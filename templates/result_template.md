@@ -56,6 +56,17 @@ OR
 
 ---
 
+## Success Criteria Verification
+
+[Map each success criterion from the spec to its verification status]
+
+| Criterion | Status | Evidence |
+|-----------|--------|----------|
+| SC1: [criterion from spec] | Pass / Partial / Deferred | [How verified, or why deferred] |
+| SC2: [criterion from spec] | Pass / Partial / Deferred | [How verified, or why deferred] |
+
+---
+
 ## Follow-Up Items
 
 [Any future work identified during implementation]

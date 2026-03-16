@@ -2,7 +2,7 @@
 name: sdlc-compliance-auditor
 description: "Use this agent when the user wants to audit SDLC process compliance, verify deliverable catalog integrity, check for untracked work, validate artifact traceability, assess knowledge freshness, or audit the SDLC knowledge layer (disciplines, knowledge stores, improvement ideas). This includes when the user says 'Let's run an SDLC compliance audit', when they suspect deliverables are missing documentation or have stale artifacts, or when they want to check whether the knowledge layer is being maintained and used.\\n\\nExamples:\\n\\n- User: \"Let's run an SDLC compliance audit\"\\n  Assistant: \"I'll launch the SDLC compliance auditor agent to perform a full audit of our process compliance.\"\\n  [Uses Agent tool to launch sdlc-compliance-auditor]\\n\\n- User: \"I feel like we've done a bunch of work that isn't tracked anywhere\"\\n  Assistant: \"Let me use the SDLC compliance auditor to scan for untracked work and catalog gaps.\"\\n  [Uses Agent tool to launch sdlc-compliance-auditor]\\n\\n- User: \"Are our deliverable docs up to date?\"\\n  Assistant: \"I'll dispatch the SDLC compliance auditor to assess artifact freshness and completeness.\"\\n  [Uses Agent tool to launch sdlc-compliance-auditor]\\n\\n- User: \"Is our knowledge layer being used? Are the discipline parking lots stale?\"\\n  Assistant: \"I'll use the SDLC compliance auditor to audit the knowledge layer health — disciplines, knowledge stores, and improvement ideas.\"\\n  [Uses Agent tool to launch sdlc-compliance-auditor]"
 model: sonnet
-tools: Read, Glob, Grep, Bash
+tools: Read, Glob, Grep, Bash, Write, Edit
 color: yellow
 memory: project
 ---

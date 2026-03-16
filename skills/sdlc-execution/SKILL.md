@@ -263,14 +263,26 @@ Key feedback incorporated:
 - Omit agents that found no issues (don't write "[agent] no issues found")
 - This section is **mandatory** — the task cannot be marked complete without it
 
-### 4. Verify, Commit, and Mark Complete
+### 3a. Per-Phase Commits (Mandatory)
+
+After each phase's POST-GATE clears, commit the phase's work before starting the next phase:
+
+1. Stage all files created or modified by the phase's agent(s)
+2. Commit with the format: `feat(DNN): phase N — [phase name]`
+3. Do NOT wait until all phases are complete to commit
+
+This ensures each phase is independently reviewable, bisectable, and revertable. A single monolithic commit at the end defeats the purpose of phased execution.
+
+**Exception:** If two phases run in parallel and both pass their POST-GATEs, they may share a single commit if the files don't overlap. Document which phases are included.
+
+### 4. Final Verify, Commit, and Mark Complete
 
 Before claiming the work is done:
 
 1. Run the full build (`[build command]` — see project CLAUDE.md)
 2. Confirm build passes with zero errors
-3. Review the git diff for unintended changes
-4. Stage all modified files (application code + any new files created by agents)
+3. Review the git diff for unintended changes (should be minimal — most work committed per-phase)
+4. Stage any remaining modified files (result doc, catalog updates, review fixes)
 5. Commit with conventional commit format (see project CLAUDE.md)
 6. Present the full commit to the user:
 
