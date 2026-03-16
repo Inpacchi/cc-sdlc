@@ -1,0 +1,327 @@
+# Deployment Patterns
+# Extracted from VoltAgent/awesome-claude-code-subagents:
+#   categories/03-infrastructure/deployment-engineer.md (primary)
+#   categories/03-infrastructure/devops-engineer.md (ChatOps, automation ROI)
+#   categories/03-infrastructure/docker-expert.md (supply chain security)
+#   categories/03-infrastructure/kubernetes-specialist.md (PDB, graceful shutdown, service mesh)
+# Covers DORA metrics, deployment strategies, GitOps, feature flags, pipeline taxonomy,
+# ChatOps, supply chain security, and deployment safety controls.
+# Last updated: 2026-03-14
+
+last_updated: 2026-03-14
+id: deployment-patterns
+name: "Deployment Patterns"
+description: >
+  Cross-project methodology for safe, fast, and observable deployments.
+  Covers DORA elite benchmarks, deployment strategy selection, GitOps workflow,
+  feature flag lifecycle, pipeline template taxonomy, ChatOps as a deployment surface,
+  supply chain security gates, and Kubernetes-grade safety controls.
+
+# ─────────────────────────────────────────────
+# DORA Metrics Benchmarks
+# ─────────────────────────────────────────────
+
+dora_metrics:
+  reference: "DORA State of DevOps Report (Google)"
+  four_key_metrics:
+    deployment_frequency:
+      elite: "> 1 deploy/day (multiple per day)"
+      high: "1/day – 1/week"
+      medium: "1/week – 1/month"
+      low: "< 1/month"
+    lead_time_for_changes:
+      elite: "< 1 hour (commit to production)"
+      high: "1 hour – 1 day"
+      medium: "1 day – 1 week"
+      low: "> 1 month"
+    change_failure_rate:
+      elite: "< 5%"
+      high: "5–10%"
+      medium: "10–15%"
+      low: "> 15%"
+    mean_time_to_restore:
+      elite: "< 1 hour"
+      high: "< 1 day"
+      medium: "1 day – 1 week"
+      low: "> 6 months"
+
+  target_checklist:
+    - "Deployment frequency > 10/day"
+    - "Lead time < 1 hour"
+    - "MTTR < 30 minutes"
+    - "Change failure rate < 5%"
+
+# ─────────────────────────────────────────────
+# Deployment Strategy Selection
+# ─────────────────────────────────────────────
+
+deployment_strategies:
+  blue_green:
+    description: "Two identical environments (blue = current, green = new). Switch traffic atomically."
+    when_to_use:
+      - "Need instant rollback without redeploy"
+      - "Database schema is backward-compatible or migration already applied"
+      - "Stateless services"
+    steps:
+      - "Deploy new version to green environment"
+      - "Run smoke tests against green"
+      - "Switch load balancer to green (DNS or LB rule)"
+      - "Monitor; if healthy, blue becomes standby"
+      - "Rollback: flip LB back to blue instantly"
+    database_constraint: "Schema changes must be backward-compatible with blue code during transition"
+    cost: "2x environment resource cost during transition"
+
+  canary:
+    description: "Route small traffic percentage to new version; expand on success signals."
+    when_to_use:
+      - "Need real user validation before full rollout"
+      - "Changes with uncertain blast radius"
+      - "ML model updates"
+    traffic_stages: ["1%", "5%", "20%", "50%", "100%"]
+    automated_analysis:
+      metrics_to_compare: ["error_rate", "p95_latency", "business_KPIs"]
+      rollback_trigger: "Error rate delta > 0.5% or latency regression > 20%"
+      promotion_criteria: "All metrics within baseline + tolerance for full stage duration"
+    bake_time_per_stage: "Minimum 10 minutes; 30 minutes for stateful changes"
+
+  rolling_update:
+    description: "Replace instances one (or N) at a time. Zero downtime with enough replicas."
+    when_to_use:
+      - "Default strategy for stateless services"
+      - "Cost-sensitive environments (no 2x capacity)"
+    kubernetes_config: |
+      strategy:
+        type: RollingUpdate
+        rollingUpdate:
+          maxSurge: 25%
+          maxUnavailable: 0
+    requirement: "readinessProbe must be configured; unhealthy pods halt the rollout"
+
+  shadow_deployment:
+    description: "Route copy of real traffic to new version; responses discarded. Validates behavior without user impact."
+    when_to_use:
+      - "Major algorithm or model changes requiring real-traffic validation"
+      - "Database migration verification"
+    tooling: ["Envoy mirror filter", "custom traffic duplication proxy"]
+    cost: "2x compute for mirrored traffic window"
+
+  progressive_delivery:
+    description: "Umbrella term combining canary + feature flags + automated rollback."
+    tooling_examples: ["Argo Rollouts", "Flagger", "LaunchDarkly + CI integration"]
+
+# ─────────────────────────────────────────────
+# GitOps Workflow
+# ─────────────────────────────────────────────
+
+gitops_workflow:
+  principle: "Git is the single source of truth for desired state. Agents (not humans) apply changes."
+  components:
+    application_repo: "Source code + Dockerfile; triggers image build on merge"
+    config_repo: "Kubernetes manifests / Helm values; no source code"
+    gitops_operator: "Watches config repo; reconciles cluster state to match"
+    operator_options: ["ArgoCD", "Flux"]
+
+  branch_strategy:
+    environment_promotion: "Merge to main → dev; PR to staging branch → staging; PR to prod branch → prod"
+    auto_promotion: "Dev → staging auto-promoted on passing tests; staging → prod requires approval PR"
+
+  drift_detection:
+    definition: "Cluster state diverges from git-declared state"
+    response: "GitOps operator reconciles automatically (configurable: alert-only vs auto-heal)"
+    alert: "Out-of-sync alert to Slack/PagerDuty after grace period"
+
+  multi_cluster_sync:
+    pattern: "Single config repo; environment-specific overlays via Kustomize or Helm values files"
+    promotion_artifact: "Image tag bump PR auto-created by CI after build succeeds"
+
+  secret_management:
+    anti_pattern: "Never commit plaintext secrets to git"
+    solutions: ["Sealed Secrets", "External Secrets Operator (pulls from Vault/AWS SSM)", "SOPS encryption"]
+
+# ─────────────────────────────────────────────
+# Feature Flag Lifecycle
+# ─────────────────────────────────────────────
+
+feature_flag_lifecycle:
+  phases:
+    creation:
+      - "Name flag with feature prefix: feat_checkout_v2"
+      - "Document: owner, purpose, expected removal date"
+      - "Default off in production"
+    rollout:
+      - "Enable for internal users first"
+      - "Expand to % of traffic using canary logic"
+      - "A/B test if measuring user behavior impact"
+    cleanup:
+      - "Remove flag code within 2 sprints of 100% rollout"
+      - "Flags older than 90 days without cleanup trigger tech-debt alert"
+
+  flag_types:
+    release_flag: "Gate incomplete features during development (short-lived)"
+    experiment_flag: "A/B test; controlled by stats framework (medium-lived)"
+    ops_flag: "Kill switch for risky integrations (long-lived; must be documented)"
+    permission_flag: "Entitlement gating by user segment (permanent; treat as config)"
+
+  performance_impact:
+    rule: "Evaluate flags at request boundary, cache result for request lifetime"
+    concern: "Flag evaluation in hot loops can add measurable latency; benchmark if > 1000 eval/s"
+
+  technical_debt_gate:
+    max_age_days: 90
+    automated_check: "CI scan flags repo; open ticket if flag exceeds max age without removal PR"
+
+# ─────────────────────────────────────────────
+# Pipeline Template Taxonomy
+# ─────────────────────────────────────────────
+
+pipeline_templates:
+  microservice:
+    stages: ["lint", "unit-test", "build-image", "scan", "integration-test", "deploy-dev", "promote-staging", "promote-prod"]
+    key_gates: ["test coverage threshold", "zero critical CVEs", "smoke test pass"]
+
+  frontend_application:
+    stages: ["lint", "type-check", "unit-test", "build", "bundle-size-check", "lighthouse-audit", "deploy"]
+    key_gates: ["bundle size regression < 10%", "Core Web Vitals pass"]
+
+  data_pipeline:
+    stages: ["schema-validate", "unit-test", "integration-test", "dry-run", "deploy", "data-quality-check"]
+    key_gates: ["data quality assertions pass", "row count delta within tolerance"]
+
+  ml_model:
+    stages: ["data-validate", "train", "evaluate", "bias-check", "deploy-shadow", "promote-canary", "promote-full"]
+    key_gates: ["accuracy >= baseline", "bias metrics pass", "shadow traffic comparison"]
+
+  infrastructure_update:
+    stages: ["validate", "plan", "security-scan", "cost-estimate", "apply-dev", "apply-staging", "apply-prod"]
+    key_gates: ["terraform plan reviewed", "cost delta approved", "no destructive operations without explicit flag"]
+
+  database_migration:
+    stages: ["syntax-validate", "dry-run-staging", "backup-verify", "apply-prod", "verify-schema"]
+    key_gates: ["backward compatibility verified", "rollback script tested", "backup confirmed before apply"]
+
+# ─────────────────────────────────────────────
+# ChatOps as Deployment Surface
+# ─────────────────────────────────────────────
+
+chatops:
+  concept: >
+    Deployment and operational commands executed through chat platforms (Slack, Teams).
+    Provides visibility (everyone sees what was deployed), audit trail, and accessibility
+    without requiring terminal access.
+
+  common_commands:
+    - "/deploy <service> <version> <environment>"
+    - "/rollback <service> <environment>"
+    - "/feature-flag enable <flag> --pct=10"
+    - "/status <service>"
+    - "/incident create <severity> <description>"
+
+  implementation_patterns:
+    bot_architecture: "Chat platform webhook → bot service → CI/CD API or kubectl"
+    authorization: "Commands restricted by channel membership or role; log who ran what"
+    approval_workflow: "High-risk commands (prod deploy) require emoji approval from second engineer"
+    output: "Bot posts deployment progress updates to thread; links to logs and dashboards"
+
+  automation_roi_signals:
+    measure:
+      - "Time from merge to production (lead time)"
+      - "Frequency of manual hotfixes requiring human terminal access"
+      - "MTTR: time from alert to resolution"
+    roi_realized_when: "Manual steps eliminated from > 80% of deployment events"
+
+# ─────────────────────────────────────────────
+# Supply Chain Security Gate
+# ─────────────────────────────────────────────
+
+supply_chain_security:
+  sbom:
+    definition: "Software Bill of Materials — machine-readable inventory of all dependencies in an artifact"
+    format_standards: ["SPDX", "CycloneDX"]
+    generation: "Generate during image build step (syft, docker sbom)"
+    storage: "Attach as OCI artifact to image manifest; store in registry alongside image"
+    use_cases: ["Vulnerability response (identify affected builds instantly)", "License compliance", "Audit"]
+
+  image_signing:
+    tool: "Cosign (sigstore)"
+    when: "Sign every production image after build, before push"
+    workflow: |
+      cosign sign --key cosign.key <image>@<digest>
+    verification: "Admission controller (Kyverno/OPA) rejects unsigned images in prod namespace"
+    keyless_option: "Cosign keyless signing via OIDC (GitHub Actions identity) — no long-lived key"
+
+  slsa_attestations:
+    definition: "Supply-chain Levels for Software Artifacts — provenance record of how artifact was built"
+    levels:
+      level_1: "Provenance exists (build script produces it)"
+      level_2: "Provenance signed by CI service"
+      level_3: "Provenance generated by tamper-resistant build platform"
+    target: "SLSA Level 2 for all production images; Level 3 for critical infrastructure images"
+    tool: "slsa-github-generator for GitHub Actions"
+
+  policy_enforcement:
+    tool_options: ["Kyverno", "OPA Gatekeeper"]
+    required_policies:
+      - "Image must be signed (Cosign signature present)"
+      - "SBOM must be attached"
+      - "Base image must be from approved registry"
+      - "No :latest tag in production"
+      - "CVE scan must show zero critical vulnerabilities"
+
+  base_image_discipline:
+    update_cadence: "Monthly at minimum; automate with Renovate or Dependabot"
+    preferred_bases: ["distroless", "alpine", "Docker Hardened Images (dhi.io)"]
+    target_size: "< 100MB for application images where achievable"
+
+# ─────────────────────────────────────────────
+# Deployment Safety Controls (Kubernetes-grade)
+# ─────────────────────────────────────────────
+
+deployment_safety_controls:
+  pod_disruption_budgets:
+    definition: "Kubernetes PDB limits concurrent voluntary disruptions (evictions, rolling updates) to maintain availability"
+    configuration: |
+      apiVersion: policy/v1
+      kind: PodDisruptionBudget
+      spec:
+        minAvailable: 2   # or maxUnavailable: 1
+        selector:
+          matchLabels:
+            app: my-service
+    when_required: "All stateful services and any service with SLA; define before first production deploy"
+    anti_pattern: "minAvailable: 0 defeats the purpose; never set for production"
+
+  graceful_shutdown:
+    definition: "Process handles SIGTERM by stopping new work, finishing in-flight requests, then exiting"
+    implementation_steps:
+      - "Register SIGTERM handler: stop accepting new connections"
+      - "Wait for in-flight requests to complete (drain)"
+      - "Close DB connections, flush buffers"
+      - "Exit with 0"
+    kubernetes_integration:
+      terminationGracePeriodSeconds: 30
+      preStop_hook: "sleep 5 before SIGTERM to allow load balancer to drain connections"
+    timeout_policy: "If drain exceeds terminationGracePeriodSeconds, SIGKILL is sent; size accordingly"
+
+  readiness_liveness_probes:
+    readiness:
+      purpose: "Gate traffic routing — pod only receives traffic when ready"
+      common_endpoint: "GET /health/ready"
+      failure_action: "Remove from load balancer endpoints; not killed"
+    liveness:
+      purpose: "Detect deadlock or unrecoverable state — restart pod"
+      common_endpoint: "GET /health/live"
+      warning: "Liveness probe failure = pod restart; tune thresholds conservatively"
+    startup_probe:
+      purpose: "Allow slow-starting containers more time before liveness kicks in"
+      use_case: "JVM services, large model loading"
+
+  service_mesh_safety:
+    circuit_breaking:
+      definition: "After N consecutive failures to a downstream, open circuit and fail fast for T seconds"
+      benefit: "Prevents retry storms from cascading a partial failure into full outage"
+      istio_config: "outlierDetection in DestinationRule"
+    retry_policies:
+      safe_to_retry: "GET, PUT, DELETE (idempotent); never auto-retry POST without idempotency key"
+      max_retries: 3
+      per_try_timeout: "Set to p99 latency of downstream, not global timeout"
+    timeout_hierarchy: "Client timeout > gateway timeout > service timeout > downstream timeout"

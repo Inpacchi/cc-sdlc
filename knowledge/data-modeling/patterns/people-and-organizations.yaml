@@ -1,0 +1,391 @@
+# People and Organizations — Universal Data Model Pattern
+# Source: Len Silverston, "The Data Model Resource Book" (Vol. 1, Ch. 1-3)
+# Also: "Zen and Universal Data Models in the Age of AI" (Tokyo, Nov 2025)
+# Last updated: 2026-02-25
+
+id: people-and-organizations
+
+business_concept:
+  name: "People and Organizations"
+  volume: "Vol. 1, Chapters 1-3"
+  description: >
+    Every business interacts with people and organizations — customers, vendors,
+    employees, partners, regulators, agents. These actors participate in relationships,
+    play roles, and connect through various contact mechanisms. The challenge is that
+    the same person or organization often appears in multiple contexts: a customer who
+    is also a vendor, an employee who is also a partner.
+  questions_it_answers:
+    - "How do I model customers and vendors without duplicating data?"
+    - "How do I handle a person who is both a customer and an employee?"
+    - "How do I track relationships between organizations (parent/subsidiary, partner)?"
+    - "How do I model contact information that changes over time?"
+    - "How do I represent different roles people play in different contexts?"
+    - "How do I model organizational hierarchies without rigid tree structures?"
+
+pattern:
+  name: "Party"
+  core_insight: >
+    Abstract all actors — people, organizations, and even automated agents — into
+    a single entity called a "Party." Then separate WHO someone is (the Party) from
+    WHAT ROLE they play (customer, vendor, employee). This single abstraction
+    eliminates the most common data modeling mistake: creating separate tables for
+    each type of actor.
+
+  entities:
+    - name: Party
+      description: >
+        The universal actor. Can be a person, organization, or other entity type.
+        Holds identity that persists regardless of what roles the party plays.
+      key_attributes:
+        - party_type  # person, organization, agent, system
+        - display_name
+      silverston_note: >
+        "A party is simply any entity that your organization needs to track.
+        The beauty is that all the common attributes — names, addresses, contact
+        mechanisms, relationships — apply uniformly regardless of party type."
+
+    - name: Individual
+      description: "A person — subtype of Party"
+      key_attributes:
+        - first_name
+        - last_name
+        - date_of_birth
+      relationship: "extends Party (party_type = person)"
+
+    - name: Organization
+      description: "A company, agency, department, or any organizational unit — subtype of Party"
+      key_attributes:
+        - legal_name
+        - tax_id
+        - industry
+      relationship: "extends Party (party_type = organization)"
+
+    - name: RoleType
+      description: >
+        A catalog of roles that parties can play: customer, vendor, employee,
+        partner, regulator, contact person, etc. New roles are added as data,
+        not schema changes.
+      key_attributes:
+        - name  # "Customer", "Vendor", "Employee"
+        - internal_identifier  # "customer", "vendor", "employee"
+        - description
+      silverston_note: >
+        "Role types are reference data, not code. When the business says 'we now
+        have affiliates,' you add a row, not a table."
+
+    - name: PartyRole
+      description: >
+        The assignment of a role to a party. THIS is where a party becomes a
+        customer, vendor, employee, etc. A single party can have many roles.
+        Roles can be temporal (active from/to dates).
+      key_attributes:
+        - party_id
+        - role_type_id
+        - from_date
+        - thru_date
+      silverston_note: >
+        "The party role is the pivot point of the entire model. It answers the
+        question 'in what capacity is this party involved?' Every relationship,
+        every transaction, every communication links to party roles — not to
+        parties directly."
+
+    - name: PartyRelationship
+      description: >
+        A typed, temporal connection between two parties (via their roles).
+        Employer/employee, parent/subsidiary, customer/vendor, partner/partner.
+        The relationship itself can carry attributes and has a time dimension.
+      key_attributes:
+        - from_party_role_id  # "who"
+        - to_party_role_id    # "to whom"
+        - relationship_type_id
+        - from_date
+        - thru_date
+      silverston_note: >
+        "Relationships are between roles, not between parties. John isn't related
+        to Acme Corp — John-as-sales-rep is related to Acme-as-customer. This
+        distinction matters when John changes roles or Acme reclassifies."
+
+    - name: ContactMechanism
+      description: >
+        How you reach a party: email, phone, postal address, social handle.
+        Contact mechanisms are independent entities — an email address exists
+        whether or not it's currently assigned to anyone.
+      subtypes:
+        - EmailAddress
+        - PhoneNumber
+        - PostalAddress
+      key_attributes:
+        - mechanism_type
+        - value
+      silverston_note: >
+        "Contact mechanisms are shared, not owned. A phone number at an office
+        may be the contact for multiple people. An address belongs to the location,
+        not the person."
+
+    - name: AutomatedAgent
+      description: >
+        An AI agent, bot, integration service, or IoT device — subtype of Party.
+        Automated agents are first-class parties: they have names, contact mechanisms,
+        roles, relationships, and capabilities, just like people and organizations.
+      key_attributes:
+        - agent_name  # "CRM Auto-Responder", "Fraud Detection Engine"
+        - agent_type  # system, chatbot, integration, iot_device
+      relationship: "extends Party (party_type = agent)"
+      contact_mechanisms:
+        - "Email Address — notifications and alerts"
+        - "API URL / Web Service Endpoint — REST, GraphQL, SOAP"
+        - "IP Address / Network Identifier — direct network communication"
+        - "Webhook Endpoint / Message Queue — event-driven (Kafka, SNS, AMQP)"
+        - "System Integration ID — internal routing identifier"
+      additional_attributes:
+        - "Objectives, Responsibilities, Assignments"
+        - "Privileges, Tools, Capabilities/Skills"
+        - "Ratings, Cost"
+      silverston_note: >
+        "Automated agents need the same information as other parties: objectives,
+        responsibilities, assignments, privileges, tools, capabilities, ratings,
+        cost. The Party pattern handles this naturally — an agent IS a party."
+
+    - name: ContactPurpose
+      description: >
+        Why a party uses a particular contact mechanism: billing address, shipping
+        address, primary phone, emergency contact. A single mechanism can serve
+        multiple purposes for the same party.
+      key_attributes:
+        - party_id
+        - contact_mechanism_id
+        - purpose_type  # billing, shipping, primary, emergency
+
+  progressive_generalization:
+    description: >
+      Silverston teaches the Party pattern through progressive levels of
+      generalization. This is his core pedagogical technique: start with what
+      the business recognizes, then show the abstraction that unifies it.
+      Contact information is the canonical example.
+    levels:
+      - level: 1
+        name: "Specific columns on specific tables"
+        description: >
+          Each entity type (Customer, Supplier, Partner) has its own table
+          with contact columns (EMAIL, WORK_PHONE, FAX, MOBILE_PHONE).
+          Simple, immediately understandable, but duplicated and rigid.
+        tradeoff: "Maximum simplicity, minimum flexibility"
+
+      - level: 2
+        name: "Separate contact entity, still typed"
+        description: >
+          Contact information extracted to its own entity, linked back to
+          the person. Multiple contacts per person. But still specific
+          to person type — separate patterns for customers vs suppliers.
+        tradeoff: "Better multiplicity, still siloed by entity type"
+
+      - level: 3
+        name: "Fully generalized with type catalogs"
+        description: >
+          Party as universal actor. ContactMechanism as independent entity
+          with a type catalog (email, phone, social handle, API endpoint).
+          Any party can have any contact mechanism for any purpose.
+          New contact types (X handle, webhook URL) are data changes, not schema changes.
+        tradeoff: "Maximum flexibility, requires understanding the abstraction"
+
+    two_knobs_of_variation:
+      description: >
+        Silverston identifies two primary reasons why data models vary across
+        organizations, even for the same business domain. Understanding these
+        knobs is essential for adapting UDM patterns to a specific context.
+      knobs:
+        - name: "Semantics"
+          description: "What you call things — Supplier vs Vendor, Part vs Item, Order vs Sales Order"
+          implication: "AI must understand synonym mappings to query across systems"
+        - name: "Generalization level"
+          description: "How abstract your model is — specific (Customer table) vs general (Party + Role)"
+          implication: "Higher generalization = more flexible but harder to understand without training"
+      third_knob:
+        name: "Standards incorporated"
+        description: "Which industry standards inform the model — GS1, UBL, OAGIS, ISO, HL7/FHIR, etc."
+        implication: "Standards enable interoperability but add complexity; choose based on integration needs"
+
+  relationships_diagram: |
+    ┌──────────────┐
+    │   Party      │◄──── The universal actor
+    │  (abstract)  │
+    └──────┬───────┘
+           │ subtyped as
+     ┌─────┴──────┐
+     │            │
+    Individual  Organization
+     │
+     └──────┐
+            ▼
+    ┌──────────────┐         ┌──────────────┐
+    │  PartyRole   │────────►│  RoleType    │
+    │              │         │  (catalog)   │
+    │  party_id    │         │  "customer"  │
+    │  role_type_id│         │  "vendor"    │
+    │  from_date   │         │  "employee"  │
+    └──────┬───────┘         └──────────────┘
+           │
+           │ participates in
+           ▼
+    ┌──────────────────────┐
+    │  PartyRelationship   │
+    │                      │
+    │  from_party_role_id  │
+    │  to_party_role_id    │
+    │  relationship_type   │
+    │  from_date / thru_date│
+    └──────────────────────┘
+
+  entity_party_role_pattern:
+    name: "Entity-Party-Role (EPR)"
+    description: >
+      A generalization of how parties connect to ANY business entity through roles.
+      The pattern: Entity -> has many PartyRoles -> Party + RoleType.
+      This applies not just to party-to-party relationships, but to how parties
+      participate in transactions, projects, accounts, and any other business context.
+    examples:
+      - "Project -> ProjectPartyRole -> Party (as project-manager, developer, sponsor)"
+      - "Transaction -> BizTxnPartyRole -> Party (as buyer, seller, approver)"
+      - "Account -> BizTxnAccountPartyRole -> Party (as account-holder, beneficiary)"
+    silverston_note: >
+      "Once you see the Party/Role pattern, you see it everywhere. Every time
+      you're tempted to put a person_id or organization_id on a table, ask:
+      'what role are they playing here?' That role deserves to be explicit."
+
+why_this_works:
+  silverston_reasoning: >
+    The Party pattern works because it mirrors reality: people and organizations
+    ARE the same kind of thing at an abstract level — they have names, addresses,
+    relationships, and roles. The traditional approach of creating separate Customer,
+    Vendor, Employee tables forces you to answer "what IS this entity?" at creation
+    time. But in reality, an entity's role is contextual and changes over time.
+    A customer today may become a vendor tomorrow. An employee may also be a customer.
+    The Party pattern defers that classification to the role level, where it belongs.
+
+  real_world_evidence:
+    - context: "AI agents as Parties"
+      detail: >
+        AI agents can be modeled as Parties with Roles — the meta-pattern where
+        the AI is represented using the same model it operates on. This allows
+        AI agents to have objectives, responsibilities, assignments, privileges,
+        tools, capabilities, and ratings — all stored as Party attributes.
+    - context: "EPR pattern in project management"
+      detail: >
+        Three-tier assignment UX (bulk fast, individual with role, full RACI matrix)
+        built entirely on PartyRole. The pattern: Entity -> has many PartyRoles ->
+        Party + RoleType. Endorsed by Len Silverston as "the right way to handle
+        multi-party participation."
+
+anti_patterns:
+  - name: "Separate entity tables per actor type"
+    description: "Creating Customer, Vendor, Employee, Partner as separate tables"
+    why_it_fails: >
+      When John Smith is both a customer and an employee, his data is duplicated.
+      When Acme Corp is both a customer and a vendor, you have two records with
+      the same tax ID. Queries that need "all actors" require UNION across every
+      table. Adding a new actor type requires a new table, new CRUD, new UI.
+    silverston_quote: >
+      "I've seen organizations with 15 separate tables for different types of
+      people and organizations. Every one of them eventually needed a 'party'
+      table to unify them — but by then they had years of duplicated data."
+    remediation: "Introduce Party as the common abstraction. Migrate existing tables to PartyRoles."
+
+  - name: "Roles as boolean columns"
+    description: "Adding is_customer, is_vendor, is_employee columns to a Person table"
+    why_it_fails: >
+      Roles are temporal (a customer from 2020-2023), carry context (customer of
+      which division?), and participate in relationships. Boolean columns can't
+      represent any of this. And every new role requires a schema change.
+    remediation: "Extract roles into PartyRole join table with RoleType catalog."
+
+  - name: "Hardcoded role logic"
+    description: "Using code (if/else, switch) to determine what a party can do based on type"
+    why_it_fails: >
+      Business rules about roles change frequently. "Vendors can now also be
+      distributors" shouldn't require a code deployment. Role-based behavior
+      should be driven by data (RoleType + configuration), not conditionals.
+    remediation: "RoleType as reference data with capability configuration."
+
+  - name: "Contact info as columns on the party"
+    description: "Adding email, phone, address columns directly to Person/Organization"
+    why_it_fails: >
+      People have multiple emails (work, personal). Organizations have multiple
+      addresses (HQ, warehouse, billing). The same phone number serves multiple
+      people at an office. Columns can't represent multiplicity or sharing.
+    remediation: "ContactMechanism as independent entity, linked via ContactPurpose."
+
+  - name: "Relationships without roles"
+    description: "Linking parties directly (employee_id -> company_id) without role context"
+    why_it_fails: >
+      The relationship between John and Acme depends on what role John plays.
+      Is he their employee? Their consultant? Their customer? Direct FK links
+      lose this context. When John changes from employee to consultant, you
+      need a schema change instead of a data change.
+    remediation: "PartyRelationship links PartyRoles, not Parties directly."
+
+ai_integration:
+  why_udm_matters_for_ai:
+    description: >
+      From Silverston's "Zen and UDM in the Age of AI" (Tokyo, 2025): AI without
+      structured data context produces hallucinations. When an AI is asked "show me
+      all customers in Tokyo who haven't ordered in 3 months," it needs to know
+      what "customer" means — is that a partner? a payer? a lead? a ship-to?
+      Without UDM, "customer" is defined differently across every system.
+    key_arguments:
+      - "AI is only as good as its data"
+      - "UDM reduces data prep and rework for AI applications"
+      - "AI needs transparency — UDM provides explainability and governance"
+      - "UDM gives AI a stable foundation that survives model changes"
+      - "Consistency, reuse, and quality across the enterprise"
+    threats_without_udm:
+      - name: "Hidden Complexity"
+        description: >
+          Simple questions hide enormous complexity. 'Show me all customers' requires
+          knowing which of 6+ party roles constitutes 'customer' in each system.
+      - name: "Silo Renaissance"
+        description: >
+          AI accelerates silo creation — each team builds AI features on their own
+          data definitions, multiplying inconsistency faster than before.
+      - name: "Multiplication Effect"
+        description: >
+          Bad data structures get amplified by AI. One poorly defined 'customer'
+          concept propagates through every AI-generated report, recommendation,
+          and automated action.
+
+  description: >
+    When AI agents operate on Party-modeled data, they benefit from the uniformity:
+    one set of tools handles all actor types. The agent doesn't need separate
+    "customer tools" and "vendor tools" — it uses Party/Role tools universally.
+
+  patterns:
+    - name: "Natural language to structured query"
+      example: >
+        User: "Show me all vendors who are also customers"
+        AI: Query PartyRoles where party_id IN (parties with role 'vendor')
+            AND party_id IN (parties with role 'customer')
+        This query is impossible with separate Customer/Vendor tables without UNION.
+
+    - name: "Role-based agent behavior"
+      example: >
+        Agent persona is driven by RoleType. A "customer-service" agent has access
+        to customer-facing Party data. A "procurement" agent sees vendor PartyRoles.
+        Same data model, different access patterns — driven by the agent's own
+        PartyRole assignment.
+
+    - name: "Relationship discovery"
+      example: >
+        User: "What's our relationship with Acme Corp?"
+        AI: Traverses PartyRelationships to find all roles Acme plays
+            (customer since 2020, vendor since 2022, partner since 2024)
+            plus all contact persons linked via their PartyRoles.
+
+implementations:
+  # Add your project's Party/Role implementation here as proof that the pattern works:
+  # - system: "Your Project Name"
+  #   models:
+  #     - "Party (id, party_type, display_name)"
+  #     - "Individual (party_id, first_name, last_name)"
+  #     - "Organization (party_id, legal_name)"
+  #     - "RoleType (name, internal_identifier)"
+  #     - "PartyRole (party_id, role_type_id, from_date, thru_date)"
+  #     - "PartyRelationship (from_party_role_id, to_party_role_id, relationship_type_id)"

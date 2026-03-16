@@ -1,0 +1,107 @@
+# Cross-Project Tool Patterns
+# How to use each tool effectively. Learned from actual test sessions.
+# Last updated: 2026-03-15
+
+playwright_cli:
+  version: "1.59.0-alpha"
+  install: "npm install -g @playwright/cli@latest && playwright-cli install"
+
+  session_lifecycle:
+    - "playwright-cli open [url]  # starts browser, url optional"
+    - "playwright-cli goto <url>   # navigate within session"
+    - "playwright-cli close        # end session"
+    - "playwright-cli list         # see active sessions"
+    - "playwright-cli kill-all     # clean up stale/zombie processes"
+
+  snapshot_workflow:
+    description: "Snapshots return YAML accessibility trees saved to .playwright-cli/"
+    steps:
+      - "playwright-cli snapshot    # saves .yml file, returns path"
+      - "Read the YAML to get element refs (e4, e12, etc.)"
+      - "Use refs in subsequent commands: click e12, fill e15 'text'"
+    notes:
+      - "Refs are session-scoped — they change on every snapshot"
+      - "Snapshot after navigation to get fresh refs"
+      - "YAML files are compact (~100 lines for a full page)"
+
+  auth_pattern:
+    description: "Login once, save state, reload on future sessions"
+    steps:
+      - "playwright-cli goto <login-url>"
+      - "playwright-cli snapshot  # get field refs"
+      - "playwright-cli fill <email-ref> '<email>'"
+      - "playwright-cli fill <password-ref> '<password>'"
+      - "playwright-cli click <submit-ref>"
+      - "Sleep 2s for redirect"
+      - "playwright-cli state-save  # saves cookies + localStorage to JSON"
+    reuse: "state-load or --storage-state on next session"
+
+  key_behaviors:
+    - "open command may land on about:blank — use goto to navigate"
+    - "headless is default (no --headless flag needed; it errors if you pass it)"
+    - "click auto-generates role-based Playwright code (getByRole, getByTestId)"
+    - "fill targets specific elements by ref, not by selector"
+    - "Screenshots save as PNG on disk, not returned inline"
+
+  token_profile:
+    per_task_estimate: "~27k tokens (vs ~114k for MCP)"
+    snapshot_size: "~100-200 lines YAML per page"
+    key_advantage: "Data stays on disk, only loaded when agent reads file"
+
+ai_browser_tool:
+  description: "AI-assisted browser tool (e.g., Claude browser extension, Playwright MCP)"
+  best_for:
+    - "Exploratory testing with visual feedback"
+    - "Testing with an active logged-in session"
+    - "Quick interactive validation without writing test code"
+  limitations:
+    - "WebSocket connections may go stale — reconnect if tool calls fail silently"
+    - "No headless mode, no CI/CD integration"
+    - "Browser-specific (typically Chrome/Edge only)"
+  key_behaviors:
+    - "Always verify tab context before interacting — tab IDs become stale across sessions"
+    - "Create a new tab rather than reusing a stale tab ID"
+
+playwright_mcp:
+  abbreviation: "PW MCP"
+  role: "Primary interactive browser tool for SDET and debug-specialist agents"
+  setup: "Configured in .mcp.json — available to all agents automatically"
+  tools_prefix: "mcp__playwright__"
+  key_tools:
+    navigation: "browser_navigate, browser_navigate_back, browser_tabs"
+    interaction: "browser_click, browser_fill_form, browser_hover, browser_press_key, browser_type, browser_select_option, browser_drag, browser_file_upload"
+    observation: "browser_snapshot, browser_take_screenshot, browser_console_messages, browser_network_requests"
+    execution: "browser_evaluate, browser_run_code"
+    lifecycle: "browser_close, browser_resize, browser_handle_dialog, browser_wait_for"
+  when_to_use:
+    - "Interactive browser validation during test development (see the page before writing assertions)"
+    - "Debugging test failures — snapshot the DOM state at the point of failure"
+    - "Exploratory testing of new features before writing formal Playwright tests"
+    - "Visual verification that UI renders correctly"
+  when_not_to_use:
+    - "Running the actual test suite — use `npx playwright test` via Bash"
+    - "CI/CD pipelines — MCP requires an active agent session"
+  workflow:
+    - "browser_navigate to your app's local dev URL"
+    - "browser_snapshot to get accessibility tree with element refs"
+    - "Interact via browser_click/browser_fill_form using refs from snapshot"
+    - "browser_take_screenshot for visual verification"
+    - "browser_console_messages to check for JS errors"
+    - "browser_network_requests to verify API calls"
+
+
+# ─── Project-Specific Playwright Patterns ───
+# Add your project's test infrastructure patterns here.
+# Common areas: auth fixtures, multi-service setup, real-time/WebSocket helpers,
+# parameterized test factories, seed data helpers.
+#
+# Example structure:
+# your_project_playwright:
+#   description: "Playwright patterns for [your project]"
+#   auth:
+#     storage_state: "path/to/auth/state.json"
+#     fixture: "getAuthenticatedContext()"
+#     notes: "How auth is handled in your test suite"
+#   test_setup:
+#     - "Step 1"
+#     - "Step 2"

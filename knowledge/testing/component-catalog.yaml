@@ -1,0 +1,112 @@
+# Cross-Project Component Test Strategies
+# How to test shared UI components regardless of which project uses them.
+# Last updated: 2026-03-15
+
+mui_datagrid:
+  description: "MUI DataGrid v8 (@mui/x-data-grid) — core grid component"
+  applies_to:
+    - "Any project using MUI DataGrid"
+
+  element_discovery:
+    preferred_method: "accessibility tree (read_page or playwright-cli snapshot)"
+    why: "MUI DataGrid uses virtualized, heavily-nested DOM with generated class names. Accessibility tree is far more reliable."
+    patterns:
+      column_headers: "role=columnheader — each header is a columnheader cell"
+      data_rows: "role=row within role=rowgroup — rows inside grid body"
+      grid_cells: "role=gridcell — individual data cells"
+      pagination: "paragraph containing 'Rows per page:' and '1–N of M'"
+      sort_icons: "img elements inside columnheader"
+
+  column_visibility_toggle:
+    trigger: "button with name 'Toggle column visibility'"
+    persistence: "localStorage under configurable storageKey"
+    risk: "React 19 StrictMode double-mount can clobber localStorage on initial render"
+    test_pattern: "toggle off → refresh → verify hidden → toggle on → navigate away → back → verify"
+
+  formula_columns:
+    indicators:
+      header: "column header text contains 'fx'"
+      aria: "aria-label contains 'Computed column'"
+      cell_style: "fontStyle: italic on computed cells, normal on data cells"
+    verification: "ALWAYS pair DOM check (read_page) with computed style check (javascript_tool/eval)"
+
+  search:
+    type: "client-side (useMemo filter, no network request)"
+    location: "TextField above grid with SearchIcon"
+    behavior: "case-insensitive substring across configured fields"
+
+  gotchas:
+    - id: "datagrid-virtual-scroll"
+      symptom: "Asserting on rows that aren't in the viewport fails"
+      cause: "DataGrid virtualizes rows — only visible rows exist in DOM"
+      prevention: "Scroll to target row before asserting, or use API data for total count"
+    - id: "datagrid-dom-vs-visual"
+      symptom: "read_page shows element exists but it's invisible to user"
+      cause: "Element can have correct text but invisible styling (color==bgcolor, low opacity)"
+      prevention: "Always pair DOM check with computed style verification"
+      example: "FxBadge — 'fx' text existed but was invisible (same color as background, opacity 0.15)"
+
+mui_form_dialog:
+  description: "MUI Dialog wrapper with TextField, MenuItem, Select — common CRUD pattern"
+  applies_to:
+    - "Any project using MUI Dialog for create/edit operations"
+
+  element_discovery:
+    dialog: "role=dialog — appears on open, disappears on close"
+    text_fields: "role=textbox with name matching label text"
+    select_fields: "MUI Select — role=combobox or role=button with name matching label"
+    save_button: "role=button, name='Save' — inside dialog"
+    cancel_button: "role=button, name='Cancel' — inside dialog"
+    error_alert: "role=alert — appears on mutation failure"
+
+  test_patterns:
+    create: "click add button → wait for dialog → fill fields → click save → verify dialog closes → verify list updated"
+    edit: "navigate to detail → click edit → wait for dialog with pre-filled values → modify → save → verify"
+    validation: "submit with missing required fields → verify error alert appears → verify dialog stays open"
+
+  gotchas:
+    - id: "mui-select-interaction"
+      symptom: "fill command doesn't work on MUI Select"
+      cause: "MUI Select renders as a custom component, not a native select"
+      prevention: "Use click to open dropdown, then click on MenuItem option"
+
+status_chip:
+  description: "Status indicator component — color-coded chip for domain entity status"
+  applies_to:
+    - "Any project using color-coded status chips (MUI Chip or equivalent)"
+
+  testability_note:
+    issue: "Color conveyed only via CSS, not in accessibility tree"
+    proposed_fix: "Add aria-label='Status: {value}' or data-testid='status-chip-{value}'"
+    impact: "Cannot verify correct color via accessibility tree alone — requires computed style check"
+
+page_header:
+  description: "PageHeader — breadcrumbs + title + optional action button"
+  element_discovery:
+    title: "role=heading, level 4"
+    breadcrumbs: "role=navigation containing role=list with listitem links"
+    action_button: "role=button with action name (e.g., 'Add Item')"
+  notes: "Consistent across all list pages — same structure, different content"
+
+
+# ─── Project-Specific Components ───
+# Add your project's component test strategies here following the same structure.
+# Each entry should include: description, applies_to, element_discovery, test_patterns, gotchas.
+#
+# Example entry structure:
+#
+# your_component_name:
+#   description: "Short description"
+#   applies_to:
+#     - "your-project (feature area)"
+#   element_discovery:
+#     preferred_method: "accessibility tree"
+#     patterns:
+#       key_element: "role=X, name='Y'"
+#   test_patterns:
+#     open: "trigger action → wait for component"
+#   gotchas:
+#     - id: "unique-gotcha-id"
+#       symptom: "What goes wrong"
+#       cause: "Why it happens"
+#       prevention: "How to avoid it"

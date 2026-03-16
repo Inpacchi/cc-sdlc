@@ -1,0 +1,126 @@
+# Cross-Project Gotchas
+# Failure patterns learned from test runs. Read before every test session.
+# Each entry: symptom, cause, resolution, prevention.
+# Last updated: 2026-03-15
+
+- id: dom-not-visual
+  severity: high
+  symptom: "DOM check passes but element is invisible to user"
+  cause: "Element has correct text/structure but invisible styling (color==bgcolor, low opacity, display:none, clipped)"
+  resolution: "Added computed style verification recipe"
+  prevention: "ALWAYS pair DOM assertions (read_page/snapshot) with computed style checks"
+  discovered: "FxBadge showed 'fx' text in accessibility tree but was invisible (foreground==background color, opacity 0.15)"
+  applies_to: "all projects"
+
+- id: server-down-false-negatives
+  severity: high
+  symptom: "Formula cells show Error indicators that look like bugs"
+  cause: "Backend API server not running — Vite proxy returns 500/502"
+  resolution: "Added prerequisites health check recipe (run before every test session)"
+  prevention: "Always verify API server, UI server, and proxy before testing"
+  discovered: "Formula cells displayed error icons at UAT handoff because API wasn't started"
+  applies_to: "all projects with API backends"
+
+- id: react-strictmode-double-mount
+  severity: medium
+  symptom: "localStorage state gets clobbered on page load"
+  cause: "React 19 StrictMode mounts components twice in dev mode — useEffect writes to localStorage on both mounts, second write may overwrite saved state"
+  resolution: "useRef guard on useEffect that writes to localStorage"
+  prevention: "When testing localStorage persistence, always include full page refresh (not just re-render)"
+  discovered: "Column visibility settings lost on refresh"
+  applies_to: "all React 19 projects using localStorage in useEffect"
+
+- id: datagrid-virtual-scroll
+  severity: medium
+  symptom: "Cannot find expected rows in DOM"
+  cause: "MUI DataGrid virtualizes rows — only rows in the visible viewport exist in DOM"
+  resolution: "Scroll to target row before asserting, or verify total count via pagination text"
+  prevention: "Don't assert on specific row content without ensuring row is in viewport"
+  applies_to: "all projects using MUI DataGrid"
+
+- id: tab-id-reuse
+  severity: low
+  symptom: "Browser tool calls fail with 'tab not found'"
+  cause: "Tab IDs from previous browser tool sessions are invalid after the session ends"
+  resolution: "Request a fresh tab context before starting a new session"
+  prevention: "Never reuse tab IDs across sessions"
+  applies_to: "AI-assisted browser tools that track tabs by ID"
+
+- id: port-conflicts
+  severity: low
+  symptom: "Dev server unreachable at expected port"
+  cause: "Multiple Vite dev servers competing for ports (5173, 5174, etc.)"
+  resolution: "Check Vite console output for actual port"
+  prevention: "Use explicit --port flag or check process list"
+  applies_to: "all Vite projects"
+
+- id: playwright-cli-open-url
+  severity: low
+  symptom: "playwright-cli open <url> lands on about:blank"
+  cause: "URL may not be applied on open command in some versions"
+  resolution: "Use goto after open to navigate"
+  prevention: "Always follow open with goto <url>"
+  applies_to: "Playwright CLI"
+
+- id: mui-popover-backdrop-intercepts
+  severity: medium
+  symptom: "Click on element behind popover times out with 'subtree intercepts pointer events'"
+  cause: "MUI Popover renders an invisible backdrop (MuiBackdrop-invisible) that covers the entire page and intercepts all pointer events"
+  resolution: "Press Escape to close the popover before clicking elements behind it"
+  prevention: "When interacting with MUI popovers/menus, always close them (Escape) before clicking other page elements"
+  applies_to: "all projects using MUI Popover/Menu/Dialog"
+
+- id: playwright-cli-fill-requires-snapshot
+  severity: low
+  symptom: "fill/click with role selectors fails with 'Ref not found in current page snapshot'"
+  cause: "Playwright CLI requires a current snapshot to resolve role-based selectors. After goto, snapshot may not be cached."
+  resolution: "Run 'snapshot' command first, then use element refs (e12, e15, etc.) for fill/click"
+  prevention: "Always snapshot after goto before interacting with elements"
+  applies_to: "Playwright CLI"
+
+- id: auth-redirect-after-login
+  severity: low
+  symptom: "After login, test expects to be on target page but lands on a default home/dashboard route"
+  cause: "Some apps always redirect to a default landing page after fresh authentication, regardless of prior navigation"
+  resolution: "After login, explicitly navigate to target page with goto"
+  prevention: "Auth flow scripts should always include a goto to the intended page after login completes"
+  applies_to: "all projects where post-login redirect is controlled by the server"
+
+- id: remote-api-initial-load-delay
+  severity: medium
+  symptom: "First snapshot after goto captures 'Loading...' instead of page content"
+  cause: "Remote API has network latency. Page renders loading state immediately, data arrives 2-5s later."
+  resolution: "Wait for specific content element before snapshotting: sleep 3 then snapshot, or use waitForSelector"
+  prevention: "After navigating to a data-driven route, wait for heading or content before asserting"
+  applies_to: "all projects with remote API backends — wait for content before asserting"
+
+- id: gcp-vm-disk-full-truncated-bundles
+  severity: high
+  symptom: "ERR_HTTP2_PROTOCOL_ERROR 200 (OK) on JS bundle — React app never mounts, <div id='root'> stays empty"
+  cause: "Old Docker images accumulate on GCP VM. Disk fills up, next deploy's docker pull fails or nginx serves truncated/corrupted JS bundles over HTTP/2."
+  resolution: "SSH into VM, run `docker image prune -a -f --filter 'until=24h' && docker system prune -f`, clean gcloud logs, then redeploy."
+  prevention: "Add periodic VM-side Docker prune to deploy script or cron. Monitor `df -h /` on VM — alert if >85%."
+  applies_to: "all GCP-deployed Docker projects"
+
+- id: mobile-locators-differ-from-desktop
+  severity: medium
+  symptom: "Playwright test passes on desktop but fails on mobile — element not found or wrong placeholder"
+  cause: "Mobile layouts use different components with different placeholder text, input patterns, and DOM structure."
+  resolution: "Use flexible locators that work across viewports, or write separate mobile-specific locators."
+  prevention: "When writing tests for both desktop and mobile, check both viewports' DOM before choosing locators. Consider a locator helper that returns viewport-appropriate selectors."
+  applies_to: "all projects with responsive/mobile layouts"
+
+
+# ─── Project-Specific Gotchas ───
+# Add project-specific gotchas here as they are discovered.
+# Use the same structure: id, severity, symptom, cause, resolution, prevention, discovered, applies_to
+#
+# Example:
+# - id: your-gotcha-id
+#   severity: medium
+#   symptom: "What the tester sees"
+#   cause: "Why it happens (code-level explanation)"
+#   resolution: "How to fix it when it happens"
+#   prevention: "How to avoid it in future tests"
+#   discovered: "YYYY-MM-DD — context"
+#   applies_to: "your-project (affected area)"

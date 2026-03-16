@@ -1,0 +1,322 @@
+---
+name: ad-hoc-planning
+description: >
+  Create lightweight plans for work that's too small for SDLC tracking but too complex to wing it.
+  Use this skill when changes span 3-6 files, involve a clear task with known scope, and would benefit from
+  worker domain agent review — but don't warrant a deliverable ID, spec, or result doc. Trigger when someone says
+  "make a quick plan", "ad hoc plan", "plan this out", "let's plan before we code", or when you identify
+  multi-file work during exploration that the user has confirmed should proceed ad hoc (not as a deliverable).
+  Also use when the user explicitly declines SDLC tracking but the work still touches multiple files or packages.
+  Do NOT use for single-file fixes, config changes, or typo corrections — those need no plan at all.
+  Do NOT use for new features, new integrations, or architectural changes — those need sdlc-planning.
+---
+
+# Ad Hoc Planning
+
+Domain worker agents write the plan and review it. You are the manager and never do work yourself. This skill produces a plan saved to `docs/current_work/ad-hoc/`, then enters plan mode so the user gets the standard execution prompt with the option to clear context.
+
+**This skill produces the plan. It does NOT execute it.** Execution happens via `ad-hoc-execution`.
+
+## When This Applies
+
+The sweet spot is work that:
+- Touches 3-6 files (too many to just start coding, too few for a deliverable)
+- Has clear, bounded scope (you know what "done" looks like)
+- Benefits from domain expertise (touches multiple domains — e.g., frontend + database, real-time + UI)
+- Was explicitly confirmed as ad hoc by the user
+
+If the work introduces new components, hooks, stores, routes, or event types — that's likely a deliverable, not ad hoc. Check with the user.
+
+## Output
+
+This skill produces two things:
+
+1. **Plan file** at `docs/current_work/ad-hoc/{slug}_plan.md` — persists across context clears
+2. **Plan mode prompt** via `EnterPlanMode` — gives the user the standard execution options (clear context, bypass permissions, etc.)
+
+## The Process
+
+```dot
+digraph ad_hoc_planning {
+    rankdir=TB;
+
+    "1. Identify relevant worker domain agents" [shape=box];
+    "2. Worker domain agents WRITE the plan" [shape=box];
+    "3. Review plan with ALL relevant\nworker domain agents" [shape=box];
+    "Incorporate feedback, revise plan" [shape=box];
+    "All worker agents clean?" [shape=diamond];
+    "4. Save plan to file" [shape=box];
+    "5. Enter plan mode\n(triggers execution prompt)" [shape=doublecircle];
+
+    "1. Identify relevant worker domain agents" -> "2. Worker domain agents WRITE the plan";
+    "2. Worker domain agents WRITE the plan" -> "3. Review plan with ALL relevant\nworker domain agents";
+    "3. Review plan with ALL relevant\nworker domain agents" -> "All worker agents clean?";
+    "All worker agents clean?" -> "Incorporate feedback, revise plan" [label="no"];
+    "Incorporate feedback, revise plan" -> "3. Review plan with ALL relevant\nworker domain agents";
+    "All worker agents clean?" -> "4. Save plan to file" [label="yes"];
+    "4. Save plan to file" -> "5. Enter plan mode\n(triggers execution prompt)";
+}
+```
+
+## Agent Selection
+
+Select from project-level worker agents (`.claude/agents/`). If a worker agent's domain touches any aspect of the task, include them. When in doubt, include — a quick review that finds nothing costs less than a shipped bug.
+
+Refer to the full agent table in the `sdlc-planning` skill if you need the complete list. The same worker agents are available here.
+
+## Manager Rule
+
+**The manager (you) never writes plan content.** This applies unconditionally: before dispatching agents, while incorporating review feedback, after re-review, and at every other point in this skill. There is no phase of this skill in which it is correct for you to produce plan text yourself. If you need a plan written or revised — dispatch the worker domain agent who wrote it. If you notice a problem with the plan — dispatch the relevant worker agent to fix it. Noticing a problem yourself does not authorize you to revise the plan yourself.
+
+**The size of a revision is not a valid reason to self-revise.** "This is a small wording change" or "I'm just incorporating the feedback" is not an exception. Every plan content change goes through the worker agent who wrote it.
+
+**Orchestrator-editable content:** Process documentation (Worker Agent Reviews section, dependency table metadata, date stamps, mechanical count updates) is not domain content — the orchestrator may write these directly. The boundary is: if it requires domain judgment about code, architecture, or implementation, dispatch. If it's summarizing review outcomes or fixing table formatting, do it yourself.
+
+## Steps
+
+### Agent Dispatch Protocol
+
+**[PLUGIN: oberskills]** Before dispatching ANY worker domain agent, invoke oberagent if installed. This validates prompt quality before dispatch. Without the plugin, proceed with manual prompt review. This applies to plan writing, plan review, revision dispatches, and all other dispatches in this skill.
+
+### 1. Identify Relevant Worker Domain Agents
+
+List which agents are relevant and why. Consult `ops/sdlc/knowledge/agent-context-map.yaml` — for each listed agent with a mapping, note the knowledge files. Include these paths when dispatching agents for plan writing and review. For recurring task types, consult `ops/sdlc/playbooks/` for pre-seeded agent selection and reference implementations. When exploring existing patterns, use LSP (`goToDefinition`, `findReferences`, `goToImplementation`) for type-system and call-graph questions. Use Grep for string literals and non-TypeScript content.
+
+```
+Relevant worker domain agents for this task:
+- frontend-developer: touches UI components and state management
+- ui-ux-designer: new UI element needs design review
+- code-reviewer: always included for implementation tasks
+
+Knowledge context (from ops/sdlc/knowledge/agent-context-map.yaml):
+- frontend-developer: design/ux-modeling-methodology.yaml, architecture/typescript-patterns.yaml
+- ui-ux-designer: design/ux-modeling-methodology.yaml
+- code-reviewer: architecture/typescript-patterns.yaml, testing/gotchas.yaml
+```
+
+After listing agents, run the infrastructure coverage check:
+
+```
+AGENT-RECONFIRM
+Infrastructure touched: [scan each domain's trigger conditions — list every domain where at least one condition is true]
+Agents from list above: [list]
+Coverage check (infrastructure): [each infra domain → specialist agent if one exists, or "no specialist"]
+Agents to add: [list or none]
+Updated agent list: [final list]
+```
+
+**Infrastructure domain trigger conditions** — check each domain by asking its trigger questions, not by scanning file names:
+
+| Domain | Trigger conditions (if ANY is true, list the domain) | Specialist |
+|--------|------------------------------------------------------|------------|
+| Real-time/WebSocket | Modifies WebSocket handlers, fan-out, connection lifecycle, or pub/sub patterns? | `realtime-systems-engineer` |
+| Database/storage | Adds/modifies schema, queries, indexes, security rules, or storage paths? | `data-architect` |
+| Payments | Touches billing, pricing, payment state, or revenue infrastructure? | `payment-engineer` |
+| ML/AI | Adds/modifies inference, model pipelines, embeddings, or ML data processing? | `ml-architect` / `ml-engineer` |
+| Streaming/broadcast | Modifies streaming state, broadcast components, or media integration? | `realtime-systems-engineer` |
+| Auth/security | Introduces unauthenticated endpoints, removes auth guards, exposes new public attack surface, changes token handling, or modifies access control? | `security-engineer` |
+| Build/CI | Changes build config, monorepo deps, CI pipeline, or package boundaries? | `build-engineer` |
+| Data pipelines | Adds/modifies scrapers, sync functions, ETL, or background processing? | `data-engineer` |
+| Search | Changes indexes, filter config, or search infrastructure? | (project-specific — check your agent table) |
+| Accessibility | Adds new interactive controls, modifies existing UI components, introduces icon-only buttons, changes color/contrast, or adds components with image backgrounds? | `accessibility-auditor` |
+
+*Customize for your project's infrastructure domains.*
+
+**CHRONICLE-CONTEXT** — after agent selection, scan `docs/chronicle/` for related concepts:
+
+1. List concept directories in `docs/chronicle/`
+2. For each concept that could be related, read its `_index.md`
+3. If the `_index.md` references deliverables with relevant decisions or patterns, read those result docs
+4. Include the relevant context when dispatching agents for plan writing
+
+```
+CHRONICLE-CONTEXT
+Related concepts found: [list concept names or "none"]
+Key context loaded:
+- [concept]: [1-line summary of relevant decision/pattern]
+Context included in agent dispatch: yes | no (none relevant)
+```
+
+This prevents re-inventing patterns established by prior deliverables.
+
+### 2. Worker Domain Agents Write the Plan
+
+The most relevant worker domain agent writes the plan. Other worker agents contribute to sections in their domain.
+
+**Plan structure:**
+
+```markdown
+# Ad Hoc Plan: [Title]
+
+**Execute this plan using the `ad-hoc-execution` skill.**
+
+**Scope:** [1-2 sentences — what's changing and why]
+**Files:** [List all files that will be created or modified]
+**Agents:** [List assigned worker domain agents]
+
+## Phase Dependencies
+
+| Phase | Depends On | Agent | Can Parallel With |
+|-------|-----------|-------|-------------------|
+| 1     | —         | agent | —                 |
+| 2     | Phase 1   | agent | Phase 3           |
+
+## Phases
+
+### Phase 1: [Name]
+**Agent:** [assigned agent]
+**What:** [What this phase produces — outcome, not implementation steps]
+**Why:** [Why it matters]
+
+### Phase 2: [Name]
+...
+
+## Post-Execution Review
+All completed work must be reviewed by all relevant worker domain agents.
+All findings must be fixed by the most relevant domain agent.
+Build must pass before work is considered done.
+```
+
+**Plan rules:**
+- Always plan the **WHAT and WHY, never the HOW.** Phases describe outcomes and constraints. No code snippets, pseudocode, line numbers, or step-by-step algorithms. The executing agent reads the actual codebase and decides HOW. Constraint values are part of WHAT — if a phase specifies a limit, threshold, maximum, or allowed set, the value must be concrete (e.g., "maximum 4 items" not "a maximum count"). If the value is a product decision the user hasn't made, mark it explicitly (e.g., `USER DECISION NEEDED: max table count — what should the limit be?`) so the reviewer routes it as DECIDE. Examples of HOW violations: function names (`migrateV1toV2`), specific field paths (`store.someField.byId`), comment block positions ("add above line 42"), and ordered implementation steps ("first do X, then do Y"). Examples of correct WHAT: "Update the persistence layer to handle the renamed field" — not "rename `oldName` to `newName` in `store.ts` line 87."
+
+**After the writing agent returns the plan, verify WHAT/WHY compliance before proceeding to review.** Read each phase's What and Why fields. If any phase contains a function name, field path, line number, code snippet, or step-by-step algorithm, re-dispatch the writing agent to remove the HOW content. Do not proceed to step 3 with a plan that contains HOW violations.
+
+- **Maximum 4 phases.** If you need more, this probably warrants a deliverable — check with the user.
+- **Assign each phase** to the worker domain agent with the most relevant expertise.
+- **Approach comparison:** If the approach follows an existing codebase pattern, cite the precedent. Otherwise, briefly compare 2 approaches with tradeoffs and state which was selected.
+- **The writing agent must produce the complete plan.** Every section shown in the template above — scope, files, agents, phase dependencies table, phases, and post-execution review — must be present in the agent's output. If the returned plan is missing any template section, re-dispatch the writing agent to complete it. Do not fill in missing sections yourself.
+
+### 3. Worker Domain Agent Plan Review
+
+Before executing, dispatch ALL relevant worker domain agents to review the full plan. Each reviews through their domain lens.
+
+Before dispatching, output a checklist:
+
+```
+Plan review — dispatching:
+- [ ] agent-name-1
+- [ ] agent-name-2
+- [ ] agent-name-3
+```
+
+**Every checkbox must have a corresponding agent dispatch. Count the checkboxes. Count the dispatches. They must match.** If the count doesn't match, stop and fix.
+
+Dispatch all review worker agents in parallel. Collect feedback.
+
+If agents have findings, classify each finding individually in a table before acting — no narrative paragraphs, no blanket dismissals:
+
+```
+| # | Finding | Agent | Classification | Severity | Rationale |
+|---|---------|-------|---------------|----------|-----------|
+| 1 | specific finding | agent-name | FIX / DECIDE / PRE-EXISTING | critical / major / minor | why |
+| 2 | ... | ... | ... | ... | ... |
+```
+
+Severity applies only to FIX findings. DECIDE and PRE-EXISTING leave Severity blank.
+- **critical**: changes the approach, adds or removes files, or changes a phase assignment
+- **major**: in-scope quality issue that doesn't change scope
+- **minor**: style, polish, or low-impact correction
+
+| Classification | When | Action |
+|---------------|------|--------|
+| **FIX** | Finding is in scope and the plan should address it — including low-severity or stylistic findings that have a clear corrective action | Include in revision dispatch |
+| **DECIDE** | Trade-off or product decision the user should make | Invoke the `AskUserQuestion` tool with the finding description and options. Do not type the question as conversational text. Block until the user answers. |
+| **PRE-EXISTING** | Finding exists in code the plan does not touch | No action — must cite the file and explain why it's out of scope |
+
+**These are the only valid classification types. Do not invent new ones. Severity labels belong in the Severity column, not the Classification column. Do not use narrative dismissals ("ignoring," "off-track," "not relevant"). Every finding gets a row in the table.**
+
+**Low-severity in-scope findings:** If a finding is in scope but has no actionable correction (e.g., purely informational, already consistent with the plan), classify it as FIX with a rationale of "acknowledged, no revision needed." It still gets a row. Do not create a new classification for it.
+
+**PRE-EXISTING rules:** A finding qualifies as pre-existing ONLY if the finding's file is not in the plan's Files list. If the file appears in the Files list, any finding about that file is in scope — regardless of whether the finding is about the specific function the plan modifies.
+
+Only FIX findings go to the writing worker agent for revision. DECIDE findings go to the user. PRE-EXISTING findings require no action but must appear in the table.
+
+If there are FIX findings, re-dispatch the worker domain agent who wrote the plan (from step 2) with only the FIX findings. That worker agent produces the revision. You do not write the revision. Output a dispatch checklist before re-dispatching:
+
+```
+Plan revision — dispatching:
+- [ ] [writing-agent-name]: incorporate N findings (K critical, M major)
+```
+
+**Every checkbox must have a corresponding agent dispatch. Count the checkboxes. Count the dispatches. They must match.** If you find yourself editing the plan directly instead of dispatching the writing worker agent, stop — that violates the Manager Rule.
+
+- **Re-review is mandatory if ANY of the following is true:** (1) any FIX finding in the classification table has Severity = `critical`, (2) the revised plan's Files list differs from the pre-revision Files list, or (3) a phase was added, removed, or its assigned agent changed. Otherwise — no FIX findings met these criteria — skip re-review. This check is mechanical: scan the Severity column and compare the before/after Files list. Do not reason about whether the revision "changed the approach."
+
+- **Re-review dispatch procedure:** When re-review is required, go back to the worker agent list you produced in step 1. Copy that list. Dispatch ALL worker agents from that list — not a subset selected based on what changed in the revision. The trigger for re-review determines whether to re-review at all; the step-1 worker agent list determines who reviews. Do not reason about which worker agents are "relevant to this revision." ALL means the step-1 list.
+
+**Stopping condition:** All worker agents report no critical or major findings. Minor findings may be acknowledged without a fix.
+
+Once the stopping condition is met, append a **Worker Agent Reviews** section to the plan. **This section is mandatory — the plan is not complete without it, even when no worker agents found issues.**
+
+```markdown
+## Worker Agent Reviews
+
+Key feedback incorporated:
+
+- [agent-name] specific, concrete feedback that was incorporated
+- [agent-name] another specific feedback point with actionable detail
+```
+
+**Rules:**
+- Bracket the worker agent's exact name: `[frontend-developer]`, `[software-architect]`, etc.
+- Each bullet is specific and concrete — not generic praise
+- Omit worker agents that found no issues
+
+**Format check:** After appending the Worker Agent Reviews section, verify that every bullet begins with `[agent-name]` in square brackets. If any bullet is missing the bracket prefix, correct only the bracket prefix — do not rephrase the finding.
+
+### 4. Save Plan to File
+
+Save the reviewed plan (including Worker Agent Reviews) to:
+
+```
+docs/current_work/ad-hoc/{slug}_plan.md
+```
+
+Where `{slug}` is a short kebab-case name derived from the plan title (e.g., `card-overlay-controls_plan.md`).
+
+Create the `docs/current_work/ad-hoc/` directory if it doesn't exist.
+
+### 5. Enter Plan Mode
+
+Follow these sub-steps in exact order. Do not combine or skip any.
+
+**5a.** Use the `Read` tool to read the file saved in step 4 (`docs/current_work/ad-hoc/{slug}_plan.md`). You need the tool output — do not work from memory.
+
+**5b.** Use `EnterPlanMode`. The content you pass to `EnterPlanMode` must be the complete file contents returned by the `Read` tool in step 5a — pasted in full, start to finish. Do not transform, shorten, summarize, or rephrase the read output in any way. Copy-paste it.
+
+**5c.** Use `ExitPlanMode` immediately after.
+
+**Why this procedure exists:** The LLM's default behavior when asked to "present" content is to summarize it. This has caused compliance failures where the manager wrote a condensed version of the plan instead of the verbatim file. The Read-then-paste procedure eliminates the summarization pathway by making the file contents the direct input to the tool call, with no intermediate "understand and re-express" step.
+
+The execution prompt appears as:
+
+```
+Claude has written up a plan and is ready to execute. Would you like to proceed?
+
+ ❯ 1. Yes, clear context and bypass permissions
+   2. Yes, and bypass permissions
+   3. Yes, manually approve edits
+   4. Type here to tell Claude what to change
+```
+
+When execution begins (whether in this session or a fresh one), `ad-hoc-execution` loads the plan from the saved file.
+
+## Red Flags
+
+| Thought | Reality |
+|---------|---------|
+| "I'll write the plan myself" | Worker agents write. You manage. See Manager Rule. |
+| "I'll just incorporate this feedback myself" | Re-dispatch the writing worker agent with the findings. Manager Rule applies to revisions too. |
+| "I'll just add the structural elements myself — the worker agent wrote the content" | There is no structural/content distinction. Missing sections (phase dependencies, file list, agents, worker agent reviews) go back to the writing worker agent. Re-dispatch. |
+| "Skip plan review, it's simple" | Simple plans still have cross-domain blind spots. |
+| "This needs 5+ phases" | That's a deliverable, not ad hoc. Check with the user. |
+| "I'll include exact code so execution is easier" | Code in plans becomes stale. Write outcomes and constraints. |
+| "The constraint is specified but the value isn't known yet" | That's a DECIDE finding. Mark it `USER DECISION NEEDED` so the reviewer routes it. |
+| "Only one domain is involved" | Most tasks touch 2+ domains. Check again. |
+| "I'll write the plan mode content from memory" | Follow step 5 exactly: Read the file with the Read tool, then paste the full Read output into EnterPlanMode. Working from memory produces summaries. |
+
+## Integration
+
+- **ad-hoc-execution** — The next skill; executes the reviewed plan from the saved file
+- **sdlc-planning** — Use instead when work warrants SDLC tracking

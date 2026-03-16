@@ -1,0 +1,303 @@
+# UX Modeling Methodology
+# Process for an agent to analyze existing app context and produce UX artifacts
+# that integrate coherently with what's already built.
+# Last updated: 2026-03-04
+
+id: ux-modeling
+name: "UX Modeling Methodology"
+description: >
+  A structured process for modeling how a new or modified feature integrates into
+  an existing application's IA, navigation, and component patterns. Starts from
+  the current state (not a blank slate), produces artifacts appropriate to what's
+  being modeled, and ensures design continuity with the existing app.
+
+# ─────────────────────────────────────────────
+# Phase 1: Context Loading — Understand what exists
+# ─────────────────────────────────────────────
+
+context_loading:
+  description: >
+    Before proposing any UX changes, the agent must understand the current state
+    of the application. This prevents producing designs that are incongruent with
+    existing patterns, navigation, or componentry.
+
+  sources:
+    - name: "Application routes"
+      what_to_find: "Route definitions, URL structure, nested routes"
+      where_to_look:
+        - "React Router config (routes.tsx, App.tsx, or similar)"
+        - "Phoenix router (router.ex)"
+        - "Testing knowledge: app-map.yaml if it exists"
+      what_to_capture: "Route tree with page names, URL patterns, and nesting"
+
+    - name: "Navigation structure"
+      what_to_find: "Sidebar items, tabs, breadcrumbs, top-level nav"
+      where_to_look:
+        - "Sidebar/nav components (Sidebar.tsx, Navigation.tsx, AppShell.tsx)"
+        - "Route-based nav generation"
+        - "Testing knowledge: element-catalog.yaml if it exists"
+      what_to_capture: "Nav hierarchy, grouping logic, active state patterns, icons"
+
+    - name: "Existing component patterns"
+      what_to_find: "How existing features are structured — list/detail, tabs, modals, forms"
+      where_to_look:
+        - "Page-level components for features similar to what's being added"
+        - "Shared component library (e.g., shared DataGrid wrapper, PageHeader, FormDialog)"
+        - "MUI or design system usage patterns"
+      what_to_capture: "Layout patterns, component composition, state management approach"
+
+    - name: "Competitive analysis output"
+      what_to_find: "The scoped feature definition from /feature-compare"
+      where_to_look:
+        - "docs/current_work/ for recent competitive analysis results"
+        - "The filled-in 'Ours' column from the comparison matrix"
+      what_to_capture: "Which dimensions are in scope, at what level"
+      note: "May not exist — the feature scope might come from other sources"
+
+    - name: "Data model"
+      what_to_find: "Entities the feature will display or manipulate"
+      where_to_look:
+        - "Database schemas/migrations"
+        - "API controllers and routes"
+        - "TypeScript types/interfaces"
+      what_to_capture: "Entity names, key fields, relationships, cardinality"
+
+  output: >
+    A brief context summary (not a full report) that captures: current IA structure,
+    navigation patterns used, similar features and how they're built, and the scoped
+    requirements for the new feature. This summary informs all subsequent modeling.
+
+# ─────────────────────────────────────────────
+# Phase 2: Modeling Process — Determine what needs design
+# ─────────────────────────────────────────────
+
+modeling_process:
+  description: >
+    Analyze the feature scope against the current state to determine what UX
+    artifacts are needed. Not every feature needs every artifact type.
+
+  analysis_questions:
+    - question: "Does this feature add new pages or routes?"
+      if_yes: "Model the IA change — where in the nav hierarchy, URL structure"
+      artifacts: ["IA diagram (D2)", "Navigation wireframe (ASCII)"]
+
+    - question: "Does this feature modify existing navigation?"
+      if_yes: "Model the nav change — new sidebar items, tab additions, breadcrumb paths"
+      artifacts: ["Navigation wireframe (ASCII)", "Before/after comparison"]
+
+    - question: "Does this feature introduce new interaction patterns?"
+      if_yes: "Model the user flow — what triggers what, state transitions"
+      artifacts: ["User flow diagram (D2)", "Interaction spec (Figma prompt)"]
+
+    - question: "Does this feature add new UI components?"
+      if_yes: "Model the component layout — arrangement, responsive behavior"
+      artifacts: ["Page wireframe (ASCII)", "Component spec (Figma prompt)"]
+
+    - question: "Does this feature change existing page layouts?"
+      if_yes: "Model the layout change — what moves, what's added, what's removed"
+      artifacts: ["Before/after wireframe (ASCII)"]
+
+    - question: "Is this feature complex enough for designer handoff?"
+      if_yes: "Produce a Figma prompt with full specifications"
+      artifacts: ["Figma prompt"]
+
+  output_selection_guide:
+    simple_nav_change:
+      description: "Adding a sidebar item or restructuring tabs"
+      recommended: ["ASCII nav diagram"]
+      optional: ["D2 IA site map"]
+
+    new_page:
+      description: "Adding a new page/view to the application"
+      recommended: ["ASCII page wireframe", "D2 IA diagram showing where it fits"]
+      optional: ["Figma prompt if complex"]
+
+    new_feature_area:
+      description: "Adding a multi-page feature (e.g., Gantt, chat, settings)"
+      recommended: ["D2 IA diagram", "ASCII wireframes for key pages", "D2 user flow"]
+      optional: ["Figma prompt for the primary view"]
+
+    complex_interaction:
+      description: "Feature with drag-and-drop, real-time updates, multi-step flows"
+      recommended: ["D2 user flow diagram", "Figma prompt with interaction specs"]
+      optional: ["ASCII wireframe for layout context"]
+
+    design_handoff:
+      description: "Handing off to a designer for high-fidelity work"
+      recommended: ["Figma prompt (comprehensive)"]
+      optional: ["ASCII wireframe as layout reference", "D2 flow diagrams"]
+
+# ─────────────────────────────────────────────
+# Phase 3: Output Production — Generate the artifacts
+# ─────────────────────────────────────────────
+
+output_production:
+  description: >
+    Produce the selected artifacts. Each output format has its own conventions
+    and structure documented below.
+
+  ascii_diagrams:
+    description: >
+      Low-fidelity wireframes and navigation diagrams rendered in ASCII.
+      See ascii-conventions.yaml for the full convention set.
+    when_to_use:
+      - "Navigation structures (sidebar, tabs, breadcrumbs)"
+      - "Page layouts showing component arrangement"
+      - "IA sections showing where new features slot in"
+      - "Before/after comparisons for modifications"
+    conventions_ref: "ascii-conventions.yaml"
+    principles:
+      - "Show structure, not styling — no colors, fonts, or pixel sizes"
+      - "Label components by type and content, not implementation"
+      - "Use annotations to call out key decisions or interactions"
+      - "Include dimensions only when layout proportions matter"
+      - "Always show existing context around new additions"
+
+  d2_diagrams:
+    description: >
+      Structural diagrams rendered via the D2 CLI. Used for information
+      architecture, user flows, and component relationships — NOT for
+      wireframes (D2 lacks UI primitives).
+    when_to_use:
+      - "IA site maps — page hierarchy with containers and connections"
+      - "User flow diagrams — click paths, state transitions between views"
+      - "Component relationship diagrams — how new components compose"
+    when_NOT_to_use:
+      - "Page wireframes — use ASCII instead"
+      - "Detailed UI layouts — use Figma prompts instead"
+
+    ia_site_map_template: |
+      # Information Architecture — [Feature Name]
+      # Render: d2 ia-[feature].d2 ia-[feature].png
+
+      direction: down
+
+      app: Application {
+        # Existing structure
+        home: Home {shape: page}
+        existing_feature: Existing Feature {shape: page}
+
+        # New addition (highlighted)
+        new_feature: New Feature {
+          style.fill: "#e8f5e9"
+          list: List View {shape: page}
+          detail: Detail View {shape: page}
+          list -> detail: click row
+        }
+
+        # Navigation
+        home -> existing_feature
+        home -> new_feature
+      }
+
+    user_flow_template: |
+      # User Flow — [Feature Name]
+      # Render: d2 flow-[feature].d2 flow-[feature].png
+
+      start: User lands on [page] {shape: oval}
+      action_1: [First action] {shape: step}
+      decision: [Decision point] {shape: diamond}
+      outcome_a: [Outcome A] {shape: step}
+      outcome_b: [Outcome B] {shape: step}
+      end: [End state] {shape: oval}
+
+      start -> action_1
+      action_1 -> decision
+      decision -> outcome_a: [condition A]
+      decision -> outcome_b: [condition B]
+      outcome_a -> end
+      outcome_b -> end
+
+  figma_prompts:
+    description: >
+      Detailed natural language specifications structured for a designer to
+      execute in Figma or similar tool. Bridges developer thinking and
+      designer execution.
+    when_to_use:
+      - "Complex features that need high-fidelity design"
+      - "Designer handoff — full specifications for production UI"
+      - "Features with significant interaction design"
+    structure:
+      - section: "Overview"
+        content: "Feature name, purpose, where it fits in the app, target users"
+
+      - section: "Page Layout"
+        content: >
+          Top-level structure: header, sidebar position, content area, panels.
+          Responsive breakpoints (desktop, tablet, mobile).
+          How this page relates to adjacent pages in the IA.
+
+      - section: "Component Specifications"
+        content: >
+          Per component: what it displays, data sources, states (empty, loading,
+          populated, error), interaction behaviors (click, hover, drag).
+          Reference existing components where they should be reused.
+
+      - section: "Interaction Behaviors"
+        content: >
+          User flows within the page: what happens on click, drag, submit.
+          Transitions and animations (if any). Loading states. Error handling UX.
+          Keyboard navigation and shortcuts.
+
+      - section: "Data Display"
+        content: >
+          What fields/columns are shown. Default sort and filter. Pagination.
+          Empty states and zero-data messaging. Number formatting, date formatting.
+
+      - section: "Accessibility Requirements"
+        content: >
+          ARIA labels, keyboard navigation, screen reader considerations,
+          color contrast requirements, focus management for modals/drawers.
+
+      - section: "Responsive Behavior"
+        content: >
+          What changes at each breakpoint. What collapses, hides, or rearranges.
+          Touch targets for mobile. Swipe gestures if applicable.
+
+      - section: "Existing Patterns to Follow"
+        content: >
+          Reference specific existing pages/components that this feature should
+          be consistent with. "Follow the Brands list pattern for the list view."
+          "Use the same FormDialog pattern as ingredient editing."
+
+# ─────────────────────────────────────────────
+# Agent Instructions — How to use this methodology
+# ─────────────────────────────────────────────
+
+agent_instructions:
+  description: >
+    When invoked to perform UX modeling, follow these phases in order.
+    Always start from existing context — never design on a blank slate.
+
+  workflow:
+    - phase: "Context"
+      actions:
+        - "Read existing routes, navigation components, and page layouts"
+        - "Load app-map.yaml and element-catalog.yaml if they exist"
+        - "Read the competitive analysis output or feature scope"
+        - "Summarize: current IA, relevant existing patterns, scoped requirements"
+      output: "Context summary (brief, not a full report)"
+
+    - phase: "Analysis"
+      actions:
+        - "Walk through the analysis questions to determine what needs modeling"
+        - "Identify which output formats are appropriate"
+        - "Present the output selection to the user for confirmation"
+      output: "Agreed list of artifacts to produce"
+
+    - phase: "Production"
+      actions:
+        - "Produce each selected artifact following the conventions"
+        - "For ASCII: use conventions from ascii-conventions.yaml"
+        - "For D2: generate .d2 source files, render if d2 CLI is available"
+        - "For Figma prompts: fill in all relevant sections"
+        - "Always show existing context around new additions"
+      output: "UX artifacts embedded in markdown or as separate files"
+
+    - phase: "Review"
+      actions:
+        - "Present all artifacts to the user"
+        - "Call out key design decisions that need validation"
+        - "Identify any ambiguities or alternatives worth discussing"
+        - "Iterate based on feedback before handing off to spec/implementation"
+      output: "Approved UX model ready for spec authoring"

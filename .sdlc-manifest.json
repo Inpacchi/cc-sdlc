@@ -1,0 +1,19 @@
+{
+  "_comment": "Drop this file in the root of a project to mark it as using cc-sdlc. Used by setup.sh to track installation state.",
+  "cc-sdlc": {
+    "version": "1.0.0",
+    "installed_at": "YYYY-MM-DD",
+    "source": "https://github.com/rickkoloski/cc-sdlc",
+    "install_mode": "default",
+    "with_optional": false,
+    "project": {
+      "name": "[Your Project Name]",
+      "description": "[Brief description of this project]",
+      "sdlc_root": "ops/sdlc",
+      "docs_root": "docs",
+      "skills_root": ".claude/skills",
+      "agents_root": ".claude/agents"
+    },
+    "notes": "Update installed_at when running setup.sh to track when cc-sdlc content was last synchronized."
+  }
+}

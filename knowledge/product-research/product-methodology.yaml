@@ -1,0 +1,384 @@
+# Product Methodology
+# Extracted from VoltAgent/awesome-claude-code-subagents:
+#   categories/08-business-product/product-manager.md
+#   categories/08-business-product/customer-success-manager.md
+# Covers RICE scoring, Kano model, Jobs-to-be-Done, North Star metric,
+# product-led growth, customer health scoring, tiered playbooks,
+# churn early-warning, and QBR cadence.
+# Last updated: 2026-03-14
+
+last_updated: 2026-03-14
+id: product-methodology
+name: "Product Methodology"
+description: >
+  Cross-project methodology for product strategy, feature prioritization, and
+  customer success. Covers the RICE scoring formula, Kano model classification,
+  Jobs-to-be-Done framing, North Star metric concept, product-led growth strategies,
+  customer health score composite model, tiered playbook system, churn early-warning,
+  and QBR cadence.
+
+# ─────────────────────────────────────────────
+# Feature Prioritization Frameworks
+# ─────────────────────────────────────────────
+
+prioritization:
+  rice_scoring:
+    definition: "Quantitative prioritization framework. Score = (Reach × Impact × Confidence) / Effort"
+    formula: "RICE = (R × I × C) / E"
+    components:
+      reach:
+        description: "How many users will this affect per time period?"
+        unit: "Number of users/customers per quarter"
+        example: "500 users/quarter"
+      impact:
+        description: "How much will this move the needle per user?"
+        scale:
+          massive: 3
+          high: 2
+          medium: 1
+          low: 0.5
+          minimal: 0.25
+      confidence:
+        description: "How confident are you in the reach and impact estimates?"
+        scale:
+          high: "100% (validated with data)"
+          medium: "80% (some evidence)"
+          low: "50% (gut feel)"
+      effort:
+        description: "How much total work will this take?"
+        unit: "Person-months"
+    interpretation:
+      higher_score: "Higher priority"
+      use_for: "Comparing features within a product area or sprint backlog"
+      limitation: "Estimates are subjective; consistent rubric across team matters more than absolute accuracy"
+
+  kano_model:
+    definition: "Classifies features by their relationship to customer satisfaction."
+    categories:
+      basic_needs:
+        also_known_as: "Must-haves, threshold attributes"
+        description: "Expected by default. Absence causes extreme dissatisfaction; presence is not noticed."
+        examples: ["App doesn't crash", "Data is saved correctly", "Login works"]
+        strategy: "Achieve and maintain; don't invest beyond minimum acceptable level"
+      performance_needs:
+        also_known_as: "Linear attributes, satisfiers"
+        description: "More is better. Satisfaction proportional to how well delivered."
+        examples: ["Faster load time", "More storage", "Higher accuracy"]
+        strategy: "Prioritize based on competitive position and user importance weighting"
+      excitement_needs:
+        also_known_as: "Delighters, attractive attributes"
+        description: "Unexpected features that create disproportionate delight when present; no dissatisfaction when absent."
+        examples: ["AI-generated summary", "Proactive alerts", "One-click integration"]
+        strategy: "Use as differentiation; today's delighter becomes tomorrow's basic need"
+      indifferent: "Features users neither like nor dislike"
+      reverse: "Features some users dislike despite others wanting them"
+
+    discovery_method:
+      question_pair_per_feature:
+        functional: "How do you feel if this feature IS present?"
+        dysfunctional: "How do you feel if this feature is NOT present?"
+      response_scale: ["I like it", "I expect it", "I'm neutral", "I can tolerate it", "I dislike it"]
+      classification_matrix: "Cross-tabulate functional × dysfunctional response to categorize feature"
+
+# ─────────────────────────────────────────────
+# Jobs-to-be-Done Framework
+# ─────────────────────────────────────────────
+
+jobs_to_be_done:
+  definition: >
+    Customers don't buy products — they "hire" them to do a job. A job is a problem
+    or goal the customer has in a specific context. Understanding the job (not the
+    feature request) leads to better product decisions.
+
+  job_statement_format:
+    template: "When [situation], I want to [motivation/goal], so I can [expected outcome]."
+    example: "When I'm preparing for a tournament, I want to see which cards I'm missing from my target deck, so I can prioritize my next purchases."
+
+  job_types:
+    functional: "The practical task (build a deck, track collection)"
+    emotional: "How they want to feel (confident in my deck choices, not anxious about missing cards)"
+    social: "How they want to be perceived (competitive player, informed trader)"
+
+  discovery_process:
+    - "Interview customers about situations, not features: 'Walk me through the last time you...'"
+    - "Listen for 'hired' and 'fired' language: what did they use before? Why did they switch?"
+    - "Map jobs to current product coverage: which jobs are underserved?"
+    - "Prioritize jobs by frequency, importance, and current satisfaction with available solutions"
+
+  application_to_product_decisions:
+    - "Feature request → translate to underlying job before evaluating"
+    - "Competing feature requests → which jobs do more customers hire for?"
+    - "New market entry → are there adjacent jobs the current product could serve?"
+
+# ─────────────────────────────────────────────
+# North Star Metric
+# ─────────────────────────────────────────────
+
+north_star_metric:
+  definition: >
+    A single metric that best captures the core value delivered to customers and
+    predicts long-term business growth. All teams align roadmap decisions to move
+    this metric.
+
+  characteristics:
+    - "Reflects customer value, not business value (revenue is a lagging indicator)"
+    - "Measurable with existing or buildable instrumentation"
+    - "Actionable: teams can identify interventions that move it"
+    - "Leading indicator of retention and revenue"
+
+  examples_by_business_type:
+    saas_productivity: "Weekly active users completing core workflow"
+    marketplace: "Monthly successful transactions (both sides)"
+    content_platform: "Minutes of content consumed per active user per week"
+    collection_platform: "Items saved or published per active user per month"
+
+  north_star_vs_guardrail_metrics:
+    north_star: "The one metric to maximize"
+    guardrail_metrics: "Metrics that must not degrade while pursuing North Star (e.g. CSAT, error rate)"
+
+  decomposition:
+    method: "Break North Star into 3–5 input metrics that drive it"
+    example: |
+      North Star: Projects published per month
+      Inputs:
+        - DAU (users who log in)
+        - Feature activation rate (login → open core feature)
+        - Project completion rate (opened → saved)
+        - Publish rate (saved → published)
+    value: "Each input metric is owned by a team; progress visible without waiting for North Star to move"
+
+# ─────────────────────────────────────────────
+# Product-Led Growth Strategies
+# ─────────────────────────────────────────────
+
+product_led_growth:
+  definition: >
+    Go-to-market strategy where the product itself drives acquisition, activation,
+    retention, and expansion — reducing dependence on sales-led motion.
+
+  plg_strategies:
+    freemium:
+      description: "Core product free; premium features behind paywall"
+      conversion_levers: ["Usage limits", "Collaboration features", "Export/sharing", "Advanced analytics"]
+      risk: "Free tier must deliver genuine value or perceived value is low"
+
+    viral_loops:
+      description: "Product usage naturally creates exposure to non-users"
+      mechanisms:
+        - "Shared decks visible to non-users (invite to view → invite to join)"
+        - "Exported artifacts contain product branding"
+        - "Leaderboards or community features visible publicly"
+
+    bottom_up_adoption:
+      description: "Individual users adopt → spread within organization"
+      relevant_for: "Multi-player products where network effects apply"
+
+    product_qualified_leads:
+      description: "Identify free users reaching 'aha moment' signals; prioritize for sales outreach"
+      signals: ["Completed core workflow N times", "Invited collaborator", "Hit usage limit"]
+
+  activation_optimization:
+    time_to_value: "Minimize steps between signup and first meaningful value moment"
+    onboarding_principle: "One job at a time; don't show all features at once"
+    empty_state_design: "Empty states should guide action, not just display 'no data'"
+
+# ─────────────────────────────────────────────
+# Customer Health Score Composite Model
+# ─────────────────────────────────────────────
+
+customer_health_score:
+  definition: >
+    A composite metric (typically 0–100) that quantifies the likelihood a customer
+    will renew, expand, or churn. Used to prioritize customer success team attention.
+
+  dimensions:
+    usage:
+      description: "How frequently and deeply is the customer using the product?"
+      signals:
+        - "Login frequency (DAU/WAU/MAU)"
+        - "Core feature adoption rate"
+        - "Sessions per week"
+        - "Breadth of features used"
+      weight: "30–40% of composite (highest weight for most SaaS)"
+
+    adoption:
+      description: "Has the customer adopted key features that correlate with retention?"
+      signals:
+        - "Key feature activated (e.g. deck published, shared with teammate)"
+        - "Onboarding milestones completed"
+        - "Integration connected"
+      weight: "20–25%"
+
+    support:
+      description: "Is the customer experiencing friction?"
+      signals:
+        - "Open support ticket count and severity"
+        - "Ticket resolution time"
+        - "CSAT on recent tickets"
+      weight: "10–15% (negative indicator)"
+
+    engagement:
+      description: "Is the customer engaged with the company beyond the product?"
+      signals:
+        - "Email open/click rates"
+        - "Webinar attendance"
+        - "Community participation"
+      weight: "10%"
+
+    payment:
+      description: "Is the customer in good financial standing?"
+      signals:
+        - "Invoice payment on time"
+        - "No outstanding balances"
+        - "Contract renewal signed"
+      weight: "15–20%"
+
+    stakeholder:
+      description: "Is the customer relationship healthy at the human level?"
+      signals:
+        - "Executive sponsor relationship active"
+        - "Champion identified and engaged"
+        - "No unresolved escalations"
+      weight: "10–15%"
+
+  scoring_approach:
+    normalize: "Each dimension scored 0–100; apply weights; sum to composite"
+    thresholds:
+      healthy: "> 70"
+      at_risk: "40–70"
+      critical: "< 40"
+    update_frequency: "Weekly automated recalculation; daily during at-risk monitoring"
+
+# ─────────────────────────────────────────────
+# Tiered Playbook System
+# ─────────────────────────────────────────────
+
+playbooks:
+  description: >
+    Structured response plans for each stage of the customer lifecycle.
+    Playbooks ensure consistent, scalable customer success execution.
+
+  onboarding_playbook:
+    trigger: "Account created / contract signed"
+    goals: ["Time to first value < 7 days", "Onboarding milestone completion > 80%"]
+    steps:
+      - "Day 0: Welcome email + kickoff call scheduled"
+      - "Day 1: Kickoff call — define success criteria with customer"
+      - "Day 3: Technical setup verification"
+      - "Day 7: First value check-in — confirm customer achieved at least one job-to-be-done"
+      - "Day 14: Full feature walkthrough if usage is low"
+      - "Day 30: 30-day review — health score check, open questions"
+
+  adoption_playbook:
+    trigger: "Health score drops due to low adoption after onboarding"
+    goals: ["Key feature adoption rate > 60% of available features"]
+    steps:
+      - "Identify which features are unused (usage data)"
+      - "Determine if gap is knowledge, value, or fit"
+      - "Schedule targeted training session on unused features"
+      - "Share relevant case studies or documentation"
+      - "Follow up in 2 weeks with usage data review"
+
+  at_risk_playbook:
+    trigger: "Health score drops below 50 or churn signal detected"
+    goals: ["Stop health score decline; identify and address root cause within 14 days"]
+    steps:
+      - "Immediate: CSM notified; account flagged"
+      - "Day 1: Review recent usage, support tickets, and stakeholder changes"
+      - "Day 2: Outreach call — open-ended discovery: 'What's getting in the way?'"
+      - "Day 3–7: Address identified friction (escalate bugs, deliver training, connect to roadmap)"
+      - "Day 14: Follow-up health check"
+      - "Escalation path: engage executive sponsor if CSM outreach not progressing"
+
+  growth_playbook:
+    trigger: "Health score > 80 and usage approaching plan limits"
+    goals: ["Identify and close expansion opportunity"]
+    steps:
+      - "Identify expansion trigger: seats, usage volume, additional modules"
+      - "Quantify business value delivered (ROI data)"
+      - "Build expansion business case with customer champion"
+      - "Propose upgrade in QBR or dedicated conversation"
+
+  renewal_playbook:
+    trigger: "90 days before contract renewal date"
+    goals: ["Renewal signed ≥ 30 days before expiry; no last-minute surprises"]
+    steps:
+      - "Day 90: Review health score trajectory; flag if below 70"
+      - "Day 60: QBR — demonstrate value delivered; align on next year goals"
+      - "Day 45: Send renewal proposal"
+      - "Day 30: Close or escalate"
+
+# ─────────────────────────────────────────────
+# Churn Early-Warning Methodology
+# ─────────────────────────────────────────────
+
+churn_early_warning:
+  definition: >
+    Proactive identification of customers showing behavioral signals of impending
+    churn, before they express intent to cancel. Earlier intervention = higher
+    save rate and lower cost.
+
+  leading_indicators:
+    usage_decline:
+      signal: "DAU or session frequency drops > 30% week-over-week for 2+ consecutive weeks"
+      action: "Trigger adoption playbook"
+    feature_regression:
+      signal: "Previously active features no longer used"
+      action: "Check-in call; determine if workflow changed or friction introduced"
+    support_spike:
+      signal: "More than 2 unresolved tickets in 7 days"
+      action: "Escalate to senior CSM; resolve root cause"
+    stakeholder_change:
+      signal: "Primary contact unresponsive for 14+ days OR role change detected"
+      action: "Identify new stakeholder; rebuild relationship"
+    missed_renewal_milestone:
+      signal: "Renewal conversation not scheduled by 60-day mark"
+      action: "Escalate; schedule immediately"
+
+  churn_prediction_model:
+    inputs: ["Health score trend", "Usage trend", "Support ticket volume", "Days since last login", "Feature adoption breadth"]
+    output: "Churn probability score (0–100); high = at risk"
+    threshold_for_action: "> 60 churn probability triggers at-risk playbook"
+    update_frequency: "Weekly"
+
+  save_rate_benchmarks:
+    early_intervention: "> 70% save rate (healthy signal detected 60+ days early)"
+    mid_stage: "40–60% save rate (signal detected 30–60 days before potential churn)"
+    late_stage: "< 20% save rate (signal detected < 30 days; customer already decided)"
+
+# ─────────────────────────────────────────────
+# QBR Cadence
+# ─────────────────────────────────────────────
+
+quarterly_business_review:
+  definition: >
+    Structured executive-level meeting with customer to review value delivered,
+    align on upcoming goals, and strengthen the strategic relationship.
+    Held quarterly for enterprise accounts; semi-annually or annually for SMB.
+
+  who_attends:
+    internal: ["CSM", "Account Executive", "Product representative (if roadmap discussion needed)"]
+    customer: ["Executive sponsor", "Day-to-day champion", "IT/technical lead if relevant"]
+
+  agenda_template:
+    1_open: "Relationship check-in (5 min)"
+    2_value_delivered: "Metrics review — what value was delivered last quarter? (15 min)"
+    3_roi: "ROI demonstration — business outcomes tied to product usage (10 min)"
+    4_roadmap_alignment: "Upcoming product roadmap + customer input (10 min)"
+    5_next_quarter_goals: "Set measurable success criteria for next quarter (10 min)"
+    6_open_issues: "Address any open support or relationship concerns (5 min)"
+    7_next_steps: "Capture action items with owners and dates (5 min)"
+
+  preparation_checklist:
+    - "Pull health score trend for past 90 days"
+    - "Prepare usage analytics: feature adoption, session frequency, power users"
+    - "Compile value metrics tied to customer's stated success criteria from onboarding"
+    - "Review open support tickets"
+    - "Prepare 3 customer-specific roadmap items for discussion"
+    - "Draft action items for anticipated discussion points"
+
+  success_signals:
+    - "Customer sets written success criteria for next quarter"
+    - "Executive sponsor engaged and positive"
+    - "Expansion discussion initiated (either direction)"
+    - "Customer references company as success story"

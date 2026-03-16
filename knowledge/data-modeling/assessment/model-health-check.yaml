@@ -1,0 +1,91 @@
+# Data Model Health Check
+# A quick assessment template for evaluating an existing data model
+# against UDM patterns. Not exhaustive — designed as a starting conversation.
+# Last updated: 2026-02-25
+
+id: model-health-check
+name: "Data Model Health Check"
+description: >
+  A structured assessment for evaluating whether a data model follows
+  universal patterns or has common structural issues. Designed to be
+  run collaboratively: the AI asks the questions, the human provides
+  the context, and together they identify improvement opportunities.
+
+sections:
+  - id: people-and-orgs
+    name: "People and Organizations"
+    questions:
+      - question: "How do you model the people and organizations your business interacts with?"
+        look_for:
+          green: "Single Party/Person abstraction with Role assignments"
+          yellow: "Unified person table but roles are boolean columns or implicit"
+          red: "Separate tables per actor type (Customer, Vendor, Employee)"
+        pattern_ref: "patterns/people-and-organizations.yaml"
+
+      - question: "Can the same person or organization play multiple roles?"
+        look_for:
+          green: "Yes — PartyRole join table with RoleType catalog"
+          yellow: "Partially — some roles tracked, others hardcoded"
+          red: "No — each role is a separate record in a separate table"
+
+      - question: "How do you track relationships between parties?"
+        look_for:
+          green: "Explicit relationship entity with type, roles, and dates"
+          yellow: "Some relationships explicit, others are bare FK columns"
+          red: "Only implicit via shared transactions or hardcoded FK columns"
+
+      - question: "How is contact information modeled?"
+        look_for:
+          green: "Independent ContactMechanism entities linked via purpose"
+          yellow: "Contact columns on party but supports multiples"
+          red: "Single email/phone columns on the party table"
+
+  - id: temporality
+    name: "Time Dimension"
+    questions:
+      - question: "Do roles and relationships have from/thru dates?"
+        look_for:
+          green: "Yes — all assignments and relationships are temporal"
+          yellow: "Some temporal, some permanent"
+          red: "No time tracking — current state only"
+
+      - question: "Can you answer 'what was the state on date X?'"
+        look_for:
+          green: "Yes — temporal queries are straightforward"
+          yellow: "For some entities but not others"
+          red: "No — only current state is available"
+
+  - id: extensibility
+    name: "Extensibility"
+    questions:
+      - question: "What happens when the business needs a new type of [party/product/transaction]?"
+        look_for:
+          green: "Add a row to the type catalog table — no schema change"
+          yellow: "Minor schema change (new enum value, new column)"
+          red: "New table, new CRUD, new UI required"
+
+      - question: "How do you handle attributes that vary by type?"
+        look_for:
+          green: "Custom fields / JSONB / dynamic attributes pattern"
+          yellow: "Nullable columns for optional attributes"
+          red: "Separate table per type with different column sets"
+
+  - id: status-tracking
+    name: "Status and State"
+    questions:
+      - question: "How do you track status changes?"
+        look_for:
+          green: "StatusApplication pattern — history of status assignments with dates"
+          yellow: "Status column plus a separate audit/history table"
+          red: "Single status column that gets overwritten"
+
+scoring:
+  description: >
+    Not a numerical score — a conversation guide. The colors indicate
+    alignment with universal patterns, not absolute right/wrong.
+    Context matters: a prototype doesn't need temporal relationships.
+    A production system handling compliance probably does.
+  interpretation:
+    mostly_green: "Model aligns well with UDM patterns. Focus on specific gaps."
+    mixed: "Common for organically grown systems. Prioritize remediation by business impact."
+    mostly_red: "Significant structural debt. Consider incremental migration starting with Party pattern."

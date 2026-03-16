@@ -1,0 +1,283 @@
+# Backend Capability Assessment — Methodology
+# Process for an agent to assess what a backend currently supports and estimate
+# the cost of adding capabilities that unlock desired feature scope.
+# Surfaced during D8 chat search trial — competitive analysis identified gaps
+# but we had no structured way to evaluate backend readiness.
+# Last updated: 2026-03-04
+
+id: backend-capability-assessment
+name: "Backend Capability Assessment"
+description: >
+  A structured methodology for examining a backend codebase to determine what
+  capabilities exist, what's partially built, and what would need to be added
+  to support a desired feature scope. Produces a capability matrix and cost
+  estimates that feed back into scope decisions. Works across stacks (Rails,
+  Phoenix, Django, Node) with stack-specific patterns in technology-patterns.yaml.
+
+# ─────────────────────────────────────────────
+# Phase 1: Inventory — What does the backend have?
+# ─────────────────────────────────────────────
+
+inventory:
+  description: >
+    Systematically examine the backend to build a picture of current capabilities.
+    Don't just check if the feature exists — check the infrastructure around it.
+
+  areas:
+    - name: "API Surface"
+      what_to_examine:
+        - "Route definitions (routes.rb, router.ex, etc.)"
+        - "Controller actions — what CRUD operations exist for relevant models"
+        - "Search/filter parameters already accepted by list endpoints"
+        - "Pagination patterns (offset, cursor-based)"
+        - "Serialization — what fields are exposed in API responses"
+      what_to_capture:
+        - "Relevant endpoints with HTTP method, path, and params"
+        - "Which models have search/filter support already"
+        - "Any search_query or full-text search parameters"
+        - "Rate limiting or query complexity guards"
+
+    - name: "Database Layer"
+      what_to_examine:
+        - "Schema for relevant tables (columns, types, constraints)"
+        - "Indexes — especially text indexes, GIN, trigram"
+        - "Full-text search configuration (tsvector columns, ts_config)"
+        - "Extensions loaded (pg_trgm, unaccent, pgvector, etc.)"
+        - "JSONB columns and their indexing"
+        - "Scoping patterns (tenant_id, soft deletes, etc.)"
+      what_to_capture:
+        - "Table structure for relevant models"
+        - "Existing indexes that support search"
+        - "Missing indexes that would be needed"
+        - "Database extensions available vs loaded"
+
+    - name: "Service Infrastructure"
+      what_to_examine:
+        - "Background job framework (Sidekiq, Oban, Celery, Bull)"
+        - "Caching layer (Redis, Memcached, in-memory)"
+        - "Real-time infrastructure (ActionCable, Phoenix Channels, WebSocket)"
+        - "External services (Elasticsearch, Typesense, S3, etc.)"
+        - "Message queues or event systems"
+      what_to_capture:
+        - "What infrastructure is running and configured"
+        - "What's available but not yet used"
+        - "What would need to be added"
+
+    - name: "Authentication & Authorization"
+      what_to_examine:
+        - "How are users authenticated (session, JWT, token)"
+        - "How is multi-tenancy scoped (tenant_id, schema isolation)"
+        - "How are access controls enforced (role checks, policy objects)"
+        - "Can search results be filtered by user's access permissions"
+      what_to_capture:
+        - "Auth pattern and where it's enforced"
+        - "Whether cross-entity queries respect access boundaries"
+        - "Whether new search endpoints would inherit existing auth"
+
+    - name: "Existing Search Patterns"
+      what_to_examine:
+        - "How do other features in the app implement search/filter"
+        - "Is there a shared search concern, module, or service"
+        - "What query patterns are already proven (ILIKE, full-text, etc.)"
+        - "Performance characteristics — are there N+1 issues, slow queries"
+      what_to_capture:
+        - "Reusable search infrastructure"
+        - "Proven patterns to follow"
+        - "Known performance constraints"
+
+# ─────────────────────────────────────────────
+# Phase 2: Capability Mapping — What's supported?
+# ─────────────────────────────────────────────
+
+capability_mapping:
+  description: >
+    Map each desired feature dimension (from the competitive analysis) to a
+    backend support level. This is the bridge between "what we want" and
+    "what we have."
+
+  support_levels:
+    - level: "Supported"
+      code: "S"
+      description: "Backend already does this — just needs frontend wiring"
+      color: "green"
+      example: "API already accepts search_query param with ILIKE"
+
+    - level: "Partially Supported"
+      code: "P"
+      description: "Infrastructure exists but needs extension or wiring"
+      color: "yellow"
+      example: "Full-text search extension loaded but no tsvector columns on messages table"
+
+    - level: "New Capability"
+      code: "N"
+      description: "Requires new code — endpoint, query, or module"
+      color: "orange"
+      example: "Need a new cross-conversation search endpoint with access filtering"
+
+    - level: "New Infrastructure"
+      code: "I"
+      description: "Requires adding a service, extension, or architectural component"
+      color: "red"
+      example: "Need Elasticsearch for fuzzy full-text search across millions of messages"
+
+  output_format: |
+    | Feature Dimension | Support Level | Notes |
+    |---|---|---|
+    | Single-conv keyword search | S (Supported) | API accepts search_query with ILIKE |
+    | Cross-conversation search | N (New Capability) | Needs new endpoint + membership filtering |
+    | Full-text with stemming | P (Partial) | pg_trgm loaded, needs tsvector columns + GIN index |
+    | Fuzzy/typo tolerance | I (New Infrastructure) | Requires Elasticsearch or Typesense |
+
+  process:
+    - step: 1
+      action: "List the feature dimensions from the competitive analysis that affect the backend"
+      note: "Not all dimensions are backend concerns — filter out pure-frontend items"
+
+    - step: 2
+      action: "For each dimension, check the inventory findings against what's needed"
+      note: "Reference technology-patterns.yaml for stack-specific guidance"
+
+    - step: 3
+      action: "Assign a support level (S/P/N/I) with specific notes"
+      note: "Be concrete — name the table, endpoint, extension, or service"
+
+    - step: 4
+      action: "Build the capability matrix"
+
+# ─────────────────────────────────────────────
+# Phase 3: Cost Estimation — What would it take?
+# ─────────────────────────────────────────────
+
+cost_estimation:
+  description: >
+    For each gap (P, N, or I level), estimate the implementation effort.
+    Use T-shirt sizing — precise estimates are false precision at this stage.
+
+  t_shirt_sizes:
+    - size: "S (Small)"
+      description: "Hours of work. Configuration, wiring, adding a param."
+      examples:
+        - "Add a search_query parameter to an existing list endpoint"
+        - "Add an index to an existing column"
+        - "Enable a PostgreSQL extension that's already available"
+
+    - size: "M (Medium)"
+      description: "Days of work. New endpoint, new query pattern, schema change."
+      examples:
+        - "New search endpoint with pagination and access filtering"
+        - "Add tsvector column + trigger + GIN index to messages table"
+        - "Background job to backfill search index"
+
+    - size: "L (Large)"
+      description: "Weeks of work. New service, significant schema work, cross-cutting concern."
+      examples:
+        - "Add Elasticsearch service with indexing pipeline"
+        - "Cross-conversation search with complex access control"
+        - "Real-time search result updates via WebSocket"
+
+    - size: "XL (Extra Large)"
+      description: "Major architecture change. Fundamental to how the system works."
+      examples:
+        - "Migrate from single-tenant to multi-tenant search"
+        - "Add event sourcing for search indexing"
+        - "Federated search across multiple backend services"
+
+  dependency_mapping:
+    description: >
+      Some capabilities depend on others. Map the dependency chain so the
+      product owner understands what must come first.
+    example: |
+      Full-text search (M) ──→ Cross-conv search (M) ──→ Search filters (S)
+                                     │
+                                     └──→ Access-controlled results (M)
+
+      Read: "Full-text search must be built before cross-conversation search,
+      which must exist before filters can be added on top."
+
+  risk_factors:
+    description: "Things that could make the estimate larger than expected"
+    common_risks:
+      - "Data migration for existing records (backfill tsvector, rebuild indexes)"
+      - "Performance at scale — works in dev with 1K messages, breaks at 100K"
+      - "Access control edge cases — shared conversations, guest users, archived channels"
+      - "API owner (Russell) review and approval cycle"
+      - "Testing infrastructure for search (seeding test data, validating relevance)"
+
+# ─────────────────────────────────────────────
+# Phase 4: Scope Recommendation — What should we do?
+# ─────────────────────────────────────────────
+
+scope_recommendation:
+  description: >
+    Synthesize the capability matrix and cost estimates into an actionable
+    recommendation organized by effort tier.
+
+  output_structure:
+    - tier: "Ship now (current backend)"
+      description: "Features the backend already supports — just needs frontend work"
+      selection: "All 'S' (Supported) items from the capability matrix"
+
+    - tier: "Quick wins (S/M effort)"
+      description: "Features achievable with small backend additions"
+      selection: "All 'P' (Partial) and small 'N' (New) items"
+      note: "Include dependency order"
+
+    - tier: "Significant investment (L/XL effort)"
+      description: "Features requiring substantial backend work or new infrastructure"
+      selection: "All 'I' (Infrastructure) and large 'N' items"
+      note: "Include risk factors and alternatives"
+
+    - tier: "Revisit later"
+      description: "Features that don't justify the cost right now"
+      selection: "Items where cost far exceeds benefit at current scale"
+
+  feedback_loop: >
+    Map each tier back to the competitive analysis scoping questions.
+    For each question the product owner answered, append: "Backend assessment:
+    [cost tier] — [brief rationale]." This gives the product owner the
+    information to adjust their scope answers with cost awareness.
+
+# ─────────────────────────────────────────────
+# Agent Instructions
+# ─────────────────────────────────────────────
+
+agent_instructions:
+  description: >
+    When invoked to perform a backend capability assessment, follow these phases
+    in order. The agent must have access to the backend codebase (or API docs)
+    to perform the inventory.
+
+  prerequisites:
+    - "A competitive analysis or feature scope document with defined dimensions"
+    - "Access to the backend codebase (read access is sufficient)"
+    - "Knowledge of the tech stack (Rails, Phoenix, etc.) — load technology-patterns.yaml"
+
+  workflow:
+    - phase: "Inventory"
+      actions:
+        - "Identify the backend codebase and tech stack"
+        - "Load relevant technology patterns from technology-patterns.yaml"
+        - "Examine each inventory area: API surface, database, services, auth, existing search"
+        - "Capture findings in structured notes"
+      output: "Backend inventory summary"
+
+    - phase: "Capability Mapping"
+      actions:
+        - "List backend-relevant dimensions from the competitive analysis"
+        - "Map each dimension to a support level (S/P/N/I)"
+        - "Be specific — name tables, endpoints, extensions"
+      output: "Capability matrix (markdown table)"
+
+    - phase: "Cost Estimation"
+      actions:
+        - "For each P/N/I item, assign a T-shirt size"
+        - "Map dependencies between items"
+        - "Identify risk factors"
+      output: "Cost estimates with dependency diagram"
+
+    - phase: "Recommendation"
+      actions:
+        - "Organize into effort tiers (ship now, quick wins, significant, revisit later)"
+        - "Map back to competitive analysis scoping questions"
+        - "Present trade-offs clearly"
+      output: "Scope recommendation document"

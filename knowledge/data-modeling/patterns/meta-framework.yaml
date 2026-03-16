@@ -1,0 +1,161 @@
+# UDM Meta-Framework — How Universal Data Models Work
+# Source: Len Silverston, "Zen and Universal Data Models in the Age of AI" (Tokyo, Nov 2025)
+# and "The Data Model Resource Book" (Vols. 1-3)
+# Last updated: 2026-02-25
+
+id: meta-framework
+
+description: >
+  Before diving into specific patterns (People and Organizations, Products, etc.),
+  this file captures HOW the UDM system works — the types of reusability, the
+  generalization spectrum, and the human dimensions of getting organizations to
+  adopt common models.
+
+three_types_of_reusability:
+  description: >
+    Silverston's Data Model Resource Book is organized into three volumes,
+    each representing a different type of reuse. Together they cover the full
+    spectrum from concrete, immediately applicable models to abstract,
+    universally applicable patterns.
+
+  types:
+    - type: "Standard Data Models for All Enterprises"
+      volume: "Vol. 1"
+      description: >
+        Subject areas that virtually every organization needs: People and
+        Organizations, Products, Orders, Work Effort, Accounting. These models
+        are concrete enough to use directly, with over 60% typically applicable
+        to any enterprise.
+      use_when: "Starting a new system or evaluating an existing one"
+
+    - type: "Industry-Specific Models"
+      volume: "Vol. 2"
+      description: >
+        Overlays for specific industries: Healthcare, Insurance, Financial
+        Services, Telecommunications, Manufacturing, Professional Services,
+        Travel, E-Commerce, Government. Built on Vol. 1 foundations with
+        industry-specific extensions.
+      use_when: "Building in a regulated or specialized industry"
+
+    - type: "Universal Patterns"
+      volume: "Vol. 3"
+      description: >
+        Abstract patterns that recur across all subject areas and industries:
+        Roles, Contact Information, Statuses, Classifications, Hierarchies.
+        These are the building blocks from which specific models are composed.
+      use_when: "Designing new subject areas or evaluating generalization options"
+
+  key_statistic: ">60% of standard models typically apply to any enterprise"
+
+progressive_generalization:
+  description: >
+    The spectrum from specific to general is not a binary choice. Silverston
+    demonstrates multiple levels, and the right level depends on context.
+    This is one of the two primary reasons data models vary across organizations.
+
+  spectrum: |
+    Specific ◄─────────────────────────────────────────────► Generalized
+    Simplicity                                              Flexibility
+
+    Level 1: Concrete columns         "CUSTOMER.EMAIL"
+    Level 2: Separate entities         "CONTACT_INFO linked to CUSTOMER"
+    Level 3: Generalized with types    "CONTACT_MECHANISM with TYPE_CATALOG linked to PARTY"
+
+  guidance: >
+    Don't generalize for the sake of it. Generalize when the business need
+    demands flexibility — when new types appear frequently, when the same
+    entity plays multiple roles, when cross-system integration requires
+    uniform structures. A prototype can live at Level 1. A production
+    enterprise system probably needs Level 3 for People and Organizations.
+
+parameterized_modeling:
+  description: >
+    Silverston's vision for AI-assisted data modeling: the model is parameterized
+    by three dimensions. An AI can generate and adapt models by adjusting these
+    parameters interactively.
+  parameters:
+    - name: "Semantics"
+      question: "What do you call things?"
+      examples:
+        - "Supplier vs Vendor"
+        - "Part vs Item vs Product"
+        - "Order vs Sales Order vs Purchase Order"
+      ai_role: "Map synonyms across systems, normalize terminology"
+
+    - name: "Generalization Level"
+      question: "How abstract should the model be?"
+      examples:
+        - "Separate Customer/Vendor tables vs unified Party"
+        - "Product columns vs Product + FeatureType catalog"
+        - "Status column vs StatusApplication history"
+      ai_role: "Recommend level based on requirements (flexibility, integration needs, team maturity)"
+
+    - name: "Standards"
+      question: "Which industry standards should be incorporated?"
+      examples:
+        - "GS1, UBL, OAGIS (supply chain)"
+        - "HL7, FHIR (healthcare)"
+        - "ISO 20022 (financial services)"
+        - "UN/LOCODE, UCUM/UNECE (international trade)"
+      ai_role: "Overlay standard-specific entities and attributes onto base UDM patterns"
+
+  ai_workflow: >
+    User describes their domain. AI generates a model at an appropriate
+    generalization level using UDM patterns. User iterates on semantics,
+    level, and standards. AI generates DDL, JSON schemas, ER diagrams.
+    Each iteration is a parameter adjustment, not a rewrite.
+
+zen_and_human_dimensions:
+  description: >
+    Silverston's "Data Oursing Framework" addresses the reality that data
+    modeling is as much a human challenge as a technical one. The best data
+    model fails if the organization won't adopt it. This framework captures
+    the organizational change management dimensions.
+  framework_name: "Data Oursing Framework"
+  copyright: "Copyright 2023 Universal Mindful, LLC"
+
+  dimensions:
+    - name: "Awareness"
+      description: "Do stakeholders understand why common data models matter?"
+
+    - name: "Purpose"
+      description: >
+        Is the purpose of the data modeling effort compelling, clear,
+        concise, and common (shared across stakeholders)?
+      qualities:
+        - Compelling
+        - Clear
+        - Concise
+        - Common
+
+    - name: "Motivation"
+      description: >
+        Understanding what each stakeholder wants, how the initiative helps
+        them, how it might be an obstacle, and what we need from them.
+
+    - name: "Communication"
+      description: >
+        The gap between intent and perception. Based on Berlo's SMCR model:
+        the sender's intent, the message, what's received, and the receiver's
+        perceptions may all differ.
+
+    - name: "Trust"
+      description: >
+        Built on character (integrity, caring about others, vulnerability/openness)
+        and competence (capabilities, results). From Covey's 'Speed of Trust.'
+
+    - name: "Conflict Management"
+      description: >
+        Inevitable when standardizing across teams that have built their own
+        data definitions. The word 'mine' is the biggest barrier to shared data.
+
+  silverston_insight: >
+    The biggest reason organizations can't get business answers from their data
+    isn't technology — it's data 'mine-ing.' People treat their data definitions
+    as territory. Technical solutions without human change management fail.
+
+  relevance_to_ai_skill: >
+    When this knowledge becomes an AI skill, the human dimensions matter for
+    assessment and coaching. The skill shouldn't just recommend Party/Role — it
+    should help the user anticipate organizational resistance and plan for
+    adoption. "Your technical model is right, but here's where you'll face pushback..."

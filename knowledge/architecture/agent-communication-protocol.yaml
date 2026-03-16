@@ -1,0 +1,144 @@
+# Agent Communication Protocol
+# Extracted from multiple agent definitions across implementation and investigation roles.
+# Defines the canonical structured progress update and handoff pattern used across all
+# implementation and investigation agents in the SDLC.
+# Last updated: 2026-03-13
+
+last_updated: 2026-03-13
+id: agent-communication-protocol
+name: "Agent Communication Protocol"
+description: >
+  The canonical pattern for structured mid-task progress updates and task completion
+  handoffs. All implementation and investigation agents emit JSON progress blocks during
+  long-running tasks and conclude with a defined handoff. This ensures the orchestrating
+  layer (CC) always has machine-readable status without having to parse prose.
+
+# ─────────────────────────────────────────────
+# Progress Update Protocol
+# ─────────────────────────────────────────────
+
+progress_updates:
+  purpose: >
+    Emitted during longer tasks so the orchestrator can track status, detect stalls,
+    and make routing decisions without waiting for task completion.
+
+  when_to_emit:
+    - After completing a logical chunk of work (e.g., each file, each phase, each step)
+    - When blocked or switching hypothesis
+    - When root cause is confirmed (for investigation agents)
+
+  canonical_fields:
+    agent:
+      type: string
+      description: "The agent name, matching the agent definition file name"
+      example: "backend-developer"
+    status:
+      type: string
+      description: "Current task phase — values are agent-specific (see per-agent extensions)"
+      common_values:
+        - implementing
+        - reviewing
+        - investigating
+        - auditing
+        - designing
+        - integrating
+    completed:
+      type: "string[]"
+      description: "List of work items finished in this task so far"
+    current:
+      type: string
+      description: "The single item being worked on right now"
+    next:
+      type: "string[]"
+      description: "Planned remaining steps"
+
+  minimal_example: |
+    {
+      "agent": "backend-developer",
+      "status": "implementing",
+      "completed": ["Route handler", "Database batch write"],
+      "current": "Error handling and input validation",
+      "next": ["Changelog entry", "Self-verification checklist"]
+    }
+
+  agent_extensions:
+    # Each agent may add domain-specific fields alongside the canonical ones.
+    # These are always additive — never replace the canonical fields.
+    code-reviewer:
+      extra_fields:
+        files_reviewed: "integer — count of files reviewed so far"
+        critical_issues: "integer"
+        warnings: "integer"
+        suggestions: "integer"
+        remaining: "string[] — files not yet reviewed"
+    debug-specialist:
+      extra_fields:
+        hypotheses_tested: "integer"
+        current_hypothesis: "string — the specific hypothesis under test"
+        fault_domain: "string — e.g., State, Rendering, Network/API"
+        root_cause_found: "boolean"
+        estimated_remaining: "string — rough estimate of remaining investigation"
+    security-engineer:
+      extra_fields:
+        domains_reviewed: "string[] — e.g., Authentication, Input Validation, Secrets"
+        findings: "object — { critical, high, medium, low } integer counts"
+        remaining: "string[] — audit domains not yet covered"
+    # Add your project's domain agents here with their extra fields:
+    # domain-agent:
+    #   extra_fields:
+    #     field_name: "type — description"
+
+# ─────────────────────────────────────────────
+# Handoff Format
+# ─────────────────────────────────────────────
+
+handoff_format:
+  purpose: >
+    The structured summary emitted at task completion. Consumed by the orchestrator to
+    determine next steps, route to downstream agents, and populate result artifacts.
+
+  principle: >
+    Every agent defines its own handoff fields suited to its domain. The common contract
+    is that handoffs are structured (not prose-only), cover what changed, and flag
+    anything the next person or agent needs to know before proceeding.
+
+  common_elements:
+    - "Modified files: every file created or changed"
+    - "Follow-up: downstream steps, environment changes, or cross-agent dependencies"
+    - "Blockers or open questions: anything unresolved that requires CD decision"
+
+  domain_specific_additions:
+    # Customize these for your project's agents:
+    backend-developer:
+      - "Database schema changes: any new indexes, migrations, or schema updates"
+      - "Shared types: any new types added to shared packages that consumers depend on"
+      - "Deployment steps: environment variable additions, deployment commands"
+    code-reviewer:
+      - "Structured review output (see investigation-report-format.yaml): Summary, Critical Issues, Warnings, Suggestions, Checklist"
+      - "Checklist is the merge gate signal — must be present"
+
+# ─────────────────────────────────────────────
+# Protocol Rules
+# ─────────────────────────────────────────────
+
+rules:
+  - id: emit-during-long-tasks
+    rule: >
+      Emit at least one progress update for any task spanning more than 3 logical steps.
+      Do not wait until completion to report status.
+
+  - id: handoff-always-structured
+    rule: >
+      Never end a task with prose alone. Always produce the agent's defined handoff
+      format as the final output so the orchestrator can parse completion state.
+
+  - id: blocked-state-must-surface
+    rule: >
+      If blocked (missing data, unresolved dependency, CD decision needed), emit a
+      progress update with status reflecting the block and list it in next[] with a
+      "BLOCKED:" prefix. Do not silently stall.
+
+  - id: agent-name-matches-definition
+    rule: >
+      The "agent" field in progress JSON must exactly match the agent's definition file
+      name (e.g., "backend-developer", not "backend developer" or "be-dev").

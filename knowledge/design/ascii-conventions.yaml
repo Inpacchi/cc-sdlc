@@ -1,0 +1,293 @@
+# ASCII Wireframe & Diagram Conventions
+# Standard conventions for producing consistent ASCII UX diagrams across projects.
+# Used by the UX modeling methodology for navigation, page wireframes, and IA diagrams.
+# Last updated: 2026-03-04
+
+id: ascii-conventions
+name: "ASCII Wireframe Conventions"
+description: >
+  Reusable conventions for drawing UX diagrams in ASCII. Designed for inline
+  markdown display, git versioning, and fast iteration. These are low-fidelity
+  by design — they show structure and arrangement, not styling or pixel detail.
+
+# ─────────────────────────────────────────────
+# Box Drawing Characters
+# ─────────────────────────────────────────────
+
+box_drawing:
+  description: "Standard characters for layout containers and borders"
+
+  basic_box: |
+    ┌─────────────────────────────┐
+    │  Content area               │
+    └─────────────────────────────┘
+
+  nested_boxes: |
+    ┌─────────────────────────────────────┐
+    │ Outer container                     │
+    │  ┌──────────┐  ┌──────────────────┐ │
+    │  │  Left     │  │  Right           │ │
+    │  │  panel    │  │  content         │ │
+    │  └──────────┘  └──────────────────┘ │
+    └─────────────────────────────────────┘
+
+  dashed_box: |
+    ┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┐
+      Optional or conditional area
+    └ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┘
+
+  double_border: |
+    ╔═════════════════════════════╗
+    ║  Modal or overlay           ║
+    ╚═════════════════════════════╝
+
+  characters:
+    single: "┌ ─ ┐ │ └ ─ ┘ ├ ┤ ┬ ┴ ┼"
+    double: "╔ ═ ╗ ║ ╚ ═ ╝ ╠ ╣ ╦ ╩ ╬"
+    rounded: "╭ ─ ╮ │ ╰ ─ ╯"
+    usage:
+      single: "Page sections, panels, cards"
+      double: "Modals, overlays, dialogs"
+      rounded: "Buttons, chips, tags"
+      dashed: "Optional areas, conditional content, future additions"
+
+# ─────────────────────────────────────────────
+# Component Shorthand
+# ─────────────────────────────────────────────
+
+component_shorthand:
+  description: >
+    Standard abbreviations for common UI components. Use inside boxes
+    to indicate what component type occupies a space without drawing
+    every detail.
+
+  interactive:
+    - symbol: "[btn: Label]"
+      meaning: "Button with label text"
+      example: "[btn: Save]  [btn: Cancel]"
+
+    - symbol: "[input: Placeholder]"
+      meaning: "Text input field"
+      example: "[input: Search brands...]"
+
+    - symbol: "[select: Label]"
+      meaning: "Dropdown / select"
+      example: "[select: Category ▼]"
+
+    - symbol: "[checkbox: Label]"
+      meaning: "Checkbox with label"
+      example: "[checkbox: Show archived]"
+
+    - symbol: "[toggle: Label]"
+      meaning: "Toggle switch"
+      example: "[toggle: Dark mode]"
+
+    - symbol: "[search: Placeholder]"
+      meaning: "Search input (distinct from plain input)"
+      example: "[search: Filter ingredients...]"
+
+  display:
+    - symbol: "[grid: N cols]"
+      meaning: "Data grid / table"
+      example: "[grid: Name | Category | ABV | Actions]"
+
+    - symbol: "[card: Title]"
+      meaning: "Card component"
+      example: "[card: Active Batches (12)]"
+
+    - symbol: "[tabs: A | B | C]"
+      meaning: "Tab group"
+      example: "[tabs: Details | Recipe | History]"
+
+    - symbol: "[chip: Label]"
+      meaning: "Status chip or tag"
+      example: "[chip: Active]  [chip: Draft]"
+
+    - symbol: "[avatar: Name]"
+      meaning: "User avatar"
+      example: "[avatar: MH]"
+
+    - symbol: "[icon: name]"
+      meaning: "Icon button or display icon"
+      example: "[icon: edit]  [icon: delete]  [icon: more]"
+
+  layout:
+    - symbol: "[breadcrumb: A > B > C]"
+      meaning: "Breadcrumb navigation"
+      example: "[breadcrumb: Home > Brands > IPA #4]"
+
+    - symbol: "[toolbar: ...]"
+      meaning: "Action toolbar"
+      example: "[toolbar: [btn: Add] [search: Filter...] [select: Status ▼]]"
+
+    - symbol: "[empty: message]"
+      meaning: "Empty state placeholder"
+      example: "[empty: No batches yet. Create your first batch.]"
+
+    - symbol: "[loading]"
+      meaning: "Loading spinner/skeleton"
+
+    - symbol: "(...)"
+      meaning: "Content truncated for brevity"
+
+# ─────────────────────────────────────────────
+# Navigation Notation
+# ─────────────────────────────────────────────
+
+navigation:
+  description: "Conventions for diagramming navigation structures"
+
+  sidebar: |
+    ┌──────────────┬─────────────────────────────────┐
+    │  [logo]      │  [breadcrumb: Home > Feature]    │
+    │              ├─────────────────────────────────  │
+    │  Dashboard   │                                   │
+    │  ● Brands    │  Page content area                │
+    │    Recipes   │                                   │
+    │  Ingredients │                                   │
+    │  Batches     │                                   │
+    │              │                                   │
+    │  ─────────── │                                   │
+    │  Settings    │                                   │
+    └──────────────┴───────────────────────────────────┘
+
+  sidebar_markers:
+    - "●  Active / selected item"
+    - "▸  Expandable group (collapsed)"
+    - "▾  Expandable group (expanded)"
+    - "   Sub-item (indented under expanded group)"
+    - "── Separator / section divider"
+    - "★  New addition (call attention in before/after)"
+
+  tabs: |
+    ┌─────────┬─────────┬─────────┐
+    │ Tab A   │ ● Tab B │  Tab C  │
+    └─────────┴─────────┴─────────┘
+    ┌───────────────────────────────┐
+    │  Tab B content                │
+    └───────────────────────────────┘
+
+  breadcrumb: |
+    Home  >  Brands  >  IPA #4  >  Recipe
+
+# ─────────────────────────────────────────────
+# Annotation Conventions
+# ─────────────────────────────────────────────
+
+annotations:
+  description: "How to mark up wireframes with notes, arrows, and callouts"
+
+  callout_numbers: |
+    ┌─────────────────────────────────┐
+    │  [grid: ...]             (1)    │
+    │                                 │
+    │  [btn: Add New]          (2)    │
+    └─────────────────────────────────┘
+
+    (1) DataGrid with virtual scroll — uses MUI DataGrid
+    (2) Opens FormDialog — follows existing dialog pattern
+
+  arrows: |
+    [btn: Create] ──→ ╔═══════════════╗
+                       ║ Create Dialog  ║
+                       ╚═══════════════╝
+
+  new_vs_existing: |
+    Existing items:  plain text
+    ★ New items:     star prefix
+    ✕ Removed items: cross prefix
+    ~ Modified items: tilde prefix
+
+  responsive_breakpoints: |
+    Desktop (1200px+)          Tablet (768px)           Mobile (375px)
+    ┌────────┬──────────┐     ┌──────────────────┐     ┌────────────────┐
+    │sidebar │ content  │     │ [☰] content      │     │ [☰] content    │
+    │        │          │     │                  │     │                │
+    │        │          │     │                  │     │                │
+    └────────┴──────────┘     └──────────────────┘     └────────────────┘
+
+# ─────────────────────────────────────────────
+# Common Layout Patterns
+# ─────────────────────────────────────────────
+
+layout_patterns:
+  description: "Reusable ASCII templates for common UI patterns"
+
+  list_detail: |
+    # List-Detail Pattern (e.g., Brands → Brand Detail)
+    ┌──────────────────────────────────────────────────┐
+    │ [breadcrumb: Home > Brands]                      │
+    │ [toolbar: [btn: + Add] [search: Filter...]]      │
+    ├──────────────────────────────────────────────────┤
+    │ [grid: Name | Category | Status | Actions]       │
+    │  IPA #4        Ale        [chip: Active]  [⋮]   │
+    │  Stout #2      Stout      [chip: Draft]   [⋮]   │
+    │  Pilsner #1    Lager      [chip: Active]  [⋮]   │
+    └──────────────────────────────────────────────────┘
+                        │ click row
+                        ▼
+    ┌──────────────────────────────────────────────────┐
+    │ [breadcrumb: Home > Brands > IPA #4]             │
+    │ [tabs: Details | Recipe | Batches | History]     │
+    ├──────────────────────────────────────────────────┤
+    │ Details tab content                              │
+    │  Name: IPA #4                                    │
+    │  Category: Ale                                   │
+    │  Status: [chip: Active]                          │
+    │  (...)                                           │
+    └──────────────────────────────────────────────────┘
+
+  dashboard: |
+    # Dashboard Pattern (e.g., Home page)
+    ┌──────────────────────────────────────────────────┐
+    │ Welcome, Matt                                    │
+    ├──────────┬──────────┬──────────┬────────────────┤
+    │ [card:   │ [card:   │ [card:   │ [card:         │
+    │  Active  │  Recipes │  Ingred. │  Recent        │
+    │  Batches │  (24)   ]│  (156)  ]│  Activity     ]│
+    │  (3)    ]│          │          │                │
+    ├──────────┴──────────┴──────────┴────────────────┤
+    │ Recent Batches                                   │
+    │ [grid: Batch | Brand | Status | Started]         │
+    │  (...)                                           │
+    └──────────────────────────────────────────────────┘
+
+  form_dialog: |
+    # Form Dialog Pattern (e.g., Create/Edit entity)
+    ╔══════════════════════════════════════╗
+    ║  Create Brand                    [✕] ║
+    ╠══════════════════════════════════════╣
+    ║  [input: Brand name]                 ║
+    ║  [select: Category ▼]               ║
+    ║  [input: Target ABV]                 ║
+    ║  [input: Description]                ║
+    ║                                      ║
+    ║        [btn: Cancel] [btn: Save]     ║
+    ╚══════════════════════════════════════╝
+
+  split_view: |
+    # Split View Pattern (e.g., Settings, Master-Detail)
+    ┌────────────────┬─────────────────────────────────┐
+    │ Categories     │ Category: Hop Varieties          │
+    │                │                                  │
+    │ ● Hop Varieties│ [toolbar: [btn: + Add Field]]   │
+    │   Grain Types  │                                  │
+    │   Yeast Strains│ [grid: Field | Type | Required] │
+    │   Adjuncts     │  Alpha Acid   Number   Yes      │
+    │                │  Origin       Text     No       │
+    │                │  (...)                           │
+    └────────────────┴─────────────────────────────────┘
+
+# ─────────────────────────────────────────────
+# Usage Guidelines
+# ─────────────────────────────────────────────
+
+guidelines:
+  - "Show structure, not styling — no colors, exact fonts, or pixel measurements"
+  - "Label by purpose and content, not by implementation detail"
+  - "Always show surrounding context — don't wireframe a component in isolation"
+  - "Use (1), (2), (3) callouts for design decisions that need explanation"
+  - "When showing modifications, use ★/✕/~ markers to distinguish new/removed/changed"
+  - "Keep proportions roughly representative but don't obsess over exact widths"
+  - "Use monospace font assumption — all characters are equal width"
+  - "Wrap at ~70-80 characters to fit in markdown and terminal views"

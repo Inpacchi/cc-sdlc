@@ -1,0 +1,413 @@
+# Competitive Analysis — Dimension Catalog
+# Reusable comparison dimensions organized by feature archetype.
+# Seeded from real research (Gantt, chat, ticketing). Grows with each analysis.
+# Last updated: 2026-03-04
+
+id: dimension-catalog
+name: "Feature Dimension Catalog"
+description: >
+  Starter dimensions for competitive feature analysis, organized by feature
+  archetype. When an agent begins a competitive analysis, it loads the relevant
+  archetype to get a head start on what to compare. Dimensions are refined
+  during each analysis — novel dimensions discovered are added back here.
+
+# ─────────────────────────────────────────────
+# UI Component Archetypes
+# ─────────────────────────────────────────────
+
+ui_component:
+  description: "Widget libraries and embeddable UI components"
+
+  general:
+    description: "Dimensions common to all UI components"
+    dimensions:
+      - name: "Framework compatibility"
+        type: spectrum
+        levels: ["Single framework", "2-3 frameworks", "Framework-agnostic (web component)"]
+        category: integration
+
+      - name: "Bundle size"
+        type: spectrum
+        levels: ["< 50KB", "50-200KB", "200KB+"]
+        category: performance
+        note: "Gzipped, tree-shakeable"
+
+      - name: "Theming / styling"
+        type: spectrum
+        levels: ["Fixed theme", "CSS variables", "Full theme API / custom renderers"]
+        category: customization
+
+      - name: "Accessibility (WCAG)"
+        type: spectrum
+        levels: ["None", "Partial (keyboard nav)", "WCAG 2.1 AA compliant"]
+        category: accessibility
+
+      - name: "TypeScript support"
+        type: binary
+        category: integration
+
+      - name: "Documentation quality"
+        type: spectrum
+        levels: ["Minimal README", "API docs", "API docs + guides + live examples"]
+        category: integration
+
+      - name: "Licensing model"
+        type: architectural
+        approaches: ["Open source (MIT/Apache)", "Open core (free + paid)", "Commercial only"]
+        category: pricing
+
+      - name: "Mobile / touch support"
+        type: spectrum
+        levels: ["Desktop only", "Responsive layout", "Touch-optimized with gestures"]
+        category: ux
+
+  gantt:
+    description: "Gantt chart / project timeline components"
+    extends: "ui_component.general"
+    dimensions:
+      - name: "Task dependencies"
+        type: spectrum
+        levels: ["None", "Finish-to-start only", "All 4 types (FS/FF/SS/SF)", "All 4 + lag/lead"]
+        category: core
+
+      - name: "Critical path"
+        type: binary
+        category: core
+
+      - name: "Baseline comparison"
+        type: binary
+        category: core
+        note: "Show planned vs actual schedule overlay"
+
+      - name: "Resource view"
+        type: spectrum
+        levels: ["None", "Resource list", "Resource timeline with allocation"]
+        category: core
+
+      - name: "Drag to reschedule"
+        type: binary
+        category: ux
+
+      - name: "Drag to resize (duration)"
+        type: binary
+        category: ux
+
+      - name: "Zoom levels"
+        type: spectrum
+        levels: ["Fixed", "2-3 levels", "Continuous zoom"]
+        category: ux
+
+      - name: "Task grouping / hierarchy"
+        type: spectrum
+        levels: ["Flat list", "Parent/child", "Multi-level with collapse"]
+        category: core
+
+      - name: "Milestone support"
+        type: binary
+        category: core
+
+      - name: "Data model flexibility"
+        type: spectrum
+        levels: ["Fixed schema", "Configurable fields", "Custom data + computed columns"]
+        category: data_model
+
+      - name: "Max task count (performance)"
+        type: spectrum
+        levels: ["< 100", "100-1000", "1000-10000", "10000+"]
+        category: performance
+
+      - name: "Export"
+        type: spectrum
+        levels: ["None", "PNG/SVG", "PNG/SVG + PDF + MS Project"]
+        category: integration
+
+  datagrid:
+    description: "Data grid / table components"
+    extends: "ui_component.general"
+    dimensions:
+      - name: "Virtual scrolling"
+        type: binary
+        category: performance
+        note: "Required for 1000+ rows"
+
+      - name: "Column sorting"
+        type: spectrum
+        levels: ["None", "Single column", "Multi-column"]
+        category: core
+
+      - name: "Filtering"
+        type: spectrum
+        levels: ["None", "Column filters", "Column + global + custom filter builder"]
+        category: core
+
+      - name: "Inline editing"
+        type: spectrum
+        levels: ["None", "Cell editing", "Cell + row editing + validation"]
+        category: core
+
+      - name: "Column resizing / reordering"
+        type: binary
+        category: ux
+
+      - name: "Row grouping"
+        type: spectrum
+        levels: ["None", "Single level", "Multi-level with aggregation"]
+        category: core
+
+      - name: "Column pinning"
+        type: binary
+        category: ux
+
+      - name: "Row selection"
+        type: spectrum
+        levels: ["None", "Single", "Multi + checkbox + select all"]
+        category: core
+
+      - name: "Export"
+        type: spectrum
+        levels: ["None", "CSV", "CSV + Excel + PDF"]
+        category: integration
+
+      - name: "Server-side operations"
+        type: spectrum
+        levels: ["Client only", "Server sort/filter", "Full server-side with pagination"]
+        category: performance
+
+  kanban:
+    description: "Kanban board components"
+    extends: "ui_component.general"
+    dimensions:
+      - name: "Drag between columns"
+        type: binary
+        category: core
+
+      - name: "Column WIP limits"
+        type: binary
+        category: core
+
+      - name: "Swimlanes"
+        type: binary
+        category: core
+
+      - name: "Card customization"
+        type: spectrum
+        levels: ["Fixed layout", "Configurable fields", "Custom render function"]
+        category: customization
+
+      - name: "Column customization"
+        type: spectrum
+        levels: ["Fixed columns", "Add/remove/rename", "Dynamic from data"]
+        category: customization
+
+      - name: "Card detail view"
+        type: spectrum
+        levels: ["None", "Click to expand", "Linked detail panel / modal"]
+        category: ux
+
+# ─────────────────────────────────────────────
+# App Feature Archetypes
+# ─────────────────────────────────────────────
+
+app_feature:
+  description: "SaaS product features and platform capabilities"
+
+  general:
+    description: "Dimensions common to all app features"
+    dimensions:
+      - name: "API availability"
+        type: spectrum
+        levels: ["No API", "Read-only API", "Full CRUD API", "Real-time API (WebSocket/SSE)"]
+        category: integration
+
+      - name: "Mobile support"
+        type: spectrum
+        levels: ["Desktop only", "Responsive web", "Native mobile app"]
+        category: ux
+
+      - name: "Role-based permissions"
+        type: spectrum
+        levels: ["None", "Admin/user", "Configurable roles + granular permissions"]
+        category: core
+
+      - name: "Audit trail"
+        type: spectrum
+        levels: ["None", "Basic logging", "Full audit trail with who/what/when"]
+        category: core
+
+      - name: "Webhooks / events"
+        type: binary
+        category: integration
+
+      - name: "Import / export"
+        type: spectrum
+        levels: ["None", "CSV import/export", "Multi-format + API bulk operations"]
+        category: integration
+
+  chat:
+    description: "Real-time messaging and communication features"
+    extends: "app_feature.general"
+    dimensions:
+      - name: "Real-time messaging"
+        type: architectural
+        approaches: ["Polling", "Long polling", "WebSocket", "SSE"]
+        category: core
+
+      - name: "Threading"
+        type: spectrum
+        levels: ["None (flat)", "Reply-to reference", "Full threaded conversations"]
+        category: core
+
+      - name: "Channels / rooms"
+        type: spectrum
+        levels: ["Single conversation", "Predefined channels", "User-created channels + DMs"]
+        category: core
+
+      - name: "File sharing"
+        type: spectrum
+        levels: ["None", "Images only", "Any file type + preview"]
+        category: core
+
+      - name: "Reactions / emoji"
+        type: binary
+        category: ux
+
+      - name: "Mentions (@user)"
+        type: binary
+        category: ux
+
+      - name: "Search"
+        type: spectrum
+        levels: ["None", "Keyword search", "Full-text + filters + date range"]
+        category: core
+
+      - name: "Presence / typing indicators"
+        type: spectrum
+        levels: ["None", "Online/offline", "Online/offline + typing + last seen"]
+        category: ux
+
+      - name: "Notifications"
+        type: spectrum
+        levels: ["None", "In-app only", "In-app + push + email digest"]
+        category: core
+
+      - name: "Message editing / deletion"
+        type: spectrum
+        levels: ["Immutable", "Edit/delete own", "Edit/delete own + admin moderation"]
+        category: core
+
+      - name: "Offline support"
+        type: spectrum
+        levels: ["None", "Read cache", "Read + queue outbound messages"]
+        category: ux
+
+      - name: "Rich text / markdown"
+        type: spectrum
+        levels: ["Plain text only", "Basic formatting", "Full rich text editor + code blocks"]
+        category: ux
+
+  ticketing:
+    description: "Issue tracking, help desk, and ticketing systems"
+    extends: "app_feature.general"
+    dimensions:
+      - name: "Status workflow"
+        type: spectrum
+        levels: ["Fixed statuses", "Configurable statuses", "Custom workflow engine with transitions"]
+        category: core
+
+      - name: "Custom fields"
+        type: spectrum
+        levels: ["None", "Text/number/date", "All types + conditional fields + computed"]
+        category: core
+
+      - name: "SLA tracking"
+        type: spectrum
+        levels: ["None", "Response time SLA", "Multi-metric SLAs + escalation + breach alerts"]
+        category: core
+
+      - name: "Automation rules"
+        type: spectrum
+        levels: ["None", "Simple triggers (on create/update)", "Complex rules + conditions + actions"]
+        category: core
+
+      - name: "Email integration"
+        type: spectrum
+        levels: ["None", "Create ticket from email", "Two-way email sync + threading"]
+        category: integration
+
+      - name: "Linked / related tickets"
+        type: spectrum
+        levels: ["None", "Manual linking", "Auto-linking + dependency tracking + duplicate detection"]
+        category: core
+
+      - name: "Bulk operations"
+        type: spectrum
+        levels: ["None", "Bulk status change", "Bulk edit any field + bulk assign + merge"]
+        category: ux
+
+      - name: "Reporting / dashboards"
+        type: spectrum
+        levels: ["None", "Canned reports", "Custom reports + dashboards + scheduling"]
+        category: core
+
+      - name: "Knowledge base"
+        type: spectrum
+        levels: ["None", "Linked docs", "Integrated KB with article suggestions"]
+        category: integration
+
+      - name: "Customer portal"
+        type: spectrum
+        levels: ["None", "View-only portal", "Self-service portal with submit + track + KB"]
+        category: core
+
+# ─────────────────────────────────────────────
+# Data Feature Archetypes
+# ─────────────────────────────────────────────
+
+  reporting:
+    description: "Reporting, dashboards, and analytics features"
+    extends: "app_feature.general"
+    dimensions:
+      - name: "Data sources"
+        type: spectrum
+        levels: ["Single source", "Multiple internal", "Internal + external connectors"]
+        category: core
+
+      - name: "Visualization types"
+        type: spectrum
+        levels: ["Tables only", "Tables + basic charts", "Full chart library + custom visualizations"]
+        category: core
+
+      - name: "Drill-down"
+        type: spectrum
+        levels: ["None", "Click to filter", "Multi-level drill-down with breadcrumb"]
+        category: ux
+
+      - name: "Scheduled reports"
+        type: spectrum
+        levels: ["None", "Email on schedule", "Multi-channel + triggers + thresholds"]
+        category: core
+
+      - name: "Export formats"
+        type: spectrum
+        levels: ["None", "PDF/CSV", "PDF/CSV/Excel + branded templates"]
+        category: integration
+
+      - name: "Embedding"
+        type: spectrum
+        levels: ["None", "iFrame", "SDK with auth + filtering + interactivity"]
+        category: integration
+
+# ─────────────────────────────────────────────
+# Maintenance Notes
+# ─────────────────────────────────────────────
+
+maintenance:
+  add_dimensions_when: >
+    A competitive analysis discovers dimensions not in this catalog that would
+    be useful for future analyses of the same archetype. Add them here with
+    the source analysis noted.
+  add_archetypes_when: >
+    A new feature type doesn't fit any existing archetype. Create a new section
+    following the same structure. If it shares dimensions with an existing
+    archetype, use 'extends' to reference the parent.
+  review_cadence: "After each competitive analysis session"

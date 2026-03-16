@@ -1,0 +1,230 @@
+# Investigation Report Format
+# Extracted from investigation and review agent definitions.
+# Defines the canonical structured output format for investigation and review agents:
+# summary header → tiered findings → verification → prevention/recommendations.
+# Last updated: 2026-03-13
+
+last_updated: 2026-03-13
+id: investigation-report-format
+name: "Investigation Report Format"
+description: >
+  The canonical output structure shared by all investigation and review agents.
+  The abstract pattern is: summary of scope and posture → findings bucketed by severity
+  (each with evidence and a concrete fix) → verification steps → prevention or
+  recommendations. Each agent instantiates this with domain-specific section names,
+  severity vocabularies, and finding fields.
+
+# ─────────────────────────────────────────────
+# Abstract Structure
+# ─────────────────────────────────────────────
+
+abstract_structure:
+  - section: Summary
+    description: >
+      1-3 sentences or bullet points covering: what was reviewed, overall posture or
+      verdict (e.g., Approved / Needs Changes / Root Cause Identified), and the count
+      or severity of the most significant findings.
+    required: true
+
+  - section: Tiered Findings
+    description: >
+      Findings grouped by severity from highest to lowest. Each finding must include:
+      (1) a specific location (file path, line, component, or endpoint),
+      (2) what is wrong and why it matters,
+      (3) a concrete, actionable fix — not an abstract recommendation.
+      Empty severity tiers may be omitted.
+    required: true
+    tiers_by_agent:
+      debug-specialist: ["Diagnosis (root cause)", "Evidence", "Fault Domain", "Fix"]
+      code-reviewer: ["Critical Issues", "Warnings", "Suggestions"]
+      security-engineer: ["Critical", "High", "Medium", "Low", "Informational", "Observation"]
+      accessibility-auditor: ["Critical (Must Fix — Blocks AA Compliance)", "Warnings (Should Fix)", "Passed (Notable)"]
+      performance-engineer: ["Root Cause", "Evidence", "Fix"]
+
+  - section: Verification
+    description: >
+      How to confirm the findings are resolved. Must be specific enough to execute:
+      a command to run, a metric to measure, a behavior to observe, or a test to perform.
+    required: true
+    agent_names:
+      debug-specialist: "Verification"
+      code-reviewer: "Checklist"
+      security-engineer: "Remediation Roadmap"
+      accessibility-auditor: "Recommendations"
+      performance-engineer: "Verification + Regression Guard"
+
+  - section: Prevention
+    description: >
+      What pattern, guard, type change, process step, or monitoring rule prevents
+      recurrence. May be omitted for review agents where the checklist serves this role.
+    required: false
+    agent_names:
+      debug-specialist: "Prevention"
+      performance-engineer: "Regression Guard"
+      security-engineer: "Compliance Notes"
+
+# ─────────────────────────────────────────────
+# Per-Agent Instantiation
+# ─────────────────────────────────────────────
+
+agent_instantiations:
+  debug-specialist:
+    section_order:
+      - "## Diagnosis — concise root cause statement"
+      - "## Evidence — specific files, lines, or behaviors confirming root cause"
+      - "## Fault Domain — which layer(s) are implicated"
+      - "## Fix — minimal targeted code change with explanation"
+      - "## Verification — how to confirm the fix works"
+      - "## Prevention — pattern or practice to prevent recurrence"
+    severity_vocabulary: "Not tiered by severity; single root cause with fault domain classification"
+    fault_domains:
+      - Rendering
+      - State
+      - Data Flow
+      - Network/API
+      - Search
+      - Real-time/WebSocket
+      - Build/Module
+      - Background Jobs
+      - Persistence
+    postmortem_format: |
+      ## Postmortem: [Bug Title]
+      **Timeline**: When introduced → when detected → when resolved
+      **Root Cause**: [Single clear sentence]
+      **Contributing Factors**: [What made this hard to catch or fix?]
+      **Impact**: [What broke? For how long? How many users affected?]
+      **Fix**: [What changed and why it works]
+      **Prevention**: [Pattern, guard, type change, or test that prevents recurrence]
+      **Action Items**: [Concrete follow-ups with owner and deadline]
+    notes: >
+      For ambiguous issues, present top hypotheses with confidence levels BEFORE
+      diving into the most likely one. Update progress JSON when root_cause_found
+      transitions to true.
+
+  code-reviewer:
+    section_order:
+      - "### Summary — 2-3 sentences, overall assessment (Approved / Approved with minor suggestions / Needs changes)"
+      - "### Critical Issues — must fix before merging"
+      - "### Warnings — important but not blockers"
+      - "### Suggestions — nice-to-have improvements"
+      - "### Checklist — merge gate signal"
+    severity_vocabulary:
+      critical: "Must fix before merging"
+      warning: "Should address, not a blocker"
+      suggestion: "Nice-to-have, quality improvement"
+    finding_format: >
+      Each finding includes: file path and line reference, clear explanation of the
+      problem, and a concrete fix or example code.
+    checklist_items:
+      # Add your project's specific checklist items here. These are generic examples:
+      - "Import style correct (value imports vs type-only imports)"
+      - "Correct file extensions for package conventions"
+      - "Path aliases used correctly per package conventions"
+      - "State management approach matches project hierarchy"
+      - "No raw fetch() calls where an HTTP client is prescribed"
+      - "New dependencies justified (bundle size, license, alternatives considered)"
+      - "No TODO/FIXME left in production-bound code without a tracking issue"
+      - "Changelog entry created (if user-facing change)"
+      - "TypeScript strict compliance — no unexplained any"
+      - "No hallucinated functions, phantom imports, or parameter mismatches (LLM verification)"
+    notes: >
+      The checklist is the merge gate signal. Must always be the final section.
+      Multi-file reviews should emit progress JSON (see agent-communication-protocol.yaml)
+      with files_reviewed, critical_issues, warnings, suggestions, and remaining counts.
+
+  security-engineer:
+    section_order:
+      - "## Executive Summary — overall posture, critical finding count, immediate actions"
+      - "## Threat Model — trust boundaries, attack surface, key threats"
+      - "## Findings — each with severity, component, description, exploit scenario, impact, recommendation, references"
+      - "## Positive Security Controls — what is already well-implemented"
+      - "## Remediation Roadmap — prioritized Critical → Low"
+      - "## Compliance Notes — GDPR, SOC2, platform-specific implications"
+    severity_vocabulary:
+      critical: "Immediate exploitation risk, data loss or auth bypass possible"
+      high: "Significant risk, exploitable with moderate effort"
+      medium: "Risk exists but requires specific conditions or effort"
+      low: "Minor risk, informational value"
+      informational: "Observation, no immediate risk"
+      observation: "Positive control or neutral finding worth noting"
+    finding_format: >
+      Each finding must include: severity, component (file path or system name),
+      description of vulnerability, exploit scenario (concrete and project-specific,
+      not generic), impact (CIA triad), recommendation (actionable fix with code
+      snippet if applicable), and references (OWASP, CWE, CVE where applicable).
+    notes: >
+      Always include Positive Security Controls — prevents assessments from reading
+      as purely negative. Findings without project-specific exploit scenarios are
+      not acceptable. Always reference actual file paths, function names, and patterns.
+
+  accessibility-auditor:
+    section_order:
+      - "### Summary — count of violations by severity, highest-impact issues"
+      - "### Critical (Must Fix — Blocks AA Compliance)"
+      - "### Warnings (Should Fix — Best Practice / Partial Compliance Risk)"
+      - "### Passed (Notable) — accessibility patterns done well"
+      - "### Recommendations — proactive improvements beyond AA minimum"
+    severity_vocabulary:
+      critical: "WCAG 2.1 AA violation — blocks compliance"
+      warning: "Best practice violation or partial compliance risk"
+      passed: "Notable correct implementation worth reinforcing"
+      recommendation: "AAA opportunity or proactive ARIA enhancement"
+    finding_format: >
+      Each critical/warning finding includes: WCAG SC reference (e.g., 1.4.3 Contrast
+      Minimum), file path and component/line reference, what is wrong and why it fails,
+      measured value (actual contrast ratio or missing attribute), and specific code fix.
+    notes: >
+      Scope is limited to recently changed components unless full audit is requested.
+      Out-of-scope findings may be noted as "Flagged for Follow-up".
+
+  performance-engineer:
+    section_order:
+      - "Root Cause — precise identification of what is slow and why"
+      - "Evidence — metrics, traces, or code patterns confirming the diagnosis"
+      - "Fix — concrete code change or configuration update with rationale"
+      - "Verification — how to confirm the fix worked (metric to check, test to run)"
+      - "Regression Guard — what to watch to ensure the fix does not break in future"
+    severity_vocabulary: "Not tiered by severity; single bottleneck with supporting evidence chain"
+    output_standards:
+      - "Show before/after code snippets for all code changes"
+      - "Quantify expected improvement where possible (e.g., reduces re-render count from N to 1)"
+      - "Flag any trade-offs (memory vs CPU, developer ergonomics vs performance)"
+      - "Respect existing patterns in the project's state and rendering architecture"
+    notes: >
+      Always establish a baseline before recommending changes. Request browser profiler
+      traces, Lighthouse reports, or Web Vitals data. Identify the bottleneck category
+      first: rendering, data fetching, bundle size, network, or database.
+
+# ─────────────────────────────────────────────
+# Shared Rules Across All Investigation Agents
+# ─────────────────────────────────────────────
+
+shared_rules:
+  - id: concrete-fixes-required
+    rule: >
+      Every finding must include a concrete, actionable fix. "Consider improving X" or
+      "X could be refactored" are not acceptable finding resolutions. Show the fix.
+
+  - id: location-required
+    rule: >
+      Every finding must reference a specific location: file path + line or component
+      name, endpoint, or system boundary. Generic findings without location are not
+      actionable.
+
+  - id: read-before-asserting
+    rule: >
+      Never assert how specific code behaves without reading it first. Use LSP hover
+      and goToDefinition for type and signature verification. Fall back to Grep if
+      LSP returns errors. Never pattern-match from filenames alone.
+
+  - id: recently-changed-scope
+    rule: >
+      Review agents (code-reviewer, accessibility-auditor) audit recently changed code,
+      not the entire codebase, unless a full audit is explicitly requested. Out-of-scope
+      findings may be noted as "Flagged for Follow-up" without expanding the audit.
+
+  - id: positive-acknowledgment
+    rule: >
+      All investigation reports should acknowledge correct implementations. This
+      reinforces good patterns and prevents reports from being received as purely
+      negative. (Mandatory for security-engineer and code-reviewer; encouraged for all.)

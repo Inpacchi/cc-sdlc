@@ -1,0 +1,210 @@
+# Technology Patterns Catalog
+# Reusable patterns for common backend capabilities, organized by concern.
+# Stack-agnostic patterns applicable across backend technologies.
+# Helps agents know what to look for in a specific backend.
+# Last updated: 2026-03-04
+
+id: technology-patterns
+name: "Technology Patterns Catalog"
+description: >
+  Stack-specific patterns for common backend capabilities. When performing a
+  backend capability assessment, the agent loads the relevant patterns to
+  know what to look for in the codebase. Each pattern includes: what to
+  look for, what it enables, and typical effort to add if missing.
+
+# ─────────────────────────────────────────────
+# Search & Retrieval
+# ─────────────────────────────────────────────
+
+search:
+  description: "Patterns for implementing search and retrieval in backends"
+
+  postgresql_ilike:
+    name: "PostgreSQL ILIKE (basic)"
+    what_it_enables: "Case-insensitive substring matching"
+    performance: "Fine for < 10K rows; degrades without indexes on larger tables"
+    what_to_look_for:
+      - "WHERE column ILIKE '%term%' in queries"
+      - "Ecto: where(ilike(field, ^pattern)) in Elixir"
+      - "ActiveRecord: where('column ILIKE ?', \"%#{term}%\") in Rails"
+      - "search_query parameter in API controllers"
+    typical_effort_if_missing: "S — add a where clause to an existing query"
+    limitations:
+      - "No stemming (searching 'run' won't find 'running')"
+      - "No ranking (all matches are equal)"
+      - "Slow on large tables without trigram index"
+
+  postgresql_trigram:
+    name: "PostgreSQL pg_trgm (fuzzy)"
+    what_it_enables: "Similarity matching, typo tolerance, trigram-based indexing"
+    performance: "Good for < 1M rows with GIN index"
+    what_to_look_for:
+      - "CREATE EXTENSION pg_trgm in migrations"
+      - "GIN or GiST index using gin_trgm_ops"
+      - "similarity() or word_similarity() functions in queries"
+      - "% operator for similarity threshold"
+    typical_effort_if_missing:
+      extension: "S — CREATE EXTENSION pg_trgm"
+      index: "S — CREATE INDEX ... USING gin (column gin_trgm_ops)"
+      query_integration: "M — modify search queries to use similarity scoring"
+    limitations:
+      - "No semantic understanding (just character trigram similarity)"
+      - "Index size can be large on text-heavy columns"
+
+  postgresql_fulltext:
+    name: "PostgreSQL tsvector/tsquery (full-text)"
+    what_it_enables: "Stemming, ranking, phrase matching, language-aware search"
+    performance: "Good for < 5M rows with GIN index on tsvector column"
+    what_to_look_for:
+      - "tsvector column on the searchable table"
+      - "Trigger or generated column to maintain tsvector"
+      - "GIN index on tsvector column"
+      - "to_tsvector() and to_tsquery() in queries"
+      - "ts_rank() or ts_rank_cd() for result ordering"
+      - "Search configuration (english, simple, etc.)"
+    typical_effort_if_missing:
+      column_and_trigger: "M — add tsvector column + trigger + GIN index"
+      backfill: "M — backfill existing rows (migration or background job)"
+      query_integration: "M — modify search endpoint to use full-text queries"
+    limitations:
+      - "Language-specific (must choose ts_config per language)"
+      - "No fuzzy matching (exact stemmed tokens only)"
+      - "Updating tsvector on write adds overhead"
+
+  dedicated_search_service:
+    name: "Dedicated Search Service (Elasticsearch, Typesense, Meilisearch)"
+    what_it_enables: "Fuzzy matching, faceted search, real-time indexing, typo tolerance, relevance tuning"
+    performance: "Handles millions of documents with sub-100ms queries"
+    what_to_look_for:
+      - "elasticsearch or typesense or meilisearch in Gemfile/mix.exs/package.json"
+      - "Search service configuration in environment files"
+      - "Indexing jobs or callbacks on model save"
+      - "Search client wrapper service"
+    typical_effort_if_missing: "L — provision service, build indexing pipeline, wire search endpoint"
+    when_to_recommend: >
+      When PostgreSQL full-text search is insufficient: > 5M documents,
+      need fuzzy matching + stemming + ranking, or need faceted search.
+      For most apps under 1M messages, PostgreSQL full-text is sufficient.
+    alternatives:
+      - name: "Typesense"
+        note: "Simpler than Elasticsearch, good for apps that don't need complex aggregations"
+      - name: "Meilisearch"
+        note: "Easiest to set up, good defaults, but less configurable"
+
+# ─────────────────────────────────────────────
+# Real-Time
+# ─────────────────────────────────────────────
+
+realtime:
+  description: "Patterns for real-time communication in backends"
+
+  actioncable:
+    name: "ActionCable (Rails WebSocket)"
+    what_it_enables: "Server-push to connected clients, channel subscriptions, presence"
+    what_to_look_for:
+      - "app/channels/ directory with channel classes"
+      - "ActionCable.server.broadcast in controllers or jobs"
+      - "cable.yml configuration (Redis adapter for production)"
+      - "Frontend: createConsumer() or ActionCableProvider"
+    typical_effort_if_missing: "M-L — depends on whether Redis is already running"
+
+  phoenix_channels:
+    name: "Phoenix Channels (Elixir WebSocket)"
+    what_it_enables: "Server-push, topic subscriptions, presence tracking"
+    what_to_look_for:
+      - "lib/app_web/channels/ directory"
+      - "Phoenix.Channel modules"
+      - "PubSub configuration in endpoint.ex"
+      - "Frontend: Phoenix.Socket connection"
+    typical_effort_if_missing: "M — Phoenix includes channel infrastructure by default"
+
+  polling_fallback:
+    name: "Polling Fallback"
+    what_it_enables: "Real-time-like updates without WebSocket infrastructure"
+    what_to_look_for:
+      - "setInterval or setTimeout-based API calls on frontend"
+      - "Last-modified or ETag headers for conditional requests"
+      - "Polling interval configuration"
+    typical_effort_if_missing: "S — add a polling interval to existing API calls"
+    when_to_recommend: "When WebSocket infrastructure is too heavy for the use case"
+
+# ─────────────────────────────────────────────
+# Access Control
+# ─────────────────────────────────────────────
+
+access_control:
+  description: "Patterns for ensuring search respects authorization boundaries"
+
+  tenant_scoping:
+    name: "Tenant Scoping"
+    what_it_enables: "All queries automatically filtered to current tenant"
+    what_to_look_for:
+      - "default_scope or around_action with tenant context"
+      - "tenant_id on all tables and enforced in queries"
+      - "ActsAsTenant, Apartment, or custom concern in Rails"
+      - "Ecto.Multi or query composition with tenant filter in Phoenix"
+    relevance: "Cross-conversation search MUST respect tenant boundaries"
+
+  membership_filtering:
+    name: "Membership-Based Access"
+    what_it_enables: "Users only see results from conversations/entities they can access"
+    what_to_look_for:
+      - "Membership or participant join tables (conversation_members, channel_members)"
+      - "Access check in controllers (authorize! or policy objects)"
+      - "Scope methods that filter by current user's memberships"
+    relevance: >
+      Critical for cross-conversation search — results must be filtered to
+      conversations the user is a member of. Missing this is a data leak.
+    typical_effort_if_missing: "M — add membership join to search query"
+
+  row_level_security:
+    name: "PostgreSQL Row-Level Security"
+    what_it_enables: "Database-enforced access control regardless of query path"
+    what_to_look_for:
+      - "ALTER TABLE ... ENABLE ROW LEVEL SECURITY"
+      - "CREATE POLICY statements"
+      - "SET role or set_config for current_user_id"
+    typical_effort_if_missing: "L — requires careful policy design and session management"
+    when_to_recommend: "When multiple query paths exist and app-level filtering isn't sufficient"
+
+# ─────────────────────────────────────────────
+# Background Processing
+# ─────────────────────────────────────────────
+
+background_jobs:
+  description: "Patterns for async work relevant to search (indexing, backfill, etc.)"
+
+  sidekiq:
+    name: "Sidekiq (Rails)"
+    what_to_look_for:
+      - "sidekiq in Gemfile"
+      - "app/jobs/ or app/workers/ directories"
+      - "Redis configured for job queue"
+      - "sidekiq.yml configuration"
+    relevance: "Needed for search index backfill, async re-indexing on message create"
+
+  oban:
+    name: "Oban (Elixir)"
+    what_to_look_for:
+      - "oban in mix.exs"
+      - "lib/app/workers/ directory"
+      - "Oban configuration in config/"
+    relevance: "Needed for search index backfill, async operations"
+
+  when_background_jobs_matter:
+    - "Backfilling tsvector or search index on existing messages"
+    - "Async re-indexing when messages are created/edited/deleted"
+    - "Bulk operations (re-index all messages in a conversation)"
+
+# ─────────────────────────────────────────────
+# Maintenance
+# ─────────────────────────────────────────────
+
+maintenance:
+  add_patterns_when: >
+    A backend assessment encounters a technology or pattern not in this catalog
+    that would be useful for future assessments. Add it with the source assessment noted.
+  add_stacks_when: >
+    A new backend stack (Go, .NET, etc.) is encountered. Create a new section
+    following the same structure.
+  review_cadence: "After each backend assessment session"

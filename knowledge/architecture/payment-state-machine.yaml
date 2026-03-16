@@ -1,0 +1,174 @@
+# Payment State Machine — Reliability & Idempotency Patterns
+# Cross-project general patterns for payment FSM design, audit trail, and webhook idempotency.
+# Project-specific gateway choices, fee economics, and planned file structure
+# belong in the agent body (payment-engineer/MEMORY.md).
+# Last updated: 2026-03-13
+
+last_updated: 2026-03-13
+id: payment-state-machine
+name: "Payment State Machine — Reliability & Idempotency Patterns"
+description: >
+  General patterns for designing reliable payment flows: an explicit finite state machine
+  for payment lifecycle, an immutable audit trail rule, and an idempotent webhook handler
+  pattern. These apply regardless of payment gateway (Stripe, PayPal, Braintree, etc.)
+  or application domain.
+
+# ─────────────────────────────────────────────
+# Finite State Machine — Payment Lifecycle
+# ─────────────────────────────────────────────
+
+payment_fsm:
+  description: >
+    Model every payment as an explicit state machine with a finite set of states and
+    allowed transitions. Reject any operation that would create an illegal state transition.
+    This prevents partial-state bugs where a payment is simultaneously "pending" and "captured."
+
+  canonical_states:
+    PENDING:
+      description: "Order created, awaiting buyer action"
+      allowed_transitions: [AUTHORIZED, CANCELLED, EXPIRED]
+    AUTHORIZED:
+      description: "Buyer approved, funds reserved but not captured"
+      allowed_transitions: [CAPTURED, VOIDED]
+    CAPTURED:
+      description: "Funds successfully collected — terminal success state"
+      allowed_transitions: [REFUNDED, PARTIALLY_REFUNDED]
+    REFUNDED:
+      description: "Full refund issued — terminal state"
+      allowed_transitions: []
+    PARTIALLY_REFUNDED:
+      description: "Partial refund issued — can refund again up to captured amount"
+      allowed_transitions: [REFUNDED, PARTIALLY_REFUNDED]
+    VOIDED:
+      description: "Authorization cancelled before capture — terminal state"
+      allowed_transitions: []
+    CANCELLED:
+      description: "Order cancelled before authorization — terminal state"
+      allowed_transitions: []
+    EXPIRED:
+      description: "Authorization expired without capture — terminal state"
+      allowed_transitions: []
+    DISPUTED:
+      description: "Buyer has initiated a dispute/chargeback — overlays any non-terminal state"
+      allowed_transitions: [DISPUTE_WON, DISPUTE_LOST]
+    DISPUTE_WON:
+      description: "Dispute resolved in seller's favor — returns to previous terminal state"
+      allowed_transitions: []
+    DISPUTE_LOST:
+      description: "Dispute resolved in buyer's favor — funds returned"
+      allowed_transitions: []
+
+  implementation_rules:
+    - "Store the current state as an enum field on the payment/order document"
+    - "Validate the transition is legal BEFORE executing the gateway API call"
+    - "Transition the state AFTER gateway confirmation, not before"
+    - "Write the new state atomically with the audit trail entry (single transaction)"
+    - "Reject any update that arrives in the wrong order — use state validation, not timestamp ordering"
+
+# ─────────────────────────────────────────────
+# Audit Trail Rule
+# ─────────────────────────────────────────────
+
+audit_trail:
+  rule: >
+    Every payment state transition must produce an immutable audit trail entry.
+    The current state of a payment must always be reconstructable from its audit trail.
+  rationale: >
+    Payments involve real money. A mutable state field alone is insufficient — it can
+    be overwritten by a race condition, a replay, or a bug. The audit trail is the source
+    of truth for dispute resolution, reconciliation, and forensics.
+
+  entry_fields:
+    - field: "eventId"
+      description: "Unique ID for this audit event (use UUID or gateway event ID)"
+    - field: "previousState"
+      description: "The FSM state before this transition"
+    - field: "newState"
+      description: "The FSM state after this transition"
+    - field: "trigger"
+      description: "What caused this transition (WEBHOOK, API_CALL, TIMEOUT, SYSTEM)"
+    - field: "gatewayEventId"
+      description: "The payment gateway's event/transaction ID — for correlation"
+    - field: "amount"
+      description: "Amount involved in this event (for captures, refunds, disputes)"
+    - field: "currency"
+      description: "ISO 4217 currency code"
+    - field: "timestamp"
+      description: "Server-side timestamp (not client-supplied)"
+    - field: "actorUid"
+      description: "UID of the user or system that triggered this event (null for webhooks)"
+    - field: "raw"
+      description: "The raw gateway payload that triggered this event (for forensics)"
+
+  immutability_requirement: >
+    Audit trail entries are WRITE-ONCE. No update or delete operations are permitted.
+    Use a subcollection or separate collection (document database), append-only table (SQL), or event log (Kafka/SNS)
+    where the data model prevents mutation.
+
+# ─────────────────────────────────────────────
+# Webhook Idempotency Pattern
+# ─────────────────────────────────────────────
+
+webhook_idempotency:
+  description: >
+    Payment gateway webhooks are delivered at-least-once — duplicate events WILL arrive.
+    Every webhook handler must be idempotent: processing the same event twice must
+    produce the same result as processing it once.
+
+  pattern:
+    name: "Processed Events Registry"
+    steps:
+      - step: 1
+        action: "Verify the webhook signature before processing anything"
+        note: "Use the gateway's signature verification API or header. Reject unverified webhooks with 401."
+      - step: 2
+        action: "Extract the gateway event ID from the webhook payload"
+        note: "This is the deduplication key. Every gateway provides a stable, unique event ID."
+      - step: 3
+        action: "Check if this event ID exists in your processedEvents registry"
+        note: "Use atomic check-and-set to prevent race conditions between concurrent deliveries."
+      - step: 4
+        action: "If already processed: return 200 immediately without re-executing handler logic"
+        note: "Return 200 (not 4xx) so the gateway does not retry."
+      - step: 5
+        action: "If not yet processed: execute the handler logic"
+      - step: 6
+        action: "Record the event ID in the processedEvents registry AFTER successful processing"
+        note: "Write the registry entry last. If handler fails, the event remains unprocessed and will be retried."
+      - step: 7
+        action: "Return 200 to acknowledge receipt"
+
+  registry_schema:
+    fields:
+      - "eventId (string, unique key)"
+      - "processedAt (timestamp)"
+      - "eventType (string — the webhook event type, e.g. PAYMENT.CAPTURE.COMPLETED)"
+      - "outcome (string — what the handler did: STATE_TRANSITIONED, ALREADY_PROCESSED, SKIPPED)"
+    storage: "Append-only subcollection or dedicated table; same database as payment records for transactional consistency"
+    ttl: "Retain for at least 90 days (longer if required by payment regulations in your jurisdiction)"
+
+  dual_verification_rule: >
+    For user-facing confirmation flows (e.g., a registration page after checkout), NEVER rely
+    solely on the async webhook to confirm payment. Use a synchronous capture check on the
+    frontend callback AND the async webhook for final confirmation. The synchronous check
+    provides an immediate user-facing result; the webhook is the authoritative record.
+
+  common_mistakes:
+    - "Relying on timestamps to deduplicate — events can arrive out of order"
+    - "Using payment status from the webhook payload as ground truth without gateway verification"
+    - "Returning 4xx for duplicate events — this causes the gateway to retry indefinitely"
+    - "Processing webhook before signature verification"
+    - "Writing the processed-events record BEFORE the handler logic — leaves a gap if the handler fails"
+
+# ─────────────────────────────────────────────
+# Maintenance
+# ─────────────────────────────────────────────
+
+maintenance:
+  add_when: >
+    A new general payment reliability pattern is identified (e.g., reconciliation loop
+    design, partial capture handling, currency conversion invariants). Add with rationale
+    and implementation notes.
+  boundary_rule: >
+    Gateway-specific API endpoints, fee structures, approval requirements, and
+    project-specific planned file paths belong in the agent body, not in this file.

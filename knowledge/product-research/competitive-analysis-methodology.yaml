@@ -1,0 +1,327 @@
+# Competitive Feature Analysis — Methodology
+# Process for an agent to research competitors, compare features, and generate scoping questions.
+# Designed to work for UI components (Gantt, datagrid) and app features (chat, ticketing).
+# Last updated: 2026-03-04
+
+id: competitive-feature-analysis
+name: "Competitive Feature Analysis"
+description: >
+  A structured methodology for researching how competitors implement a feature,
+  producing an easy-to-consume comparison matrix, and generating scoping questions
+  that help the product owner define what to build. Works for UI components
+  (widget libraries), app features (SaaS capabilities), and platform capabilities.
+
+# ─────────────────────────────────────────────
+# Phase 1: Discovery — Identify what to compare against
+# ─────────────────────────────────────────────
+
+discovery:
+  description: >
+    Find 3-5 competitors that represent the range of approaches to the feature.
+    Don't limit to direct product competitors — include best-in-class implementations
+    from adjacent domains.
+
+  search_strategies:
+    - name: "Direct search"
+      description: "Search for the feature by name"
+      patterns:
+        - "best {feature} for {framework/platform}"
+        - "{feature} comparison {current year}"
+        - "top {feature} libraries/tools/platforms"
+      example: "best gantt chart libraries for React 2026"
+
+    - name: "Alternatives search"
+      description: "Start from a known competitor and find alternatives"
+      patterns:
+        - "alternatives to {known product}"
+        - "{known product} vs"
+        - "products like {known product}"
+      example: "alternatives to Bryntum Gantt"
+
+    - name: "Category search"
+      description: "Search by the problem category, not the solution"
+      patterns:
+        - "{problem domain} software"
+        - "how to {user goal}"
+        - "{industry} {capability} tools"
+      example: "project scheduling software with dependency tracking"
+
+    - name: "Comparison sites"
+      description: "Use aggregator and review sites"
+      sources:
+        - "G2, Capterra, TrustRadius — for SaaS/app features"
+        - "npm trends, bundlephobia, GitHub stars — for UI components"
+        - "Product Hunt, AlternativeTo — for discovery"
+
+  competitor_types:
+    ui_component:
+      description: "Widget libraries and UI component packages"
+      what_to_find:
+        - "2-3 commercial libraries (the premium baseline)"
+        - "1-2 open source alternatives (the free baseline)"
+        - "1 adjacent approach (e.g., a full project management tool's embedded Gantt)"
+      example_set: "Bryntum, DHTMLX, Syncfusion (commercial); frappe-gantt, gantt-task-react (open source); Monday.com's Gantt (embedded)"
+
+    app_feature:
+      description: "SaaS products and platform capabilities"
+      what_to_find:
+        - "2-3 products where this is the PRIMARY feature (specialists)"
+        - "1-2 products where it's a SECONDARY feature (generalists)"
+        - "1 emerging/novel approach (the disruptor)"
+      example_set: "Slack, Discord (chat specialists); Teams, Notion (generalists); Arc browser chat (novel)"
+
+  minimum_competitors: 3
+  ideal_competitors: 5
+  maximum_competitors: 7
+
+# ─────────────────────────────────────────────
+# Phase 2: Dimension Identification — What to compare
+# ─────────────────────────────────────────────
+
+dimension_identification:
+  description: >
+    Identify the feature dimensions that matter for comparison. Start with the
+    dimension catalog (dimension-catalog.yaml) for the relevant archetype, then
+    refine based on what the competitors actually offer.
+
+  process:
+    - step: 1
+      action: "Load starter dimensions from dimension-catalog.yaml for the feature archetype"
+      note: "If no archetype matches, use the 'general' dimensions"
+
+    - step: 2
+      action: "Research the richest competitor first"
+      note: >
+        The most full-featured competitor reveals dimensions you might not have
+        thought of. Their feature page and docs are the best dimension discovery tool.
+
+    - step: 3
+      action: "Add dimensions unique to specific competitors"
+      note: "Novel approaches often introduce dimensions that don't exist in the catalog yet"
+
+    - step: 4
+      action: "Categorize each dimension"
+      categories:
+        - name: "Core Functionality"
+          description: "What the feature actually does — its primary capabilities"
+        - name: "UX / Interaction"
+          description: "How users interact with it — drag, click, keyboard, mobile"
+        - name: "Data Model"
+          description: "What data structures underlie it — flexibility, extensibility"
+        - name: "Integration"
+          description: "How it connects — APIs, imports/exports, webhooks, third-party"
+        - name: "Performance"
+          description: "Scale limits — row counts, concurrent users, render speed"
+        - name: "Accessibility"
+          description: "WCAG compliance, keyboard navigation, screen reader support"
+        - name: "Customization"
+          description: "Theming, extensibility points, custom renderers, plugins"
+        - name: "Pricing / Licensing"
+          description: "Cost model — per seat, per project, open source, freemium"
+
+    - step: 5
+      action: "Classify each dimension's comparison type"
+      types:
+        - name: "binary"
+          description: "Has it or doesn't. Yes/No."
+          example: "Supports drag-to-reschedule: Yes/No"
+        - name: "spectrum"
+          description: "Ranges from basic to advanced. Needs level definitions."
+          example: "Dependency support: none → finish-to-start only → all 4 types + lag"
+        - name: "architectural"
+          description: "Fundamentally different approaches. Not better/worse — different trade-offs."
+          example: "Rendering: canvas (fast, limited styling) vs DOM (styleable, slower at scale)"
+
+# ─────────────────────────────────────────────
+# Phase 3: Research Execution — Gather the data
+# ─────────────────────────────────────────────
+
+research_execution:
+  description: >
+    Systematically gather data for each competitor across each dimension.
+    Prioritize official docs and demos over third-party reviews.
+
+  sources_priority:
+    - rank: 1
+      source: "Official product documentation and feature pages"
+      why: "Most accurate, most current"
+    - rank: 2
+      source: "Live demos and sandboxes"
+      why: "See actual behavior, not marketing claims"
+    - rank: 3
+      source: "Changelogs and release notes"
+      why: "Shows trajectory — what's being invested in"
+    - rank: 4
+      source: "Developer docs and API references"
+      why: "Reveals data model and extensibility depth"
+    - rank: 5
+      source: "Community forums and GitHub issues"
+      why: "Shows pain points and what users actually struggle with"
+    - rank: 6
+      source: "Third-party reviews and comparisons"
+      why: "Useful for discovery, but may be outdated or biased"
+
+  per_competitor_capture:
+    - "Feature presence and level for each dimension"
+    - "Notable implementation approach (if architecturally interesting)"
+    - "Pricing model and relevant tier for the feature"
+    - "Any standout strength or weakness"
+    - "Last significant update date (signals active development)"
+
+  data_quality:
+    confirmed_present: "Feature documented or observed in demo"
+    confirmed_absent: "Feature explicitly not available, or not mentioned across docs/demos/forums"
+    uncertain: "Not enough evidence — mark as '?' and note what's missing"
+    not_applicable: "Dimension doesn't apply to this competitor type"
+
+# ─────────────────────────────────────────────
+# Phase 4: Output Format — The deliverable
+# ─────────────────────────────────────────────
+
+output_format:
+  description: >
+    The research produces a structured document with three sections.
+    Designed to be scannable by a product owner in under 5 minutes,
+    with depth available for those who want it.
+
+  sections:
+    - name: "Feature Comparison Matrix"
+      description: >
+        The core deliverable. Competitors as columns, dimensions as rows,
+        grouped by category. Each cell contains a brief assessment.
+      format: "Markdown table"
+      cell_values:
+        binary: "Yes / No / Partial"
+        spectrum: "None / Basic / Standard / Advanced"
+        architectural: "Brief approach label (e.g., 'Canvas-based', 'DOM-based')"
+      example: |
+        | Dimension | Bryntum | DHTMLX | frappe-gantt | Ours (target) |
+        |-----------|---------|--------|--------------|----------------|
+        | **Core Functionality** | | | | |
+        | Task dependencies | All 4 types + lag | FS/FF/SS/SF | FS only | ? |
+        | Critical path | Yes | Yes | No | ? |
+        | Baselines | Yes | No | No | ? |
+        | **UX / Interaction** | | | | |
+        | Drag to reschedule | Yes | Yes | Yes | ? |
+        | Drag to resize | Yes | Yes | No | ? |
+        | Touch/mobile | Yes | Partial | No | ? |
+      notes:
+        - "The 'Ours' column starts with '?' — filled in by the product owner after scoping"
+        - "Group dimensions by category for scannability"
+        - "Bold the category headers"
+
+    - name: "Dimension Detail Cards"
+      description: >
+        For spectrum and architectural dimensions, define what the levels mean.
+        Helps the product owner understand what 'Basic' vs 'Advanced' actually implies.
+      format: "Bullet list per dimension"
+      example: |
+        ### Dependency Support (spectrum)
+        - **None**: Tasks are independent, no linking
+        - **Basic**: Finish-to-start links only, no lag/lead time
+        - **Standard**: All 4 dependency types (FS, FF, SS, SF)
+        - **Advanced**: Standard + lag/lead time + dependency chains + circular detection
+
+    - name: "Competitor Spotlights"
+      description: >
+        Brief notes on unique or noteworthy approaches that don't fit in the matrix.
+        Captures architectural insights and "they did something interesting" observations.
+      format: "2-3 sentences per competitor, only when something is genuinely notable"
+      example: >
+        Bryntum uses a web component architecture that makes it framework-agnostic
+        while maintaining React/Vue/Angular wrappers. Their data model separates
+        task store from assignment store, allowing many-to-many resource allocation.
+
+# ─────────────────────────────────────────────
+# Phase 5: Scoping Questions — What to ask the product owner
+# ─────────────────────────────────────────────
+
+scoping_questions:
+  description: >
+    Generate targeted questions that help the product owner decide what scope
+    to include. Questions should be answerable, not open-ended. Frame them
+    around trade-offs, not abstractions.
+
+  question_types:
+    - type: "Inclusion"
+      template: "Do we need {dimension}? Our competitors split: {who has it} vs {who doesn't}."
+      purpose: "Binary decision — in or out of scope"
+      example: "Do we need critical path highlighting? Bryntum and DHTMLX have it, frappe-gantt doesn't."
+
+    - type: "Level"
+      template: "What level of {dimension} do we need? Options range from {basic} to {advanced}."
+      purpose: "Spectrum decision — how far to go"
+      example: "What level of dependency support? Basic (FS only) would cover 80% of use cases. Full (all 4 types + lag) matches commercial tools."
+
+    - type: "Trade-off"
+      template: "{Feature X} enables {benefit} but requires {cost/complexity}. Is that justified for our users?"
+      purpose: "Force explicit cost-benefit reasoning"
+      example: "Touch/mobile support enables field use but requires a responsive layout rework. Is that justified for v1?"
+
+    - type: "MVP boundary"
+      template: "Which of these are table stakes (must-have for launch) vs differentiators (nice-to-have)?"
+      purpose: "Separate the phases — what's v1 vs v2"
+      example: "Table stakes: task display, basic dependencies, drag to reschedule. Differentiator: baselines, resource view, critical path."
+
+    - type: "Integration"
+      template: "How should {feature} interact with {existing feature}? Competitors handle this by {approaches}."
+      purpose: "Surface integration decisions early"
+      example: "How should Gantt interact with Kanban? Monday.com syncs both views to the same data. Asana keeps them separate."
+
+    - type: "Architectural"
+      template: "Competitors use {approach A} vs {approach B}. Each has trade-offs: {A pros/cons} vs {B pros/cons}."
+      purpose: "Surface build-vs-buy and rendering strategy decisions"
+      example: "Canvas rendering (Bryntum) handles 10K+ tasks but limits CSS customization. DOM rendering handles custom styling but slows at 500+ tasks."
+
+  generation_rules:
+    - "Generate 5-10 questions total — enough to scope, not so many it's overwhelming"
+    - "Lead with the highest-impact decisions (the ones that most constrain scope)"
+    - "For each question, note which competitors informed it"
+    - "Include an 'Ours' recommendation column in the matrix AFTER questions are answered"
+    - "Questions should be answerable in a single sentence — not essay questions"
+
+# ─────────────────────────────────────────────
+# Agent Instructions — How to use this methodology
+# ─────────────────────────────────────────────
+
+agent_instructions:
+  description: >
+    When invoked to perform a competitive feature analysis, follow these phases
+    in order. The entire process should take one focused session.
+
+  workflow:
+    - phase: "Discovery"
+      actions:
+        - "Identify the feature archetype (UI component, app feature, etc.)"
+        - "Run 3-5 web searches using the search strategies above"
+        - "Select 3-5 competitors representing the range of approaches"
+      output: "List of competitors with brief description of each"
+
+    - phase: "Dimensions"
+      actions:
+        - "Load starter dimensions from dimension-catalog.yaml"
+        - "Research the richest competitor's docs/features page"
+        - "Refine dimension list — add discovered, remove irrelevant"
+        - "Classify each dimension (binary/spectrum/architectural)"
+      output: "Categorized dimension list"
+
+    - phase: "Research"
+      actions:
+        - "For each competitor, gather data across all dimensions"
+        - "Prioritize official docs over reviews"
+        - "Mark uncertain data explicitly"
+      output: "Raw data per competitor per dimension"
+
+    - phase: "Synthesis"
+      actions:
+        - "Build the comparison matrix"
+        - "Write dimension detail cards for spectrum/architectural dimensions"
+        - "Write competitor spotlight notes where warranted"
+      output: "Formatted comparison document"
+
+    - phase: "Scoping"
+      actions:
+        - "Generate 5-10 scoping questions using the question types above"
+        - "Order by impact (highest-impact decisions first)"
+        - "Include an empty 'Ours' column in the matrix for the product owner to fill"
+      output: "Scoping questions appended to the comparison document"

@@ -1,0 +1,197 @@
+# Risk Assessment Framework — Legal & Compliance
+# Cross-project general framework for legal risk assessment and compliance gap analysis.
+# Project-specific legal domains (payment compliance, privacy policy status, vendor DPA status,
+# open compliance items) belong in the agent body (legal-advisor/MEMORY.md).
+# Last updated: 2026-03-13
+
+last_updated: 2026-03-13
+id: risk-assessment-framework
+name: "Risk Assessment Framework — Legal & Compliance"
+description: >
+  A structured framework for assessing legal and compliance risks in software products.
+  Covers risk categorization, a compliance gap analysis format, and a decision model
+  for when to escalate to legal counsel vs. proceed with documented risk acceptance.
+  Applies to SaaS products, marketplaces, payment platforms, and streaming/recording services.
+
+# ─────────────────────────────────────────────
+# Risk Severity Scale
+# ─────────────────────────────────────────────
+
+risk_severity_scale:
+  BLOCKING:
+    description: "Legal exposure that, if triggered, could result in injunction, criminal liability, license revocation, or unrecoverable reputational damage"
+    response: "Do not launch the feature or take the action until resolved. Requires attorney review."
+    examples:
+      - "Processing payments without required money transmitter license"
+      - "Collecting biometric data without explicit consent (IL BIPA, GDPR Art. 9)"
+      - "Operating a service for minors without COPPA compliance"
+  HIGH:
+    description: "Significant legal or regulatory exposure with moderate probability — likely to be triggered at scale"
+    response: "Resolve before scaling to production users. Document mitigation steps and timeline."
+    examples:
+      - "Absent Terms of Service before taking paid subscriptions"
+      - "Missing data processing agreements with third-party processors"
+      - "Platform fee structure that could be characterized as money transmission"
+  MEDIUM:
+    description: "Legal exposure that requires action but has low probability or limited blast radius at current scale"
+    response: "Resolve within 90 days. Document as accepted risk with expiry condition."
+    examples:
+      - "Privacy policy not yet linked from the application footer"
+      - "No formal DMCA agent registered before user-submitted content goes live"
+      - "Geo-restriction list incomplete (some prohibited states not blocked)"
+  LOW:
+    description: "Hygiene item or future-proofing — no immediate exposure at current scale"
+    response: "Resolve opportunistically. Add to compliance backlog."
+    examples:
+      - "Cookie consent banner not implemented (justified by strictly-necessary-only cookies)"
+      - "Data export/portability feature not yet built (GDPR right but low user demand)"
+
+# ─────────────────────────────────────────────
+# Risk Assessment Categories
+# ─────────────────────────────────────────────
+
+risk_categories:
+  payment_and_financial:
+    description: "Risks associated with collecting, processing, or distributing money"
+    key_questions:
+      - "Does the platform collect funds from one party and distribute to another? (money transmission risk)"
+      - "Does the payment processor's ToS permit this use case explicitly?"
+      - "Are there regulated financial activities embedded in the product (lending, insurance, securities)?"
+      - "Is 1099 reporting required and who is the reporting entity?"
+      - "Are zero-decimal currencies and international payment regulations handled?"
+    common_traps:
+      - "Assuming a payment processor that works for one use case (SaaS subscriptions) works for another (marketplace fees)"
+      - "Fund flow through platform accounts when the business model assumes pass-through"
+      - "Prize distribution without considering the platform's potential MTL exposure"
+
+  data_privacy:
+    description: "Risks under GDPR, CCPA/CPRA, COPPA, BIPA, and similar privacy laws"
+    key_questions:
+      - "What personal data is collected, where is it stored, and what is the legal basis?"
+      - "Are any special categories of data collected (biometrics, health, children's data)?"
+      - "Can users exercise their rights (access, deletion, portability) through the product?"
+      - "Do all third-party processors have data processing agreements (DPAs) in place?"
+      - "Is the privacy policy accurate, current, and accessible?"
+    jurisdictional_triggers:
+      - "GDPR: Any EU/EEA user, regardless of company location"
+      - "CCPA/CPRA: California residents; threshold at 100K consumers or $25M revenue"
+      - "COPPA: Any service directed at or knowingly collecting from children under 13"
+      - "BIPA: Illinois residents; biometric data (face, fingerprint, voice); private right of action"
+      - "VCDPA/CPA: Virginia and Colorado residents"
+
+  intellectual_property:
+    description: "Risks associated with using third-party content (card images, game rules, tournament data)"
+    key_questions:
+      - "Is a license required from the IP holder for the planned use case?"
+      - "Does fair use / fair dealing apply? (commercial use shifts the calculus)"
+      - "Is a DMCA safe harbor defense available if users submit infringing content?"
+      - "Are web scraping ToS violations a risk for automated data collection?"
+    common_traps:
+      - "Assuming fan site / personal use fair use applies to commercial products"
+      - "Scraping data in violation of robots.txt or ToS without assessing legal risk"
+      - "No DMCA agent registered before user-submitted content goes live"
+
+  consumer_protection:
+    description: "Risks under FTC regulations, state consumer protection laws, and platform ToS"
+    key_questions:
+      - "Are pricing, subscription terms, and cancellation clearly disclosed? (FTC auto-renew rules)"
+      - "Are trial terms, billing dates, and charges disclosed before collection?"
+      - "Are user-submitted reviews or testimonials authentic? (FTC endorsement guidelines)"
+      - "Do subscription tiers offer what they advertise?"
+
+  geo_restrictions:
+    description: "State/country-level prohibitions or additional requirements for specific features"
+    key_questions:
+      - "Are any states or countries explicitly prohibited from using specific features?"
+      - "Are the geo-restriction rules implemented technically (IP block, registration block)?"
+      - "Is the restriction list complete and reviewed against current law?"
+    approach: >
+      Use a whitelist approach (permitted jurisdictions) rather than a blacklist (excluded
+      jurisdictions). Whitelists are safer because they default to exclusion for unknown
+      jurisdictions; blacklists require exhaustive enumeration of every problematic jurisdiction.
+
+# ─────────────────────────────────────────────
+# Compliance Gap Analysis Format
+# ─────────────────────────────────────────────
+
+compliance_gap_analysis:
+  description: >
+    A structured format for documenting the gap between current state and required
+    compliance state, with prioritized remediation steps.
+
+  item_template:
+    requirement: "What law, regulation, or contractual obligation creates this requirement"
+    current_state: "What is implemented today (can be 'nothing')"
+    gap: "The delta between current state and required state"
+    severity: "BLOCKING | HIGH | MEDIUM | LOW"
+    blocking_for: "Which features or revenue streams cannot launch until this is resolved"
+    remediation: "Specific action steps to close the gap"
+    owner: "Who is responsible for remediation (engineering, legal, product, operations)"
+    target_date: "Date by which remediation must be complete (for BLOCKING/HIGH)"
+    status: "OPEN | IN_PROGRESS | RESOLVED | ACCEPTED"
+    accepted_risk_rationale: "Required if status is ACCEPTED — why is this risk being accepted and under what conditions would that change"
+
+  review_cadence:
+    - "At each feature launch: review gaps that are BLOCKING for that feature"
+    - "Quarterly: review all HIGH and MEDIUM gaps for progress"
+    - "At major version/milestone: full gap analysis review"
+
+# ─────────────────────────────────────────────
+# Escalation Decision Model
+# ─────────────────────────────────────────────
+
+escalation_decision:
+  description: >
+    When to escalate to qualified legal counsel vs. when to proceed with internal
+    risk assessment and documented acceptance.
+
+  escalate_to_counsel_when:
+    - "Any BLOCKING severity finding"
+    - "Money transmission liability analysis (MTL exposure varies significantly by state)"
+    - "Any finding that involves criminal liability (not just civil/regulatory)"
+    - "Before entering any regulated payment partnership agreement"
+    - "Before launching in a new jurisdiction with materially different legal requirements"
+    - "Any finding where the risk of getting it wrong exceeds the cost of counsel"
+
+  proceed_with_documented_acceptance_when:
+    - "MEDIUM or LOW findings where the legal requirement is clear and the gap is well-understood"
+    - "The gap has a defined remediation timeline and a named owner"
+    - "The risk is proportionate to current scale (e.g., GDPR exposure before reaching EU users)"
+
+  acceptance_documentation_required:
+    - "Specific finding and severity"
+    - "Why the risk is being accepted (scale, cost, timeline)"
+    - "What condition would change the acceptance decision (user count, revenue, feature launch)"
+    - "Named approver and date"
+
+# ─────────────────────────────────────────────
+# Common Legal Traps in Consumer Software
+# ─────────────────────────────────────────────
+
+common_traps:
+  - name: "Payment processor ToS assumption"
+    description: "Assuming a processor approved for one business model covers a different model. Always verify the specific use case is explicitly permitted."
+  - name: "Fund flow vs. pass-through"
+    description: "Receiving funds and re-distributing them (even momentarily) vs. a split at source. The former triggers MTL risk; the latter does not. Verify the technical implementation matches the business model."
+  - name: "Fair use in commercial context"
+    description: "Fair use analysis changes materially when the use is commercial. Do not rely on personal/fan site fair use precedents for a commercial product."
+  - name: "Biometric data underestimation"
+    description: "Video recordings of identifiable faces qualify as biometric data under GDPR Art. 9 and IL BIPA. Streaming and recording features require explicit, separate consent."
+  - name: "Privacy policy drift"
+    description: "Privacy policies are often accurate at launch but drift as features are added. Establish a review trigger: any new data collection or new third-party processor requires a privacy policy update."
+  - name: "Minor in contract"
+    description: "Minors cannot form binding contracts in most jurisdictions. A minor registering for a paid tournament creates a voidable contract. Age verification at registration prevents this."
+
+# ─────────────────────────────────────────────
+# Maintenance
+# ─────────────────────────────────────────────
+
+maintenance:
+  add_when: >
+    A new category of legal risk is identified during a legal review that does not
+    fit within the existing 5 risk categories, or a new common trap is discovered
+    that applies across projects.
+  boundary_rule: >
+    Project-specific compliance status, open items with specific statuses, vendor DPA
+    confirmations, and jurisdiction-specific decisions (e.g., which states are geo-restricted
+    for the specific project) belong in the agent body, not in this file.

@@ -1,0 +1,59 @@
+# Testing Discipline
+
+**Status**: Active — codified in `process/overview.md` (Validation phase) and `process/deliverable_lifecycle.md` (Validated/Deployed states)
+**Knowledge store**: `knowledge/testing/` (cross-project), project `docs/testing/knowledge/` (project-specific)
+**Domain agent**: `.claude/agents/sdet.md` — dispatched for E2E test writing, Playwright suites, WebSocket flow tests, test architecture, and flake diagnosis
+
+## Summary
+
+Hybrid browser testing approach combining an AI-assisted browser tool for SDLC-aware exploration with Playwright CLI for fast, deterministic execution. Self-improving knowledge loop (Layers 0-6) reduces token cost and improves test quality over time. Testability is a first-class code quality concern.
+
+## Mutation Verification — The Persistence Rule
+
+Any test that validates a write operation (create, update, delete) MUST verify persistence, not just UI response. Optimistic UI updates and HTTP 200s are not proof that data was saved.
+
+**Required sequence for mutation verification:**
+1. **Perform** the write action (create, update, delete, link, unlink)
+2. **Force state reset** — close the modal, navigate away, or reload the page. This discards all client-side state including optimistic updates, local cache, and component state.
+3. **Return** to the same view via fresh navigation (reopen modal, revisit page)
+4. **Confirm** the change persisted — the data must reflect the mutation from a fresh server round-trip
+
+**What does NOT count as verification:**
+- Seeing the UI update immediately after the action (optimistic update)
+- A 200 status code in the network tab (the request succeeded but the backend may not have persisted)
+- Console logs showing "success" (frontend interpretation, not server truth)
+- The absence of an error (silent failures exist)
+
+**What counts:**
+- Server-round-tripped state: data loaded fresh from the API after a full state reset
+- A subsequent GET request returning the mutated data
+- Reopening the entity and seeing the change reflected
+
+**Why this matters:**
+This rule exists because of a real failure mode: a test agent declared a feature "fixed" because the UI updated after the action. The action triggered an optimistic removal from the local list, but the backend returned an auth error — the data was never actually changed. The next time the user opened the record, the "change" had reverted. The test passed, but the feature was broken.
+
+**Shorthand for test specs:** "Persist-verify" or "round-trip verify" — meaning the test must prove the mutation survived a full client reset.
+
+## Active Questions
+
+*(Add per-project as testing matures)*
+
+- Playwright Test Agents integration — CLI works, AI-assisted test generation patterns being evaluated
+- Custom spec format — prototype done, needs iteration per project type
+- Mobile test suite — confirm Playwright device emulation setup for each project
+
+## Parking Lot
+
+*Add testing insights here as they emerge during work. Include date and source context.*
+
+### Seeded Insights
+
+- **Cross-discipline**: Testability debt remediation flow (tester captures → architect polls → backlog) generalizes to other debt types (design debt, architecture debt, documentation debt).
+
+- **Skill readiness**: Test spec format sections map to skill input schema; knowledge layers map to skill context loading; scenarios map to skill execution instructions.
+
+- **Element catalog needs an operations layer.** The element catalog captures elements (nouns — how to find them) and locators (automation access paths). Advanced components (Gantt charts, Kanban boards) need an operations layer (verbs — how to interact): multi-step interaction sequences with choreography, coordinate math, settlement timing, and success verification. Each operation also carries a tool selection dimension (playwright-only for drag, browser tool for visual exploration, either for clicks). Build this when advanced components arrive; the element catalog structure is ready to host it.
+
+- **CLI auto-generates idiomatic locator code.** When using Playwright's interactive CLI, every command outputs the equivalent Playwright JS. The catalog should capture these directly as the canonical access path.
+
+- **Mobile testing pipeline.** Playwright's `devices` config (e.g., `devices['Pixel 7']`) enables mobile emulation. Auth fixtures must forward `contextOptions` through the context factory so device emulation (viewport, userAgent, hasTouch, isMobile) carries through. Use viewport-aware storageState cache keys (e.g., `_mobile` suffix for viewports < 768px) to prevent desktop/mobile auth state cross-contamination.

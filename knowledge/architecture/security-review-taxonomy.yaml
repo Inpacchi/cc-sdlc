@@ -1,0 +1,605 @@
+# Security Review Taxonomy — 7 Domain Framework
+# Cross-project general taxonomy for security reviews.
+# Project-specific findings, known vulnerabilities, accepted risks, and audit status
+# belong in the agent body (security-engineer/MEMORY.md).
+# Last updated: 2026-03-13
+
+last_updated: 2026-03-14
+id: security-review-taxonomy
+name: "Security Review Taxonomy — 7 Domain Framework"
+description: >
+  A structured taxonomy for conducting security reviews across 7 domains. Each domain
+  defines the threat category, the questions to ask, the patterns to enforce, and the
+  common failure modes to look for. Designed to ensure no category is skipped during
+  a review and to produce actionable, prioritized findings.
+
+# ─────────────────────────────────────────────
+# Severity Scale
+# ─────────────────────────────────────────────
+
+severity_scale:
+  CRITICAL:
+    description: "Exploitable without authentication or with publicly known credentials; allows unauthorized data access, code execution, or fund theft"
+    response: "Fix before merge. Do not ship."
+  HIGH:
+    description: "Requires authentication but allows privilege escalation, significant data exposure, or supply chain compromise"
+    response: "Fix in current sprint. Do not ship to production without mitigation."
+  MEDIUM:
+    description: "Limited impact, requires specific conditions or authenticated access to exploit"
+    response: "Fix within 30 days. Document as accepted risk if deferring."
+  LOW:
+    description: "Defense-in-depth concern; no direct exploit path but reduces security margin"
+    response: "Fix opportunistically. Document if accepting."
+  INFORMATIONAL:
+    description: "Observation that does not represent an exploitable vulnerability but may indicate process gaps, missing best practices, or areas to monitor"
+    response: "Document and consider in next architecture review. No SLA required."
+  ENVIRONMENTAL:
+    description: "Finding whose risk level depends heavily on the deployment context (e.g., internal-only vs. public-facing); the vulnerability exists but may be mitigated by environmental controls"
+    response: "Document the environmental assumption. Re-evaluate if deployment context changes."
+  BEST_PRACTICE:
+    description: "Code or configuration that deviates from security best practices but does not represent an active vulnerability in the current context"
+    response: "Address opportunistically. Track in technical debt backlog."
+  FALSE_POSITIVE:
+    description: "Finding confirmed to not represent a real vulnerability after investigation"
+    response: "Document the investigation rationale so future reviewers do not re-raise the same finding."
+
+# ─────────────────────────────────────────────
+# Domain 1: Authentication & Authorization
+# ─────────────────────────────────────────────
+
+# ─────────────────────────────────────────────
+# Pre-Engagement Rules of Engagement
+# ─────────────────────────────────────────────
+
+pre_engagement_rules_of_engagement:
+  description: >
+    Checklist of items that must be established before any active security testing begins.
+    Skipping this phase exposes the tester and organization to legal and operational risk.
+  checklist:
+    - "Scope is defined in writing: which systems, domains, IP ranges, and endpoints are in-scope"
+    - "Systems explicitly out of scope are listed: third-party services, shared infrastructure, production databases if testing in staging"
+    - "Legal authorization is documented: signed engagement letter or equivalent, identifying the authorizing party"
+    - "Testing boundaries are defined: what actions are permitted (read-only vs. exploitation, social engineering yes/no)"
+    - "Time window is specified: authorized testing hours/dates to avoid confusion with real attacks"
+    - "Emergency contacts are established: who to notify if a critical vulnerability is found or if testing causes unintended impact"
+    - "Data handling rules are defined: how vulnerabilities and evidence are stored and destroyed post-engagement"
+    - "Communication channel is agreed: who receives interim findings, how critical issues are escalated immediately"
+
+# ─────────────────────────────────────────────
+# Reconnaissance Phase
+# ─────────────────────────────────────────────
+
+reconnaissance_phase:
+  description: >
+    Structured information-gathering phase that precedes all active domain reviews.
+    Reconnaissance establishes the attack surface before any exploitation attempt.
+    Passive reconnaissance produces no traffic to the target and cannot be detected.
+  phase_type: "precursor — run before domain reviews, not as part of any single domain"
+
+  passive_information_gathering:
+    description: "Collect publicly available information without sending any traffic to the target systems"
+    techniques:
+      - "WHOIS lookup for domain registration, registrant, and expiry"
+      - "Certificate transparency logs (crt.sh) for subdomain enumeration"
+      - "Google dorking for exposed configuration files, error pages, and directory listings"
+      - "Shodan/Censys for exposed infrastructure and open ports"
+      - "LinkedIn and job postings for technology stack inference"
+      - "GitHub public repositories for accidentally committed secrets or internal hostnames"
+      - "Wayback Machine for historical exposure of endpoints or content"
+
+  dns_enumeration:
+    description: "Map DNS records to identify hosts, mail servers, CDN configuration, and potential subdomains"
+    records_to_check: ["A", "AAAA", "MX", "TXT", "CNAME", "NS", "SRV"]
+    subdomain_discovery:
+      - "DNS brute-force against common subdomain wordlists"
+      - "Certificate transparency enumeration (passive, no target traffic)"
+      - "Virtual host scanning for co-hosted subdomains"
+    outputs: "List of confirmed in-scope hosts and IP ranges to feed into active domain reviews"
+
+  technology_fingerprinting:
+    description: "Identify the technology stack from public signals before any authenticated testing"
+    signals:
+      - "HTTP response headers (Server, X-Powered-By, Set-Cookie names)"
+      - "HTML source comments and meta tags"
+      - "JavaScript bundle names and source map references"
+      - "favicon.ico hash compared against known technology databases"
+      - "Error page formatting (framework-specific error pages)"
+      - "robots.txt and sitemap.xml for path structure"
+    output: "Technology stack hypothesis to guide which domain checklist items are most relevant"
+
+domain_1_auth:
+  name: "Authentication & Authorization"
+  threat: "Unauthenticated access, privilege escalation, identity spoofing"
+  checklist:
+    - "Every route that touches user data or triggers a privileged action requires authentication"
+    - "Authorization checks server-side, not client-side (role checks on the server, not in the UI)"
+    - "Identity is always server-derived — never trust client-supplied identity claims"
+    - "Tokens are verified cryptographically (JWT signature, identity token verification) — not compared as strings"
+    - "Role escalation paths are protected by the same auth middleware as the resources they grant access to"
+    - "Token expiry and revocation are handled — expired tokens are rejected, not silently accepted"
+    - "WebSocket connections authenticate within the first N seconds of connection — not just on the initial HTTP upgrade"
+  common_failures:
+    - "Route uses an opaque header token without cryptographic verification (anyone knowing the string can access it)"
+    - "Role check performed client-side only — removed from UI but not from API"
+    - "WebSocket authenticates on HTTP upgrade but not on reconnect — session hijacking window"
+    - "Service-to-service calls use hardcoded credentials or no auth"
+
+# ─────────────────────────────────────────────
+# Domain 2: Input Validation
+# ─────────────────────────────────────────────
+
+domain_2_input_validation:
+  name: "Input Validation"
+  threat: "Injection (SQL, NoSQL, command, path traversal), schema pollution, oversized payloads"
+  checklist:
+    - "All user-supplied input is validated against an explicit schema before use"
+    - "Field allowlists are used for updates — no mass-assignment vulnerabilities"
+    - "String fields have maximum length limits enforced server-side"
+    - "Numeric fields have explicit type validation (isFinite, parseInt, not coerced)"
+    - "Identifiers used in file paths or database queries are validated with regex before use"
+    - "Payload size limits are enforced (max body size, max file size, max field count)"
+    - "Prototype pollution is guarded against when merging untrusted objects"
+    - "SSE/streaming event names are allowlisted — not echoed from user input"
+  common_failures:
+    - "Spread operator used to merge user-supplied objects into state without filtering"
+    - "Database path constructed from user input without format validation"
+    - "No maximum length on free-text fields — denial of service via large inputs"
+    - "parseInt/parseFloat without radix or NaN check"
+
+# ─────────────────────────────────────────────
+# Domain 3: Secrets & Credential Management
+# ─────────────────────────────────────────────
+
+domain_3_secrets:
+  name: "Secrets & Credential Management"
+  threat: "Credential exposure in source, logs, or client bundles"
+  checklist:
+    - "No secrets hardcoded in source code — use environment variables"
+    - "Secrets are not logged (not in console.log, not in error messages, not in audit trails)"
+    - "Client-side code bundles contain only public-safe credentials (read-only API keys, publishable keys)"
+    - "Server-side secrets (private keys, admin credentials) are never sent to the client"
+    - "Third-party OAuth tokens (refresh tokens) are stored encrypted or in restricted-access storage"
+    - "Secret scanning is configured in CI (GitHub secret scanning, pre-commit hooks)"
+    - "API keys in frontend code are restricted at the provider level (read-only, domain-restricted)"
+  common_failures:
+    - "Hardcoded UUIDs or tokens used as authentication credentials"
+    - "OAuth refresh tokens stored in a world-readable collection or localStorage"
+    - "Private API keys included in client bundles via VITE_* variables"
+    - "Tokens logged in plaintext at INFO level during normal operation"
+
+# ─────────────────────────────────────────────
+# Domain 4: Dependency Security
+# ─────────────────────────────────────────────
+
+domain_4_dependencies:
+  name: "Dependency Security"
+  threat: "Vulnerable or compromised transitive dependencies, supply chain attacks"
+  checklist:
+    - "pnpm audit (or npm audit) runs in CI with a minimum severity threshold"
+    - "GitHub Actions and other CI steps use pinned SHA references for third-party actions (not floating @v3 tags)"
+    - "Lock file is committed and regenerated only through the package manager"
+    - "New dependencies are reviewed for: purpose, publisher reputation, maintenance status, known CVEs"
+    - "Dependencies with known critical CVEs are patched or replaced within SLA (typically 7 days for CRITICAL)"
+    - "Node.js runtime version matches a supported LTS version"
+  common_failures:
+    - "CI uses @v3 or @latest tags for third-party actions — tag can be moved to malicious code"
+    - "No dependency audit in CI — critical CVEs accumulate silently"
+    - "Lock file not committed — allows non-deterministic installs with different transitive versions"
+
+# ─────────────────────────────────────────────
+# Domain 5: DevSecOps
+# ─────────────────────────────────────────────
+
+domain_5_devsecops:
+  name: "DevSecOps"
+  threat: "Security gaps introduced during development lifecycle — missing CI gates, no secret scanning, no review process"
+  checklist:
+    - "Dependency audit runs as a required CI gate on PRs"
+    - "Secret scanning is active (GitHub advanced security or equivalent)"
+    - "Security findings from reviews are tracked in a backlog with severity-based SLAs"
+    - "Security review is part of the definition of done for new features that touch auth, payments, or PII"
+    - "Environment separation: production secrets are not accessible in development or staging"
+    - "Deployment pipeline validates that no development-only flags or debug endpoints are active in production"
+  common_failures:
+    - "Security review happens post-merge instead of pre-merge for high-risk features"
+    - "Production environment variables shared with development team (blast radius on credential leak)"
+    - "No tracking of open security findings — they accumulate without SLA pressure"
+
+# ─────────────────────────────────────────────
+# Domain 6: Data Privacy
+# ─────────────────────────────────────────────
+
+domain_6_data_privacy:
+  name: "Data Privacy"
+  threat: "GDPR/CCPA violations, PII leakage, missing consent, inadequate data retention"
+  checklist:
+    - "PII fields are explicitly inventoried (email, name, photo URL, device ID, location)"
+    - "Third-party error tracking does not capture PII (sendDefaultPii: false in Sentry, etc.)"
+    - "User deletion requests result in actual data deletion (not just account deactivation)"
+    - "Data retention periods are defined and enforced for each PII category"
+    - "Sensitive data categories (biometrics, payment details, health) have explicit consent flows"
+    - "Privacy policy is accurate, current, and accessible from the application"
+    - "Cookies beyond strictly necessary are disclosed and consented to"
+    - "Data processing agreements (DPAs) are in place with all third-party data processors"
+  common_failures:
+    - "Error tracking capturing request bodies or query parameters that include tokens or PII"
+    - "User deletion flow removes the account record but leaves PII in subcollections or logs"
+    - "Biometric or recording data collected without explicit separate consent"
+    - "Privacy policy describes data that is no longer collected, or omits data that is being collected"
+
+# ─────────────────────────────────────────────
+# Domain 7: Infrastructure
+# ─────────────────────────────────────────────
+
+domain_7_infrastructure:
+  name: "Infrastructure"
+  threat: "Misconfigured CORS, overly permissive database rules, exposed admin endpoints, resource exhaustion"
+  checklist:
+    - "CORS origin allowlist is specific to known domains — not wildcard or overly broad regex"
+    - "Database rules default to deny — explicitly grant only what is required"
+    - "Rate limiting is applied to all public-facing endpoints and WebSocket connections"
+    - "Rate limiting survives process restarts (use Redis or database-backed rate limiting for production)"
+    - "Admin endpoints are restricted by both authentication and role claims"
+    - "Storage CORS is configured for production domains (not only localhost)"
+    - "Resource limits are enforced: max file upload size, max concurrent connections, max payload size"
+    - "Error responses do not leak internal implementation details (stack traces, file paths, SQL)"
+  common_failures:
+    - "CORS regex too broad (matches any subdomain of a known domain, or any Vercel deployment)"
+    - "Database collection has allow read: if true on sensitive data (enumeration risk)"
+    - "In-memory rate limiting bypassed by process restart (Railway redeploy resets all counters)"
+    - "Storage bucket CORS allows only localhost — production breaks silently"
+    - "Admin endpoint protected only by authentication, not by role — any authenticated user can access"
+
+# ─────────────────────────────────────────────
+# Review Process
+# ─────────────────────────────────────────────
+
+# ─────────────────────────────────────────────
+# Attack Surface Taxonomy
+# ─────────────────────────────────────────────
+
+attack_surface_taxonomy:
+  description: >
+    Categorized taxonomy of attack surfaces to ensure no surface category is overlooked
+    during scope definition and reconnaissance. Not every surface is relevant to every
+    engagement — include/exclude based on the target's architecture.
+
+  surfaces:
+    web:
+      - "Public-facing web applications"
+      - "Admin panels and management consoles"
+      - "API endpoints (REST, GraphQL, WebSocket)"
+      - "OAuth/OIDC flows and redirect URIs"
+    mobile:
+      - "iOS and Android native apps"
+      - "Hybrid apps (React Native, Flutter, Ionic)"
+      - "Mobile deep links and URL scheme handlers"
+      - "Local data storage (SQLite, SharedPreferences, Keychain)"
+      - "Certificate pinning implementation"
+      - "Binary analysis and reverse engineering exposure"
+    wireless:
+      - "WiFi (WPA2/3 configuration, rogue AP exposure)"
+      - "Bluetooth pairing and data transfer protocols"
+      - "NFC tap-to-pay or identity flows"
+      - "RF signals from IoT or proximity devices"
+    cloud_specific:
+      - "S3/Cloud Storage bucket permissions and public access settings"
+      - "IAM role and service account privilege scope"
+      - "Serverless function cold-start injection vectors"
+      - "Container image supply chain (base image provenance)"
+      - "Kubernetes RBAC and network policy configuration"
+      - "Secrets manager access policies and rotation status"
+      - "Cloud metadata service access from application code (SSRF → IMDS)"
+    network:
+      - "Exposed ports and services (enumerated during reconnaissance)"
+      - "Internal network segmentation (lateral movement potential)"
+      - "VPN and remote access configuration"
+    supply_chain:
+      - "Third-party dependencies (see Domain 4)"
+      - "CI/CD pipeline and build system"
+      - "Container registries and base images"
+      - "Developer tooling and IDE plugins"
+
+# ─────────────────────────────────────────────
+# Supply Chain Security Patterns
+# ─────────────────────────────────────────────
+
+supply_chain_security:
+  description: >
+    Extended patterns for software supply chain security, complementing the Domain 4
+    dependency checklist. These address systemic attack classes that go beyond individual
+    CVE patching.
+
+  sbom:
+    name: "Software Bill of Materials (SBOM)"
+    description: "A machine-readable inventory of all software components, their versions, and their relationships in a software product"
+    formats: ["SPDX", "CycloneDX"]
+    when_to_generate: "At every production build; include as a build artifact alongside the deployment"
+    use_cases:
+      - "Rapid impact assessment when a new CVE is disclosed (query SBOM to find affected builds)"
+      - "License compliance verification"
+      - "Customer-facing transparency (regulated industries, government contracts)"
+    tooling: ["syft", "trivy", "cdxgen"]
+
+  dependency_confusion:
+    name: "Dependency Confusion Attack"
+    description: >
+      An attack where a malicious package is published to a public registry (npm, PyPI)
+      with the same name as a private internal package. Package managers that check public
+      registries before private ones may resolve to the malicious version.
+    mechanism:
+      - "Attacker discovers internal package name (via job postings, error messages, public source)"
+      - "Attacker publishes a package with the same name to npm/PyPI with a higher version number"
+      - "Developer or CI runs install — package manager fetches the malicious public package"
+    mitigations:
+      - "Scope all internal packages with a private scope prefix (e.g., @company/package-name)"
+      - "Configure package manager to always prefer the private registry for scoped packages"
+      - "Pin private package versions in lock files and validate hashes"
+      - "Use npm's publishConfig.registry to restrict where internal packages can be published"
+    detection: "Monitor public registries for packages matching internal naming conventions"
+
+  typosquatting_detection:
+    description: "Attackers publish packages with names that are slight misspellings of popular packages"
+    heuristics:
+      - "Edit distance check: flag new dependencies whose names are within edit distance 2 of a top-1000 package"
+      - "Character transpositions: lodash vs lodasch, express vs expres"
+      - "Homoglyph substitution: using visually similar Unicode characters in package names"
+      - "Trailing characters: lodash_ or _express"
+    process:
+      - "Review new package additions in PRs — a typo in a dependency can introduce a malicious package"
+      - "Use automated tools (socket.dev, Snyk) that flag suspicious package characteristics"
+      - "Verify publisher identity for new packages before merging"
+
+  license_compatibility:
+    description: >
+      License compatibility determines whether a dependency's license permits use in your
+      project's intended distribution model. Incompatible licenses can create legal exposure.
+    compatibility_concept: >
+      Not all open source licenses are compatible with each other or with commercial use.
+      The matrix of compatibility must be evaluated at intake — not discovered at legal review.
+    key_considerations:
+      - name: "GPL (v2/v3)"
+        note: "Copyleft — if your code links against a GPL library and you distribute the result, your code may need to be GPL. Strong vs. weak copyleft distinction matters."
+      - name: "MIT / BSD"
+        note: "Permissive — compatible with commercial use and proprietary code. Attribution required."
+      - name: "Apache 2.0"
+        note: "Permissive — compatible with commercial use. Includes patent grant. Incompatible with GPL v2 in some configurations."
+      - name: "AGPL"
+        note: "Network copyleft — using AGPL software over a network (as a service) may trigger copyleft obligations. High-risk for SaaS."
+    process:
+      - "Maintain an approved license list; new dependencies outside the list require legal review"
+      - "Automate license detection in CI (license-checker, FOSSA, Snyk)"
+      - "Flag any GPL or AGPL introduction as requiring review"
+
+# ─────────────────────────────────────────────
+# Regulatory Compliance Frameworks
+# ─────────────────────────────────────────────
+
+regulatory_compliance_frameworks:
+  description: >
+    Overview of major regulatory certification frameworks. These define the control
+    structures that auditors verify. Security reviews should map findings to relevant
+    framework controls when applicable.
+
+  frameworks:
+    soc2:
+      name: "SOC 2 (Service Organization Control 2)"
+      scope: "SaaS providers and cloud services handling customer data"
+      trust_service_criteria: ["Security", "Availability", "Processing Integrity", "Confidentiality", "Privacy"]
+      types:
+        type_1: "Point-in-time — controls are designed correctly"
+        type_2: "Period of time (typically 6-12 months) — controls operated effectively over the period"
+      key_controls:
+        - "Logical access controls and least privilege"
+        - "Change management procedures"
+        - "Incident response and notification procedures"
+        - "Vendor management and risk assessment"
+        - "Monitoring and anomaly detection"
+
+    iso_27001:
+      name: "ISO/IEC 27001"
+      scope: "Information security management system (ISMS) — applicable to any organization"
+      structure: "114 controls across 14 domains (Annex A)"
+      certification: "Third-party audit by accredited certification body; recertified every 3 years"
+      key_domains:
+        - "Information security policies"
+        - "Organization of information security"
+        - "Human resource security"
+        - "Asset management"
+        - "Access control"
+        - "Cryptography"
+        - "Physical and environmental security"
+        - "Operations security"
+        - "Communications security"
+        - "Supplier relationships"
+        - "Information security incident management"
+
+    pci_dss:
+      name: "PCI DSS (Payment Card Industry Data Security Standard)"
+      scope: "Any organization that stores, processes, or transmits cardholder data"
+      version: "v4.0 (current as of 2024)"
+      twelve_requirements:
+        - "Install and maintain network security controls"
+        - "Apply secure configurations to all system components"
+        - "Protect stored account data"
+        - "Protect cardholder data with strong cryptography during transmission"
+        - "Protect all systems and networks from malicious software"
+        - "Develop and maintain secure systems and software"
+        - "Restrict access to system components and cardholder data by business need to know"
+        - "Identify users and authenticate access to system components"
+        - "Restrict physical access to cardholder data"
+        - "Log and monitor all access to system components and cardholder data"
+        - "Test security of systems and networks regularly"
+        - "Support information security with organizational policies and programs"
+      relevance: "Mandatory for any system that handles payment card data directly. Outsourcing to a payment processor (Stripe, PayPal) reduces but does not eliminate scope."
+
+# ─────────────────────────────────────────────
+# Evidence Collection Automation
+# ─────────────────────────────────────────────
+
+evidence_collection:
+  description: >
+    Methodology for automating the collection of compliance evidence. Manual evidence
+    collection is error-prone, time-consuming, and does not scale to continuous compliance.
+
+  automation_methodology:
+    principle: "Evidence should be collected continuously by automated systems, not assembled manually before an audit"
+    categories:
+      configuration_exports:
+        description: "Automated snapshots of security-relevant configuration"
+        examples:
+          - "IAM policy exports (scheduled daily)"
+          - "Database security rule snapshots committed to version control"
+          - "Network ACL and security group configuration exports"
+          - "TLS certificate validity and configuration (automated cert scanner)"
+      log_retention:
+        description: "Centralized log aggregation with defined retention periods"
+        requirements:
+          - "Authentication events (login, logout, failed attempts)"
+          - "Privilege escalation events"
+          - "Data export and bulk access events"
+          - "Configuration changes"
+        retention_period: "Minimum 12 months for SOC 2 / ISO 27001; 13 months for PCI DSS"
+      test_result_artifacts:
+        description: "Automated test execution results as compliance evidence"
+        examples:
+          - "Penetration test reports (annual minimum for SOC 2)"
+          - "Vulnerability scan results (continuous or quarterly)"
+          - "Security awareness training completion records"
+      process_evidence:
+        description: "Documentation that processes are followed"
+        examples:
+          - "Code review approvals (git history + PR merge requirements)"
+          - "Change management tickets for production changes"
+          - "Incident response ticket records"
+
+  audit_readiness:
+    principle: "An organization with continuous evidence collection can produce an audit package in days, not months"
+    checklist:
+      - "Evidence is timestamped and tamper-evident"
+      - "Evidence collection is automated and does not rely on manual action before the audit window"
+      - "Evidence is organized by control framework requirement for rapid retrieval"
+      - "Evidence collection scripts are version-controlled and auditable themselves"
+
+# ─────────────────────────────────────────────
+# Continuous Compliance Posture
+# ─────────────────────────────────────────────
+
+continuous_compliance:
+  description: >
+    Continuous compliance treats compliance posture as a real-time metric rather than a
+    point-in-time audit result. Drift from a compliant state is detected and remediated
+    automatically or immediately, rather than being discovered at the next annual audit.
+
+  posture_vs_point_in_time:
+    point_in_time: "Traditional audit model — assess compliance at a fixed date, produce a report, remediate findings, repeat next year"
+    continuous_posture: "Compliance controls are monitored in real time; any drift triggers an alert and automated remediation where possible"
+    advantage: "Continuous posture eliminates the 'compliant on audit day, non-compliant the next day' problem"
+
+  implementation_patterns:
+    real_time_monitoring:
+      - "Policy-as-code tools (OPA, Kyverno) enforce security policies in CI/CD and at runtime"
+      - "Cloud security posture management (CSPM) tools scan cloud configuration continuously"
+      - "SIEM alerts on security control failures (e.g., MFA disabled for an account)"
+    drift_detection:
+      description: "Compare current configuration against the known-good baseline; alert on any delta"
+      examples:
+        - "S3 bucket ACL changed from private to public — immediate alert"
+        - "Security group rule added that allows 0.0.0.0/0 — auto-blocked or immediate alert"
+        - "Dependency with known CRITICAL CVE introduced — CI gate blocks merge"
+    automated_remediation:
+      examples:
+        - "Auto-revoke overly permissive IAM roles that exceed a permission threshold"
+        - "Auto-rotate secrets approaching expiry"
+        - "Auto-close public cloud storage buckets that are opened without an approved exception"
+    metrics_and_dashboards:
+      - "Compliance score as a percentage of passing controls — visible to engineering and leadership"
+      - "Time-to-remediation per finding severity"
+      - "Control failure trend (rising failures signal systemic process issues)"
+
+# ─────────────────────────────────────────────
+# Privacy Engineering
+# ─────────────────────────────────────────────
+
+privacy_engineering:
+  description: >
+    Privacy by Design (PbD) treats privacy as a foundational design discipline, not a
+    compliance checkbox added before launch. Privacy controls are embedded in architecture
+    decisions, not bolted on afterward.
+
+  seven_principles:
+    - name: "Proactive not Reactive"
+      description: "Anticipate and prevent privacy-invasive events before they occur; do not remediate after the fact"
+    - name: "Privacy as the Default"
+      description: "The strictest privacy settings are the default. Users must opt in to share more, not opt out to share less."
+    - name: "Privacy Embedded into Design"
+      description: "Privacy is not an add-on; it is an integral component of the system design from the beginning"
+    - name: "Full Functionality — Positive-Sum"
+      description: "Privacy does not come at the expense of functionality; both can be achieved simultaneously"
+    - name: "End-to-End Security"
+      description: "Full lifecycle protection — data is protected from collection through deletion"
+    - name: "Visibility and Transparency"
+      description: "All stakeholders can verify that privacy practices match stated policies"
+    - name: "Respect for User Privacy"
+      description: "Keep it user-centric; respect user interests and preferences above organizational convenience"
+
+  design_disciplines:
+    data_minimization: "Collect only the data necessary for the stated purpose. Every additional field is additional risk."
+    purpose_limitation: "Data collected for one purpose must not be repurposed without explicit consent"
+    storage_limitation: "Define retention periods at data collection time; enforce deletion automatically"
+    pseudonymization: "Replace direct identifiers with pseudonyms where the original identity is not needed for the processing purpose"
+    privacy_impact_assessments: "Conduct a PIA/DPIA before deploying any new feature that processes sensitive personal data"
+
+  integration_with_security_review: >
+    Privacy engineering concerns overlap with Domain 6 (Data Privacy) but operate at design
+    time rather than review time. When reviewing a spec or plan, check: Is data minimization
+    applied? Is the retention period defined? Is consent architecture planned? Flag
+    gaps at spec review, not at code review.
+
+review_process:
+  timing:
+    pre_implementation: "Review spec and plan for security-relevant design decisions. Flag CRITICAL or HIGH risks before any code is written."
+    pre_engagement: "Complete pre-engagement rules of engagement checklist and reconnaissance phase before active testing."
+    pre_merge: "Review implementation against all 7 domains. Required for features touching auth, payments, PII, or new external integrations."
+    post_deployment: "Verify production configuration (CORS, rate limits, secrets) matches reviewed implementation."
+    retest_validation: >
+      After remediation of CRITICAL or HIGH findings, conduct a retest to confirm the fix is
+      effective and has not introduced new vulnerabilities. Retest must be performed by the
+      same reviewer or an equally qualified reviewer — not self-certified by the developer.
+      Update finding status to RESOLVED only after retest passes.
+
+  output_format:
+    finding_template:
+      severity: "CRITICAL | HIGH | MEDIUM | LOW | INFORMATIONAL | ENVIRONMENTAL | BEST_PRACTICE | FALSE_POSITIVE"
+      domain: "Which of the 7 domains (or SUPPLY_CHAIN / RECONNAISSANCE for new categories)"
+      location: "File path and line number"
+      description: "What is the vulnerability and why is it a risk"
+      recommendation: "Specific fix or mitigation"
+      retest_required: "Yes (CRITICAL/HIGH) | No (MEDIUM/LOW/INFORMATIONAL)"
+      status: "OPEN | IN_REMEDIATION | RETEST_PENDING | RESOLVED | ACCEPTED (with rationale) | FALSE_POSITIVE"
+
+  accepted_risk_requirement: >
+    When a finding is accepted without remediation, document: the finding, the severity,
+    the rationale for acceptance, the conditions that would change the decision, and who approved.
+
+  retest_protocol:
+    trigger: "All CRITICAL and HIGH findings after developer reports remediation complete"
+    steps:
+      - "Reproduce the original finding using the documented proof of concept to confirm the baseline"
+      - "Apply the same test against the remediated version"
+      - "Verify the fix does not introduce a bypass or new vulnerability"
+      - "Update finding status to RESOLVED with retest date and tester"
+    documentation: "Retest results are appended to the original finding, not recorded separately"
+
+# ─────────────────────────────────────────────
+# Maintenance
+# ─────────────────────────────────────────────
+
+maintenance:
+  add_when: >
+    A new class of vulnerability is found during a security review that does not fit
+    cleanly into the 7 existing domains. Either add a checklist item to the most
+    relevant domain or propose a new domain if the threat category is genuinely distinct.
+  boundary_rule: >
+    Project-specific findings, accepted risks with project-specific rationale, and
+    known vulnerabilities with their current status belong in the agent body, not here.

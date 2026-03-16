@@ -1,0 +1,241 @@
+# Idempotent Pipeline Design Patterns
+# Cross-project general patterns for incremental, idempotent data pipeline design
+# and rollback/recovery strategies.
+# Project-specific pipeline details (cloud functions, sync metadata, database write rules)
+# belong in the agent body (data-engineer/MEMORY.md).
+# Last updated: 2026-03-13
+
+last_updated: 2026-03-13
+id: pipeline-design-patterns
+name: "Idempotent Pipeline Design Patterns"
+description: >
+  General patterns for designing data pipelines that are safe to re-run without
+  duplicating writes, can resume from failures without full re-scrapes, and can be
+  rolled back cleanly when a bug is introduced. Applies to ETL, scraping pipelines,
+  ML enrichment, and any batch processing system.
+
+# ─────────────────────────────────────────────
+# Idempotency Patterns
+# ─────────────────────────────────────────────
+
+idempotency:
+  definition: >
+    A pipeline is idempotent if running it multiple times against the same input
+    produces the same output as running it once, with no unintended side effects
+    (no duplicate records, no double-charged fees, no double-sent notifications).
+
+  content_hash_diffing:
+    description: >
+      Compute a hash of the raw source data (before any transformation or enrichment).
+      Compare the hash to the stored hash from the previous run. Only write records
+      where the hash has changed.
+    algorithm:
+      - "Fetch/scrape raw data for all items in the current run"
+      - "Compute hash of the raw representation for each item"
+      - "Load stored hashes from the previous run"
+      - "Diff: identify items where hash differs or item is new"
+      - "Transform + enrich only the changed/new items"
+      - "Write only changed/new items to the data store"
+      - "Update stored hashes after successful writes"
+    rules:
+      - "Hash is computed from raw data BEFORE transformation — transformation bugs do not cause spurious re-writes"
+      - "Parser or enrichment changes require a forced re-run to re-apply to existing records"
+      - "Hash collisions are theoretical; use SHA-256 for low-probability tolerance"
+
+  enrichment_placement:
+    rule: >
+      Enrichment (derived fields, lookups, ML annotations) runs AFTER content hash
+      comparison, on the full set of records (not just changed records), and is applied
+      to the formattedData used in batch writes.
+    rationale: >
+      If enrichment ran only on changed records, records not changed in the current run
+      would miss enrichment updates caused by external data changes (e.g., a set registry
+      update that affects setName for existing cards).
+    tradeoff: >
+      Enrichment cost scales with total record count, not delta count. For large datasets,
+      consider a separate enrichment pipeline with its own change detection.
+
+  forced_rerun:
+    description: >
+      A mechanism to bypass content hash diffing and force full re-processing of all records.
+      Required when: parser logic changes, enrichment logic changes, or a data quality issue
+      is discovered that requires retroactive correction.
+    implementation: "A boolean flag (forceRescrape, forceReprocess) passed to the pipeline entrypoint"
+    warning: >
+      Forced re-runs can be expensive (all records re-written). Run during off-peak hours
+      and monitor write quotas.
+
+# ─────────────────────────────────────────────
+# Incremental Processing
+# ─────────────────────────────────────────────
+
+incremental_processing:
+  description: >
+    Process records in ordered batches, saving a cursor after each batch, so that a
+    pipeline interrupted mid-run can resume from where it left off rather than
+    restarting from the beginning.
+
+  cursor_pattern:
+    description: >
+      After each successful batch, write the cursor (page number, offset, or last-seen ID)
+      to a persistent state store. On the next invocation, read the cursor and resume
+      from that position.
+    cursor_fields:
+      - "cursor (string or number — position in the source data)"
+      - "lastRunAt (timestamp)"
+      - "lastSuccessfulBatch (number — for diagnostics)"
+      - "totalProcessed (number — running count)"
+      - "status (running | completed | failed)"
+    state_store: "Same database as the pipeline output — ensures transactional consistency between cursor and data"
+
+  cursor_save_timing:
+    rule: "Save the cursor DURING the fetch/scrape loop, after each page is fetched successfully."
+    do_not: >
+      Do not save the cursor only at the end of the pipeline. If the pipeline times out
+      during batch writes, the cursor will not be saved and the next run will re-fetch
+      from the beginning. Content hash diffing prevents duplicate writes in this case,
+      but the redundant fetch traffic is wasteful.
+
+  batched_writes:
+    description: >
+      Group writes into batches (e.g., 500 records per batch) to stay within
+      API rate limits and avoid partial-write states.
+    rules:
+      - "Choose batch size based on the target API's documented limits"
+      - "Commit each batch atomically before proceeding to the next"
+      - "Log the count of records written per batch for monitoring"
+      - "If a batch commit fails, retry with exponential backoff before failing the pipeline"
+
+# ─────────────────────────────────────────────
+# Rollback & Recovery
+# ─────────────────────────────────────────────
+
+rollback_and_recovery:
+  description: >
+    When a pipeline bug corrupts data or introduces incorrect values, a recovery strategy
+    is needed that does not require manual record-by-record correction.
+
+  reprocessing_strategy:
+    description: >
+      The primary recovery strategy for pipeline bugs: fix the bug, then re-run with
+      forced reprocessing to overwrite all affected records.
+    steps:
+      - "Identify the scope of affected records (time range, version tag, or flag field)"
+      - "Fix the pipeline bug"
+      - "Run with forceRescrape=true or equivalent forced-rerun flag"
+      - "Verify output on a sample of previously-affected records before declaring complete"
+    prerequisites:
+      - "Original source data is preserved (not overwritten by the pipeline)"
+      - "A forced-rerun mechanism exists in the pipeline"
+
+  version_tagging:
+    description: >
+      Tag records with the pipeline version or run timestamp that produced them.
+      This enables targeted reprocessing: identify all records from the buggy run
+      and re-process only those.
+    fields:
+      - "_pipelineVersion (string — semver or hash of pipeline code)"
+      - "_lastSyncedAt (timestamp)"
+    benefit: "Surgical recovery: only re-process records affected by the specific pipeline version with the bug"
+
+  soft_delete_pattern:
+    description: >
+      For pipelines that remove records from the source (items discontinued, cards rotated out),
+      use a soft-delete flag rather than hard deletion. This allows recovery if the removal
+      was incorrect.
+    fields:
+      - "isActive (boolean — false means soft-deleted)"
+      - "deactivatedAt (timestamp)"
+      - "deactivatedReason (string)"
+    recovery: "To restore a soft-deleted record: set isActive=true, clear deactivatedAt and deactivatedReason, re-run enrichment"
+
+  failure_counters:
+    description: >
+      Track consecutive failure counts per record. After N consecutive failures, flag the
+      record for human review rather than continuing to retry.
+    fields:
+      - "failureCount (number)"
+      - "lastFailureAt (timestamp)"
+      - "lastFailureReason (string)"
+      - "flaggedForReview (boolean)"
+    threshold: "Flag after 3-5 consecutive failures (domain-dependent)"
+
+  backoff_strategy:
+    description: "Use exponential backoff with jitter for transient failures (network errors, rate limits)."
+    pattern:
+      base_delay_ms: 1000
+      max_delay_ms: 30000
+      jitter: "Add random(0, base_delay) to each delay to avoid thundering herd"
+      max_attempts: 5
+    do_not_retry:
+      - "4xx errors (except 429 Too Many Requests)"
+      - "Schema validation failures (retrying won't fix bad data)"
+      - "Auth failures (retrying won't fix missing credentials)"
+
+# ─────────────────────────────────────────────
+# Pipeline State Schema
+# ─────────────────────────────────────────────
+
+pipeline_state_schema:
+  description: >
+    A recommended schema for the state document that tracks pipeline execution across runs.
+  fields:
+    - field: "cursor"
+      type: "string | number | null"
+      description: "Current position in the source data"
+    - field: "status"
+      type: "enum: idle | running | completed | failed"
+      description: "Current pipeline status"
+    - field: "lastRunAt"
+      type: "timestamp"
+      description: "When the last run started"
+    - field: "lastCompletedAt"
+      type: "timestamp | null"
+      description: "When the last successful full run completed"
+    - field: "totalProcessed"
+      type: "number"
+      description: "Total records processed in the current or last run"
+    - field: "totalWritten"
+      type: "number"
+      description: "Total records actually written (hash diff reduced set)"
+    - field: "failureCount"
+      type: "number"
+      description: "Consecutive run failures (reset on success)"
+    - field: "lastError"
+      type: "string | null"
+      description: "Last error message for diagnostics"
+
+# ─────────────────────────────────────────────
+# Data Quality Rules
+# ─────────────────────────────────────────────
+
+data_quality:
+  undefined_values:
+    rule: "Never write undefined to any field in the data store."
+    rationale: >
+      Many data stores (document databases, key-value stores) reject undefined values with a runtime error.
+      Even those that accept it create inconsistent schema where some records have a field
+      and others do not.
+    fix: "Use null for intentionally absent optional fields. Omit the field if null is also not meaningful."
+    belt_and_suspenders: >
+      In TypeScript pipelines: JSON.parse(JSON.stringify(data)) strips undefined values
+      before any data store write. Use as a last-resort guard in addition to explicit null handling.
+
+  array_field_updates:
+    rule: >
+      Never use dot-path notation to update individual elements of an array field
+      (e.g., 'items.0.price'). This is a known footgun in document databases
+      — it converts the array into a map with numeric string keys.
+    fix: "Read the full array, modify it in memory, and write the entire array back."
+
+# ─────────────────────────────────────────────
+# Maintenance
+# ─────────────────────────────────────────────
+
+maintenance:
+  add_when: >
+    A new general pipeline reliability pattern is identified during a data engineering
+    engagement. Add with rationale and implementation notes.
+  boundary_rule: >
+    Project-specific pipeline commands, Cloud Function configurations, collection names,
+    and game-specific sync metadata schemas belong in the agent body, not in this file.

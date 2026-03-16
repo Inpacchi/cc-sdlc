@@ -1,0 +1,332 @@
+# API Design Methodology
+# Extracted from VoltAgent/awesome-claude-code-subagents: categories/01-core-development/api-designer.md
+# Covers REST maturity, versioning strategy, webhook patterns, bulk operations,
+# SDK delivery, and business capability to resource mapping.
+# Last updated: 2026-03-14
+
+last_updated: 2026-03-14
+id: api-design-methodology
+name: "API Design Methodology"
+description: >
+  Cross-project methodology for designing scalable, developer-friendly APIs.
+  Covers REST maturity levels, versioning lifecycle, webhook reliability patterns,
+  bulk operation contracts, SDK packaging strategy, and the mapping process from
+  business capabilities to REST resources.
+
+# ─────────────────────────────────────────────
+# REST Maturity Model
+# ─────────────────────────────────────────────
+
+rest_maturity_levels:
+  level_0:
+    name: "The Swamp of POX"
+    description: "Single URI, single HTTP method (usually POST). No resource thinking."
+    example: "POST /api — { action: 'getUser', id: 42 }"
+  level_1:
+    name: "Resources"
+    description: "Multiple URIs, one resource per URI, still only POST."
+    example: "POST /users/42"
+  level_2:
+    name: "HTTP Verbs"
+    description: "Proper HTTP method semantics: GET, POST, PUT, PATCH, DELETE. Status codes meaningful."
+    characteristics:
+      - "GET is safe and idempotent"
+      - "PUT/DELETE are idempotent"
+      - "POST creates or triggers non-idempotent operations"
+      - "Status codes carry semantics (200, 201, 204, 400, 404, 409, 422)"
+  level_3:
+    name: "Hypermedia Controls (HATEOAS)"
+    description: "Responses embed links to valid next actions. Clients navigate the API from a single entry point without hardcoding URLs."
+    hateoas_implementation:
+      link_relation_types: ["self", "next", "prev", "related", "describedby"]
+      format: "Embed '_links' or 'links' map in every response body"
+      benefit: "Decouples client from URI structure; API can evolve URLs without breaking clients"
+      example: |
+        {
+          "id": 42,
+          "status": "active",
+          "_links": {
+            "self": { "href": "/users/42" },
+            "orders": { "href": "/users/42/orders" },
+            "deactivate": { "href": "/users/42/deactivate", "method": "POST" }
+          }
+        }
+
+  target_level: "Level 2 minimum for all new APIs; Level 3 for APIs with complex state transitions"
+
+# ─────────────────────────────────────────────
+# Versioning Strategy Decision Tree
+# ─────────────────────────────────────────────
+
+versioning_strategy:
+  approaches:
+    uri_versioning:
+      pattern: "/v1/users, /v2/users"
+      when_to_use: "Public APIs with broad third-party adoption; most explicit and cacheable"
+      tradeoff: "URI is supposed to identify a resource, not its representation version"
+    header_versioning:
+      pattern: "Accept: application/vnd.api+json;version=2"
+      when_to_use: "Internal APIs or developer-audience APIs where clean URIs matter"
+      tradeoff: "Less visible; harder to test with a browser"
+    content_type_versioning:
+      pattern: "Content-Type: application/vnd.company.resource.v2+json"
+      when_to_use: "Fine-grained per-resource versioning needs"
+      tradeoff: "Most precise but highest complexity"
+
+  decision_tree:
+    - question: "Is this API consumed by external third parties?"
+      yes: "Use URI versioning — discoverability and visibility outweigh URI purity"
+      no:
+        - question: "Does the team have strong REST purity preferences?"
+          yes: "Use header-based versioning"
+          no: "URI versioning is still acceptable for simplicity"
+
+  breaking_change_definition:
+    breaking:
+      - "Removing a field from response"
+      - "Renaming a field"
+      - "Changing a field's type"
+      - "Removing or renaming an endpoint"
+      - "Changing authentication mechanism"
+      - "Tightening validation rules on existing inputs"
+    non_breaking:
+      - "Adding new optional fields to response"
+      - "Adding new endpoints"
+      - "Adding new optional query parameters"
+      - "Loosening validation rules"
+
+  sunset_policies:
+    minimum_notice_period: "6 months for external APIs; 3 months for internal"
+    sunset_header: "Sunset: Sat, 01 Jan 2027 00:00:00 GMT  # RFC 8594"
+    deprecation_header: "Deprecation: true"
+    communication_checklist:
+      - "Add Sunset + Deprecation headers to all responses from deprecated version"
+      - "Email or webhook notification to registered API consumers"
+      - "Document migration guide in changelog before sunset"
+      - "Monitor traffic to deprecated version — delay sunset if significant usage remains"
+      - "Return 410 Gone after sunset date, not 404"
+
+# ─────────────────────────────────────────────
+# Webhook Design Patterns
+# ─────────────────────────────────────────────
+
+webhook_design:
+  delivery_guarantees:
+    at_least_once:
+      description: "Default for most systems. Retry until 2xx received or retry budget exhausted."
+      consumer_requirement: "Consumers MUST be idempotent"
+    exactly_once:
+      description: "Requires deduplication ID on every event + consumer-side idempotency key storage"
+      implementation: "Include X-Webhook-Event-ID header; consumer tracks processed IDs"
+
+  payload_structure:
+    required_fields:
+      - field: "id"
+        type: "UUID"
+        purpose: "Deduplication identifier"
+      - field: "type"
+        type: "string"
+        purpose: "Event type (e.g. 'order.completed')"
+      - field: "created_at"
+        type: "ISO 8601 timestamp"
+        purpose: "Event generation time for ordering"
+      - field: "api_version"
+        type: "string"
+        purpose: "Schema version so consumers can migrate gradually"
+      - field: "data"
+        type: "object"
+        purpose: "Full resource snapshot (prefer full over delta for idempotency)"
+
+  security_signatures:
+    algorithm: "HMAC-SHA256"
+    header: "X-Webhook-Signature: sha256=<hex_digest>"
+    key_rotation: "Support two active signing keys during rotation window"
+    verification: |
+      computed = HMAC-SHA256(secret, raw_request_body)
+      safe_compare(computed, header_value)  # use constant-time comparison
+
+  retry_strategy:
+    schedule: "Exponential backoff: 5s, 30s, 2m, 10m, 1h, 6h, 24h"
+    max_attempts: 7
+    timeout_per_attempt: "30 seconds"
+    success_criteria: "HTTP 2xx"
+    failure_handling: "After exhaustion: move to dead-letter queue; alert consumer"
+
+  deduplication:
+    producer_side: "Assign stable UUID per logical event; do not generate new ID on retry"
+    consumer_side: "Store processed event IDs with TTL = retry window + buffer"
+    idempotency_window: "72 hours recommended"
+
+  subscription_management:
+    required_features:
+      - "Endpoint URL registration + update"
+      - "Event type filtering (subscribe to subset)"
+      - "Secret rotation without downtime"
+      - "Delivery log access (last N attempts per event)"
+      - "Manual replay endpoint"
+      - "Pause/resume subscription"
+
+  event_ordering:
+    note: "Do not guarantee strict global ordering across event types"
+    within_resource: "Include sequence or version number on resource; consumer detects and handles reordering"
+
+# ─────────────────────────────────────────────
+# Bulk Operations Patterns
+# ─────────────────────────────────────────────
+
+bulk_operations:
+  batch_create:
+    endpoint_pattern: "POST /resources/batch"
+    request: "Array of resource objects in body"
+    max_items_per_request: "Declare and document a hard limit (e.g. 100)"
+    response_pattern: "Return per-item result array; HTTP 207 Multi-Status for partial success"
+    partial_success:
+      http_status: 207
+      response_shape: |
+        {
+          "results": [
+            { "index": 0, "status": 201, "id": "abc" },
+            { "index": 1, "status": 422, "error": { "code": "VALIDATION_ERROR", "message": "..." } }
+          ]
+        }
+
+  bulk_updates:
+    pattern: "PATCH /resources/batch with array of { id, ...fields }"
+    atomicity: "Document whether all-or-nothing or best-effort; prefer explicit"
+    idempotency: "Require Idempotency-Key header for bulk mutations"
+
+  mass_delete_safety:
+    require_explicit_filter: "Never allow DELETE without filter that would be logically empty"
+    soft_delete_first: "Return count of would-be-deleted records in dry-run mode"
+    dry_run_pattern: "?dry_run=true returns count without executing"
+
+  progress_reporting:
+    synchronous: "Fine for < 1 second operations"
+    asynchronous:
+      trigger: "POST returns 202 Accepted + Location header to status resource"
+      status_resource: "GET /operations/{id} → { status, progress_pct, result_url }"
+      completion: "status = 'completed' | 'failed'; result_url points to downloadable result"
+
+  rollback_strategies:
+    preferred: "Idempotent re-application (re-run with same input = same result)"
+    transactional: "Wrap in DB transaction; rollback on any item failure"
+    compensating: "Log pre-mutation state; apply reverse operation on failure"
+
+# ─────────────────────────────────────────────
+# SDK Delivery Strategy
+# ─────────────────────────────────────────────
+
+sdk_strategy:
+  delivery_tiers:
+    tier_1_auto_generated:
+      tools: ["openapi-generator", "fern", "speakeasy"]
+      when: "OpenAPI spec is clean and complete; generate as part of CI"
+      languages: ["TypeScript/JS", "Python", "Go", "Java"]
+    tier_2_hand_crafted:
+      when: "Auth complexity, streaming, webhooks, or DX polish beyond codegen capability"
+      investment: "Justified for APIs with > 500 external consumers"
+    tier_3_community:
+      when: "Low-priority language bindings; accept community PRs with minimal maintenance commitment"
+
+  sdk_release_discipline:
+    versioning: "SDKs follow SemVer independently from API version"
+    api_version_pinning: "SDK major version pins to an API version; SDK 2.x calls API v2"
+    changelog: "Required for every release; auto-generate from conventional commits"
+    deprecation_mirror: "When API endpoint sunsets, SDK method must deprecate in same release cycle"
+
+  distribution:
+    - "npm for TypeScript/JS"
+    - "PyPI for Python"
+    - "pkg.go.dev for Go"
+    - "Maven Central for Java"
+    - "Postman collection always published alongside SDK"
+
+# ─────────────────────────────────────────────
+# Business Capability to Resource Mapping
+# ─────────────────────────────────────────────
+
+capability_to_resource_mapping:
+  process:
+    step_1_capability_inventory:
+      description: "List business capabilities in plain language (nouns, not verbs)"
+      example_capabilities:
+        - "User account management"
+        - "Order placement and fulfillment"
+        - "Inventory tracking"
+        - "Payment processing"
+
+    step_2_identify_resources:
+      description: "Each capability maps to one or more REST resources"
+      mapping_rules:
+        - "Capability noun → primary resource (e.g. 'orders' → /orders)"
+        - "Sub-capabilities → sub-resources or related resources (/orders/{id}/items)"
+        - "Cross-cutting capabilities → standalone resources (/payments, /notifications)"
+      anti_patterns:
+        - "Avoid action-based URIs: /createOrder, /cancelOrder"
+        - "Replace with resource + method: POST /orders, POST /orders/{id}/cancellation"
+
+    step_3_define_state_transitions:
+      description: "Map business workflows to resource state changes"
+      example: |
+        Order lifecycle:
+          draft → submitted:  POST /orders/{id}/submission
+          submitted → paid:   POST /orders/{id}/payment
+          paid → shipped:     POST /orders/{id}/shipment
+          shipped → delivered: POST /orders/{id}/delivery
+          any → cancelled:    POST /orders/{id}/cancellation
+
+    step_4_validate_against_use_cases:
+      description: "Walk each client use case through the resource model; if awkward, revise"
+      checklist:
+        - "Can the client achieve the use case with <= 3 API calls?"
+        - "Does the client need to know internal state to call correctly?"
+        - "Are compound documents needed to avoid N+1 fetches?"
+
+  resource_naming_conventions:
+    - "Plural nouns for collections: /users, /orders, /products"
+    - "Singular noun for singleton sub-resource: /users/{id}/profile"
+    - "Kebab-case for multi-word: /payment-methods, /shipping-addresses"
+    - "No verbs in URIs — encode action in HTTP method or sub-resource"
+
+# ─────────────────────────────────────────────
+# Pagination Patterns
+# ─────────────────────────────────────────────
+
+pagination:
+  cursor_based:
+    when: "Default for all production APIs with mutable datasets"
+    mechanism: "Opaque cursor encodes sort key + ID of last seen record"
+    response_fields: ["data", "next_cursor", "has_more"]
+    benefits: ["Stable under inserts/deletes", "O(1) per page", "Works with arbitrary sort"]
+
+  offset_based:
+    when: "Reporting/analytics endpoints where users jump to arbitrary pages"
+    limitations: "Unstable under concurrent writes; expensive at high offsets"
+    response_fields: ["data", "total_count", "page", "page_size"]
+
+  default_page_size: 20
+  max_page_size: 100
+
+# ─────────────────────────────────────────────
+# Error Response Design
+# ─────────────────────────────────────────────
+
+error_design:
+  standard_shape:
+    fields:
+      - field: "error.code"
+        type: "string"
+        purpose: "Machine-readable constant (e.g. VALIDATION_ERROR, NOT_FOUND)"
+      - field: "error.message"
+        type: "string"
+        purpose: "Human-readable summary"
+      - field: "error.details"
+        type: "array"
+        purpose: "Per-field validation errors"
+      - field: "error.request_id"
+        type: "UUID"
+        purpose: "Correlation ID for support"
+
+  retry_guidance:
+    include: "Retry-After header for 429 and 503"
+    5xx_retry: "Clients should retry 500/503 with exponential backoff; never retry 4xx"

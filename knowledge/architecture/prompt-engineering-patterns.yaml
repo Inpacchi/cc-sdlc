@@ -1,0 +1,345 @@
+# Prompt Engineering Patterns
+# Extracted from VoltAgent/awesome-claude-code-subagents:
+#   categories/05-data-ai/prompt-engineer.md (primary)
+#   categories/05-data-ai/nlp-engineer.md (active learning, weak supervision, continual learning)
+# Covers prompt pattern taxonomy, few-shot selection, A/B testing framework,
+# prompt versioning, token optimization economics, and NLP production patterns.
+# Last updated: 2026-03-14
+
+last_updated: 2026-03-14
+id: prompt-engineering-patterns
+name: "Prompt Engineering Patterns"
+description: >
+  Cross-project methodology for designing, testing, deploying, and evolving prompts
+  in production LLM systems. Covers the eight core prompt patterns, few-shot example
+  selection methodology, A/B testing for prompts, versioning as a deployable artifact,
+  token optimization economics, and NLP production patterns (active learning,
+  weak supervision, continual learning drift detection).
+
+# ─────────────────────────────────────────────
+# Performance Target Checklist
+# ─────────────────────────────────────────────
+
+performance_targets:
+  accuracy: "> 90% on task-specific evaluation set"
+  latency: "< 2 seconds end-to-end"
+  cost_per_query: "Tracked and budgeted per use case"
+  safety_filter_coverage: "100% of outputs pass safety evaluation"
+  version_control: "Every production prompt version-controlled with changelog"
+
+# ─────────────────────────────────────────────
+# Prompt Pattern Taxonomy
+# ─────────────────────────────────────────────
+
+prompt_patterns:
+  zero_shot:
+    description: "Provide task instructions only; no examples. Relies entirely on model's pre-training."
+    when_to_use: "Simple, well-defined tasks where the model has strong priors (summarization, classification of common categories)"
+    structure: |
+      [System: role + constraints]
+      [User: task instruction + input]
+    limitations: "Unreliable for novel tasks, specialized domains, or strict output format requirements"
+
+  few_shot:
+    description: "Provide N labeled input→output examples before the actual input. Conditions the model on desired format and behavior."
+    when_to_use: "Output format matters, task is non-obvious, or zero-shot accuracy is insufficient"
+    optimal_n: "3–8 examples for most tasks; diminishing returns beyond 10 for most models"
+    structure: |
+      [System: role + constraints]
+      [Examples: input_1 → output_1, ..., input_N → output_N]
+      [User: actual input]
+    key_principles:
+      - "Examples must be representative of the real distribution, including edge cases"
+      - "Label quality matters more than quantity"
+      - "Consistent format across all examples"
+
+  chain_of_thought:
+    description: "Instruct model to reason step-by-step before producing the final answer."
+    when_to_use: "Multi-step reasoning, math problems, logical deduction, complex classification"
+    trigger_phrase: "'Think step by step' or 'Let's reason through this'"
+    structure: |
+      [Instruction to reason first]
+      [Few-shot examples showing reasoning chain if needed]
+      [Input requiring reasoning]
+    zero_shot_cot: "Appending 'Let's think step by step' to the prompt without examples"
+    benefit: "Dramatically improves accuracy on reasoning tasks; makes model logic auditable"
+    tradeoff: "Higher token count; higher latency"
+
+  tree_of_thought:
+    description: "Model explores multiple reasoning branches simultaneously; selects best branch."
+    when_to_use: "Problems with multiple viable solution paths; when CoT explores dead ends"
+    implementation: "Multiple CoT explorations in parallel (multi-call or single call with structured output)"
+    cost: "3–5x higher than single CoT; reserve for highest-value decisions"
+
+  react:
+    description: "Reason + Act pattern. Model alternates between reasoning steps and tool calls."
+    when_to_use: "Agents that need to use tools, search, or APIs to complete tasks"
+    structure: |
+      Thought: [reasoning about what to do]
+      Action: [tool_name(args)]
+      Observation: [tool result]
+      Thought: [reasoning about result]
+      ...
+      Final Answer: [response]
+    requirement: "Tool execution layer and observation injection between model calls"
+
+  constitutional_ai:
+    description: "Model self-critiques and revises its output against a set of principles (the constitution)."
+    when_to_use: "High-stakes outputs requiring safety, accuracy, or ethical constraints"
+    process:
+      - "Generate initial response"
+      - "Critique: 'Does this response violate any of the following principles?'"
+      - "Revise: 'Rewrite to address the critique'"
+      - "Optionally: repeat critique-revise cycle"
+    benefit: "Reduces harmful outputs without human review of every response"
+
+  role_based:
+    description: "Assign a specific persona or expert role in the system prompt."
+    when_to_use: "When domain framing improves output quality (e.g. 'You are a senior radiologist reviewing...')"
+    effective_role_components:
+      - "Expertise level and domain"
+      - "Relevant constraints (audience, format, tone)"
+      - "What NOT to do"
+    anti_pattern: "Over-specified fictional roles can reduce factual accuracy; keep roles grounded"
+
+  instruction_following:
+    description: "Explicit, structured instructions in the system or user prompt. Format spec, output constraints, negative examples."
+    best_practices:
+      - "Use numbered lists for multi-step instructions"
+      - "Specify output format explicitly (JSON schema, markdown structure)"
+      - "Include negative examples: 'Do NOT include...'"
+      - "Put most important constraints first and last (primacy/recency effect)"
+
+# ─────────────────────────────────────────────
+# Few-Shot Example Selection Methodology
+# ─────────────────────────────────────────────
+
+few_shot_selection:
+  static_selection:
+    description: "Fixed set of examples chosen once and embedded in the prompt template"
+    selection_criteria:
+      coverage: "Examples should cover the common input distribution, including edge cases"
+      diversity: "Avoid examples that are too similar to each other"
+      difficulty: "Include at least one challenging example with non-obvious label"
+      label_quality: "Human-verified gold labels only; model-generated labels introduce bias"
+    anti_patterns:
+      - "Cherry-picking easy examples inflates eval but not production performance"
+      - "Including examples similar to the test input leaks task-specific hints"
+
+  dynamic_selection:
+    description: "At query time, retrieve the most relevant examples for the specific input from an example store."
+    retrieval_method: "Semantic similarity search (embedding cosine similarity) against example corpus"
+    benefit: "Adapts to each input; better performance on diverse input distributions"
+    implementation: |
+      1. Embed all labeled examples offline
+      2. At query time: embed input, retrieve top-K similar examples
+      3. Insert K examples into prompt, ordered by relevance descending
+    cost: "Additional embedding call per query + vector store lookup"
+
+  example_ordering:
+    principle: "Most relevant example should be closest to the actual input (recency effect)"
+    for_diverse_tasks: "Order from easy → hard → medium; end on a high-quality exemplar"
+
+  continuous_improvement:
+    - "Track per-example contribution: does including this example improve or hurt accuracy on held-out set?"
+    - "Prune examples with negative contribution"
+    - "Add new examples from production failures (with human verification)"
+
+# ─────────────────────────────────────────────
+# A/B Testing Framework for Prompts
+# ─────────────────────────────────────────────
+
+prompt_ab_testing:
+  when_to_run:
+    - "Changing prompt structure, not just wording"
+    - "Changing few-shot examples"
+    - "Switching models"
+    - "Changing CoT vs. non-CoT approach"
+
+  hypothesis_formation:
+    template: "Changing [X] will improve [metric] by [Y] because [mechanism]"
+    example: "Adding chain-of-thought reasoning will improve classification accuracy by > 5% on ambiguous inputs because explicit reasoning reduces shortcut reliance"
+
+  test_design:
+    control: "Current production prompt (Prompt A)"
+    variant: "Modified prompt (Prompt B)"
+    traffic_split: "50/50 for controlled tests; 90/10 if variant is unproven"
+    minimum_sample_size: "Use power calculation: α=0.05, power=0.80, minimum detectable effect = 2%"
+
+  metric_selection:
+    primary: "Task-specific accuracy on evaluation set (ground truth required)"
+    secondary:
+      - "Token count (cost proxy)"
+      - "Latency p50/p95"
+      - "User satisfaction rating (if human feedback available)"
+    guard_rail: "Safety filter pass rate must not decrease"
+
+  statistical_significance:
+    threshold: "p < 0.05"
+    tool: "Chi-square test for binary outcomes; t-test for continuous metrics"
+    note: "Never declare a winner before reaching minimum sample size"
+
+  rollout_strategy:
+    on_win: "Gradually roll variant to 100% over 24–48 hours; watch for distribution shift"
+    on_loss: "Archive variant with test results documented"
+    on_tie: "Prefer the lower-token variant for cost"
+
+# ─────────────────────────────────────────────
+# Prompt Versioning as Deployable Artifact
+# ─────────────────────────────────────────────
+
+prompt_versioning:
+  principle: >
+    Prompts are code. They change system behavior, must be reviewed, and must be
+    rollback-able. Treat prompt deployment with the same rigor as application deployment.
+
+  versioning_scheme:
+    format: "MAJOR.MINOR.PATCH (SemVer)"
+    major_bump: "Behavioral change visible to end users; restructured prompt or new pattern"
+    minor_bump: "New few-shot examples, refined instructions, non-breaking improvements"
+    patch_bump: "Typo fixes, formatting, whitespace"
+
+  storage:
+    recommended: "Prompt stored in version-controlled file (YAML or JSON); deployed via CI"
+    alternative: "Prompt management platforms (PromptLayer, Langsmith, custom DB with version history)"
+    anti_pattern: "Hardcoded prompt string in application code without version tracking"
+
+  deployment_workflow:
+    - "Prompt change proposed as PR with evaluation results attached"
+    - "Review: at least one peer review of prompt change + eval diff"
+    - "Merge to main triggers prompt publishing to prompt store"
+    - "Application pulls prompt version at startup or per-request (configurable)"
+    - "Rollback: redeploy previous version tag"
+
+  changelog_requirement:
+    - "Every version documents: what changed, why, eval result before and after"
+    - "Breaking behavioral changes marked as MAJOR with migration notes"
+
+  model_binding:
+    note: "Prompts may be model-specific; pin prompt version to model version"
+    risk: "Model API update (new default system prompt, tokenization change) can break prompt without prompt change"
+    mitigation: "Pin model version in application config; test on model upgrade in staging"
+
+# ─────────────────────────────────────────────
+# Token Optimization Economics
+# ─────────────────────────────────────────────
+
+token_optimization:
+  cost_components:
+    input_tokens: "System prompt + few-shot examples + user input + conversation history"
+    output_tokens: "Response; typically 2–5x more expensive per token than input on major APIs"
+    total_cost: "Price = (input_tokens * input_rate) + (output_tokens * output_rate)"
+
+  optimization_techniques:
+    context_compression:
+      description: "Summarize or truncate conversation history rather than sending full history"
+      when: "Conversation history exceeds 2,000 tokens"
+      approach: "Keep last N turns verbatim; compress earlier turns to bullet summary"
+
+    instruction_efficiency:
+      description: "Remove redundant instructions; use examples to show instead of describe"
+      test: "Does removing this sentence change model behavior on eval set? If no, remove it."
+
+    few_shot_token_budget:
+      calculation: "Total tokens per example × N examples = few-shot overhead"
+      optimization: "Prefer shorter examples that demonstrate the same behavior"
+
+    output_constraints:
+      description: "Constrain output length and format explicitly"
+      patterns:
+        - "Respond in JSON only, no additional text"
+        - "Maximum 3 sentences"
+        - "Return only the classification label, nothing else"
+
+    caching:
+      prefix_caching: "Some APIs cache the system prompt portion; place stable content at the beginning"
+      response_caching: "Cache identical or near-identical inputs at application layer; meaningful for FAQ-style workloads"
+
+    batch_processing:
+      when: "Non-real-time workloads: classification jobs, bulk extraction"
+      benefit: "Batch APIs typically 50% cheaper; rate limits less constraining"
+      tradeoff: "Higher latency (hours, not seconds)"
+
+    model_routing:
+      principle: "Use the smallest model that meets quality requirements for each task"
+      tiering:
+        - "Simple classification / extraction → small/fast model"
+        - "Complex reasoning / generation → large model"
+        - "Fallback chain: attempt small model; escalate if confidence low"
+
+  economics_tracking:
+    per_use_case_budget: "Assign a cost target per query type"
+    alerting: "Alert if cost per query exceeds 2x budget baseline"
+    monthly_review: "Compare token usage trends against feature usage growth"
+
+# ─────────────────────────────────────────────
+# NLP Production Patterns
+# ─────────────────────────────────────────────
+
+nlp_production_patterns:
+  active_learning:
+    definition: >
+      Model identifies examples it is least confident about; these are prioritized
+      for human labeling. Reduces labeling cost by focusing human effort where
+      model uncertainty is highest.
+    uncertainty_sampling_strategies:
+      - "Least confidence: select examples where max class probability is lowest"
+      - "Margin sampling: select where gap between top-2 class probabilities is smallest"
+      - "Entropy: select where output distribution has highest entropy"
+    workflow:
+      - "Deploy model to production"
+      - "Log model confidence scores per prediction"
+      - "Batch low-confidence examples daily"
+      - "Human annotators label batch"
+      - "Retrain model with augmented dataset"
+      - "Evaluate and redeploy if improvement"
+    benefit: "Achieve 90% of fully-supervised performance with 20–30% of the labeled data"
+
+  weak_supervision:
+    definition: >
+      Use heuristic labeling functions (regex rules, keyword lists, distant supervision
+      from knowledge bases) to programmatically generate noisy training labels at scale,
+      without human annotation of each example.
+    labeling_function_types:
+      - "Keyword match: if 'refund' in text → label COMPLAINT"
+      - "Regular expression: if text matches pattern → label DATE_ENTITY"
+      - "Distant supervision: entity appears in knowledge base → label PERSON"
+      - "External model: existing classifier output as soft label"
+    label_model:
+      description: "Combine multiple noisy labeling functions; learn their accuracies and correlations"
+      tools: ["Snorkel", "skweak"]
+    tradeoffs:
+      - "Faster to scale than manual annotation"
+      - "Label quality lower than human gold labels"
+      - "Works best combined with small human-labeled validation set"
+
+  continual_learning_and_drift:
+    definition: >
+      Models deployed in production are exposed to a changing data distribution over time.
+      Performance degrades without retraining — this is model drift.
+
+    drift_types:
+      data_drift:
+        description: "Input distribution changes (new vocabulary, new topics, new user behavior)"
+        detection: "Monitor feature distribution statistics; compare production vs. training data"
+      concept_drift:
+        description: "Relationship between inputs and correct labels changes"
+        detection: "Monitor model performance on human-verified sample"
+      label_shift:
+        description: "Prior probability of labels changes (seasonal effects, world events)"
+        detection: "Monitor predicted label distribution over time"
+
+    detection_methods:
+      - "Population Stability Index (PSI) on input features"
+      - "Performance monitoring on human-annotated production sample (1–5% sampling rate)"
+      - "Prediction confidence distribution monitoring (drift often shows as confidence erosion)"
+
+    response_playbook:
+      on_data_drift: "Collect new training examples from shifted distribution; fine-tune or retrain"
+      on_concept_drift: "Re-label recent examples; retrain with time-weighted data (recency bias)"
+      on_label_shift: "Adjust class priors in post-processing; monitor recall per class"
+
+    retraining_triggers:
+      - "Accuracy drops > 5% from baseline on monitored sample"
+      - "PSI > 0.2 on key input features"
+      - "Confidence score mean drops > 10% over 30-day window"

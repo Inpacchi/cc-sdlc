@@ -1,0 +1,372 @@
+# ML System Design Principles
+# Cross-project general principles for production ML system design.
+# Project-specific ML use cases belong in the agent body.
+# Last updated: 2026-03-13
+
+last_updated: 2026-03-14
+id: ml-system-design
+name: "ML System Design Principles"
+description: >
+  General principles for designing ML systems that work reliably in production. Covers
+  confidence gating, composable pipeline stages, active learning loop structure, the
+  simplicity-first default, game/domain-agnostic model design, and training data strategy.
+  These principles apply regardless of model type, domain, or application stack.
+
+# ─────────────────────────────────────────────
+# Confidence Gates
+# ─────────────────────────────────────────────
+
+confidence_gates:
+  description: >
+    Every ML prediction that triggers a consequential action must pass through a
+    confidence gate before the action executes. Low-confidence predictions must route
+    to a human review queue, not to automatic execution.
+  rationale: >
+    ML models do not fail cleanly — they produce plausible-looking wrong answers.
+    Without confidence gates, a model operating below its calibrated accuracy range
+    silently corrupts data. The gate makes the confidence floor explicit and
+    routes uncertain cases to human review rather than silent failure.
+
+  design_rules:
+    - "Set the confidence threshold empirically from a held-out validation set — not from intuition"
+    - "Calibrate the threshold separately per output class if class distributions differ significantly"
+    - "The auto-execute threshold should be conservative: prefer false negatives (human review) over false positives (wrong auto-action)"
+    - "Log all predictions with their confidence scores — threshold tuning requires historical data"
+    - "Make the threshold a runtime configuration value, not a hardcoded constant"
+
+  threshold_tiers:
+    auto_execute:
+      description: "Prediction is acted on automatically without human review"
+      typical_range: ">= 0.90 (domain-dependent)"
+    review_queue:
+      description: "Prediction is held for human review and confirmation before acting"
+      typical_range: "0.60 - 0.89"
+    reject:
+      description: "Prediction is discarded; fallback path or error is triggered"
+      typical_range: "< 0.60"
+
+  output_fields_required:
+    - "prediction (the model output)"
+    - "confidence (float 0.0 - 1.0)"
+    - "gate_result (auto | review | reject)"
+    - "model_version (which model produced this result)"
+
+# ─────────────────────────────────────────────
+# Composable Pipeline Stages
+# ─────────────────────────────────────────────
+
+composable_stages:
+  description: >
+    Design ML pipelines as a sequence of composable, independently testable stages.
+    Each stage has a defined input schema, output schema, and can be replaced or
+    upgraded without rewriting adjacent stages.
+  rationale: >
+    Monolithic ML pipelines are hard to debug, hard to test, and hard to improve.
+    When detection, extraction, validation, and post-processing are separate stages,
+    each can be benchmarked, replaced, and tested in isolation.
+
+  stage_contract:
+    input: "Well-typed schema (TypeScript interface, Pydantic model, etc.) — never 'any' or 'dict'"
+    output: "Well-typed schema with confidence score and stage metadata"
+    errors: "Explicit error type — stages do not throw; they return a discriminated union result"
+    idempotency: "Same input always produces the same output — no side effects within the stage"
+
+  cascade_pattern:
+    description: >
+      For pipelines where a fast/cheap method handles the common case and a slow/expensive
+      method handles the rest, use a cascade: run the fast method first; only invoke the
+      expensive method if the fast method fails or falls below the confidence gate.
+    example: >
+      CV-based detection (fast, cheap) → confidence gate → if below threshold, invoke
+      LLM-based detection (slow, expensive). This minimizes LLM calls while preserving
+      accuracy on hard cases.
+    implementation_rules:
+      - "The fast method and slow method must agree on the output schema"
+      - "Log which path was taken for every invocation (for cascade ratio monitoring)"
+      - "Set a cascade budget: if the slow path is invoked more than X% of the time, investigate the fast method"
+
+# ─────────────────────────────────────────────
+# Active Learning Loop
+# ─────────────────────────────────────────────
+
+active_learning_loop:
+  description: >
+    A structured feedback loop that uses production model outputs to continuously
+    improve training data quality without requiring full manual re-labeling.
+  rationale: >
+    Static training datasets degrade over time as the real-world distribution shifts.
+    The active learning loop captures high-value examples from production — especially
+    cases the model found uncertain or got wrong — and routes them back to training.
+
+  loop_stages:
+    - stage: "Predict"
+      description: "Model produces prediction + confidence score on real production input"
+    - stage: "Gate"
+      description: "Confidence gate routes prediction to auto-execute or human review"
+    - stage: "Human Review"
+      description: "Human reviews uncertain predictions, corrects errors, confirms auto-executes spot-check"
+    - stage: "Label"
+      description: "Reviewed outputs become labeled training examples"
+    - stage: "Select"
+      description: "Select the highest-value examples for next training run (prioritize: wrong predictions, low-confidence correct predictions, edge cases)"
+    - stage: "Retrain"
+      description: "Retrain or fine-tune model on augmented dataset"
+    - stage: "Evaluate"
+      description: "Validate new model on held-out set before promoting to production"
+    - stage: "Deploy"
+      description: "Promote to production; loop continues"
+
+  data_flywheel:
+    description: >
+      The active learning loop creates a data flywheel: more production traffic → more
+      labeled examples → better model → higher confidence gate pass rate → less human review cost.
+    warning: >
+      The flywheel can also amplify systematic errors if human reviewers introduce
+      consistent biases. Periodically audit the label quality with a blinded review of
+      a sample of labeled examples.
+
+# ─────────────────────────────────────────────
+# Simplicity First
+# ─────────────────────────────────────────────
+
+simplicity_first:
+  principle: >
+    Always establish a simple baseline before building a complex model. The baseline
+    defines the minimum bar the complex model must beat to justify its added cost and
+    maintenance burden.
+  baselines_to_try:
+    - "Rule-based heuristics (regex, thresholds, lookup tables)"
+    - "Pre-trained general model with zero fine-tuning"
+    - "Nearest-neighbor retrieval from a labeled reference set"
+  decision_rule: >
+    If the simple baseline achieves >= 90% of the accuracy target with <= 20% of the
+    implementation complexity, ship the baseline and defer the complex model.
+  rationale: >
+    Complex models introduce: longer training cycles, higher inference costs, more failure
+    modes, and steeper debugging costs. These are only justified when a simpler approach
+    demonstrably falls short.
+
+# ─────────────────────────────────────────────
+# Domain-Agnostic Default
+# ─────────────────────────────────────────────
+
+domain_agnostic_default:
+  principle: >
+    Design models and extraction pipelines to work across multiple domains by default.
+    Domain-specific behavior should be injectable configuration, not hardcoded logic.
+  rationale: >
+    Hardcoding domain-specific field names, validation rules, or confidence thresholds
+    into the model or pipeline creates N separate codepaths that must be maintained in
+    parallel. Configuration injection lets one pipeline serve multiple domains.
+  pattern:
+    name: "Domain Config Injection"
+    description: >
+      Each domain provides a configuration object that the pipeline consumes.
+      The pipeline logic is domain-agnostic; the config drives field definitions,
+      validation rules, confidence thresholds, and output schemas.
+    config_fields:
+      - "expectedFields (list of fields to extract)"
+      - "fieldDescriptions (prompt text or schema hints per field)"
+      - "validationRules (per-field type and range checks)"
+      - "autoPublishThreshold (confidence floor for auto-execution)"
+      - "fallbackBehavior (what to do when confidence is below threshold)"
+
+# ─────────────────────────────────────────────
+# Training Data Strategy
+# ─────────────────────────────────────────────
+
+training_data_strategy:
+  principles:
+    - name: "Preserve originals"
+      description: "Always store original unprocessed inputs separately from processed outputs. Original inputs enable reprocessing when the model or pipeline changes."
+    - name: "Idempotency via content hash"
+      description: "Use a content hash of the original input as the idempotency key. If the same input is submitted twice (by the same or different users), the existing result is returned without re-running inference."
+    - name: "Version model outputs"
+      description: "Tag every prediction with the model version that produced it. This enables bulk reprocessing when a new model version is deployed — identify all records produced by the old version."
+    - name: "Separate training from inference paths"
+      description: "Do not use the same pipeline for training data collection and production inference. The training path needs richer logging and may accept lower confidence thresholds to maximize labeled data volume."
+    - name: "Stratify the validation set"
+      description: "Hold out examples from all known input distributions — easy cases, hard cases, edge cases. A validation set composed only of easy cases gives an optimistic accuracy estimate."
+
+  idempotency_pattern:
+    description: "Use MD5 or SHA-256 hash of the source input buffer as the document ID or lookup key."
+    fields:
+      - "_sourceHash (string — hash of raw input bytes)"
+      - "_modelVersion (string — version of the model that produced this record)"
+      - "_processedAt (timestamp)"
+    benefit: "Re-submitting the same input returns the existing result instantly without re-running inference."
+
+# ─────────────────────────────────────────────
+# Maintenance
+# ─────────────────────────────────────────────
+
+# ─────────────────────────────────────────────
+# Ethical AI Operations
+# ─────────────────────────────────────────────
+
+ethical_ai_operations:
+  description: >
+    Operational checklist and governance pipeline for deploying AI systems responsibly.
+    Ethical controls are deployment gates, not post-deployment audits.
+
+  deployment_gates:
+    bias_score_threshold:
+      description: "Bias score must be below 0.03 (measured across protected attribute groups) before a model is promoted to production"
+      source: "Derived from the ai-engineer checklist where 0.03 is the tracked threshold"
+      measurement: >
+        Compute fairness metrics (demographic parity, equalized odds) across protected groups
+        using a representative held-out validation set. All groups must fall within the 0.03 threshold.
+    explainability_gate:
+      description: "Every model promoted to production must have an explainability mechanism configured"
+      acceptable_mechanisms:
+        - "SHAP values for feature attribution"
+        - "LIME for local approximation"
+        - "Attention visualization for transformer models"
+        - "Counterfactual explanations ('what would change this prediction')"
+      requirement: "Explanations must be accessible to non-technical reviewers, not just ML engineers"
+
+  governance_pipeline:
+    description: >
+      Structured sequence of governance artifacts that must be produced before a model
+      goes to production. Each stage gates the next.
+    stages:
+      - stage: "Model Documentation"
+        description: "Model card documenting: intended use, known limitations, training data sources, bias evaluation results, performance metrics per subgroup"
+        gate: "Must be completed before experiment tracking begins"
+      - stage: "Experiment Tracking"
+        description: "All training runs logged with: hyperparameters, dataset version, evaluation metrics, bias scores, hardware used"
+        tools: "MLflow, Weights & Biases, or equivalent"
+        gate: "Reproducible experiment record must exist before deployment review"
+      - stage: "Audit Trails"
+        description: "Production predictions logged with: input hash, model version, confidence score, gate result, timestamp. Logs retained per applicable data retention policy."
+        gate: "Logging pipeline must be live before model goes to production"
+      - stage: "Incident Response"
+        description: "Documented runbook for: model degradation, bias spike detection, rollback procedure, stakeholder notification"
+        gate: "Runbook must be reviewed and approved before go-live"
+
+# ─────────────────────────────────────────────
+# Inference Serving Patterns
+# ─────────────────────────────────────────────
+
+inference_serving_patterns:
+  description: >
+    Patterns for efficiently serving ML model predictions at scale. These address the
+    unique throughput and latency challenges of inference workloads.
+
+  batching_strategies:
+    dynamic_batching:
+      description: "Accumulate requests over a short time window (e.g., 10ms) and process them as a single batch, regardless of whether the batch is full"
+      benefit: "Maximizes GPU utilization without requiring clients to coordinate batch submission"
+      tradeoff: "Adds latency equal to the window size; tune window based on acceptable latency budget"
+
+    adaptive_batching:
+      description: "Dynamically adjust batch size and wait window based on current load. Under high load, use larger batches; under low load, reduce window to minimize latency."
+      benefit: "Optimizes GPU utilization and latency across variable traffic patterns"
+      implementation: "Monitor queue depth and request rate; increase batch size when queue is growing, decrease when queue is empty"
+
+    request_coalescing:
+      description: "Deduplicate identical or near-identical requests within a time window — return the same cached result to all callers"
+      when_to_use: "High-traffic scenarios where multiple users request the same content simultaneously (e.g., trending card lookups)"
+      benefit: "Eliminates redundant inference work at peak load"
+
+    speculative_execution:
+      description: "Start processing the most likely next request before it arrives, based on predicted user behavior or prefetching signals"
+      when_to_use: "Paginated results, sequential workflows, or any scenario with predictable access patterns"
+      tradeoff: "Wastes compute when the speculation is wrong; only beneficial when hit rate > waste threshold"
+
+  multi_model_serving:
+    model_cascading:
+      description: >
+        Route requests through a sequence of models ordered cheap-to-expensive. The cheap
+        model handles the majority of cases; the expensive model handles only what the cheap
+        model cannot confidently resolve.
+      pattern: "cheap_model(input) → confidence_gate → if below threshold → expensive_model(input)"
+      benefit: "Dramatically reduces average inference cost while preserving accuracy on hard cases"
+      monitoring: "Track cascade rate (% of requests reaching expensive model). A rising cascade rate signals cheap model degradation."
+
+    bulkhead_isolation:
+      description: "Isolate models into separate resource pools so that a spike in demand for one model does not starve another"
+      implementation: "Separate Kubernetes deployments, separate GPU allocations, or separate process pools per model"
+      benefit: "Prevents one high-traffic model from degrading SLA for all other models on the same serving infrastructure"
+
+    hot_swapping:
+      description: "Replace a model version in production without downtime by loading the new model alongside the old one and atomically switching the routing pointer"
+      steps:
+        - "Load new model version into memory alongside current version"
+        - "Validate new model with shadow traffic (see shadow_mode_testing)"
+        - "Atomically update routing to send 100% traffic to new version"
+        - "Unload old model after a drain period"
+      benefit: "Zero-downtime model updates without blue-green infrastructure overhead"
+
+# ─────────────────────────────────────────────
+# ML Production SLOs
+# ─────────────────────────────────────────────
+
+ml_production_slos:
+  description: >
+    Explicit SLO targets for production ML serving infrastructure. These are starting
+    points — calibrate to the specific latency and throughput requirements of each system.
+
+  targets:
+    inference_latency: "< 100ms p99 for real-time inference endpoints"
+    throughput: "> 1000 RPS per serving replica at target latency"
+    gpu_utilization: "> 80% — below this indicates over-provisioned or poorly batched serving"
+    model_accuracy_drift: "Alert when validation accuracy drops > 2% relative from baseline"
+
+  gpu_utilization_guidance:
+    target: "> 80%"
+    rationale: "GPU hardware is the primary cost driver for inference. Low utilization means paying for capacity that is not being used."
+    remediation_for_low_utilization:
+      - "Increase batch size (dynamic batching or request coalescing)"
+      - "Reduce replica count and rely on auto-scaling to add replicas under load"
+      - "Profile for CPU-bound preprocessing that starves GPU feed"
+    remediation_for_high_latency_at_high_utilization:
+      - "Add replicas to distribute load"
+      - "Apply model quantization to reduce per-inference compute time"
+      - "Implement request queuing with explicit timeout rejection to protect SLA"
+
+# ─────────────────────────────────────────────
+# Shadow Mode Testing for AI Systems
+# ─────────────────────────────────────────────
+
+shadow_mode_testing:
+  description: >
+    Run a new model version in parallel with the current production model, receiving
+    the same production traffic, but without serving its outputs to users. Compare
+    outputs to validate the new version before any user traffic is shifted.
+  position_in_rollout_sequence:
+    order:
+      - step: 1
+        name: "Shadow mode"
+        description: "New model receives 100% of traffic, outputs are logged and compared, zero user impact"
+      - step: 2
+        name: "Canary"
+        description: "New model serves a small percentage of users (1-5%), monitor for regressions"
+      - step: 3
+        name: "Full rollout"
+        description: "Gradually shift all traffic to new model"
+    rationale: >
+      Shadow mode de-risks the canary phase. Failures discovered in shadow mode have
+      zero user impact. This is especially important for AI systems where output
+      quality degradation is subtle and not always caught by standard error monitoring.
+  what_to_compare:
+    - "Output class distribution (does the new model predict different categories at a different rate?)"
+    - "Confidence score distribution (is the new model systematically more or less confident?)"
+    - "Latency (does the new model meet the inference latency SLO?)"
+    - "Bias score (does the new model pass the 0.03 threshold on production traffic samples?)"
+  exit_criteria: >
+    Shadow mode can be exited when: output distribution delta is within acceptable bounds,
+    latency SLO is met at production traffic levels, bias score is below threshold, and
+    no unexpected error classes have appeared in shadow logs.
+
+# ─────────────────────────────────────────────
+# Maintenance
+# ─────────────────────────────────────────────
+
+maintenance:
+  add_when: >
+    A new general ML reliability or design pattern is identified during an ML engagement
+    that applies beyond the specific use case. Add with rationale and implementation guidance.
+  boundary_rule: >
+    Project-specific ML use cases, model file paths, specific confidence thresholds,
+    and application-specific field definitions belong in the agent body, not in this file.

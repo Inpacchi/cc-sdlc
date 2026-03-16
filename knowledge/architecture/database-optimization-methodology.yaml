@@ -1,0 +1,326 @@
+# Database Optimization Methodology
+# Extracted from VoltAgent/awesome-claude-code-subagents: categories/05-data-ai/database-optimizer.md
+# Covers wait event taxonomy, plan regression detection, index type decision matrix,
+# bloat thresholds, and statistics drift as root cause category.
+# Last updated: 2026-03-14
+
+last_updated: 2026-03-14
+id: database-optimization-methodology
+name: "Database Optimization Methodology"
+description: >
+  Cross-project methodology for diagnosing and resolving database performance problems.
+  Covers the three-axis wait event taxonomy, plan regression detection and remediation,
+  a complete index type decision matrix, bloat thresholds and maintenance guidance,
+  and statistics drift as the most common invisible root cause category.
+
+# ─────────────────────────────────────────────
+# Performance Target Checklist
+# ─────────────────────────────────────────────
+
+performance_targets:
+  query_time: "< 100ms for OLTP queries"
+  index_usage: "> 95% of queries use indexes"
+  cache_hit_rate: "> 90% (buffer pool / shared_buffers)"
+  lock_wait_pct: "< 1% of query time"
+  bloat_threshold: "< 20% table/index bloat"
+  replication_lag: "< 1 second for synchronous replicas"
+  connection_pool: "< 80% utilization at peak"
+
+# ─────────────────────────────────────────────
+# Wait Event Taxonomy
+# ─────────────────────────────────────────────
+
+wait_event_taxonomy:
+  description: >
+    Database wait events identify what a query is waiting for. Grouping by wait
+    category directs the investigation to the right subsystem before looking at
+    individual queries. Always start optimization by understanding the dominant
+    wait category.
+
+  lock_waits:
+    description: "Query waiting for another transaction to release a lock on a row, page, or table."
+    signals:
+      - "pg_stat_activity: wait_event_type = 'Lock'"
+      - "Lock timeout errors in application logs"
+      - "Query duration histogram shows long tail correlated with transaction concurrency"
+    common_causes:
+      - "Long-running transactions holding row locks"
+      - "Missing index causing table-lock fallback"
+      - "Deadlock cycles between two transactions"
+      - "DDL operations (ALTER TABLE) taking AccessExclusiveLock"
+    diagnostic_queries:
+      - "SELECT * FROM pg_stat_activity WHERE wait_event_type = 'Lock'"
+      - "SELECT * FROM pg_locks WHERE NOT granted"
+      - "SELECT * FROM pg_blocking_pids(<blocked_pid>)"
+    mitigations:
+      - "Shorten transaction scope: acquire locks as late as possible, release as early as possible"
+      - "Add index to eliminate table-scan lock escalation"
+      - "Use SELECT FOR UPDATE SKIP LOCKED for queue patterns"
+      - "NOWAIT or lock_timeout for non-critical paths"
+
+  io_waits:
+    description: "Query waiting for data to be read from disk into buffer pool."
+    signals:
+      - "pg_stat_activity: wait_event_type = 'IO'"
+      - "High disk read IOPS correlated with slow queries"
+      - "Buffer pool hit rate < 90%"
+    common_causes:
+      - "Working set exceeds shared_buffers / buffer pool size"
+      - "Sequential scan of large table (no index)"
+      - "Index exists but is not selective enough (low cardinality)"
+      - "Bloated table requiring more pages to scan"
+    diagnostic_queries:
+      - "SELECT * FROM pg_statio_user_tables ORDER BY heap_blks_read DESC"
+      - "SELECT * FROM pg_stat_user_indexes WHERE idx_scan = 0"
+    mitigations:
+      - "Add index to eliminate sequential scan"
+      - "Increase shared_buffers (PostgreSQL: typically 25% of RAM)"
+      - "Partition large tables to reduce scan scope"
+      - "VACUUM to reclaim bloat and reduce page count"
+
+  cpu_waits:
+    description: "Query consuming CPU for computation (sort, hash join, aggregation, function evaluation)."
+    signals:
+      - "High CPU utilization correlated with slow queries"
+      - "wait_event_type = NULL (actively running, not waiting)"
+      - "Sort and hash operations in EXPLAIN ANALYZE with large memory grants"
+    common_causes:
+      - "Missing index forcing sort or hash in memory"
+      - "Complex aggregations over large datasets"
+      - "Regex or function calls in WHERE clause defeating index"
+      - "Parallel workers not engaged for large scans"
+    mitigations:
+      - "Add covering index to satisfy sort order"
+      - "Rewrite function-in-WHERE to expression index"
+      - "Enable parallel query (max_parallel_workers_per_gather)"
+      - "Materialize expensive CTE results"
+      - "Offload to read replica for analytical queries"
+
+  wait_priority_order:
+    - "Lock waits → diagnose concurrency and transaction design first"
+    - "IO waits → diagnose index coverage and buffer pool size"
+    - "CPU waits → diagnose query plan and parallelism last"
+
+# ─────────────────────────────────────────────
+# Plan Regression Detection
+# ─────────────────────────────────────────────
+
+plan_regression:
+  definition: >
+    A query that previously executed with an efficient plan (index scan, nested loop)
+    now executes with an inefficient plan (sequential scan, hash join). Performance
+    degrades without any change to the query text.
+
+  common_triggers:
+    - "Table growth crosses planner threshold — sequential scan becomes 'cheaper' in cost model"
+    - "Statistics drift: planner has stale cardinality estimates after bulk load"
+    - "After VACUUM ANALYZE, statistics change and planner switches plans"
+    - "PostgreSQL version upgrade changes planner cost model defaults"
+    - "Index added on related table changes join order decisions"
+
+  detection_approaches:
+    pg_stat_statements:
+      description: "Track mean_exec_time and calls per queryid over time"
+      alert_rule: "If mean_exec_time for a queryid increases > 2x week-over-week, flag for review"
+      query: |
+        SELECT query, calls, mean_exec_time, stddev_exec_time
+        FROM pg_stat_statements
+        ORDER BY mean_exec_time DESC
+        LIMIT 20;
+
+    explain_comparison:
+      process:
+        - "Capture EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON) output at baseline"
+        - "Store in slow-query library"
+        - "Re-run on regression alert; diff node types and row estimates"
+      key_signals:
+        - "Node type changed: Index Scan → Seq Scan"
+        - "Estimated rows wildly different from actual rows (statistics drift)"
+        - "Loops count unexpectedly high (nested loop on large relation)"
+
+    auto_explain:
+      description: "PostgreSQL extension that logs explain plans for slow queries automatically"
+      config: |
+        auto_explain.log_min_duration = 1000  # ms
+        auto_explain.log_analyze = on
+        auto_explain.log_buffers = on
+
+  remediation_options:
+    statistics_refresh:
+      action: "ANALYZE table_name;"
+      when: "After bulk insert/delete or when estimates diverge from actuals"
+
+    statistics_target_increase:
+      action: "ALTER TABLE t ALTER COLUMN c SET STATISTICS 500;"
+      when: "High-cardinality column with skewed distribution needs finer histogram"
+
+    plan_hints:
+      postgresql: "pg_hint_plan extension — use as last resort; documents technical debt"
+      mysql: "USE INDEX / FORCE INDEX hints"
+
+    planner_cost_tuning:
+      random_page_cost: "Lower to 1.1 for SSD storage (default 4.0 is for rotational disk)"
+      effective_cache_size: "Set to total RAM - shared_buffers; affects planner's IO cost estimates"
+
+# ─────────────────────────────────────────────
+# Index Type Decision Matrix
+# ─────────────────────────────────────────────
+
+index_types:
+  decision_matrix:
+    btree:
+      use_for: "Default. Equality, range, ORDER BY, LIKE 'prefix%'"
+      not_for: "Full-text search, geometric data, array containment"
+      characteristics:
+        - "Balanced tree structure; O(log n) lookup"
+        - "Supports all comparison operators: =, <, >, <=, >="
+        - "Supports ORDER BY without sort step"
+        - "Covers multi-column index with leftmost prefix rule"
+
+    hash:
+      use_for: "Exact equality only (=). Useful when index is large and range queries never occur."
+      not_for: "Range queries, ORDER BY, LIKE"
+      characteristics:
+        - "O(1) average lookup for equality"
+        - "Smaller on-disk size than B-tree for equality-only workload"
+        - "Not WAL-logged in older PostgreSQL versions (durability concern; fixed in PG10+)"
+
+    gist:
+      use_for: "Geometric types (PostGIS), range types, nearest-neighbor (KNN) search, full-text (tsvector)"
+      not_for: "Simple scalar equality/range (use B-tree)"
+      characteristics:
+        - "Generalized Search Tree — pluggable operator class framework"
+        - "Supports overlap, containment, adjacency operators"
+        - "Lossy: may require recheck filter"
+
+    gin:
+      use_for: "Full-text search (tsvector), JSONB containment (@>, ?), array containment"
+      not_for: "Equality or range on scalar columns"
+      characteristics:
+        - "Generalized Inverted Index — maps values to row lists"
+        - "Fast for 'does this document contain X?' queries"
+        - "Expensive to update; use fastupdate for write-heavy JSONB"
+
+    brin:
+      use_for: "Very large tables where values are physically ordered by insertion (logs, time-series, append-only)"
+      not_for: "Tables with random update patterns"
+      characteristics:
+        - "Block Range Index — stores min/max per range of pages"
+        - "Tiny size (10-1000x smaller than B-tree)"
+        - "Coarse granularity: eliminates page ranges, not individual rows"
+        - "Ideal for: timestamp columns in append-only log tables"
+
+    partial:
+      use_for: "Index only the rows that queries actually filter on (sparse conditions)"
+      example: "CREATE INDEX ON orders (created_at) WHERE status = 'pending'"
+      benefit: "Dramatically smaller index; faster maintenance; queries must include the WHERE clause"
+
+    expression:
+      use_for: "Index the result of a function or expression, not the raw column value"
+      example: "CREATE INDEX ON users (lower(email))"
+      requirement: "Query WHERE clause must use the exact same expression"
+
+    covering:
+      use_for: "Include non-key columns to satisfy query from index alone (index-only scan)"
+      syntax: "CREATE INDEX ON orders (user_id) INCLUDE (status, total)"
+      benefit: "Eliminates heap fetch; highest benefit for high-frequency read queries"
+      tradeoff: "Larger index size; must be maintained on writes to included columns"
+
+  selection_guide:
+    - condition: "Equality + range on scalar column"
+      choice: "B-tree"
+    - condition: "Equality only, large index"
+      choice: "Hash"
+    - condition: "Full-text search"
+      choice: "GIN with tsvector"
+    - condition: "JSONB containment queries"
+      choice: "GIN"
+    - condition: "Geospatial / PostGIS"
+      choice: "GiST"
+    - condition: "Append-only large table with timestamp range queries"
+      choice: "BRIN"
+    - condition: "Only a subset of rows are ever queried (e.g. active records)"
+      choice: "Partial B-tree"
+    - condition: "Queries always return same extra columns alongside key"
+      choice: "Covering index (INCLUDE)"
+    - condition: "WHERE clause uses function(column)"
+      choice: "Expression index"
+
+  index_maintenance:
+    redundant_index_detection: "SELECT * FROM pg_stat_user_indexes WHERE idx_scan = 0"
+    bloated_index_detection: "pgstattuple extension: SELECT * FROM pgstatindex('idx_name')"
+    rebuild_options: "REINDEX CONCURRENTLY (no lock); or CREATE INDEX CONCURRENTLY + DROP old"
+    update_frequency: "High-write tables: monitor index bloat monthly; REINDEX when > 20%"
+
+# ─────────────────────────────────────────────
+# Bloat Thresholds and Management
+# ─────────────────────────────────────────────
+
+bloat_management:
+  definition: >
+    Bloat is dead space in tables and indexes from updated/deleted rows that VACUUM
+    has not yet reclaimed. Bloat increases storage usage, reduces cache efficiency,
+    and slows sequential scans.
+
+  thresholds:
+    acceptable: "< 20% bloat ratio (dead tuples / live tuples)"
+    warning: "20–40% — schedule maintenance"
+    critical: "> 40% — immediate action required"
+
+  detection:
+    table_bloat: |
+      SELECT schemaname, tablename,
+             n_dead_tup, n_live_tup,
+             round(n_dead_tup * 100.0 / NULLIF(n_live_tup + n_dead_tup, 0), 1) AS dead_pct
+      FROM pg_stat_user_tables
+      ORDER BY n_dead_tup DESC;
+    index_bloat: "pgstattuple extension or pg_bloat_check tool"
+
+  remediation:
+    autovacuum_tuning:
+      autovacuum_vacuum_scale_factor: "0.01 (1%) for large tables (default 0.2 is too coarse)"
+      autovacuum_analyze_scale_factor: "0.005 for tables with frequent statistics drift"
+      note: "Tune per-table with ALTER TABLE t SET (autovacuum_vacuum_scale_factor = 0.01)"
+    manual_vacuum: "VACUUM ANALYZE table_name (safe, no lock)"
+    aggressive_reclaim: "VACUUM FULL table_name (full lock; use CLUSTER or pg_repack instead)"
+    pg_repack: "Rebuild table online without AccessExclusiveLock; preferred for production"
+
+# ─────────────────────────────────────────────
+# Statistics Drift as Root Cause Category
+# ─────────────────────────────────────────────
+
+statistics_drift:
+  definition: >
+    The PostgreSQL query planner makes decisions based on table statistics (row count,
+    column cardinality, value distribution histograms) collected by ANALYZE. When the
+    actual data distribution diverges from stored statistics, the planner makes
+    suboptimal plan choices — this is statistics drift.
+
+  why_it_happens:
+    - "Large bulk loads: millions of rows inserted faster than autovacuum/autoanalyze triggers"
+    - "Bulk deletes: large portions of data removed; statistics show phantom rows"
+    - "Skewed data growth: one partition/shard grows while others stay static"
+    - "Low statistics_target: histogram has too few buckets to represent distribution"
+
+  symptoms:
+    - "EXPLAIN ANALYZE: estimated rows wildly different from actual rows (e.g. estimated 5 rows, actual 50,000)"
+    - "Plan regression after bulk ETL operation"
+    - "Query fast in staging (small data) but slow in production (large data)"
+
+  diagnosis:
+    step_1: "Run EXPLAIN (ANALYZE, BUFFERS) on the slow query"
+    step_2: "Compare 'rows=N' estimate vs '(actual rows=M' for each plan node"
+    step_3: "If ratio > 10x, statistics drift is likely root cause"
+    step_4: "Check last analyze time: SELECT last_analyze, last_autoanalyze FROM pg_stat_user_tables WHERE relname = 'table_name'"
+
+  remediation:
+    immediate: "ANALYZE table_name; — safe, no lock, fast"
+    persistent:
+      - "Increase statistics target for problematic column: ALTER TABLE t ALTER COLUMN c SET STATISTICS 500"
+      - "Tune autovacuum to analyze more frequently after writes"
+      - "Add post-ETL ANALYZE to data pipeline jobs"
+
+  extended_statistics:
+    description: "For columns with correlated values (e.g. city and state always co-vary)"
+    syntax: "CREATE STATISTICS stat_name ON city, state FROM addresses"
+    benefit: "Captures multi-column correlations that per-column statistics cannot express"

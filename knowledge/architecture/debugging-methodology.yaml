@@ -1,0 +1,154 @@
+# Debugging Methodology — 6-Phase RCA Framework
+# Cross-project general methodology for structured root cause analysis.
+# Project-specific fault domains, package gotchas, and known bugs belong in the agent body.
+# Last updated: 2026-03-13
+
+last_updated: 2026-03-13
+id: debugging-methodology
+name: "Debugging Methodology — 6-Phase RCA Framework"
+description: >
+  A structured 6-phase root cause analysis process for diagnosing software defects.
+  Designed to prevent premature fixes, enforce evidence-based reasoning, and produce
+  postmortems that make the next investigation cheaper. Applies to any stack or domain.
+
+# ─────────────────────────────────────────────
+# Phase 1: Reproduce
+# ─────────────────────────────────────────────
+
+phase_1_reproduce:
+  goal: "Establish a reliable reproduction path before forming any hypothesis."
+  steps:
+    - "Identify the exact inputs, environment, and sequence that trigger the failure"
+    - "Confirm reproduction in a clean environment (rule out local state contamination)"
+    - "Record the minimal reproduction case — strip unrelated variables"
+  do_not: "Do not form a hypothesis until reproduction is confirmed."
+  output: "A minimal, reliable reproduction path with a clear failure signal."
+
+# ─────────────────────────────────────────────
+# Phase 2: Characterize
+# ─────────────────────────────────────────────
+
+phase_2_characterize:
+  goal: "Understand the failure boundary before diagnosing root cause."
+  questions:
+    - "What is the exact failure signal? (error message, wrong value, missing output, crash)"
+    - "When did this start? (first observed, recent deploy, environmental change)"
+    - "What changed recently? (deploy, dependency update, config, data)"
+    - "Is this intermittent or deterministic? Under what conditions?"
+    - "What is the blast radius? (one user, all users, specific feature only)"
+  output: "A failure profile: signal, scope, recency, and change correlation."
+
+# ─────────────────────────────────────────────
+# Phase 3: Hypothesize
+# ─────────────────────────────────────────────
+
+phase_3_hypothesize:
+  goal: "Generate candidate causes ranked by likelihood before investigating any single one."
+  rules:
+    - "List at least 3 candidate hypotheses before investigating any single one"
+    - "Rank by: likelihood (base rate of that failure type) × evidence already present"
+    - "Each hypothesis must be falsifiable — state what would disprove it"
+  anti_pattern: >
+    Locking onto the first plausible explanation and investing investigation time in it
+    before considering alternatives. This is confirmation bias — common in debugging and
+    expensive when wrong.
+  output: "A ranked, falsifiable hypothesis list."
+
+# ─────────────────────────────────────────────
+# Phase 4: Investigate
+# ─────────────────────────────────────────────
+
+phase_4_investigate:
+  goal: "Gather evidence to confirm or refute hypotheses. Work from the outside in."
+  strategy:
+    - "Start at the failure boundary (the observed signal), not at the suspected cause"
+    - "Follow the data/control flow toward the source of the anomaly"
+    - "Use binary search on the call chain to narrow fault location"
+    - "Instrument, don't guess — add logging/tracing rather than assuming behavior"
+  three_strike_rule:
+    description: >
+      If a hypothesis is not confirmed after 3 distinct investigation steps, abandon it
+      and move to the next ranked hypothesis. Do not sink more time into a theory that
+      isn't yielding evidence.
+    rationale: >
+      Debugging time is finite. The 3-strike rule prevents the sunk-cost trap where
+      increasing investment in a wrong hypothesis delays finding the real cause.
+  output: "Confirmed or refuted status for each hypothesis, with evidence."
+
+# ─────────────────────────────────────────────
+# Phase 5: Fix
+# ─────────────────────────────────────────────
+
+phase_5_fix:
+  goal: "Apply the minimal correct fix at the confirmed root cause location."
+  rules:
+    - "Fix at the root cause, not at a symptom downstream"
+    - "Prefer the smallest change that resolves the failure"
+    - "Do not bundle unrelated improvements with a bug fix"
+    - "Write a regression test that would have caught the original bug before applying the fix"
+  verification:
+    - "Confirm the reproduction case no longer triggers the failure"
+    - "Confirm no adjacent behavior is broken (run existing test suite)"
+    - "Confirm the regression test passes after the fix and fails on the unfixed code"
+
+# ─────────────────────────────────────────────
+# Phase 6: Postmortem
+# ─────────────────────────────────────────────
+
+phase_6_postmortem:
+  goal: "Extract a generalizable lesson so the next investigation of this class of bug is cheaper."
+  applies_when: >
+    Any bug that took more than 30 minutes to diagnose, OR any bug that would have been
+    prevented by a known pattern that was not followed.
+  template:
+    bug_family: "What category of bug is this? (e.g., race condition, build order, enum import, null path)"
+    root_cause: "One sentence: what was the actual cause?"
+    detection_gap: "Why was this not caught earlier? (missing test, missing type, silent failure)"
+    fix_summary: "What was changed and where?"
+    prevention: "What pattern, check, or test would prevent this class of bug recurrence?"
+    added_to_knowledge: "Did this update gotchas.yaml or another knowledge file? (yes/no + path)"
+
+# ─────────────────────────────────────────────
+# 3-Strike Rule (Summary)
+# ─────────────────────────────────────────────
+
+three_strike_rule:
+  description: >
+    Applied during Phase 4 (Investigate). If a hypothesis does not yield confirming
+    evidence after 3 distinct investigation steps, abandon it and move to the next
+    ranked hypothesis from Phase 3.
+  steps_that_count:
+    - "Reading a file and finding no relevant signal"
+    - "Running a diagnostic command and finding no relevant output"
+    - "Adding instrumentation and observing the anomaly is not present at that location"
+  steps_that_do_not_count:
+    - "Forming a follow-up question from a result"
+    - "Reading a file that redirects to another file (counts as 1 step only if terminal)"
+
+# ─────────────────────────────────────────────
+# Postmortem Template (Standalone)
+# ─────────────────────────────────────────────
+
+postmortem_template: |
+  ## Bug Postmortem
+
+  **Date**: [date]
+  **Bug Family**: [category]
+  **Root Cause**: [one sentence]
+  **Detection Gap**: [why not caught earlier]
+  **Fix Summary**: [what changed and where]
+  **Prevention**: [pattern or test that prevents recurrence]
+  **Added to Knowledge**: [yes/no — which file]
+
+# ─────────────────────────────────────────────
+# Maintenance
+# ─────────────────────────────────────────────
+
+maintenance:
+  add_when: >
+    A new class of debugging failure is identified that requires a different investigation
+    strategy than the 6 phases cover. Add to the relevant phase or as a new phase.
+  boundary_rule: >
+    Project-specific fault domains, known gotchas per package, and environment-specific
+    traps belong in the agent body (MEMORY.md), not in this file. This file contains
+    methodology only.

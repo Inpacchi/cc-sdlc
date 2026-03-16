@@ -1,0 +1,122 @@
+# Party/Role Pattern — Universal Data Model (UDM)
+# Generated from knowledge/data-modeling/patterns/people-and-organizations.yaml
+
+direction: right
+
+party: {
+  shape: sql_table
+  id: int {constraint: primary_key}
+  party_type: "enum(individual, organization)"
+  display_name: varchar(100)
+  created_at: datetime
+  updated_at: datetime
+}
+
+individual: {
+  shape: sql_table
+  id: int {constraint: primary_key}
+  party_id: int {constraint: [foreign_key; unique]}
+  first_name: varchar(50)
+  last_name: varchar(50)
+}
+
+organization: {
+  shape: sql_table
+  id: int {constraint: primary_key}
+  party_id: int {constraint: [foreign_key; unique]}
+  legal_name: varchar(100)
+}
+
+role_type: {
+  shape: sql_table
+  id: int {constraint: primary_key}
+  name: varchar(50)
+  internal_identifier: varchar(50) {constraint: unique}
+  description: varchar(255)
+}
+
+party_role: {
+  shape: sql_table
+  id: int {constraint: primary_key}
+  party_id: int {constraint: foreign_key}
+  role_type_id: int {constraint: foreign_key}
+  from_date: date
+  thru_date: "date (nullable)"
+}
+
+party_relationship: {
+  shape: sql_table
+  id: int {constraint: primary_key}
+  from_party_role_id: int {constraint: foreign_key}
+  to_party_role_id: int {constraint: foreign_key}
+  relationship_type_id: int {constraint: foreign_key}
+  from_date: date
+  thru_date: "date (nullable)"
+}
+
+contact_mechanism: {
+  shape: sql_table
+  id: int {constraint: primary_key}
+  mechanism_type: "enum(email, phone, postal, ...)"
+}
+
+email_address: {
+  shape: sql_table
+  id: int {constraint: primary_key}
+  contact_mechanism_id: int {constraint: [foreign_key; unique]}
+  email: varchar(255)
+}
+
+phone_number: {
+  shape: sql_table
+  id: int {constraint: primary_key}
+  contact_mechanism_id: int {constraint: [foreign_key; unique]}
+  phone_number: varchar(25)
+}
+
+postal_address: {
+  shape: sql_table
+  id: int {constraint: primary_key}
+  contact_mechanism_id: int {constraint: [foreign_key; unique]}
+  street: varchar(255)
+  city: varchar(50)
+  state_province: varchar(50)
+  postal_code: varchar(15)
+  country: varchar(50)
+}
+
+contact: {
+  shape: sql_table
+  id: int {constraint: primary_key}
+  party_id: int {constraint: foreign_key}
+  contact_mechanism_id: int {constraint: foreign_key}
+  from_date: date
+  thru_date: "date (nullable)"
+}
+
+contact_purpose: {
+  shape: sql_table
+  id: int {constraint: primary_key}
+  contact_id: int {constraint: foreign_key}
+  purpose_type: "varchar(50)"
+}
+
+# Relationships
+
+individual.party_id -> party.id: subtype
+organization.party_id -> party.id: subtype
+
+party_role.party_id -> party.id: plays
+party_role.role_type_id -> role_type.id: defined by
+
+party_relationship.from_party_role_id -> party_role.id: from
+party_relationship.to_party_role_id -> party_role.id: to
+
+contact.party_id -> party.id: reached at
+contact.contact_mechanism_id -> contact_mechanism.id
+
+email_address.contact_mechanism_id -> contact_mechanism.id: subtype
+phone_number.contact_mechanism_id -> contact_mechanism.id: subtype
+postal_address.contact_mechanism_id -> contact_mechanism.id: subtype
+
+contact_purpose.contact_id -> contact.id: purpose of

@@ -1,0 +1,267 @@
+# Knowledge Management Methodology
+# Extracted from VoltAgent/awesome-claude-code-subagents: categories/09-meta-orchestration/knowledge-synthesizer.md
+# Covers pattern classification taxonomy, knowledge validation metrics,
+# learning distribution architecture, emergence detection, and interaction mining.
+# Last updated: 2026-03-14
+
+last_updated: 2026-03-14
+id: knowledge-management-methodology
+name: "Knowledge Management Methodology"
+description: >
+  Cross-project methodology for extracting, organizing, validating, and distributing
+  knowledge across multi-agent systems. Covers the seven-category pattern classification
+  taxonomy, knowledge validation metrics (accuracy, relevance, retrieval latency),
+  how knowledge flows back to agents, emergence detection methodology, and interaction
+  mining as the primary knowledge extraction technique.
+
+# ─────────────────────────────────────────────
+# Pattern Classification Taxonomy
+# ─────────────────────────────────────────────
+
+pattern_taxonomy:
+  description: >
+    Seven categories for classifying patterns extracted from agent interactions
+    and system behavior. Every identified pattern is assigned one primary category
+    to enable targeted retrieval and application.
+
+  categories:
+    workflow:
+      description: "Patterns in how tasks are sequenced, handed off, or parallelized across agents"
+      examples:
+        - "Spec → Plan → Execute → Review is always faster with parallel domain agent drafts than sequential"
+        - "Database changes and API changes in the same deliverable benefit from explicit dependency ordering"
+      extraction_signals: ["Task completion time", "Handoff latency", "Retry frequency"]
+      application: "Improve orchestration logic; inform task routing decisions"
+
+    success:
+      description: "Patterns present in high-quality, on-time, low-rework outcomes"
+      examples:
+        - "Deliverables with explicit acceptance criteria have 40% lower rework rate"
+        - "Agent outputs reviewed by a second domain agent before implementation have fewer integration issues"
+      extraction_signals: ["Rework rate", "Review pass rate", "Stakeholder acceptance on first submission"]
+      application: "Encode as best-practice guidance; use to define quality gates"
+
+    failure:
+      description: "Patterns present when deliverables fail, produce rework, or trigger escalation"
+      examples:
+        - "Scope expansion during execution correlates with missed estimates"
+        - "Missing acceptance criteria in spec correlates with plan revision"
+      extraction_signals: ["Rework triggers", "Escalation events", "Estimate overrun rate"]
+      application: "Encode as anti-patterns; add to pre-flight checklists"
+
+    communication:
+      description: "Patterns in how information is shared between agents, roles, or systems"
+      examples:
+        - "Structured JSON handoff reduces parsing errors vs. freeform prose"
+        - "Explicit 'blocking on X' signals reduce idle wait time"
+      extraction_signals: ["Miscommunication events", "Clarification request frequency", "Handoff rejection rate"]
+      application: "Improve communication protocols and handoff formats"
+
+    resource:
+      description: "Patterns in how compute, tool access, context window, and attention are consumed"
+      examples:
+        - "Large context windows underutilized when agents read more files than needed"
+        - "Parallel agent invocations saturate tool rate limits at > 8 concurrent"
+      extraction_signals: ["Token utilization", "Tool call frequency", "Timeout rate"]
+      application: "Inform parallelism limits; optimize context loading strategies"
+
+    optimization:
+      description: "Patterns in techniques that improve efficiency, quality, or cost without changing the outcome"
+      examples:
+        - "Caching LSP hover results within a session reduces redundant tool calls"
+        - "Reading CLAUDE.md before exploration cuts irrelevant file reads by 60%"
+      extraction_signals: ["Redundant operations rate", "Task time before/after optimization"]
+      application: "Share as efficiency improvements; update agent instructions"
+
+    evolution:
+      description: "Patterns in how system capabilities, agent behavior, or codebase structure change over time"
+      examples:
+        - "New game adapter integrations follow a consistent 3-phase pattern (frontend → backend → pipeline)"
+        - "Agent memory files added within 30 days of major architectural changes improve next-session accuracy"
+      extraction_signals: ["Architectural change frequency", "Pattern reuse rate", "Memory file freshness"]
+      application: "Inform architectural planning; guide onboarding of new capabilities"
+
+# ─────────────────────────────────────────────
+# Knowledge Validation Metrics
+# ─────────────────────────────────────────────
+
+validation_metrics:
+  accuracy:
+    definition: "What fraction of retrieved knowledge entries are factually correct and applicable?"
+    measurement:
+      method: "Periodic human spot-check of sample N entries"
+      frequency: "Monthly or after major system changes"
+      sample_size: "Minimum 10% of active entries"
+    target: "> 85% accuracy"
+    failure_response: "Flag inaccurate entries; trigger review-and-update workflow"
+    freshness_dimension: "Knowledge that was accurate at creation may become inaccurate after codebase changes"
+
+  relevance:
+    definition: "What fraction of retrieved knowledge is relevant to the query that triggered retrieval?"
+    measurement:
+      method: "Retrieval audit: for N recent agent dispatches, did the retrieved knowledge files contribute to the output?"
+      proxy: "Agent cites retrieved knowledge in its reasoning"
+    target: "> 90% relevance"
+    failure_response: "Refine tagging, agent-to-knowledge mappings, or retrieval query construction"
+
+  retrieval_latency:
+    definition: "Time from agent dispatch to knowledge delivery"
+    target: "< 500ms for synchronous retrieval"
+    measurement: "Instrument knowledge lookup; log p50/p95"
+    optimization_options:
+      - "Pre-load knowledge at session start for known agent set"
+      - "Cache frequently retrieved files in memory"
+      - "Index by agent role to avoid full scan"
+
+  coverage:
+    definition: "Fraction of agent interactions that had relevant knowledge available to consult"
+    measurement: "For each agent invocation, check if mapped knowledge exists; track miss rate"
+    target: "< 10% knowledge gap rate for established agents"
+    failure_response: "New knowledge gaps trigger creation of new knowledge files"
+
+  update_frequency:
+    target: "High-change knowledge files reviewed within 30 days of major system changes"
+    staleness_threshold: "Knowledge files older than 90 days in active code areas flagged for review"
+
+# ─────────────────────────────────────────────
+# Learning Distribution Architecture
+# ─────────────────────────────────────────────
+
+learning_distribution:
+  description: >
+    How knowledge flows from extraction back to agents. The distribution architecture
+    determines whether insights actually change agent behavior or remain inert documentation.
+
+  distribution_channels:
+    knowledge_files:
+      description: "YAML knowledge files in ops/sdlc/knowledge/ consulted at agent dispatch time"
+      latency: "Available to next session immediately after file is written"
+      format: "Structured YAML with sections indexed by topic"
+      update_trigger: "Human decision after pattern validation"
+
+    agent_memory_files:
+      description: "Per-agent memory in .claude/agent-memory/ updated with session-specific learnings"
+      latency: "Available to same agent in next session"
+      format: "Structured markdown; agent reads at session start"
+      update_trigger: "Agent self-updates or orchestrator updates after significant session"
+
+    skill_instructions:
+      description: "SDLC skill files in ops/sdlc/skills/ updated with process improvements"
+      latency: "Available to next skill invocation"
+      format: "Markdown with explicit instructions and Red Flags sections"
+      update_trigger: "SDLC process improvement decision"
+
+    agent_context_map:
+      description: "ops/sdlc/knowledge/agent-context-map.yaml maps agent roles to relevant knowledge files"
+      role: "Orchestration layer — determines which knowledge each agent receives"
+      update_trigger: "When new knowledge files are created or agent responsibilities change"
+
+  distribution_workflow:
+    step_1: "Pattern identified from interaction mining or retrospective"
+    step_2: "Pattern validated (accuracy check; is this generalizable?)"
+    step_3: "Pattern classified by taxonomy category"
+    step_4: "Determine distribution channel: knowledge file, memory file, or skill update"
+    step_5: "Write update; include last_updated date"
+    step_6: "Update agent-context-map if new knowledge file"
+    step_7: "Commit alongside any related code changes"
+
+  feedback_loops:
+    agent_to_knowledge: "Agent identifies gap → flags for knowledge creation → human writes file"
+    outcome_to_pattern: "Retrospective finds failure pattern → encoded as anti-pattern in knowledge"
+    knowledge_to_skill: "Frequently cited knowledge promotes to skill instruction for automatic application"
+
+# ─────────────────────────────────────────────
+# Emergence Detection Methodology
+# ─────────────────────────────────────────────
+
+emergence_detection:
+  definition: >
+    Emergence is a system-level behavior that was not explicitly programmed but arises
+    from the interaction of components. In agent systems, emergent patterns are often
+    more valuable than individually optimized behaviors because they reveal non-obvious
+    efficiencies or failure modes.
+
+  what_to_look_for:
+    cross_agent_patterns:
+      description: "Patterns that appear across multiple agent types without being instructed"
+      example: "Multiple domain agents independently converge on the same architectural recommendation — signals a strong pattern worth encoding"
+    unanticipated_efficiency:
+      description: "Task completion faster or cheaper than expected — usually indicates a reusable pattern"
+      detection: "Compare actual time/tokens vs. estimate; flag positive outliers"
+    failure_clustering:
+      description: "Multiple independent failures sharing a common upstream cause not in any single agent's scope"
+      example: "Three different deliverables failing because all agents misread the same ambiguous CLAUDE.md section"
+    capability_gaps:
+      description: "Recurring knowledge queries that return no results — agents seeking knowledge that doesn't exist yet"
+
+  detection_methods:
+    frequency_analysis:
+      description: "Count how often the same pattern appears across independent interactions"
+      threshold: "Pattern appearing in > 3 independent contexts is a candidate for encoding"
+    outcome_correlation:
+      description: "Correlate agent behaviors with outcome quality (rework rate, pass rate)"
+      method: "Tag successful vs. unsuccessful deliverables; compare behaviors present in each"
+    anomaly_detection:
+      description: "Flag interactions that deviate significantly from the norm (much faster, much slower, unusual tool call sequence)"
+      benefit: "Anomalies are often the source of new efficiency patterns or new failure patterns"
+
+  encoding_decision:
+    encode_when:
+      - "Pattern appears in >= 3 independent contexts"
+      - "Pattern has clear mechanism (not coincidence)"
+      - "Pattern is actionable (agents can apply it)"
+    defer_when:
+      - "Single occurrence (may be coincidence)"
+      - "Pattern is context-specific and unlikely to generalize"
+    discard_when:
+      - "Pattern contradicts validated higher-authority knowledge"
+      - "Pattern is trivially obvious and adds no value when stated"
+
+# ─────────────────────────────────────────────
+# Interaction Mining as Knowledge Extraction
+# ─────────────────────────────────────────────
+
+interaction_mining:
+  definition: >
+    Systematic analysis of agent interaction history — tool calls, outputs, decisions,
+    errors — to extract knowledge that was implicitly learned during task execution
+    but not yet explicitly encoded in knowledge files.
+
+  data_sources:
+    agent_outputs: "Reasoning traces, recommendations, and deliverables produced"
+    tool_call_sequences: "Which tools were called in what order; which were ineffective"
+    error_logs: "Failed tool calls, rejected outputs, correction rounds"
+    timing_data: "How long each phase took; where time was lost"
+    human_feedback: "Approval, rejection, or modification of agent outputs"
+
+  extraction_techniques:
+    retrospective_review:
+      cadence: "After each major deliverable (D-level work)"
+      questions:
+        - "What did agents do that worked especially well?"
+        - "What did agents struggle with or get wrong?"
+        - "What knowledge would have prevented the struggle?"
+        - "What pattern emerged that should be encoded?"
+
+    failure_postmortem:
+      trigger: "Any deliverable requiring > 2 rounds of revision"
+      output: "Failure pattern entry + updated anti-pattern in relevant knowledge file"
+
+    efficiency_retrospective:
+      trigger: "Deliverable completed significantly faster than estimated"
+      output: "Success pattern entry; candidate for encoding as optimization pattern"
+
+    gap_analysis:
+      method: "Review agent context map; identify agents with few or no knowledge files"
+      action: "Prioritize knowledge creation for agents with most frequent dispatch"
+
+  mining_cadence:
+    continuous: "Flag interesting interactions during session for later review"
+    per_deliverable: "Retrospective on completion"
+    periodic: "Monthly review of interaction patterns across all deliverables in period"
+
+  output_formats:
+    new_knowledge_file: "When a new topic domain needs structured coverage"
+    addition_to_existing_file: "When new pattern fits under existing taxonomy"
+    memory_file_update: "When learning is agent-specific rather than universal"
+    skill_instruction_update: "When learning should become mandatory process step"

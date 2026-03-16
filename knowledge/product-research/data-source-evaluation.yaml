@@ -1,0 +1,260 @@
+# Data Source Evaluation — Research Methodology
+# Cross-project general methodology for evaluating external data sources.
+# Project-specific platform awareness and data source decisions
+# belong in the agent body (data-researcher/MEMORY.md).
+# Last updated: 2026-03-13
+
+last_updated: 2026-03-13
+id: data-source-evaluation
+name: "Data Source Evaluation — Research Methodology"
+description: >
+  A structured 4-phase methodology for evaluating external data sources before
+  integrating them into a product. Covers source discovery, data quality assessment,
+  access assessment, and legal/ToS review. Includes a feasibility scale for ranking
+  candidate sources. Applies to any domain requiring third-party data integration.
+
+# ─────────────────────────────────────────────
+# Phase 1: Source Discovery
+# ─────────────────────────────────────────────
+
+phase_1_source_discovery:
+  goal: "Identify the full set of candidate sources before committing to any single one."
+  rationale: >
+    Integrating the first plausible source without surveying alternatives leads to
+    suboptimal choices — often picking a source that works but is fragile, expensive,
+    or legally risky when a better option exists.
+
+  discovery_strategies:
+    - name: "Official publisher sources"
+      description: "APIs, data exports, or developer programs offered by the data's original publisher"
+      priority: "Highest — lowest legal risk, most stable"
+    - name: "Official third-party aggregators"
+      description: "Platforms that aggregate the data type with explicit publisher partnerships or licenses"
+      priority: "High — stable, usually licensed, may require approval"
+    - name: "Community aggregators"
+      description: "Platforms aggregating data via community contribution (scraping, submission forms)"
+      priority: "Medium — useful but maintenance risk, no SLA"
+    - name: "Raw source scraping"
+      description: "Scraping source websites directly where no API exists"
+      priority: "Low — fragile, ToS risk, high maintenance"
+    - name: "Derived sources"
+      description: "Aggregations, mirrors, or derived datasets published by third parties"
+      priority: "Variable — assess each independently"
+
+  search_patterns:
+    - "{domain} API documentation"
+    - "{domain} developer portal"
+    - "{domain} data export"
+    - "{domain} tournament data API"
+    - "best {domain} data source"
+    - "{platform} API alternatives"
+    - "site:github.com {domain} API"
+
+  minimum_candidates: "Identify at least 3 candidate sources before ranking."
+
+# ─────────────────────────────────────────────
+# Phase 2: Data Quality Assessment
+# ─────────────────────────────────────────────
+
+phase_2_data_quality:
+  goal: "Assess whether each candidate source has the data fidelity required for the integration."
+
+  dimensions:
+    completeness:
+      questions:
+        - "Does the source cover all required entities (all cards, all tournaments, all regions)?"
+        - "Are there known gaps (JP-only, EN-only, recent sets only)?"
+        - "What is the volume? (record count, tournament count, date range)"
+    accuracy:
+      questions:
+        - "Is the data maintained by the publisher or by the community?"
+        - "What is the error rate? (known data quality issues)"
+        - "Is there a correction mechanism when data is wrong?"
+    freshness:
+      questions:
+        - "How frequently is the data updated? (real-time, daily, weekly, manual)"
+        - "What is the lag between real-world events and data availability?"
+        - "Is there a webhook or notification mechanism for new data?"
+    schema_stability:
+      questions:
+        - "How often does the data schema change?"
+        - "Is there a versioned API or changelog for breaking changes?"
+        - "What is the migration path when the schema changes?"
+    format_compatibility:
+      questions:
+        - "Does the data format match or closely match the target system's schema?"
+        - "What transformation is required to normalize to the canonical format?"
+        - "Are there known encoding, character set, or locale issues?"
+
+  red_flags:
+    - "No documented schema — field meanings must be reverse-engineered"
+    - "No stated freshness SLA — data staleness is unpredictable"
+    - "Known large gaps in coverage with no stated remediation plan"
+    - "Community-maintained with no active maintainer (bus factor = 1)"
+
+# ─────────────────────────────────────────────
+# Phase 3: Access Assessment
+# ─────────────────────────────────────────────
+
+phase_3_access_assessment:
+  goal: "Assess the practical feasibility of accessing each candidate source."
+
+  access_types:
+    public_api:
+      description: "REST/GraphQL API with documented endpoints, no approval required"
+      feasibility: "High — integrate immediately"
+      risks: "Rate limits, undocumented breaking changes, no SLA"
+    gated_api:
+      description: "API requiring registration, approval, or a paid subscription"
+      feasibility: "Medium — timeline depends on approval process"
+      assessment_steps:
+        - "What is the approval process and timeline?"
+        - "What are the requirements (public-facing project, attribution, commercial use clause)?"
+        - "What is the cost? (free tier, paid tiers, per-request pricing)"
+    scraping:
+      description: "No API — data accessible via web scraping only"
+      feasibility: "Low — fragile, requires maintenance on structure changes"
+      assessment_steps:
+        - "Does robots.txt allow scraping the relevant paths?"
+        - "Is the data structured (HTML tables) or unstructured (free-form HTML)?"
+        - "What is the ToS — does it prohibit scraping?"
+        - "What is the structure stability risk (fan site vs. institutional site)?"
+    partnership:
+      description: "Data only accessible via a formal partnership with the source owner"
+      feasibility: "Very Low — requires business relationship"
+      assessment_steps:
+        - "Is there a public contact or partnership program?"
+        - "What does the source owner likely want in return?"
+        - "What is the realistic timeline?"
+    closed:
+      description: "Data is not accessible to third parties — confirmed by research"
+      feasibility: "None"
+      action: "Document as unavailable. Identify alternative sources or alternative approaches."
+
+  rate_limit_assessment:
+    - "What are the documented rate limits (requests/minute, requests/day)?"
+    - "Are rate limits enforced with 429 responses or silent throttling?"
+    - "Does the use case fit within the rate limits?"
+    - "Is there a higher-tier plan with higher limits if needed?"
+
+# ─────────────────────────────────────────────
+# Phase 4: Legal & ToS Review
+# ─────────────────────────────────────────────
+
+phase_4_legal_review:
+  goal: "Assess the legal and contractual risk of using each candidate source."
+
+  checklist:
+    - "Does the source's Terms of Service explicitly address API / programmatic access?"
+    - "Does the ToS permit commercial use? (many free APIs restrict to non-commercial)"
+    - "Does the ToS require attribution? (visible credit, link, or logo)"
+    - "Does the ToS restrict resale or re-publishing of the data?"
+    - "Does robots.txt allow scraping the relevant paths? (not legally binding but industry norm)"
+    - "Is the data itself copyrightable? (raw facts are not; selection/arrangement may be)"
+    - "Does using the data require a license from the underlying IP holder (e.g., game publisher)?"
+    - "Is there a data processing agreement (DPA) required for user data?"
+
+  risk_levels:
+    permitted:
+      description: "ToS explicitly permits the intended use case"
+      action: "Proceed. Document the specific ToS clause."
+    silent:
+      description: "ToS does not address the use case (neither permits nor prohibits)"
+      action: "Assess risk level. Contact the source owner for clarification if scale is significant."
+    prohibited:
+      description: "ToS explicitly prohibits the use case"
+      action: "Do not proceed. Identify alternative sources."
+    requires_approval:
+      description: "ToS permits the use case with prior written approval"
+      action: "Initiate approval process before integration. Do not integrate before approval."
+
+  contact_pattern: >
+    When ToS is ambiguous or silent, proactively contact the data source owner before
+    integrating at scale. Describe the use case specifically. Keep a record of the response.
+    Many data providers who have no explicit commercial API policy will grant permission
+    informally in writing if asked politely.
+
+# ─────────────────────────────────────────────
+# Feasibility Scale
+# ─────────────────────────────────────────────
+
+feasibility_scale:
+  description: >
+    A 5-level scale for ranking candidate data sources after completing all 4 phases.
+    Use this to select a primary source and identify fallbacks.
+
+  levels:
+    5_ideal:
+      label: "Ideal"
+      criteria:
+        - "Public API with documented endpoints and rate limits"
+        - "No approval required"
+        - "ToS explicitly permits commercial use"
+        - "Data is complete, accurate, and fresh"
+        - "Stable schema with changelog"
+      action: "Integrate as primary source."
+    4_viable:
+      label: "Viable"
+      criteria:
+        - "API available but requires approval OR paid subscription"
+        - "ToS permits commercial use (explicitly or after contact)"
+        - "Data quality is good but may have coverage gaps"
+        - "Rate limits are workable for the use case"
+      action: "Pursue approval/subscription. Set timeline expectation."
+    3_workable:
+      label: "Workable"
+      criteria:
+        - "API available but with significant friction (complex approval, high cost, unclear ToS)"
+        - "OR: Scraping viable with ToS permission or ToS silence + low risk"
+        - "Data quality is adequate but requires transformation"
+      action: "Evaluate cost/benefit. Use as secondary source or fallback."
+    2_risky:
+      label: "Risky"
+      criteria:
+        - "Scraping required, ToS silent or ambiguous"
+        - "OR: API available but ToS restricts commercial use"
+        - "OR: Community-maintained with high maintenance risk"
+      action: "Use only if no better option. Document risk explicitly. Seek ToS clarification."
+    1_unavailable:
+      label: "Unavailable"
+      criteria:
+        - "Data is not accessible to third parties"
+        - "OR: ToS explicitly prohibits the use case"
+        - "OR: Requires partnership with no accessible contact path"
+      action: "Document as unavailable. Consider alternative approaches (manual entry, user submission)."
+
+# ─────────────────────────────────────────────
+# Output Format
+# ─────────────────────────────────────────────
+
+output_format:
+  description: "Recommended format for presenting data source evaluation results."
+
+  source_entry_template:
+    source_name: "Name of the data source"
+    url: "Base URL"
+    access_type: "public_api | gated_api | scraping | partnership | closed"
+    feasibility_score: "1-5 (see feasibility scale)"
+    data_quality:
+      completeness: "High | Medium | Low — with notes"
+      freshness: "Update frequency"
+      schema_stability: "Stable | Versioned | Unknown"
+    access_notes: "Rate limits, approval requirements, cost"
+    legal_status: "permitted | silent | prohibited | requires_approval"
+    legal_notes: "Specific ToS clause or contact outcome"
+    recommendation: "primary | secondary | fallback | avoid"
+    blocker: "What, if anything, must happen before integration can proceed"
+
+# ─────────────────────────────────────────────
+# Maintenance
+# ─────────────────────────────────────────────
+
+maintenance:
+  add_when: >
+    A new general pattern for data source evaluation is identified during a research
+    engagement — a new access type, a new legal risk category, or a new data quality
+    dimension. Add with rationale and assessment guidance.
+  boundary_rule: >
+    Specific data source evaluations (named APIs, specific ToS findings, rate limit
+    numbers), game-specific platform knowledge, and project-specific integration
+    decisions belong in the agent body, not in this file.

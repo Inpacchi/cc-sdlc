@@ -1,0 +1,326 @@
+# TypeScript Advanced Patterns
+# Cross-project general TypeScript patterns for type safety, error handling, and exhaustiveness.
+# Project-specific backend conventions (file extensions, SDK choices, config location)
+# belong in the agent body (backend-developer/MEMORY.md).
+# Last updated: 2026-03-13
+
+last_updated: 2026-03-13
+id: typescript-patterns
+name: "TypeScript Advanced Patterns"
+description: >
+  General TypeScript patterns that improve type safety, eliminate classes of runtime errors,
+  and make code easier to verify statically. Covers branded types, Result types, the
+  satisfies operator, type predicates, template literal types, and exhaustive union handling.
+  These patterns apply across backend, frontend, and library code regardless of framework.
+
+# ─────────────────────────────────────────────
+# Branded Types
+# ─────────────────────────────────────────────
+
+branded_types:
+  description: >
+    Branded types (also called nominal types or opaque types) prevent structural type
+    aliasing mistakes at compile time. Two types with the same underlying structure
+    (e.g., `string`) become incompatible by branding them with a unique phantom type tag.
+  rationale: >
+    TypeScript's structural type system means that `UserId` and `OrderId` (both `string`)
+    are mutually assignable — you can pass a `UserId` where an `OrderId` is expected with
+    no error. Branded types prevent this class of bug without any runtime cost.
+
+  pattern: |
+    // Define the brand utility
+    type Brand<T, B> = T & { readonly __brand: B };
+
+    // Create branded types
+    type UserId = Brand<string, 'UserId'>;
+    type OrderId = Brand<string, 'OrderId'>;
+    type CardId = Brand<string, 'CardId'>;
+
+    // Create constructor functions (the only way to produce a branded value)
+    const UserId = (id: string): UserId => id as UserId;
+    const OrderId = (id: string): OrderId => id as OrderId;
+
+    // Usage — now incompatible:
+    function getUser(id: UserId): User { ... }
+    const orderId = OrderId('abc-123');
+    getUser(orderId); // TS Error: Argument of type 'OrderId' is not assignable to parameter of type 'UserId'
+
+  when_to_use:
+    - "Any identifier that flows between multiple systems (user IDs, order IDs, room IDs)"
+    - "Validated strings where the brand represents the post-validation guarantee (SafeHtml, ValidEmail)"
+    - "Units where confusion is dangerous (DollarsUsd vs. Cents vs. DollarsEur)"
+
+  when_not_to_use:
+    - "Internal IDs that never cross a module boundary and have no confusion risk"
+    - "Config values that are immediately consumed and not stored"
+
+# ─────────────────────────────────────────────
+# Result Types
+# ─────────────────────────────────────────────
+
+result_types:
+  description: >
+    A Result type (also known as Either or Try) makes error handling explicit in the
+    function signature rather than through thrown exceptions. The caller must handle
+    both the success and failure cases — it cannot be ignored.
+  rationale: >
+    Thrown exceptions are invisible in TypeScript function signatures. A function that
+    throws `AuthError` or `NetworkError` looks identical to one that doesn't. Result
+    types make the error contract explicit, force call sites to handle failures, and
+    enable `await`-free error composition.
+
+  pattern: |
+    // Core Result type
+    type Result<T, E extends Error = Error> =
+      | { ok: true; value: T }
+      | { ok: false; error: E };
+
+    // Constructor helpers
+    const ok = <T>(value: T): Result<T, never> => ({ ok: true, value });
+    const err = <E extends Error>(error: E): Result<never, E> => ({ ok: false, error });
+
+    // Usage
+    async function fetchUser(id: UserId): Promise<Result<User, NotFoundError | NetworkError>> {
+      try {
+        const user = await db.users.get(id);
+        if (!user) return err(new NotFoundError(id));
+        return ok(user);
+      } catch (e) {
+        return err(new NetworkError('fetchUser failed', { cause: e }));
+      }
+    }
+
+    // Call site — both paths are enforced
+    const result = await fetchUser(userId);
+    if (!result.ok) {
+      // handle result.error
+    } else {
+      // use result.value
+    }
+
+  when_to_use:
+    - "Functions with multiple distinct failure modes that callers should handle differently"
+    - "Public API functions where the error contract should be visible in the signature"
+    - "Async operations that cross I/O or network boundaries"
+
+  when_not_to_use:
+    - "Functions with a single obvious failure mode where exceptions are fine (validation throws)"
+    - "Internal private functions where the calling context controls all inputs"
+    - "When the codebase doesn't consistently use Result types — inconsistency is worse than either approach"
+
+# ─────────────────────────────────────────────
+# satisfies Operator
+# ─────────────────────────────────────────────
+
+satisfies_operator:
+  description: >
+    The `satisfies` operator (TypeScript 4.9+) validates that a value conforms to a type
+    without widening it. This preserves the literal types of the value while still
+    catching type errors at the definition site.
+  rationale: >
+    When using `const config: MyType = { ... }`, TypeScript widens the type to `MyType`,
+    losing the specific literal types of the fields. `satisfies` validates the shape
+    without widening, enabling both type-safety at the definition and precise types at usage.
+
+  pattern: |
+    type RouteConfig = {
+      path: string;
+      method: 'GET' | 'POST' | 'PUT' | 'DELETE';
+      auth: boolean;
+    };
+
+    // With `: RouteConfig` — method type is widened to 'GET' | 'POST' | 'PUT' | 'DELETE'
+    // With `satisfies` — method type is kept as the literal 'GET'
+    const loginRoute = {
+      path: '/auth/login',
+      method: 'POST',
+      auth: false,
+    } satisfies RouteConfig;
+
+    // loginRoute.method is 'POST' (literal), not 'GET' | 'POST' | 'PUT' | 'DELETE'
+
+  use_cases:
+    - "Configuration objects where field literal types matter for downstream use"
+    - "Enum-like constant maps where keys and values should remain as literals"
+    - "Plugin/adapter registries where the runtime needs precise types"
+
+# ─────────────────────────────────────────────
+# Type Predicates
+# ─────────────────────────────────────────────
+
+type_predicates:
+  description: >
+    Type predicates (`param is Type`) are user-defined type guard functions that
+    narrow a union type within a conditional block. They let you encapsulate
+    type-narrowing logic in a reusable function.
+  rationale: >
+    Without type predicates, type narrowing logic is duplicated across every call site.
+    A type predicate function centralizes the check and gives it a name, making the
+    narrowing intent explicit.
+
+  pattern: |
+    type SuccessResponse = { ok: true; data: string };
+    type ErrorResponse = { ok: false; error: string };
+    type ApiResponse = SuccessResponse | ErrorResponse;
+
+    // Type predicate — return type is `param is SuccessResponse`
+    function isSuccess(response: ApiResponse): response is SuccessResponse {
+      return response.ok === true;
+    }
+
+    function handle(response: ApiResponse) {
+      if (isSuccess(response)) {
+        // TypeScript knows response is SuccessResponse here
+        console.log(response.data);
+      } else {
+        // TypeScript knows response is ErrorResponse here
+        console.error(response.error);
+      }
+    }
+
+  when_to_use:
+    - "Discriminated union narrowing that repeats in 3+ call sites"
+    - "Runtime validation functions that need to teach TypeScript the narrowed type"
+    - "Filtering arrays with a type-safe predicate (array.filter(isSuccess))"
+
+# ─────────────────────────────────────────────
+# Template Literal Types
+# ─────────────────────────────────────────────
+
+template_literal_types:
+  description: >
+    Template literal types construct string union types from combinations of other
+    string literal types. They enforce naming conventions and key patterns at the
+    type level without runtime cost.
+  rationale: >
+    When a system has naming conventions for identifiers, event names, or route paths,
+    template literal types encode those conventions in the type system. Violations
+    are caught at compile time.
+
+  pattern: |
+    type ModuleId = 'billing' | 'inventory' | 'shipping';
+    type EventSuffix = 'created' | 'updated' | 'deleted';
+
+    // Enforce naming convention: `{moduleId}:{entity}:{event}`
+    type ModuleEventName = `${ModuleId}:order:${EventSuffix}` | `${ModuleId}:item:${EventSuffix}`;
+
+    // Valid: 'billing:order:created', 'inventory:item:updated'
+    // Invalid: 'marketing:order:created' — TS error
+
+    // Extract parts from a template literal type
+    type ExtractModuleId<T extends string> =
+      T extends `${infer G}:${string}` ? G : never;
+
+  use_cases:
+    - "Event name systems (WebSocket actions, pub/sub topics)"
+    - "Route path patterns"
+    - "CSS custom property names"
+    - "Database collection path patterns"
+    - "Enforcing key naming conventions on config objects"
+
+# ─────────────────────────────────────────────
+# Exhaustive Union Handling
+# ─────────────────────────────────────────────
+
+exhaustive_unions:
+  description: >
+    Exhaustive union handling ensures that when a discriminated union gains a new member,
+    all switch/if-else chains that handle the union produce a compile-time error until
+    the new case is added. This prevents the silent "falls through to default" bug.
+  rationale: >
+    Without exhaustiveness checks, adding a new member to a union is a silent operation.
+    The type system does not alert you to all the places in the codebase that need a
+    corresponding case. The `never` trick forces every handler to be updated.
+
+  pattern: |
+    // The exhaustive check helper
+    function assertNever(x: never): never {
+      throw new Error(`Unhandled case: ${JSON.stringify(x)}`);
+    }
+
+    type Shape =
+      | { kind: 'circle'; radius: number }
+      | { kind: 'rectangle'; width: number; height: number }
+      | { kind: 'triangle'; base: number; height: number };
+
+    function area(shape: Shape): number {
+      switch (shape.kind) {
+        case 'circle':
+          return Math.PI * shape.radius ** 2;
+        case 'rectangle':
+          return shape.width * shape.height;
+        case 'triangle':
+          return (shape.base * shape.height) / 2;
+        default:
+          return assertNever(shape); // TS error if a case is missing
+      }
+    }
+
+    // When a new member is added:
+    // | { kind: 'hexagon'; side: number }
+    // The `default: assertNever(shape)` line immediately produces a TS error:
+    // "Argument of type '{ kind: "hexagon"; side: number }' is not assignable to parameter of type 'never'"
+
+  sse_example: |
+    // Real-world: SSE event allowlist with exhaustive check
+    type SseEventName = 'card' | 'player' | 'score' | 'timer' | 'counter';
+
+    function pushSseEvent(name: SseEventName, data: unknown) {
+      switch (name) {
+        case 'card': ...; break;
+        case 'player': ...; break;
+        case 'score': ...; break;
+        case 'timer': ...; break;
+        case 'counter': ...; break;
+        default:
+          assertNever(name); // forces all new event types to be handled
+      }
+    }
+
+  when_to_use:
+    - "Switch statements on discriminated union kind fields"
+    - "SSE/WebSocket event type handlers"
+    - "Adapter/plugin dispatch tables"
+    - "Any pattern where new enum/union members require corresponding handler additions"
+
+# ─────────────────────────────────────────────
+# Combining Patterns
+# ─────────────────────────────────────────────
+
+combining_patterns:
+  description: "These patterns compose naturally and are most powerful when combined."
+  examples:
+    branded_result: |
+      // Branded input + Result output: both the input contract and error contract are explicit
+      async function validateToken(token: string): Promise<Result<UserId, InvalidTokenError>> { ... }
+
+    satisfies_with_exhaustive: |
+      // satisfies preserves literal types used in an exhaustive switch
+      const ROUTES = {
+        login: { path: '/auth/login', method: 'POST' },
+        logout: { path: '/auth/logout', method: 'DELETE' },
+      } satisfies Record<string, RouteConfig>;
+      // ROUTES.login.method is 'POST', not 'GET' | 'POST' | 'PUT' | 'DELETE'
+
+    predicate_with_result: |
+      // Type predicate as the narrowing branch on a Result
+      function processResult<T>(result: Result<T>) {
+        if (isOk(result)) {         // isOk is `result is { ok: true; value: T }`
+          consume(result.value);    // narrowed to T
+        }
+      }
+
+# ─────────────────────────────────────────────
+# Maintenance
+# ─────────────────────────────────────────────
+
+maintenance:
+  add_when: >
+    A new TypeScript pattern is identified during a coding engagement that has
+    meaningful cross-project applicability and meaningfully reduces a class of
+    runtime errors or improves static guarantees. Add with rationale and code example.
+  boundary_rule: >
+    Project-specific type definitions, project-specific conventions (domain adapters,
+    file extension requirements, import rules for enums), and backend-specific
+    integration patterns belong in the agent body, not in this file.
+  typescript_version: "Patterns documented here require TypeScript 4.9+ (satisfies operator)"

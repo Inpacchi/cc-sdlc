@@ -1,0 +1,301 @@
+# Error Cascade Methodology
+# Extracted from VoltAgent/awesome-claude-code-subagents: categories/04-quality-security/error-detective.md
+# Covers cascade failure taxonomy, multi-axis error correlation framework,
+# forensic timeline reconstruction, and root cause analysis methods.
+# Last updated: 2026-03-14
+
+last_updated: 2026-03-14
+id: error-cascade-methodology
+name: "Error Cascade Methodology"
+description: >
+  Cross-project methodology for diagnosing distributed system failures.
+  Covers cascade failure taxonomy (the five propagation patterns), multi-axis
+  correlation framework for surfacing hidden connections, forensic timeline
+  reconstruction, and the peer relationship between Five Whys, Fishbone,
+  and Fault Tree as complementary root cause methods.
+
+# ─────────────────────────────────────────────
+# Cascade Failure Taxonomy
+# ─────────────────────────────────────────────
+
+cascade_failure_taxonomy:
+  description: >
+    The five primary ways a failure in one part of a distributed system amplifies
+    into a wider outage. Each has distinct signals and distinct mitigations.
+
+  retry_storms:
+    definition: >
+      Clients or upstream services retry a failing downstream at high frequency.
+      The downstream, already degraded, receives more load than the healthy baseline,
+      accelerating its failure. Each retry wave may trigger the next.
+    signals:
+      - "Upstream error rate spikes, downstream request rate simultaneously spikes"
+      - "Downstream CPU/connection metrics increase during error period, not decrease"
+      - "Request rate to failing service exceeds its known capacity ceiling"
+    mitigations:
+      - "Exponential backoff with jitter on all retry logic"
+      - "Circuit breaker opens after N failures, stops retrying entirely for T seconds"
+      - "Server-side retry budgets: reject excess retries with 429"
+    detection_query: "Compare upstream retry-attempt count vs total request count over time"
+
+  timeout_chains:
+    definition: >
+      Service A calls B with timeout T_A. B calls C with timeout T_B where T_B > T_A.
+      A times out and returns error; B continues waiting for C, consuming threads/connections.
+      When B finally resolves C, it has no caller — threads pile up, pool exhausts.
+    signals:
+      - "Upstream sees timeouts; downstream shows requests completing (late)"
+      - "Thread pool / connection pool exhaustion at intermediate services"
+      - "Latency histogram shows bimodal distribution: fast + very slow"
+    mitigations:
+      - "Timeout hierarchy: T_client > T_gateway > T_service > T_downstream"
+      - "Context propagation: cancel downstream calls when caller context is cancelled"
+      - "Deadline propagation in gRPC or via X-Request-Deadline header in HTTP"
+    detection_query: "Cross-correlate latency p99 of each hop; identify where timeout > caller's timeout"
+
+  queue_backups:
+    definition: >
+      A consumer service slows or stops. Messages accumulate in queue. When consumer
+      recovers, it processes backlog at burst rate, spiking downstream dependencies.
+      Queue lag metric rises monotonically as leading indicator.
+    signals:
+      - "Queue consumer lag growing monotonically"
+      - "Message processing latency increasing (older messages are processed)"
+      - "Downstream spike when consumer recovers"
+    mitigations:
+      - "Consumer group lag alerts before lag grows large"
+      - "Rate-limit consumer burst after recovery (don't process full backlog at max speed)"
+      - "Dead-letter queue for poison messages that cause consumer crash loops"
+    detection_query: "Queue consumer lag chart; correlate with consumer CPU and downstream error rate"
+
+  resource_exhaustion:
+    definition: >
+      A shared resource (connection pool, thread pool, file descriptors, memory) is consumed
+      to capacity by one failure mode, starving unrelated requests. Presents as seemingly
+      unrelated service degradation.
+    signals:
+      - "Connection pool 'wait time' metric rising"
+      - "Thread pool queue depth increasing"
+      - "OOM kills or pod evictions"
+      - "Unrelated endpoints degrading simultaneously"
+    resource_types:
+      - "Database connection pool"
+      - "HTTP client connection pool (per host)"
+      - "Thread pool / goroutine pool"
+      - "File descriptor limits"
+      - "Memory (heap, off-heap)"
+      - "Network bandwidth / socket backlog"
+    mitigations:
+      - "Pool size limits with visible metrics (used / max)"
+      - "Bulkhead pattern: separate pools per downstream"
+      - "Timeouts on pool acquisition, not just on requests"
+    detection_query: "Pool utilization metrics at time of failure; process-level resource metrics"
+
+  domino_effects:
+    definition: >
+      Sequential service failures where failure of service A removes capacity that service B
+      depended on, causing B to fail, which removes capacity service C depended on, and so on.
+      Distinguished from retry storms by the sequential nature rather than amplification.
+    signals:
+      - "Services fail in sequence with observable time delay between each"
+      - "Each failing service was a dependency (direct or indirect) of the previous"
+      - "Overall blast radius grows over time rather than instantly"
+    mitigations:
+      - "Graceful degradation: define what each service does when its dependency is unavailable"
+      - "Fallback responses (cached, default, or degraded) at each hop"
+      - "Blast radius isolation: not all services should share same critical dependencies"
+    detection_query: "Service dependency graph; correlate failure timestamps against topology"
+
+# ─────────────────────────────────────────────
+# Multi-Axis Error Correlation Framework
+# ─────────────────────────────────────────────
+
+multi_axis_correlation:
+  description: >
+    Errors are rarely random. Correlation across dimensions reveals the true scope
+    and root cause faster than examining any single axis. Systematically sweep
+    all axes before settling on a hypothesis.
+
+  axes:
+    time:
+      question: "When did the error rate change? Was there a step-change or gradual drift?"
+      signals: ["Error spike at deploy time", "Gradual increase correlating with traffic growth", "Periodic pattern (cron job, batch)"]
+      tools: ["Error rate time-series chart", "Deploy markers on graphs", "Changepoint detection"]
+
+    service:
+      question: "Which services are affected? Are they in a dependency chain?"
+      signals: ["Single service isolated vs. multiple services", "Services sharing a dependency all fail"]
+      tools: ["Service dependency map overlaid with error rates", "Distributed trace fan-out"]
+
+    user:
+      question: "Is the error affecting all users or a segment?"
+      signals: ["New vs. returning users", "Users on specific plan tier", "Users who performed specific action"]
+      tools: ["Error rate broken down by user segment", "Feature flag targeting correlation"]
+
+    geographic:
+      question: "Is the error localized to a region, datacenter, or CDN PoP?"
+      signals: ["Single region spiking", "CDN edge node errors", "Latency-sensitive to network path"]
+      tools: ["Error rate by region/AZ", "Traceroute anomalies", "DNS resolution variance"]
+
+    version:
+      question: "Did the error appear with a specific code version or dependency version?"
+      signals: ["Correlated with deploy of specific commit", "Only affects pods/instances on new version"]
+      tools: ["Version tag on metrics", "Canary vs. stable error rate comparison"]
+
+    load:
+      question: "Does error rate correlate with traffic volume?"
+      signals: ["Errors appear above N req/s threshold", "Error rate is proportional to request rate"]
+      tools: ["Scatter plot: request rate vs. error rate", "Load test replay"]
+
+    change:
+      question: "What changed in the system before the errors appeared?"
+      change_types: ["Code deploy", "Config change", "Infrastructure change", "Dependency version bump", "Data migration", "Certificate rotation"]
+      tools: ["Change log / deploy log", "Git blame on config files", "Infrastructure change audit"]
+
+    external:
+      question: "Are third-party dependencies involved?"
+      signals: ["Errors contain upstream provider error messages", "Provider status page incidents", "Latency to external endpoint increased"]
+      tools: ["Provider status pages", "External dependency latency metrics", "DNS / SSL certificate validity"]
+
+  correlation_workflow:
+    step_1: "Establish exact error onset time with 1-minute resolution"
+    step_2: "Sweep time axis — what changed in the hour before onset?"
+    step_3: "Sweep service axis — which services are affected; draw dependency subgraph"
+    step_4: "Sweep user axis — is this all users or a segment?"
+    step_5: "Sweep version axis — which deployment version(s) are involved?"
+    step_6: "Form hypothesis; verify with one additional axis"
+    step_7: "Validate by predicting a new observable that confirms or refutes"
+
+# ─────────────────────────────────────────────
+# Forensic Timeline Reconstruction
+# ─────────────────────────────────────────────
+
+forensic_timeline:
+  description: >
+    Reconstruct the precise sequence of events leading to and during an incident.
+    A timeline is the artifact that transforms "something went wrong" into
+    "this specific chain of events caused this specific outcome."
+
+  data_sources:
+    - "Application logs (structured, with timestamps)"
+    - "Infrastructure metrics (Prometheus, CloudWatch, Datadog)"
+    - "Distributed traces (Jaeger, Zipkin, Tempo)"
+    - "Deployment logs and CI/CD records"
+    - "Database slow query logs"
+    - "Load balancer / CDN access logs"
+    - "Alert firing history"
+    - "On-call engineer notes / chat logs"
+
+  reconstruction_process:
+    gather: "Collect all data sources; normalize timestamps to UTC"
+    align: "Merge into single timeline ordered by timestamp"
+    annotate: "Mark change events (deploys, config changes) with vertical markers"
+    identify_transitions: "Find state transitions: normal → degraded → failed → recovering"
+    gap_analysis: "Note timeline gaps where data is missing; these are investigation targets"
+    causal_chain: "Draw arrows from cause events to effect events; look for propagation delay"
+
+  timeline_artifact_format: |
+    T+0:00  [DEPLOY]   Service checkout-api v2.3.1 deployed to production
+    T+0:03  [METRIC]   checkout-api error rate: 0.1% (baseline)
+    T+0:08  [METRIC]   checkout-api p99 latency: 180ms → 420ms
+    T+0:09  [ALERT]    checkout-api latency alert firing
+    T+0:11  [METRIC]   payment-service error rate: 0.5% → 3.2%
+    T+0:13  [METRIC]   DB connection pool: 45/50 → 50/50 (exhausted)
+    T+0:14  [ALERT]    DB connection pool exhausted alert firing
+    T+0:15  [ACTION]   On-call: begin investigation
+    T+0:22  [ACTION]   On-call: rollback checkout-api v2.3.1 → v2.3.0
+    T+0:25  [METRIC]   checkout-api error rate normalizing
+    T+0:28  [METRIC]   DB connection pool: 50/50 → 31/50 (recovering)
+
+  common_timeline_pitfalls:
+    - "Clock skew between services makes millisecond-level ordering unreliable — use distributed trace IDs instead"
+    - "Log timestamps may reflect write time, not event time — check buffering/batching settings"
+    - "Alert firing times lag actual metric threshold crossing by 1-5 minutes — backtrack to actual onset"
+
+# ─────────────────────────────────────────────
+# Root Cause Analysis Methods
+# ─────────────────────────────────────────────
+
+root_cause_methods:
+  description: >
+    Three peer methods for root cause analysis. Use all three on significant incidents;
+    they illuminate different facets of causation and produce more actionable outcomes together.
+
+  five_whys:
+    description: "Iterative questioning technique. Ask 'why?' until you reach a root cause you can act on."
+    process:
+      - "State the problem precisely"
+      - "Ask: why did this happen? → Answer 1"
+      - "Ask: why did [Answer 1] happen? → Answer 2"
+      - "Continue until arriving at a systemic cause (process gap, missing safeguard, design flaw)"
+    stopping_criteria: "Stop when the answer is an actionable system or process change, not another symptom"
+    limitation: "Linear — follows one causal chain; may miss parallel contributing causes"
+    best_for: "Simple, single-cause failures; quick post-incident conversations"
+    example: |
+      Problem: Users couldn't check out for 25 minutes
+      Why 1: checkout-api returned 500 errors → DB connection pool exhausted
+      Why 2: DB connections exhausted → each request held connection 10x longer than usual
+      Why 3: Connections held longer → new ORM query emitted N+1 queries per request
+      Why 4: N+1 queries → ORM eager-loading default changed in v2.3.1
+      Why 5: Default changed → dependency upgrade not reviewed for behavioral changes
+      Root cause: No automated regression test for N+1 query patterns; upgrade review checklist incomplete
+
+  fishbone_diagram:
+    also_known_as: "Ishikawa diagram, cause-and-effect diagram"
+    description: "Visual method grouping potential causes by category into a diagram resembling a fish skeleton."
+    standard_categories:
+      - "People: training, fatigue, process knowledge"
+      - "Process: documented procedures, review steps"
+      - "Technology: system design, tooling, dependencies"
+      - "Environment: infrastructure, configuration, external factors"
+      - "Measurement: monitoring gaps, alert thresholds"
+      - "Materials: data quality, third-party inputs"
+    process:
+      - "Draw horizontal arrow pointing right to the 'problem' box"
+      - "Add diagonal branches for each category"
+      - "Brainstorm contributing factors per category; add as sub-branches"
+      - "Identify which factors were actually present during the incident"
+      - "Prioritize by likelihood and controllability"
+    best_for: "Brainstorming phase; ensuring no contributing category is overlooked; team discussions"
+    limitation: "Does not establish causation — generates hypotheses, not proof"
+
+  fault_tree_analysis:
+    description: "Top-down deductive method. Start from the undesired event; decompose into logical combinations of sub-events using AND/OR gates."
+    gates:
+      AND_gate: "All sub-events must occur simultaneously for parent to occur"
+      OR_gate: "Any one sub-event is sufficient for parent to occur"
+    process:
+      - "Define the top-level undesired event (e.g. 'checkout unavailable')"
+      - "Identify immediate causes; connect with AND/OR gates"
+      - "Expand each cause recursively until reaching basic events (hardware failure, human error, software bug)"
+      - "Calculate probability if quantitative FTA needed"
+      - "Identify minimal cut sets: smallest combinations of basic events that cause the top event"
+    best_for: "Safety-critical systems; understanding whether safeguards are sufficient; identifying single points of failure"
+    limitation: "Requires complete knowledge of system; time-intensive for complex systems"
+
+  method_selection_guide:
+    quick_postmortem: "Five Whys"
+    team_brainstorm_without_preconceptions: "Fishbone"
+    complex_multi_factor_incident: "Fault Tree + Five Whys for deepest branch"
+    safety_critical_or_recurring_incident: "All three; cross-validate findings"
+
+# ─────────────────────────────────────────────
+# Error Categorization Reference
+# ─────────────────────────────────────────────
+
+error_categorization:
+  categories:
+    system_errors: "Infrastructure failures: host down, disk full, OOM kill, network partition"
+    application_errors: "Code bugs, unhandled exceptions, logic errors, dependency API contract violations"
+    user_errors: "Invalid input, unauthorized actions, incorrect usage patterns"
+    integration_errors: "Third-party API failures, webhook delivery failures, auth token expiry"
+    performance_errors: "Timeout, latency SLO violation, throughput degradation"
+    security_errors: "Auth failures, injection attempts, certificate expiry, permission escalation"
+    data_errors: "Schema validation failures, data corruption, referential integrity violations"
+    configuration_errors: "Wrong env var, missing secret, misconfigured feature flag"
+
+  triage_order:
+    - "Impact: how many users affected, what severity?"
+    - "Recency: did anything change in the last hour?"
+    - "Category: which category matches the error signature?"
+    - "Blast radius: is it spreading or contained?"

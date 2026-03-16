@@ -1,0 +1,367 @@
+# Advanced Test Patterns
+# Cross-project general patterns for resilience testing, property-based testing,
+# and feature-flag isolation. Project-specific implementations belong in agent bodies.
+# Last updated: 2026-03-13
+
+last_updated: 2026-03-14
+id: advanced-test-patterns
+name: "Advanced Test Patterns"
+description: >
+  General, cross-project patterns for three advanced testing concerns: structured
+  chaos experimentation, property-based testing for contract verification, and
+  explicit feature-flag path coverage. These patterns apply regardless of stack
+  and are not tied to any specific project.
+
+# ─────────────────────────────────────────────
+# Chaos Hypothesis Methodology
+# ─────────────────────────────────────────────
+
+chaos_hypothesis:
+  description: >
+    A structured framework for fault injection tests. Forces every chaos experiment
+    to define a recovery path and learning objective before running. Prevents chaos
+    tests that damage state without a way back and ensures every experiment produces
+    a learnable result.
+
+  experiment_structure:
+    steady_state:
+      description: "Define the observable, measurable baseline behavior before any fault is injected"
+      guidance: >
+        The steady state must be assertable — a function or set of assertions that can
+        be called before and after the experiment to confirm the app is in a known-good
+        state. If you cannot define steady state, you cannot write a valid chaos test.
+      example: "Search returns results within 300ms, no error UI shown, WS connection active"
+
+    hypothesis:
+      description: "State the specific degraded behavior you expect when the fault is injected"
+      guidance: >
+        Be precise about the expected degraded state, not just 'the app handles it.'
+        Include what the user should see and what should NOT be visible.
+      example: >
+        When the search service returns 503, the UI shows an error state — not a blank
+        screen — and recovers automatically when the service comes back.
+
+    blast_radius:
+      description: "Define which system components are affected and which must remain unaffected"
+      guidance: >
+        Explicitly name the components in scope (impacted) and out of scope (must remain
+        functional). This prevents a test from passing silently when the blast radius
+        was larger than intended.
+      example: "Search UI only; core navigation, data persistence, and WS connection are unaffected"
+
+    rollback:
+      description: "Define the mechanism to restore normal behavior within the test"
+      guidance: >
+        Every fault injection must be reversible within the same test. Do not rely on
+        test teardown for fault removal — the recovery must be testable as part of the
+        experiment.
+      example: "route.unroute() restores real service responses within the same test"
+
+    learning_target:
+      description: "State what the test proves or disproves about the system's resilience"
+      guidance: >
+        A chaos test with no learning target is just a fault injection. The learning
+        target frames what architectural claim is being validated.
+      example: "Does graceful degradation actually gate on the correct UI state change?"
+
+  execution_protocol:
+    steps:
+      - step: 1
+        action: "Assert steady state passes before injecting fault"
+        note: "If steady state fails before the experiment, the test is invalid"
+      - step: 2
+        action: "Inject fault"
+      - step: 3
+        action: "Assert degraded state matches hypothesis"
+      - step: 4
+        action: "Remove fault (rollback)"
+      - step: 5
+        action: "Assert steady state passes again after recovery"
+        note: "If any step fails, the test itself is a bug — not a finding"
+
+  comment_block_template: |
+    /**
+     * CHAOS EXPERIMENT: [short name]
+     * Steady state: [observable baseline]
+     * Hypothesis: When [fault], the system [expected degraded behavior] —
+     *             not [unacceptable behavior] — and recovers when [condition]
+     * Blast radius: [impacted component]; [unaffected components] are unaffected
+     * Rollback: [mechanism to restore normal behavior within this test]
+     * Learning target: [what architectural claim does this validate?]
+     */
+
+# ─────────────────────────────────────────────
+# Property-Based Testing for Contract Verification
+# ─────────────────────────────────────────────
+
+property_based_testing:
+  description: >
+    Property-based testing verifies that invariants hold across the full input space,
+    not just the examples a developer thought to write. Especially valuable for
+    adapter/codec contract claims where the interface promises correct behavior for
+    any valid input.
+
+  when_to_use:
+    - "A module makes a strong contract claim (encode/decode round-trips cleanly for any valid input)"
+    - "Validation rules have boundary conditions that parametric examples can't exhaust"
+    - "Multiple implementations of the same interface must all satisfy the same invariants"
+
+  invariant_types:
+    round_trip: "encode(decode(x)) === x and decode(encode(x)) === x"
+    boundary: "Exactly at the limit is valid; one beyond is invalid"
+    commutativity: "Operation order does not change the result"
+    idempotency: "Applying an operation twice produces the same result as applying it once"
+
+  tooling:
+    javascript_typescript: "fast-check (fc)"
+    python: "hypothesis"
+    general_notes:
+      - "Property tests run in-process — they are fast and belong in CI without slowing the suite"
+      - "Shrinking: when a test fails, the framework finds the minimal failing case automatically"
+      - "Seed determinism: reproduce failures by logging and reusing the failing seed"
+
+  recommended_targets:
+    - "Codec round-trips (encode → decode preserves identity)"
+    - "Validation boundaries (exactly at max, exactly at min, one over)"
+    - "Cross-implementation invariants (multiple adapters implementing the same interface)"
+
+  pattern_template: |
+    import fc from 'fast-check';
+
+    test('codec round-trips any valid input', () => {
+      fc.assert(
+        fc.property(
+          fc.record({ id: fc.string(), quantity: fc.integer({ min: 1, max: 4 }) }),
+          (input) => {
+            const encoded = codec.encode(input);
+            const decoded = codec.decode(encoded);
+            // Invariant: round-trip preserves identity
+            return JSON.stringify(decoded) === JSON.stringify(input);
+          }
+        )
+      );
+    });
+
+  tagging: "Tag as @regression. Run on PRs touching codec or validation files."
+
+# ─────────────────────────────────────────────
+# Feature-Flag Isolation Strategies
+# ─────────────────────────────────────────────
+
+feature_flag_isolation:
+  description: >
+    When a feature is gated by an environment flag, both code paths — flag=on and
+    flag=off — must be tested explicitly. The flag's default does not cover both paths.
+    A flag=off path can have zombie UI state (a disabled component that still renders
+    a broken shell) that is invisible to tests that only run with the default.
+
+  core_principle: "Never assume the flag default covers both code paths."
+
+  strategy:
+    flag_off_test:
+      description: "Verify the system behaves correctly when the flag is disabled"
+      what_to_assert:
+        - "Gated feature does not render or execute"
+        - "No outbound calls to the gated service"
+        - "Graceful fallback UI is shown (not a broken shell)"
+        - "No console errors from the disabled code path"
+
+    flag_on_test:
+      description: "Verify the system behaves correctly when the flag is enabled"
+      what_to_assert:
+        - "Gated feature renders and functions correctly"
+        - "Correct calls made to the gated service"
+        - "No regression in flag=off behavior (if flags can be toggled at runtime)"
+
+  isolation_techniques:
+    environment_variable: "Set via test config (playwright.config.ts env, pytest env fixture, etc.) — preferred for build-time flags"
+    runtime_toggle: "Inject feature flag client mock — preferred for runtime-evaluated flags"
+    describe_block_scoping: >
+      Use separate describe blocks per flag state so test names make the tested path explicit.
+      Example: test.describe('Feature disabled (default)') and test.describe('Feature enabled').
+
+  common_pitfalls:
+    - "Only testing the flag=on path and assuming off is safe — zombie UI state lives in the off path"
+    - "Relying on the CI environment's default flag state instead of explicitly setting it in the test"
+    - "Sharing browser contexts or process state between flag=on and flag=off tests — use isolation"
+    - "Not asserting absence of service calls in the flag=off path (the call may still fire silently)"
+
+# ─────────────────────────────────────────────
+# Maintenance
+# ─────────────────────────────────────────────
+
+# ─────────────────────────────────────────────
+# Test Effectiveness Metrics
+# ─────────────────────────────────────────────
+
+test_effectiveness_metrics:
+  description: >
+    Quantitative measures for evaluating the quality and impact of a test suite beyond
+    raw coverage percentages. These metrics should be tracked continuously, not just
+    at release time.
+
+  defect_leakage:
+    definition: "Defects found in production / total defects found (pre-release + production)"
+    formula: "defect_leakage = production_defects / (pre_release_defects + production_defects)"
+    target: "< 10% — the majority of defects should be caught pre-release"
+    interpretation: >
+      High defect leakage means the test suite is catching defects in the wrong environment.
+      Drill into which test phase (unit, integration, E2E) the leaking defects would have
+      been caught by, and add coverage there.
+    tracking: "Measure per sprint and per release cycle. Track trend over time — improvement matters more than the absolute value."
+
+  mttd_mttr_defect_granularity:
+    description: >
+      MTTD (Mean Time to Detect) and MTTR (Mean Time to Resolve) can be applied at defect
+      granularity, not just incident level. This gives finer signal about test cycle efficiency.
+    mttd:
+      definition: "Average time from defect introduction (commit) to detection (test failure or bug report)"
+      how_to_reduce: "Shift detection left — unit tests catch in minutes, E2E catches in hours, production monitoring catches in days"
+    mttr:
+      definition: "Average time from defect detection to verified resolution (fix deployed and confirmed)"
+      how_to_reduce: "Clear reproduction steps, good error messages, fast CI feedback on fix PRs"
+    usage: >
+      Track MTTD per test tier (unit / integration / E2E / monitoring). A high MTTD at the
+      unit tier signals missing unit test coverage. A high MTTD at the integration tier
+      signals missing contract tests.
+
+# ─────────────────────────────────────────────
+# Test Design Techniques Taxonomy
+# ─────────────────────────────────────────────
+
+test_design_techniques:
+  description: >
+    A structured taxonomy of systematic test design techniques. Using named techniques
+    ensures test cases are derived from the specification, not from developer intuition,
+    and makes coverage rationale explicit.
+
+  techniques:
+    equivalence_partitioning:
+      description: "Divide the input domain into partitions where all values in a partition are expected to behave the same way. Test one representative value from each partition."
+      when_to_use: "Any input with a range or set of valid values. Reduces the number of test cases without sacrificing coverage."
+      example: "For an age field (1–120), partitions: invalid-low (< 1), valid (1–120), invalid-high (> 120). Test one value from each."
+
+    boundary_value_analysis:
+      description: "Test at and immediately around partition boundaries, where defects cluster most often."
+      when_to_use: "Any numeric range, string length limit, collection size limit, or date range."
+      example: "For max 4 copies of a card: test 0, 1, 3, 4, 5. The boundaries (0, 1, 4, 5) are the high-value cases."
+
+    decision_tables:
+      description: "Map combinations of input conditions to expected outputs. Ensures all condition combinations are covered."
+      when_to_use: "Business rules with multiple boolean or enumerated conditions that interact (e.g., access control, pricing rules)."
+      example: "A table mapping (isAuthenticated × hasSubscription × isTrialExpired) to the set of accessible features."
+
+    state_transitions:
+      description: "Model the system as a state machine and derive test cases from the valid and invalid transitions between states."
+      when_to_use: "Workflows with explicit lifecycle states (draft → published → archived; connecting → connected → disconnected)."
+      example: "For a WebSocket connection: test all valid transitions and invalid transitions (e.g., send message from disconnected state)."
+
+    pairwise_testing:
+      description: "When the input space is a combination of N parameters each with M values, test all pairs of parameter values rather than all combinations. Catches most multi-factor defects with O(N × M²) instead of O(M^N) tests."
+      when_to_use: "Configuration matrixes, multi-parameter API endpoints, cross-browser / cross-device test grids."
+      tools: "PICT (Microsoft), AllPairs, pairwiser"
+
+    model_based_testing:
+      description: "Derive test cases automatically from a formal model of the system (state machine, data flow model, grammar). Tests are generated rather than hand-written."
+      when_to_use: "Complex protocol implementations, parser/codec validation, UI flows with many branching paths."
+      benefit: "Finds paths a human test designer would not think to write."
+
+    screenplay_pattern:
+      description: >
+        An alternative to the Page Object Model (POM) for organizing UI and E2E tests.
+        Models tests as actors performing tasks through interactions. More expressive than
+        POM for complex multi-actor flows and avoids bloated page object classes.
+      structure:
+        actor: "Represents a user persona with specific abilities (browse the web, call APIs)"
+        task: "A business-level action an actor performs (add card to deck, publish deck)"
+        interaction: "A low-level UI operation (click, type, navigate) — equivalent to a page object method"
+      advantage_over_pom: >
+        POM classes tend to grow into god objects that mix navigation, interaction, and
+        assertion concerns. Screenplay composes small, single-responsibility units.
+        Multiple actors in one test (e.g., admin and regular user) are natural.
+      when_to_prefer: "Complex workflows, multi-actor tests, or any project where POM classes are growing unwieldy."
+
+# ─────────────────────────────────────────────
+# Test Reliability Patterns
+# ─────────────────────────────────────────────
+
+test_reliability:
+  description: >
+    Patterns for reducing test flakiness and maintaining a reliable test suite over time.
+    An unreliable test suite trains developers to ignore failures, which eliminates the
+    value of CI gates.
+
+  self_healing_locators:
+    description: >
+      Locator strategies that can recover from minor DOM changes without requiring test
+      code updates. Reduces maintenance burden caused by UI refactoring.
+    strategies:
+      - "Prefer semantic locators: accessible roles, ARIA labels, and test IDs over CSS class names or XPath"
+      - "Use data-testid attributes as stable anchors — they survive class rename refactors"
+      - "Fallback chains: try primary locator first; if not found, try secondary; log which locator was used"
+      - "Avoid position-based locators (nth-child) — they break when sibling elements are added"
+    tooling_note: "Some frameworks (Playwright, Healenium) offer built-in self-healing via visual or structural similarity matching."
+
+  flakiness_slo:
+    target: "< 1% flaky test rate across the full test suite"
+    definition: "A flaky test is one that fails intermittently without a code change — the failure is non-deterministic."
+    enforcement:
+      - "Track flaky tests in a dedicated backlog; do not allow them to accumulate silently"
+      - "A test that fails 3 times non-deterministically in CI is quarantined (tagged @flaky, excluded from blocking gates) until fixed"
+      - "Quarantined tests run in parallel non-blocking mode — they still execute but do not block merge"
+      - "Flakiness rate > 1% triggers a reliability sprint before adding new test coverage"
+    common_causes:
+      - "Timing-dependent assertions (fixed sleeps instead of event-driven waits)"
+      - "Shared test data or database state between tests (tests must be independent)"
+      - "Non-deterministic ordering of API results without explicit sort"
+      - "Race conditions in async setup/teardown"
+
+# ─────────────────────────────────────────────
+# Test Automation ROI
+# ─────────────────────────────────────────────
+
+test_automation_roi:
+  description: >
+    A methodology for calculating and communicating the return on investment of test
+    automation work. Used to prioritize which tests to automate and to justify
+    automation investment to stakeholders.
+
+  calculation_methodology:
+    formula: >
+      ROI = (Manual cost saved per cycle × Cycles per year) - (Automation build cost + Annual maintenance cost)
+    inputs:
+      manual_cost_per_cycle: "Hours to run the test manually × hourly rate"
+      cycles_per_year: "How many times per year the test would be run (CI frequency × working days)"
+      automation_build_cost: "Hours to write the automated test × hourly rate"
+      annual_maintenance_cost: "Estimated hours per year to maintain the test × hourly rate (typically 10-20% of build cost)"
+    break_even_point: "Automation build cost / (Manual cost per cycle - Automation run cost per cycle)"
+
+  prioritization_heuristics:
+    high_roi:
+      - "Regression suites run on every PR (high frequency = high manual cost avoided)"
+      - "Data-driven tests with many input combinations (automation scales; manual does not)"
+      - "Smoke tests that block deployments (high frequency, high cost of false negatives)"
+    low_roi:
+      - "One-time tests for a feature being deprecated soon"
+      - "Highly exploratory tests that require human judgment"
+      - "Tests for UI flows that change every sprint (high maintenance cost)"
+
+  tracking:
+    - "Measure actual cycle time before and after automation"
+    - "Track automation maintenance hours per quarter"
+    - "Report: manual hours avoided per quarter vs. maintenance hours spent"
+
+# ─────────────────────────────────────────────
+# Maintenance
+# ─────────────────────────────────────────────
+
+maintenance:
+  add_patterns_when: >
+    A cross-project testing pattern is discovered during an SDET session that would
+    benefit future projects. Add it with context: what problem it solves, when to
+    use it, and a language-agnostic template.
+  boundary_rule: >
+    Project-specific implementations (named services, specific enum values, project
+    file paths) belong in the agent body, not in this file. This file contains
+    methodology and templates only.
+  review_cadence: "After each major SDET engagement that surfaces new general patterns"
