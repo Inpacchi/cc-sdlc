@@ -125,7 +125,6 @@ Follow the plan's phase structure. For each phase:
 ```
 PRE-GATE Phase [N] — [phase name]
 Pattern search: [what you searched for] → [found / not found / following pattern at path/to/file.ts] (use LSP goToImplementation/findReferences for interface implementations and call sites; Grep for text patterns)
-Knowledge context: [paths from agent-context-map.yaml, or "none"]
 Triage: BUILD | SKIP | REVISE_PLAN
 If SKIP or REVISE_PLAN: [reason — stop and wait for CD confirmation before proceeding]
 Dependencies: [phase N complete | none required]
@@ -137,7 +136,9 @@ For **BUILD**: proceed to dispatch. For **SKIP** or **REVISE_PLAN**: stop and wa
 
 **File-Conflict Gate (parallel phases only):** Before dispatching two or more phases simultaneously, list every file each phase will modify. If any file appears in more than one phase, those phases MUST run sequentially — dispatch the first phase, wait for POST-GATE to pass, then dispatch the second. Do not rely on the plan's dependency table alone; verify file overlap yourself.
 
-**EXECUTE**: Before dispatching, consult `ops/sdlc/knowledge/agent-context-map.yaml` for relevant knowledge files. If the agent has mapped files, include their paths in the dispatch prompt with: "Before implementing, read [paths] for relevant patterns." If no mapping exists, the Knowledge context line in the PRE-GATE should show "none". Then **[PLUGIN: oberskills]** invoke oberagent if installed (validates prompt quality before dispatch). Dispatch assigned agent(s) per plan. The dispatch prompt must describe WHAT/WHY — implementation HOW is the agent's domain. Dispatch independent phases in parallel using multiple Agent tool calls in a single message. If you find yourself editing files directly instead of dispatching an agent, stop — that violates the Manager Rule.
+**EXECUTE**: **[PLUGIN: oberskills]** invoke oberagent if installed (validates prompt quality before dispatch). Dispatch assigned agent(s) per plan. The dispatch prompt must describe WHAT/WHY — implementation HOW is the agent's domain. Dispatch independent phases in parallel using multiple Agent tool calls in a single message. If you find yourself editing files directly instead of dispatching an agent, stop — that violates the Manager Rule.
+
+**Cross-domain knowledge injection:** When a phase requires an agent to work in a context outside its primary domain, consult `ops/sdlc/knowledge/agent-context-map.yaml` for the other domain's agent and include those knowledge files in the dispatch prompt. Use judgment — only inject when the agent is genuinely crossing into unfamiliar territory (e.g., a backend agent implementing a feature that depends on real-time patterns, a frontend agent touching data layer code). Do not inject for routine single-domain work.
 
 **POST-GATE** — a phase is NOT complete until this block appears in your response:
 

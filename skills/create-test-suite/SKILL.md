@@ -57,9 +57,12 @@ Extract from the scope:
 
 Invoke oberagent, then dispatch `sdet` with a single prompt that covers both design and implementation.
 
+**Cross-domain knowledge injection:** The SDET is testing code written by domain agents (frontend, backend, etc.). Consult `ops/sdlc/knowledge/agent-context-map.yaml` for the agents who built the feature being tested and include their domain knowledge files in the SDET's dispatch prompt. This helps the SDET understand domain patterns, data flows, and known gotchas in the code under test.
+
 The dispatch prompt must include:
 - The scope context gathered in step 0 (changed files, packages, acceptance criteria)
 - Any user-suggested test cases
+- Cross-domain knowledge file paths from the feature's domain agents
 - These instructions:
 
 ```

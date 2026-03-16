@@ -119,7 +119,9 @@ Agent: [agent-name]
 
 **DISPATCH:** List the agent and phase description before dispatching. Every listed agent must have a corresponding dispatch. If you find yourself editing files directly instead of dispatching an agent, stop — that violates the Manager Rule.
 
-**EXECUTE:** Before dispatching, consult `ops/sdlc/knowledge/agent-context-map.yaml` for relevant knowledge files. If the agent has mapped files, include their paths in the dispatch prompt with: "Before implementing, read [paths] for relevant patterns." Then dispatch the assigned agent. For independent phases, dispatch in parallel using multiple Agent tool calls in a single message.
+**EXECUTE:** Dispatch the assigned agent. The dispatch prompt must describe WHAT/WHY — implementation HOW is the agent's domain. For independent phases, dispatch in parallel using multiple Agent tool calls in a single message.
+
+**Cross-domain knowledge injection:** When a phase requires an agent to work in a context outside its primary domain, consult `ops/sdlc/knowledge/agent-context-map.yaml` for the other domain's agent and include those knowledge files in the dispatch prompt. Use judgment — only inject when the agent is genuinely crossing into unfamiliar territory. Do not inject for routine single-domain work.
 
 **POST-GATE:**
 - Verify build passes: `[build command]` — see project CLAUDE.md

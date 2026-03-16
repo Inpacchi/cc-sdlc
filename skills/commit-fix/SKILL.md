@@ -44,9 +44,12 @@ Dispatching fixes:
 
 **Every checkbox must have a corresponding agent dispatch.** Count the checkboxes. Count the dispatches. They must match. If you find yourself editing files directly instead of dispatching an agent, stop — that violates this command.
 
+**Cross-domain knowledge injection:** When the fixing agent differs from the agent that found the issue, the fixer may lack context about the reviewer's domain. Consult `ops/sdlc/knowledge/agent-context-map.yaml` for the *finding* agent's entry and include relevant knowledge files in the *fixing* agent's dispatch prompt. For example, if `performance-engineer` found a re-render issue and `frontend-developer` is fixing it, include the performance engineer's knowledge files so the fixer understands the performance constraints.
+
 Each agent receives:
 - The specific findings assigned to them (description, file, line, category)
 - The original diff for context
+- Cross-domain knowledge files from the finding agent (when fixer ≠ finder)
 - Instruction to make the minimal change that addresses each finding — no drive-by refactors, no scope expansion
 
 Agents with no dependency between their fixes run in parallel.

@@ -227,8 +227,6 @@ Group all TEST-CODE failures into a single SDET dispatch. The dispatch prompt mu
 
 **Test isolation is mandatory.** If tests fail when run in parallel but pass serially, that is a test isolation bug — not a valid workaround. Do NOT accept serial execution as a fix. Dispatch SDET with an explicit instruction to fix isolation so each test uses unique namespaces per worker.
 
-Before dispatching, consult `ops/sdlc/knowledge/agent-context-map.yaml` for SDET knowledge files and include them in the dispatch prompt.
-
 #### 3b. Domain Agent Dispatch (app-code failures)
 
 Group APP-CODE failures by assigned agent. Each agent receives:
@@ -237,9 +235,9 @@ Group APP-CODE failures by assigned agent. Each agent receives:
 - The relevant application code paths (from stack trace)
 - Instruction: fix the application code so the described behavior works correctly. Do NOT modify test files.
 
-**Scope the dispatch prompt tightly.** Name the exact file(s) and function(s) to change. If the diagnosis identified the root cause, state the cause and the fix location explicitly. Do not use vague prompts like "fix the WebSocket bug" — the agent will interpret latitude as permission to refactor adjacent code.
+**Cross-domain knowledge injection:** Domain agents fixing app bugs exposed by tests are working in a testing context they wouldn't normally encounter. Consult `ops/sdlc/knowledge/agent-context-map.yaml` for the `sdet` entry and include the SDET's testing knowledge files (e.g., `testing/gotchas.yaml`, `testing/timing-defaults.yaml`) in the domain agent's dispatch prompt. This helps the agent understand test-specific constraints like timing, fixture patterns, and known gotchas that may affect the fix.
 
-Before dispatching, consult `ops/sdlc/knowledge/agent-context-map.yaml` for each agent's knowledge files and include them in the dispatch prompt.
+**Scope the dispatch prompt tightly.** Name the exact file(s) and function(s) to change. If the diagnosis identified the root cause, state the cause and the fix location explicitly. Do not use vague prompts like "fix the WebSocket bug" — the agent will interpret latitude as permission to refactor adjacent code.
 
 **Parallel dispatch:** If SDET and domain agent(s) are fixing different files with no overlap, dispatch them in parallel. If there's file overlap risk, dispatch sequentially — domain agent first, then SDET.
 
@@ -352,5 +350,4 @@ Fixes applied:
 - **SDET agent** — fixes test-code issues (selectors, fixtures, helpers, assertions)
 - **Domain agents** (frontend-developer, backend-developer, realtime-systems-engineer, debug-specialist, build-engineer, performance-engineer) — fix app-code issues
 - **oberagent** — invoked before every agent dispatch (if available)
-- **agent-context-map.yaml** — consulted for knowledge file paths before each dispatch
 - **commit-review** — can be run after the auto-commit to verify code quality of the fixes

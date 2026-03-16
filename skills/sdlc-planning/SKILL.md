@@ -157,7 +157,7 @@ Located at: `.claude/agents/` (project root)
 | `build-engineer` | Build infra, bundler config, CI pipeline, package boundaries |
 | `refactor-engineer` | Code restructuring, abstraction boundaries, safe incremental refactoring |
 
-*Remove agents not relevant to your project. Add project-specific agents (e.g., `game-integration-engineer`, `payment-engineer`) with their specific domain. See AGENT_TEMPLATE.md.*
+*Remove agents not relevant to your project. Add project-specific agents (e.g., `game-integration-engineer`, `payment-engineer`) with their specific domain. Use `/plugin-dev:agent-development` to create new agents.*
 
 ### Personal-Level Agents (Fallback)
 
@@ -199,17 +199,7 @@ Relevant domain agents for this task:
 - code-reviewer: always included for implementation tasks
 ```
 
-Consult `ops/sdlc/knowledge/agent-context-map.yaml`. For each listed agent with a mapping, note the knowledge files. Include these paths when dispatching agents for spec writing, plan writing, and review.
-
-For recurring task types, consult `ops/sdlc/playbooks/` for pre-seeded agent selection, knowledge context, and reference implementations.
-
-```
-Knowledge context (from ops/sdlc/knowledge/agent-context-map.yaml):
-- software-architect: architecture/backend-capability-assessment.yaml, architecture/technology-patterns.yaml
-- ui-ux-designer: design/ux-modeling-methodology.yaml
-- frontend-developer: (no mapping)
-- code-reviewer: (no mapping)
-```
+For recurring task types, consult `ops/sdlc/playbooks/` for pre-seeded agent selection and reference implementations.
 
 **DISCOVERY-GATE** — you cannot dispatch agents to write the spec until this block appears in your response:
 

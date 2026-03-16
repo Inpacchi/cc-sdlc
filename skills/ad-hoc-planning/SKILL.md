@@ -80,18 +80,13 @@ Refer to the full agent table in the `sdlc-planning` skill if you need the compl
 
 ### 1. Identify Relevant Worker Domain Agents
 
-List which agents are relevant and why. Consult `ops/sdlc/knowledge/agent-context-map.yaml` — for each listed agent with a mapping, note the knowledge files. Include these paths when dispatching agents for plan writing and review. For recurring task types, consult `ops/sdlc/playbooks/` for pre-seeded agent selection and reference implementations. When exploring existing patterns, use LSP (`goToDefinition`, `findReferences`, `goToImplementation`) for type-system and call-graph questions. Use Grep for string literals and non-TypeScript content.
+List which agents are relevant and why. For recurring task types, consult `ops/sdlc/playbooks/` for pre-seeded agent selection and reference implementations. When exploring existing patterns, use LSP (`goToDefinition`, `findReferences`, `goToImplementation`) for type-system and call-graph questions. Use Grep for string literals and non-TypeScript content.
 
 ```
 Relevant worker domain agents for this task:
 - frontend-developer: touches UI components and state management
 - ui-ux-designer: new UI element needs design review
 - code-reviewer: always included for implementation tasks
-
-Knowledge context (from ops/sdlc/knowledge/agent-context-map.yaml):
-- frontend-developer: design/ux-modeling-methodology.yaml, architecture/typescript-patterns.yaml
-- ui-ux-designer: design/ux-modeling-methodology.yaml
-- code-reviewer: architecture/typescript-patterns.yaml, testing/gotchas.yaml
 ```
 
 After listing agents, run the infrastructure coverage check:

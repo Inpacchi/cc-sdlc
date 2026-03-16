@@ -106,7 +106,6 @@ Check the SDLC knowledge layer for context that should inform the design:
 4. **Design discipline**: Read `ops/sdlc/disciplines/design.md` — UX modeling pipeline, parking lot items, trajectory
 5. **UX methodology**: Read `ops/sdlc/knowledge/design/ux-modeling-methodology.yaml`
 6. **ASCII conventions**: Read `ops/sdlc/knowledge/design/ascii-conventions.yaml`
-7. **Agent context map**: Check `ops/sdlc/knowledge/agent-context-map.yaml` for `ui-ux-designer` knowledge paths
 
 #### 2e. Compile the Context Brief
 
