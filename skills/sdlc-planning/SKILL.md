@@ -81,7 +81,7 @@ Assess task scope before starting. Create the worktree **before** step 1 if need
 
 | Scope | Branch Strategy |
 |-------|----------------|
-| New feature, new integration, new module/adapter | **Git worktree** — use **[PLUGIN: oberskills] superpowers:using-git-worktrees** |
+| New feature, new integration, new module/adapter | **Git worktree** |
 | Breaking changes, multi-step iterative changes | **Git worktree** |
 | Modification touching 10+ files | **Git worktree** |
 | Bug fix, config change, small modification | Main branch |
@@ -185,7 +185,7 @@ If an agent's domain touches **any aspect** of the task, include them. When in d
 
 ### Agent Dispatch Protocol
 
-**[PLUGIN: oberskills]** Before dispatching ANY domain agent in this skill, invoke oberagent if the plugin is installed. oberagent validates prompt quality before dispatch. Without the plugin, proceed with manual prompt review. For personal-level agents without frontmatter model assignments, use the plugin's model decision table if available.
+Before dispatching ANY domain agent in this skill, invoke the `oberagent` skill. oberagent validates the dispatch prompt, selects the correct `subagent_type`, and assigns the appropriate model tier. This is mandatory for every dispatch — spec writing, plan writing, reviews, and revisions. For personal-level agents without frontmatter model assignments, oberagent's model decision table determines the tier.
 
 ### 1. Identify Relevant Domain Agents
 
@@ -497,7 +497,7 @@ Not every invocation needs a deliverable ID. For ad hoc work (bug fixes, small t
 | "I don't need plan review" | Domain agents catch non-obvious issues in obvious plans. |
 | "Only one domain is involved" | Most tasks touch 2+ domains. Check again. |
 | "Skip straight to coding, the plan is obvious" | Planning catches issues that cost 10x more to fix during execution. |
-| "I'll dispatch without the oberagent checklist" | The checklist catches prompt quality issues before they waste an agent run. |
+| "I'll dispatch without invoking oberagent" | oberagent catches prompt quality issues and ensures correct agent type selection before they waste an agent run. |
 | "I'll use opus for everything to be safe" | Model tiers are pre-assigned in agent frontmatter. Trust the assignment. |
 | "The agent will figure out what skills to load" | Iron Law 2: subagents don't inherit skill awareness. Load skills in the prompt. |
 | "I'll ask all my questions at once to save time" | Batched questions get shallow answers. One question at a time surfaces real constraints. |
@@ -513,6 +513,5 @@ Not every invocation needs a deliverable ID. For ad hoc work (bug fixes, small t
 
 ## Integration
 
-- **[PLUGIN: oberskills] superpowers:writing-plans** — Optional: domain agents can use this for plan structure. Requires oberskills plugin.
-- **[PLUGIN: oberskills] superpowers:using-git-worktrees** — Optional: create worktree before planning if scope warrants it. Requires oberskills plugin.
+- **oberagent** — Mandatory: validates every agent dispatch prompt, selects correct agent type and model tier
 - **sdlc-execution** — The next skill in the pipeline; executes the approved plan

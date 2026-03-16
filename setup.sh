@@ -4,7 +4,7 @@
 # Usage:
 #   ./setup.sh [TARGET_DIR]                # Install, skip existing files
 #   ./setup.sh [TARGET_DIR] --force        # Overwrite all existing files
-#   ./setup.sh [TARGET_DIR] --with-optional  # Also install optional/ docs
+#   ./setup.sh [TARGET_DIR] --with-optional  # Also install design-for-ai plugin guide
 #
 # For content-aware updates to existing projects, use MIGRATE.md instead.
 
@@ -152,8 +152,13 @@ done
 [ -d "$SCRIPT_DIR/skills" ] && install_tree "$SCRIPT_DIR/skills" "$TARGET_DIR/.claude/skills" "$SCRIPT_DIR/skills"
 [ -d "$SCRIPT_DIR/agents" ] && install_tree "$SCRIPT_DIR/agents" "$TARGET_DIR/.claude/agents" "$SCRIPT_DIR/agents"
 
-if [ "$WITH_OPTIONAL" = "true" ] && [ -d "$SCRIPT_DIR/optional" ]; then
-  install_tree "$SCRIPT_DIR/optional" "$SDLC_TARGET/optional" "$SCRIPT_DIR/optional"
+# oberskills setup guide is always installed (required dependency)
+[ -f "$SCRIPT_DIR/plugins/oberskills-setup.md" ] && install_file "$SCRIPT_DIR/plugins/oberskills-setup.md" "$SDLC_TARGET/plugins/oberskills-setup.md"
+[ -f "$SCRIPT_DIR/plugins/README.md" ] && install_file "$SCRIPT_DIR/plugins/README.md" "$SDLC_TARGET/plugins/README.md"
+
+# design-for-ai setup guide is optional
+if [ "$WITH_OPTIONAL" = "true" ] && [ -f "$SCRIPT_DIR/plugins/design-for-ai-setup.md" ]; then
+  install_file "$SCRIPT_DIR/plugins/design-for-ai-setup.md" "$SDLC_TARGET/plugins/design-for-ai-setup.md"
 fi
 
 # ─────────────────────────────────────────────
@@ -246,8 +251,11 @@ echo "  See ops/sdlc/initial-prompt.md for more prompts and quick reference"
 
 if [ "$WITH_OPTIONAL" = "false" ]; then
   echo ""
-  echo "Optional: run with --with-optional to install plugin setup guides."
+  echo "Optional: run with --with-optional to install design-for-ai plugin guide."
 fi
+echo ""
+echo "IMPORTANT: Install the oberskills plugin — it is required for agent dispatch."
+echo "  See ops/sdlc/plugins/oberskills-setup.md for instructions."
 
 [ "$FAILED" -gt 0 ] && exit 1
 exit 0

@@ -21,7 +21,7 @@ The framework is designed to be adopted incrementally — start with the core pr
 | `skills/` | Claude Code skills for SDLC workflow automation |
 | `agents/` | Agent definitions — `sdlc-compliance-auditor` + `AGENT_TEMPLATE.md` for adding your own |
 | `skeleton/` | Directory structure manifest for bootstrapping new projects |
-| `optional/` | Plugin setup guides (oberskills quality gates, design-for-ai) |
+| `plugins/` | Plugin setup guides (oberskills is required, design-for-ai is optional) |
 | `improvement-ideas/` | Design proposals for evolving the SDLC itself |
 
 ## Quick Start
@@ -95,14 +95,13 @@ Disciplines (parking lots) → Knowledge YAMLs (structured patterns) → Skills 
 
 This layer starts mostly empty and fills in as your project accumulates insights.
 
-## Optional Plugins
+## Required Plugin
 
-The skills in this framework reference two optional quality-gate plugins:
+- **oberskills** — Agent dispatch quality gate. All SDLC skills invoke `oberagent` before every agent dispatch to validate prompts, select the correct `subagent_type`, and assign model tiers. Without it, agents may dispatch with incorrect types or poorly-scoped prompts. See `plugins/oberskills-setup.md` for installation.
 
-- **oberskills** — Prompt engineering quality gate (`[PLUGIN: oberagent]`). Validates agent prompts before dispatch. See `optional/oberskills-setup.md`.
-- **design-for-ai** — Design theory integration (`[PLUGIN: design-for-ai]`). Enriches `design-consult` skill with Design for Hackers principles. See `optional/design-for-ai-setup.md`.
+## Optional Plugin
 
-Skills degrade gracefully when plugins are absent — they annotate plugin dependencies with `[PLUGIN: ...]` markers so you know what's optional.
+- **design-for-ai** — Design theory integration (`[PLUGIN: design-for-ai]`). Enriches `design-consult` skill with Design for Hackers principles. See `plugins/design-for-ai-setup.md`.
 
 ## Upstream
 

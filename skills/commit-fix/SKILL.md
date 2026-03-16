@@ -27,6 +27,10 @@ A `/commit-review` must have been run in this conversation. If no review finding
 
 Read the review report from the current conversation. Extract each finding's description, file path, agent, severity, and category. Also extract the full list of relevant agents from the review (both those with findings and those without).
 
+### Agent Dispatch Protocol
+
+Before dispatching ANY agent in this skill, invoke the `oberagent` skill. oberagent validates the dispatch prompt, selects the correct `subagent_type`, and assigns the appropriate model tier. This is mandatory for every dispatch — initial fixes and re-review fix dispatches.
+
 ### 2. Group by Agent and Dispatch Fixes
 
 Group findings by the most relevant domain agent to fix them — this is often the agent who found the issue, but may be a different agent with deeper expertise in the affected file. **You do NOT fix findings yourself — you dispatch the relevant worker domain agent.**

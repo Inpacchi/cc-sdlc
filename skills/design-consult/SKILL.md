@@ -29,7 +29,7 @@ The user stays in the loop at PRESENT and ITERATE. You present options, they rea
 
 ## Agent Dispatch Protocol
 
-Before dispatching ANY agent in this skill (ui-ux-designer for audit, concepts, or iteration), invoke `oberagent` first if available. This applies to every dispatch — initial, re-dispatch for enforcement, and iteration refinements.
+Before dispatching ANY agent in this skill (ui-ux-designer for audit, concepts, or iteration), invoke the `oberagent` skill. oberagent validates the dispatch prompt, selects the correct `subagent_type`, and assigns the appropriate model tier. This is mandatory for every dispatch — initial, re-dispatch for enforcement, and iteration refinements.
 
 **Critical:** The `ui-ux-designer` agent starts fresh each dispatch — it has no context from prior dispatches. Everything the agent needs must be in the dispatch prompt. The richer the context brief, the better the options.
 

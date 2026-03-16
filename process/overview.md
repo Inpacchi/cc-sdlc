@@ -204,17 +204,17 @@ See `process/sdlc_changelog.md` for the change history.
 
 ## Tooling Integration
 
-### oberskills Plugin
+### oberskills Plugin (Required)
 
-Quality gates for agent dispatch, prompt engineering, writing, and research. Invoked automatically by the planning and execution skills when the plugin is installed.
+Quality gates for agent dispatch, prompt engineering, writing, and research. All SDLC skills invoke oberagent before every agent dispatch — it validates the prompt, selects the correct `subagent_type`, and assigns the appropriate model tier.
 
 | Skill | Integrated Into | Purpose |
 |-------|----------------|---------|
-| oberagent | Planning + Execution (agent dispatch) | Validates agent prompts before dispatch |
+| oberagent | Planning + Execution (every agent dispatch) | Validates prompts, selects agent type and model tier |
 | oberprompt | oberagent (auto-invoked) | Constraint budget and prompt quality |
 | oberweb | Planning (research phase) | Multi-dimensional web research |
 
-See `ops/sdlc/optional/oberskills-setup.md` for installation instructions.
+See `ops/sdlc/plugins/oberskills-setup.md` for installation instructions.
 
 ### CHECKER/APPLIER Pattern
 

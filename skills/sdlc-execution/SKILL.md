@@ -136,7 +136,7 @@ For **BUILD**: proceed to dispatch. For **SKIP** or **REVISE_PLAN**: stop and wa
 
 **File-Conflict Gate (parallel phases only):** Before dispatching two or more phases simultaneously, list every file each phase will modify. If any file appears in more than one phase, those phases MUST run sequentially — dispatch the first phase, wait for POST-GATE to pass, then dispatch the second. Do not rely on the plan's dependency table alone; verify file overlap yourself.
 
-**EXECUTE**: **[PLUGIN: oberskills]** invoke oberagent if installed (validates prompt quality before dispatch). Dispatch assigned agent(s) per plan. The dispatch prompt must describe WHAT/WHY — implementation HOW is the agent's domain. Dispatch independent phases in parallel using multiple Agent tool calls in a single message. If you find yourself editing files directly instead of dispatching an agent, stop — that violates the Manager Rule.
+**EXECUTE**: Before dispatching, invoke the `oberagent` skill. oberagent validates the dispatch prompt, selects the correct `subagent_type` (matching the agent name from the PRE-GATE), and assigns the appropriate model tier. This is mandatory — every dispatch goes through oberagent. Then dispatch assigned agent(s) per plan. The dispatch prompt must describe WHAT/WHY — implementation HOW is the agent's domain. Dispatch independent phases in parallel using multiple Agent tool calls in a single message. If you find yourself editing files directly instead of dispatching an agent, stop — that violates the Manager Rule.
 
 **Cross-domain knowledge injection:** When a phase requires an agent to work in a context outside its primary domain, consult `ops/sdlc/knowledge/agent-context-map.yaml` for the other domain's agent and include those knowledge files in the dispatch prompt. Use judgment — only inject when the agent is genuinely crossing into unfamiliar territory (e.g., a backend agent implementing a feature that depends on real-time patterns, a frontend agent touching data layer code). Do not inject for routine single-domain work.
 
@@ -227,7 +227,7 @@ For each finding, classify before acting:
 
 **PRE-EXISTING** qualifies ONLY if the finding's file is not in the plan's Files list AND was not created or modified by an agent during execution. If the file appears in the Files list, or if an agent touched it during this execution, any finding about that file is in scope — regardless of whether the finding is about the specific function the plan modifies.
 
-Dispatch the most relevant domain agent to fix each finding — this is often the agent who found it, but may be a different agent with deeper expertise in the affected file. Fix dispatches are dispatches — **[PLUGIN: oberskills]** invoke oberagent before dispatching fixes if installed, same as before phase dispatches. If multiple findings need fixes, dispatch all of them before re-reviewing.
+Dispatch the most relevant domain agent to fix each finding — this is often the agent who found it, but may be a different agent with deeper expertise in the affected file. Fix dispatches are dispatches — invoke `oberagent` before every fix dispatch, same as before phase dispatches. If multiple findings need fixes, dispatch all of them before re-reviewing.
 
 For anything that isn't a FIX, state what you don't know:
 ```
@@ -339,7 +339,7 @@ When the deliverable is complete, the "Let's organize the chronicles" command mo
 | "The review loop finished cleanly" | Output the exit announcement before proceeding. Silent state transitions cause drift. |
 | "Build passes, fixes are done — moving on" | Build-pass is step 4, not the review loop exit. After ANY fix round, return to 2a and dispatch ALL agents. Only exit when 2b shows all agents clean. Two audits caught this same skip. |
 | "I noted the file deviation but it's reasonable, proceeding" | POST-GATE says "wait for explicit approval." Noting a deviation is not the same as getting approval. Stop and ask — even if the extra file is obviously necessary. |
-| "This is a fix dispatch, not a phase dispatch" | Fix dispatches are dispatches. Invoke oberagent. |
+| "This is a fix dispatch, not a phase dispatch" | Fix dispatches are dispatches. Invoke `oberagent`. |
 | "Phase 2's agent did Phase 3's work — I'll skip Phase 3" | Note the overlap to CD. Dispatch Phase 3 to verify completeness and implement what remains. |
 
 ## Integration

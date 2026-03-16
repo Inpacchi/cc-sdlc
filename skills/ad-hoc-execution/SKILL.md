@@ -81,7 +81,7 @@ This rule has no exceptions for scope or completeness. Specifically:
 
 ### Agent Dispatch Protocol
 
-**[PLUGIN: oberskills]** Before dispatching ANY worker domain agent, invoke oberagent if installed. This applies to phase execution, reviews, and fixes.
+Before dispatching ANY worker domain agent, invoke the `oberagent` skill. oberagent validates the dispatch prompt, selects the correct `subagent_type`, and assigns the appropriate model tier. This is mandatory for every dispatch — phase execution, reviews, and fixes.
 
 ### 0. Load the Plan
 
@@ -175,7 +175,7 @@ Classify each finding individually — no blanket dismissals. Every finding gets
 
 **PRE-EXISTING** qualifies ONLY if the finding's file is not in the plan's Files list AND was not created or modified by an agent during execution. If the file appears in the Files list, or if an agent touched it during this execution, any finding about that file is in scope — regardless of whether the finding is about the specific function the plan modifies.
 
-Dispatch the most relevant domain agent to fix each finding — this is often the agent who found it, but may be a different agent with deeper expertise in the affected file. Fix dispatches are dispatches — **[PLUGIN: oberskills]** invoke oberagent before dispatching fixes if installed, same as before phase dispatches. Dispatch all FIX agents before re-reviewing.
+Dispatch the most relevant domain agent to fix each finding — this is often the agent who found it, but may be a different agent with deeper expertise in the affected file. Fix dispatches are dispatches — invoke `oberagent` before every fix dispatch, same as before phase dispatches. Dispatch all FIX agents before re-reviewing.
 
 #### 2d. Re-Review (Mandatory)
 
@@ -250,7 +250,7 @@ Files changed:
 | "The review loop finished cleanly" | Output the exit announcement before proceeding. Silent state transitions cause drift. |
 | "Build passes, fixes are done — moving on" | Build-pass is step 4, not the review loop exit. After ANY fix round, return to 2a and dispatch ALL agents. Only exit when 2b shows all agents clean. Two audits caught this same skip. |
 | "I noted the file deviation but it's reasonable, proceeding" | POST-GATE says "wait for explicit approval." Noting a deviation is not the same as getting approval. Stop and ask — even if the extra file is obviously necessary. |
-| "This is a fix dispatch, not a phase dispatch" | Fix dispatches are dispatches. **[PLUGIN: oberskills]** Invoke oberagent if installed. |
+| "This is a fix dispatch, not a phase dispatch" | Fix dispatches are dispatches. Invoke `oberagent`. |
 | "Phase 2's agent did Phase 3's work — I'll skip Phase 3" | Note the overlap to the user. Dispatch Phase 3 to verify completeness and implement what remains. |
 
 ## Integration

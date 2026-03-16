@@ -76,7 +76,7 @@ Refer to the full agent table in the `sdlc-planning` skill if you need the compl
 
 ### Agent Dispatch Protocol
 
-**[PLUGIN: oberskills]** Before dispatching ANY worker domain agent, invoke oberagent if installed. This validates prompt quality before dispatch. Without the plugin, proceed with manual prompt review. This applies to plan writing, plan review, revision dispatches, and all other dispatches in this skill.
+Before dispatching ANY worker domain agent, invoke the `oberagent` skill. oberagent validates the dispatch prompt, selects the correct `subagent_type`, and assigns the appropriate model tier. This is mandatory for every dispatch — plan writing, plan review, revision dispatches, and all other dispatches in this skill.
 
 ### 1. Identify Relevant Worker Domain Agents
 
