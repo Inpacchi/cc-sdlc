@@ -22,3 +22,7 @@ node_modules/
 
 # Test artifacts (from install simulations)
 /tmp/
+
+.claude/
+
+docs/current_work/audits/
