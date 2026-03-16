@@ -1,7 +1,6 @@
 # D42: Memory Formation Layer — Complete
 
-> **Note:** This example is from the upstream `rickkoloski/cc-sdlc` framework (Elixir/Phoenix stack).
-> It's included as a reference for what a well-formed result doc looks like, not as project content.
+> **Note:** This example is included as a reference for what a well-formed result doc looks like, not as project content.
 
 **Spec:** `d42_memory_formation_layer_spec.md`
 **Completed:** 2026-01-25

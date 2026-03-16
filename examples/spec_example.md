@@ -1,7 +1,6 @@
 # D42: Memory Formation Layer — Specification
 
-> **Note:** This example is from the upstream `rickkoloski/cc-sdlc` framework (Elixir/Phoenix stack).
-> It's included as a reference for what a well-formed spec looks like, not as project content.
+> **Note:** This example is included as a reference for what a well-formed spec looks like, not as project content.
 
 **Status:** Complete
 **Created:** 2026-01-24

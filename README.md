@@ -30,7 +30,7 @@ The framework is designed to be adopted incrementally — start with the core pr
 
 ```bash
 # Clone or copy cc-sdlc to your machine
-git clone https://github.com/rickkoloski/cc-sdlc ~/src/ops/sdlc
+git clone https://github.com/Inpacchi/cc-sdlc ~/src/ops/sdlc
 
 # Or set it up as a pnpm/npm package — see skeleton/manifest.json
 ```
@@ -105,6 +105,6 @@ This layer starts mostly empty and fills in as your project accumulates insights
 
 ## Upstream
 
-This framework is maintained at [github.com/rickkoloski/cc-sdlc](https://github.com/rickkoloski/cc-sdlc).
+This framework is maintained at [github.com/Inpacchi/cc-sdlc](https://github.com/Inpacchi/cc-sdlc).
 
 Knowledge YAMLs and discipline files were seeded from a cross-project reference implementation. They are intentionally generic — project-specific content belongs in your project's `docs/` and `CLAUDE.md`.

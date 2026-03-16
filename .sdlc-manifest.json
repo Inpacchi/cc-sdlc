@@ -3,7 +3,7 @@
   "cc-sdlc": {
     "version": "1.0.0",
     "installed_at": "YYYY-MM-DD",
-    "source": "https://github.com/rickkoloski/cc-sdlc",
+    "source": "https://github.com/Inpacchi/cc-sdlc",
     "install_mode": "default",
     "with_optional": false,
     "project": {
