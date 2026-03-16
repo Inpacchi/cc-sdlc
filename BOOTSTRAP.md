@@ -192,6 +192,29 @@ Idea → Spec (CD approves) → Plan (reviewed) → Execute → Review → Resul
 | "Let's run an SDLC compliance audit" | Audit spec coverage and catalog integrity |
 ```
 
+### 3.8 Create or Update Domain Agents
+
+If the project doesn't have domain agents yet, create them now. If agents exist, verify they follow the current template structure.
+
+1. Review `agents/AGENT_SUGGESTIONS.md` for recommended roles matching your project type
+2. **MANDATORY: Invoke the `/plugin-dev:agent-development` skill for each agent.** Do NOT write agent files directly — the skill handles frontmatter validation, description formatting with `<example>` blocks, system prompt scaffolding, and ensures compliance with the template structure. Writing agent files by hand bypasses these quality gates.
+3. The skill will produce agents following `agents/AGENT_TEMPLATE.md`: scope ownership, Knowledge Context section, Communication Protocol, Core Principles, Workflow, Anti-Rationalization Table, Self-Verification Checklist, and Persistent Agent Memory
+4. Verify every agent includes the `## Knowledge Context` section that directs it to self-lookup from `agent-context-map.yaml`
+
+### 3.9 Wire Up Agent-to-Knowledge Context Map
+
+The knowledge layer (`ops/sdlc/knowledge/`) ships with an `agent-context-map.yaml` that maps generic role names (e.g., `architect`, `sdet`, `backend-developer`) to knowledge files. Update this file to use the project's **actual agent filenames** from `.claude/agents/`.
+
+1. Read `ops/sdlc/knowledge/agent-context-map.yaml`
+2. List the project's agents: `ls .claude/agents/*.md`
+3. For each mapping entry:
+   - Rename generic roles to match the project's agent filenames (e.g., `architect` → `software-architect`)
+   - Remove mappings for roles that have no corresponding agent
+   - Add mappings for project-specific agents not in the generic list (e.g., `fullstack-engineer`, `taste-intelligence-engineer`)
+4. Keep the knowledge file paths unchanged — the YAML files are cross-project
+
+Agents self-lookup their mapped knowledge files via a `## Knowledge Context` section in their definition, so the role names must match exactly. Skills also consult this map for cross-domain knowledge injection when dispatching agents into contexts outside their primary domain.
+
 ---
 
 ## Phase 4: Verification
@@ -231,6 +254,7 @@ Verify `docs/_index.md` exists and has the correct format.
 - chronicle/: N concepts with indexes
 - templates/: M templates copied
 - docs/_index.md: deliverable catalog initialized
+- agent-context-map.yaml: wired to N project agents
 
 ### Next Steps
 1. Review the concept indexes for accuracy

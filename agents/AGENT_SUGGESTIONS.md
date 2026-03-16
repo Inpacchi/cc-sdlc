@@ -2,7 +2,7 @@
 
 Domain agent roles that have proven useful across projects. Each entry includes the universal expertise description you can paste into your agent's system prompt, plus suggested frontmatter. Customize the project-specific sections (file paths, package names, tech stack) for your codebase.
 
-See `AGENT_TEMPLATE.md` for the full frontmatter and structural pattern.
+**Creating agents:** Always invoke `/plugin-dev:agent-development` to create agents. Do NOT write agent files directly — the skill validates frontmatter, formats description `<example>` blocks, and scaffolds the system prompt. See `AGENT_TEMPLATE.md` for the structural pattern the skill produces.
 
 ---
 
@@ -654,4 +654,4 @@ Not every project needs all of these. Start with agents that match your pain poi
 | **Game development** | game-developer, performance-engineer, realtime-systems-engineer, build-engineer |
 | **LLM-powered product** | prompt-engineer, ml-architect, security-engineer, sdet |
 
-All agents follow the structure in `AGENT_TEMPLATE.md`. Copy the expertise description, add your project-specific context (file paths, tech stack, conventions), and you have a working domain agent.
+All agents follow the structure in `AGENT_TEMPLATE.md`. To create a new agent, use `/plugin-dev:agent-development` — it handles frontmatter validation, description formatting with `<example>` blocks, and system prompt scaffolding. Then add your project-specific context (file paths, tech stack, conventions).
