@@ -161,7 +161,17 @@ Spot-check 2-3 skills to confirm:
 - Project customizations preserved
 - No orphaned references to removed framework features
 
-### 4.4 Update Manifest
+### 4.4 Post-Migration Audit
+
+Run the `sdlc-compliance-auditor` agent to verify migration integrity. The auditor's §7 (Migration Integrity) checks manifest version, framework file completeness, content-merge correctness, and stale references to removed features — exactly what needs validation after a migration.
+
+```
+"Let's run an SDLC compliance audit"
+```
+
+Fix any findings before committing the migration.
+
+### 4.5 Update Manifest
 
 After migration, update `.sdlc-manifest.json` with the new source version and file hashes:
 
@@ -170,7 +180,7 @@ After migration, update `.sdlc-manifest.json` with the new source version and fi
 # Or manually update source_version to the current cc-sdlc commit hash
 ```
 
-### 4.5 Report to User
+### 4.6 Report to User
 
 ```markdown
 ## SDLC Migration Complete
@@ -197,10 +207,11 @@ After migration, update `.sdlc-manifest.json` with the new source version and fi
 - All agent-context-map paths resolve: yes/no
 - All agents have Knowledge Context: yes/no
 - Spot-check passed: yes/no
+- Post-migration audit: passed/findings fixed
 
 ### Next Steps
-1. Run an SDLC compliance audit to verify integrity
-2. Review the migration diff: `git diff`
+1. Review the migration diff: `git diff`
+2. Commit the migration
 ```
 
 ---
