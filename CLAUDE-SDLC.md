@@ -105,6 +105,34 @@ Run `"Let's run an SDLC compliance audit"` periodically (~every 2-4 weeks or at 
 
 ---
 
+## Use AskUserQuestion for All Questions
+
+**Always use the `AskUserQuestion` tool when you need user input.** Do not type questions as conversational text. This includes:
+
+- Design decisions and trade-offs
+- Scope confirmation ("should we plan or go ad hoc?")
+- Data accuracy questions ("should this be X or Y?")
+- Clarification of ambiguous requirements
+- Escalation when stuck (3-strike rule, blocked work)
+
+**Why:** Conversational questions create pause points where the user has to type free-text responses like "do it", "yes", "continue", "go" to unblock execution. `AskUserQuestion` presents structured options, reduces friction, and makes the decision point explicit.
+
+**Exception:** Status updates, findings tables, and informational output are not questions — those are plain text.
+
+---
+
+## Data Pipeline Integrity
+
+**Data pipelines must never contain hallucinated or assumed values.** Every value in a seed script, scraper constant, allowlist, or configuration must be traceable to an official source — a rules document, an API response, an existing codebase constant, or a user decision.
+
+**Required behavior:**
+1. **Read from the defined source.** If the plan names an external source (GitHub repo, API, rules document), fetch from it. Do not infer, guess, or generate plausible-sounding values.
+2. **Cross-reference codebase constants.** When the codebase already has values (e.g., adapter config, color maps), read those files and use the exact values — do not retype from memory.
+3. **When a value cannot be sourced, use `AskUserQuestion`.** If no official source exists for a data point and it cannot be derived from the codebase, stop and ask the user. Do not fill the gap with a plausible guess.
+4. **Coupled artifacts must read from each other.** When two files must agree (e.g., a consumer's allowlist must match a producer's canonical data), the later file must read the earlier file as its canonical reference — not independently derive the same values.
+
+---
+
 ## Code Verification Rule
 
 **Never assert how specific code behaves without reading it first.**

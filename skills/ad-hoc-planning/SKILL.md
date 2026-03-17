@@ -76,7 +76,7 @@ Refer to the full agent table in the `sdlc-planning` skill if you need the compl
 
 ### Agent Dispatch Protocol
 
-Before dispatching ANY worker domain agent, invoke the `oberagent` skill. oberagent validates the dispatch prompt, selects the correct `subagent_type`, and assigns the appropriate model tier. This is mandatory for every dispatch — plan writing, plan review, revision dispatches, and all other dispatches in this skill.
+Dispatch prompts must describe WHAT/WHY — implementation HOW is the agent's domain. Never narrate readiness ("Ready to dispatch") and wait for user confirmation. Dispatch immediately when context is ready.
 
 ### 1. Identify Relevant Worker Domain Agents
 

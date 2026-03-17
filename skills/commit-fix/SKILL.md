@@ -29,7 +29,7 @@ Read the review report from the current conversation. Extract each finding's des
 
 ### Agent Dispatch Protocol
 
-Before dispatching ANY agent in this skill, invoke the `oberagent` skill. oberagent validates the dispatch prompt, selects the correct `subagent_type`, and assigns the appropriate model tier. This is mandatory for every dispatch — initial fixes and re-review fix dispatches.
+Dispatch prompts must describe WHAT/WHY — implementation HOW is the agent's domain. Every dispatch must include sufficient context for the agent to work autonomously.
 
 ### 2. Group by Agent and Dispatch Fixes
 

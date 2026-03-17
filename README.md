@@ -95,12 +95,9 @@ Disciplines (parking lots) → Knowledge YAMLs (structured patterns) → Skills 
 
 This layer starts mostly empty and fills in as your project accumulates insights.
 
-## Required Plugin
+## Optional Plugins
 
-- **oberskills** — Agent dispatch quality gate. All SDLC skills invoke `oberagent` before every agent dispatch to validate prompts, select the correct `subagent_type`, and assign model tiers. Without it, agents may dispatch with incorrect types or poorly-scoped prompts. See `plugins/oberskills-setup.md` for installation.
-
-## Optional Plugin
-
+- **oberskills** — Prompt engineering and web research utilities. See `plugins/oberskills-setup.md` for installation.
 - **design-for-ai** — Design theory integration (`[PLUGIN: design-for-ai]`). Enriches `design-consult` skill with Design for Hackers principles. See `plugins/design-for-ai-setup.md`.
 
 ## Upstream

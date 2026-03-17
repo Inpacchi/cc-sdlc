@@ -27,6 +27,7 @@ CC (or human) executes the work:
 - Follow the planning document
 - Create/modify code
 - Run tests
+- **Data integrity rule:** Data pipelines must never contain hallucinated or assumed values. Every value in a seed script, scraper constant, or allowlist must trace to an official source (rules document, API, codebase constant) or be escalated to CD via `AskUserQuestion`. See the Data Pipeline Integrity section in your project's CLAUDE.md.
 
 ### 5. Validation (stage gate)
 A deliverable is not deployable until it passes validation. Validation follows the **5-phase hybrid testing workflow**:
@@ -201,17 +202,17 @@ See `process/sdlc_changelog.md` for the change history.
 7. **Capture testing knowledge** — Tester navigation paths and learnings compound across runs
 8. **Validation before deployment** — Tests must pass before code ships
 9. **Deploy is a process step** — Not an afterthought; gated by validation, verified by smoke tests
+10. **Deployment is documented** — Execution skills produce deployment guides when infrastructure changes require manual steps beyond automatic CI/CD
 
 ## Tooling Integration
 
-### oberskills Plugin (Required)
+### oberskills Plugin (Optional)
 
-Quality gates for agent dispatch, prompt engineering, writing, and research. All SDLC skills invoke oberagent before every agent dispatch — it validates the prompt, selects the correct `subagent_type`, and assigns the appropriate model tier.
+Prompt engineering, writing, and research utilities. These skills are available but not mandatory for agent dispatch.
 
 | Skill | Integrated Into | Purpose |
 |-------|----------------|---------|
-| oberagent | Planning + Execution (every agent dispatch) | Validates prompts, selects agent type and model tier |
-| oberprompt | oberagent (auto-invoked) | Constraint budget and prompt quality |
+| oberprompt | Ad hoc prompt improvement | Constraint budget and prompt quality |
 | oberweb | Planning (research phase) | Multi-dimensional web research |
 
 See `ops/sdlc/plugins/oberskills-setup.md` for installation instructions.

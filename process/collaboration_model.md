@@ -58,6 +58,7 @@ When work is done:
 | How to build (approach) | CC proposes, CD approves |
 | Implementation details | CC |
 | Architectural patterns | CD (or CC with approval) |
+| Data visibility (what users see) | CD |
 | Scope changes | CD |
 | When to ship/merge | CD |
 
@@ -96,8 +97,11 @@ For long-running work, CC should:
 ### CC Anti-Patterns
 - Implementing before confirming approach
 - Making architectural decisions without asking
+- Making data exclusion decisions without surfacing them (e.g., stripping fields from indexes to meet size limits — this silently breaks downstream features that depend on that data)
 - Ignoring existing patterns in the codebase
 - Over-engineering beyond requirements
+
+> **Data visibility** includes decisions to exclude, transform, or omit fields from indexes, caches, or API responses — anything that changes what data reaches the frontend. These are product decisions, not implementation details, because they affect what users can see and do.
 
 ---
 

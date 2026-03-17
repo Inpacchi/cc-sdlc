@@ -55,7 +55,7 @@ Extract from the scope:
 
 ## Step 1: Dispatch SDET to Design and Implement
 
-Invoke the `oberagent` skill (mandatory — validates dispatch prompt, selects correct `subagent_type` and model tier), then dispatch `sdet` with a single prompt that covers both design and implementation.
+Dispatch `sdet` with a single prompt that covers both design and implementation.
 
 **Cross-domain knowledge injection:** The SDET is testing code written by domain agents (frontend, backend, etc.). Consult `ops/sdlc/knowledge/agent-context-map.yaml` for the agents who built the feature being tested and include their domain knowledge files in the SDET's dispatch prompt. This helps the SDET understand domain patterns, data flows, and known gotchas in the code under test.
 

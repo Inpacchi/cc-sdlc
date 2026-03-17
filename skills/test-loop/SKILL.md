@@ -82,7 +82,7 @@ The size of a fix is not a valid reason to self-fix. A one-character typo fix st
 
 ### Agent Dispatch Protocol
 
-Before dispatching ANY agent in this skill, invoke the `oberagent` skill. oberagent validates the dispatch prompt, selects the correct `subagent_type`, and assigns the appropriate model tier. This is mandatory for every dispatch — SDET dispatches, domain agent dispatches, and fix re-dispatches.
+Dispatch prompts must describe WHAT/WHY — implementation HOW is the agent's domain. Every dispatch must include sufficient context for the agent to work autonomously.
 
 ### 0. Setup
 
@@ -349,5 +349,4 @@ Fixes applied:
 
 - **SDET agent** — fixes test-code issues (selectors, fixtures, helpers, assertions)
 - **Domain agents** (frontend-developer, backend-developer, realtime-systems-engineer, debug-specialist, build-engineer, performance-engineer) — fix app-code issues
-- **oberagent** — mandatory before every agent dispatch
 - **commit-review** — can be run after the auto-commit to verify code quality of the fixes

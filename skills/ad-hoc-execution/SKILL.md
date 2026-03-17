@@ -81,7 +81,7 @@ This rule has no exceptions for scope or completeness. Specifically:
 
 ### Agent Dispatch Protocol
 
-Before dispatching ANY worker domain agent, invoke the `oberagent` skill. oberagent validates the dispatch prompt, selects the correct `subagent_type`, and assigns the appropriate model tier. This is mandatory for every dispatch — phase execution, reviews, and fixes.
+Dispatch prompts must describe WHAT/WHY — implementation HOW is the agent's domain. Never narrate readiness ("Ready to dispatch") and wait for user confirmation. The plan is already approved; execution means continuous forward motion.
 
 ### 0. Load the Plan
 
@@ -109,17 +109,26 @@ PRE-GATE Phase [N] — [phase name]
 Pattern search: [what you searched for] → [found / not found / following pattern at path/to/file.ts]
 Dependencies: [phase N complete | none required]
 File-conflict check: [parallel only — list files per phase, confirm no overlap | N/A — sequential]
+Data sources: [ALL external sources from the plan for this phase — URLs, repos, APIs, documents | "codebase only"]
+Expected counts: [any counts stated in the plan — "14 trigger prefixes", "11 counter types" | none]
+Design Decisions: [list binding decisions from the plan that apply to this phase | none]
 Agent: [agent-name]
 ```
 
 - **Pattern Reuse Gate:** Search the codebase for existing implementations of what this phase builds. Use LSP `goToImplementation` for interface methods and `findReferences` for hooks/utilities. Use Grep for text patterns in configuration or documentation. If a pattern exists, follow it — consistency over preference.
 - Verify all dependency phases are complete
 - **File-Conflict Gate (parallel phases only):** Before dispatching two or more phases simultaneously, list every file each phase will modify. If any file appears in more than one phase, those phases MUST run sequentially — dispatch the first phase, wait for POST-GATE to pass, then dispatch the second. Do not rely on the plan's dependency table alone; verify file overlap yourself.
+- **Data Source Extraction (mandatory):** Read the plan's phase description and extract EVERY data source mentioned — external repos, APIs, URLs, documents, AND codebase files. List them all in the PRE-GATE block. If the plan says data comes from an external source, the dispatch prompt MUST tell the agent to fetch from that source. Omitting an external data source from the dispatch prompt causes agents to hallucinate values instead of reading from the defined source.
 - Confirm the dispatch prompt describes WHAT/WHY — the agent decides HOW
 
 **DISPATCH:** List the agent and phase description before dispatching. Every listed agent must have a corresponding dispatch. If you find yourself editing files directly instead of dispatching an agent, stop — that violates the Manager Rule.
 
-**EXECUTE:** Dispatch the assigned agent. The dispatch prompt must describe WHAT/WHY — implementation HOW is the agent's domain. For independent phases, dispatch in parallel using multiple Agent tool calls in a single message.
+**EXECUTE:** Dispatch the assigned agent(s). The dispatch prompt must include:
+1. **All data sources** from the PRE-GATE extraction — external sources get explicit fetch instructions. For data extraction tasks, tell the agent to read ALL relevant pages from the source, extract ALL entries exhaustively, and cross-check the final count.
+2. **Expected counts** from the plan — the agent can self-check its output
+3. **Binding Design Decisions** that constrain this phase's implementation
+4. **Prior phase artifacts** — when this phase depends on a completed phase that produced data artifacts (seed scripts, config files, type definitions), the dispatch prompt must tell the agent to read those files as the canonical reference. Agents that produce coupled artifacts will fabricate their own values if not told where the canonical data lives.
+For independent phases, dispatch in parallel using multiple Agent tool calls in a single message.
 
 **Cross-domain knowledge injection:** When a phase requires an agent to work in a context outside its primary domain, consult `ops/sdlc/knowledge/agent-context-map.yaml` for the other domain's agent and include those knowledge files in the dispatch prompt. Use judgment — only inject when the agent is genuinely crossing into unfamiliar territory. Do not inject for routine single-domain work.
 
@@ -132,6 +141,8 @@ Agent: [agent-name]
   4. If any deviation exists: stop, report the extra files to the user, and wait for explicit approval before starting the next phase. Do not proceed on your own judgment that the extra work was warranted.
 
 - **Phase bleeding check:** If an agent returns work that covers scope belonging to a subsequent phase (within plan-listed files): (1) output a one-line note to the user identifying which phase was anticipated, (2) in the subsequent phase's dispatch prompt, include a summary of what the earlier agent already implemented and instruct the agent to verify completeness and implement only what remains. If the bleeding substantially changes a subsequent phase (e.g., makes it a verify-only pass), flag to the user rather than silently absorbing.
+
+- **Data audit (mandatory for phases that produce data artifacts):** If this phase created or modified a seed script, scraper, allowlist, or any file containing data values (not just code logic), verify the data against its authoritative source before marking the phase complete. For each data category: check the count matches the plan's expected count, confirm no fabricated entries exist, and confirm no entries are missing. If any value cannot be traced to a source, flag it via `AskUserQuestion`. Code review catches code quality — the data audit catches data accuracy. These are separate concerns.
 
 A phase is NOT complete until POST-GATE passes.
 
@@ -175,7 +186,7 @@ Classify each finding individually — no blanket dismissals. Every finding gets
 
 **PRE-EXISTING** qualifies ONLY if the finding's file is not in the plan's Files list AND was not created or modified by an agent during execution. If the file appears in the Files list, or if an agent touched it during this execution, any finding about that file is in scope — regardless of whether the finding is about the specific function the plan modifies.
 
-Dispatch the most relevant domain agent to fix each finding — this is often the agent who found it, but may be a different agent with deeper expertise in the affected file. Fix dispatches are dispatches — invoke `oberagent` before every fix dispatch, same as before phase dispatches. Dispatch all FIX agents before re-reviewing.
+Dispatch the most relevant domain agent to fix each finding — this is often the agent who found it, but may be a different agent with deeper expertise in the affected file. Dispatch all FIX agents before re-reviewing.
 
 #### 2d. Re-Review (Mandatory)
 
@@ -215,8 +226,9 @@ Key feedback incorporated:
 
    Co-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>
    ```
-5. Move the plan file to `docs/current_work/ad-hoc/completed/` — preserves the "why this approach" context for reconciliation
-6. Present the full commit to the user:
+5. **Deployment guide (if applicable):** If the work touches infrastructure that requires manual deployment steps beyond an automatic CI/CD deploy (e.g., Cloud Functions, search index config, database indexes/rules, environment variables), present a concise deployment guide to the user. Include: deploy commands in order, any backfill/migration steps, and post-deploy verification checks. Skip this step for changes that deploy automatically.
+6. Move the plan file to `docs/current_work/ad-hoc/completed/` — preserves the "why this approach" context for reconciliation
+7. Present the full commit to the user:
 
 ```
 Commit: {short-sha}
@@ -250,8 +262,10 @@ Files changed:
 | "The review loop finished cleanly" | Output the exit announcement before proceeding. Silent state transitions cause drift. |
 | "Build passes, fixes are done — moving on" | Build-pass is step 4, not the review loop exit. After ANY fix round, return to 2a and dispatch ALL agents. Only exit when 2b shows all agents clean. Two audits caught this same skip. |
 | "I noted the file deviation but it's reasonable, proceeding" | POST-GATE says "wait for explicit approval." Noting a deviation is not the same as getting approval. Stop and ask — even if the extra file is obviously necessary. |
-| "This is a fix dispatch, not a phase dispatch" | Fix dispatches are dispatches. Invoke `oberagent`. |
+| "Ready to dispatch" / "Let me dispatch now" | Never narrate readiness — just dispatch. The plan is already approved. |
 | "Phase 2's agent did Phase 3's work — I'll skip Phase 3" | Note the overlap to the user. Dispatch Phase 3 to verify completeness and implement what remains. |
+| "Data sources: read from these codebase files" (plan also mentions external source) | If the plan says data comes from an external source AND codebase files, the dispatch prompt must include BOTH. Listing only codebase files causes agents to hallucinate values for the external-source categories. |
+| "This phase produces a scraper/consumer that should align with the seed/config from Phase N" | Tell the agent to READ the Phase N output file for canonical values. Agents will fabricate their own allowlists if not pointed at the canonical source. |
 
 ## Integration
 
