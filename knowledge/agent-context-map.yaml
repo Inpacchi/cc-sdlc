@@ -67,6 +67,7 @@ mappings:
   # ── Review / Quality ───────────────────────────────────────────────
   code-reviewer:
     - ops/sdlc/knowledge/architecture/technology-patterns.yaml
+    - ops/sdlc/knowledge/testing/testing-paradigm.yaml
     - ops/sdlc/knowledge/testing/gotchas.yaml
     - ops/sdlc/knowledge/testing/tool-patterns.yaml
     - ops/sdlc/knowledge/testing/component-catalog.yaml
@@ -79,6 +80,7 @@ mappings:
 
   # ── Testing ────────────────────────────────────────────────────────
   sdet:
+    - ops/sdlc/knowledge/testing/testing-paradigm.yaml
     - ops/sdlc/knowledge/testing/gotchas.yaml
     - ops/sdlc/knowledge/testing/tool-patterns.yaml
     - ops/sdlc/knowledge/testing/component-catalog.yaml

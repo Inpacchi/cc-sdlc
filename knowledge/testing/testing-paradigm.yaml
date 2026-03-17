@@ -1,0 +1,235 @@
+# Testing Paradigm — Code Structure & Test Type Selection
+# The "grug brain" approach: structure code so tests are obvious and mocks are unnecessary.
+# Source: https://grugbrain.dev/ + practical experience
+# Last updated: 2026-03-17
+
+id: testing-paradigm
+name: "Testing Paradigm"
+description: >
+  Foundational guidance on how to structure code for testability and how to choose
+  the right test type. The core insight: if you need mocks, your code is poorly
+  structured. Separate I/O from logic, and unit tests become trivial.
+
+# ─────────────────────────────────────────────
+# Functional Core, Imperative Shell
+# ─────────────────────────────────────────────
+
+functional_core_imperative_shell:
+  description: >
+    The single most important structural pattern for testability. Separate your code
+    into two layers: a pure functional core that transforms data, and a thin imperative
+    shell that handles I/O. The core is easy to test. The shell is thin enough to
+    verify with integration tests.
+
+  the_problem:
+    description: "When logic and I/O are mixed, testing requires mocking the world"
+    wrong: |
+      // WRONG — logic and I/O are entangled
+      function processFile(fileName: string): Result {
+        const data = fs.readFileSync(fileName, 'utf-8');  // I/O
+        const parsed = JSON.parse(data);                   // logic
+        const result = transform(parsed);                  // logic
+        db.save(result);                                   // I/O
+        return result;
+      }
+      // To test: must mock fs AND db. Tests are fragile and don't test real I/O.
+    right: |
+      // RIGHT — I/O at edges, logic in the middle
+      function readInput(fileName: string): RawData {
+        return JSON.parse(fs.readFileSync(fileName, 'utf-8'));
+      }
+
+      function transform(data: RawData): Result {
+        // Pure logic — no I/O, no side effects
+        return { /* transformed data */ };
+      }
+
+      function saveResult(result: Result): void {
+        db.save(result);
+      }
+
+      function main(): void {
+        const data = readInput("input.json");   // shell — I/O
+        const result = transform(data);          // core — pure logic
+        saveResult(result);                      // shell — I/O
+      }
+      // To test transform(): just pass data in, assert data out. No mocks.
+      // To test I/O: integration test against real filesystem/database.
+
+  layers:
+    functional_core:
+      description: "Pure functions that transform data. No I/O, no side effects, no dependencies on external systems."
+      test_with: "Unit tests — pass data in, assert data out"
+      examples:
+        - "formatCardData(rawCard) → FormattedCard"
+        - "parseEffects(effectString) → StructuredEffect[]"
+        - "calculatePrice(items, discounts) → PriceBreakdown"
+        - "validateDeckList(cards, rules) → ValidationResult"
+      characteristics:
+        - "Same input always produces same output"
+        - "No filesystem, network, database, or clock access"
+        - "No global state mutation"
+        - "Easy to test with fixtures — just data in, data out"
+
+    imperative_shell:
+      description: "Thin wrappers that handle I/O — reading from databases, calling APIs, writing files. As little logic as possible."
+      test_with: "Integration tests — hit real systems"
+      examples:
+        - "fetchCardFromAPI(cardId) → RawCard"
+        - "saveToFirestore(collection, document) → void"
+        - "readConfigFile(path) → RawConfig"
+      characteristics:
+        - "Thin — does I/O only, no business logic"
+        - "Not worth unit testing (nothing to assert beyond 'it called the API')"
+        - "Tested by integration tests that verify real system behavior"
+
+    wiring:
+      description: "The main/controller/handler that connects shell to core. Reads data via shell, processes via core, writes via shell."
+      test_with: "E2E tests — verify the full flow works"
+      examples:
+        - "Cloud Function handler: read Firestore → transform → write Firestore"
+        - "API route handler: parse request → validate → process → respond"
+        - "React component that fetches data, passes to pure renderer"
+
+  rule: >
+    If a function does both I/O and logic, split it. The logic half becomes
+    trivially testable. The I/O half becomes thin enough that integration tests
+    suffice.
+
+# ─────────────────────────────────────────────
+# Test Type Selection
+# ─────────────────────────────────────────────
+
+test_type_selection:
+  description: >
+    When to use unit, integration, and E2E tests. The answer depends on what
+    layer of code you're testing, not on arbitrary coverage targets.
+
+  decision_table:
+    - code_type: "Pure logic (transforms, validators, parsers, formatters)"
+      test_type: "Unit test"
+      why: "Fast, deterministic, no external dependencies. The functional core."
+      mock_needed: "Never — if you need a mock, the function isn't pure"
+
+    - code_type: "I/O boundary (database queries, API calls, file operations)"
+      test_type: "Integration test"
+      why: "Must verify real system behavior. Mocks hide the bugs that matter most."
+      mock_needed: "Never — hit the real system. That's the point."
+
+    - code_type: "Wiring / controllers / handlers"
+      test_type: "Integration or E2E test"
+      why: "Verifies components work together correctly."
+      mock_needed: "Rarely — only for truly external third-party services you can't control"
+
+    - code_type: "User-facing flows (login, purchase, multi-step workflows)"
+      test_type: "E2E test (small, curated suite)"
+      why: "Proves the system works from the user's perspective."
+      mock_needed: "Never for your own services. Maybe for third-party payment/auth."
+
+  the_testing_pyramid_reframed:
+    description: >
+      The classic testing pyramid (many unit, fewer integration, few E2E) is
+      correct but for the wrong reasons. It's not about quantity — it's about
+      what each level is good at.
+    unit:
+      good_at: "Verifying logic is correct. Fast feedback. Cheap to write and run."
+      bad_at: "Verifying systems work together. Catching deployment issues."
+      sweet_spot: "Pure functions, algorithms, data transformations, validators"
+    integration:
+      good_at: "Verifying components work together. Catching the bugs that actually ship."
+      bad_at: "Running in milliseconds. Testing every edge case."
+      sweet_spot: "Database queries, API contracts, service boundaries, auth flows"
+    e2e:
+      good_at: "Proving the system works from the user's perspective. Catching integration gaps."
+      bad_at: "Fast feedback. Stability. Debugging failures."
+      sweet_spot: "Critical user journeys. Keep the suite small and curated — 5-20 tests, not 500."
+
+# ─────────────────────────────────────────────
+# Mocking Stance
+# ─────────────────────────────────────────────
+
+mocking:
+  stance: >
+    Mocking is a code smell, not a tool. If you need a mock, your code is
+    probably structured wrong. Restructure first, mock as a last resort.
+
+  when_mocking_is_wrong:
+    - symptom: "Mocking the database in a test for a function that queries the database"
+      diagnosis: "The function mixes logic and I/O. Split them."
+      fix: "Extract the query into a thin I/O function. Unit test the logic. Integration test the query."
+
+    - symptom: "Mocking an internal service to test a controller"
+      diagnosis: "The controller is doing too much. The service boundary is wrong."
+      fix: "Push the logic into pure functions. Test those directly. Integration test the wiring."
+
+    - symptom: "Mocking the filesystem to test a config parser"
+      diagnosis: "The parser reads AND parses. Split reading from parsing."
+      fix: "readConfig() does I/O. parseConfig(rawString) is pure logic. Unit test parseConfig."
+
+  when_mocking_is_acceptable:
+    - "Third-party services you genuinely cannot control (payment providers, external auth)"
+    - "Services with rate limits or costs per call in CI (geocoding, AI APIs)"
+    - "Clock/time for testing time-dependent logic (but prefer injecting time as a parameter)"
+    - "Network failure simulation for resilience testing (but prefer real fault injection where possible)"
+
+  the_real_danger: >
+    Mocks that pass when the real system would fail. This is the failure mode
+    that burns teams: mocked tests pass in CI, the real integration fails in
+    production, and nobody finds out until a user reports it. Every mock is a
+    place where your tests and reality can diverge.
+
+# ─────────────────────────────────────────────
+# Bug Fix Testing — Regression First
+# ─────────────────────────────────────────────
+
+regression_first:
+  rule: "Reproduce the bug in a test BEFORE fixing it."
+  why: >
+    A bug fix without a regression test is a bug that will come back. The test
+    proves the bug exists (red), proves the fix works (green), and prevents
+    regression forever after.
+  workflow:
+    - "1. Write a test that reproduces the bug (test fails — red)"
+    - "2. Fix the bug (test passes — green)"
+    - "3. Commit both together"
+  anti_pattern: >
+    Fixing the bug first, then writing a test that passes. You can't prove the
+    test would have caught the bug if it was written after the fix. The red-green
+    sequence is the proof.
+
+# ─────────────────────────────────────────────
+# When to Write Tests
+# ─────────────────────────────────────────────
+
+when_to_write_tests:
+  description: >
+    Tests written before you understand the domain are tests you'll throw away.
+    Tests written after the code stabilizes catch real bugs.
+
+  guidance:
+    - phase: "Prototyping / exploring"
+      tests: "None. You're learning the domain. Code will change drastically."
+    - phase: "Implementation stabilizing"
+      tests: "Unit tests for the functional core as it solidifies."
+    - phase: "Feature complete"
+      tests: "Integration tests for I/O boundaries. E2E tests for critical flows."
+    - phase: "Bug fix"
+      tests: "Regression test FIRST (red), then fix (green)."
+    - phase: "Refactoring"
+      tests: "Tests should already exist. If they don't, add them before refactoring."
+
+  the_grug_insight: >
+    Writing tests too early is almost as bad as not writing them. Tests lock in
+    behavior — if the behavior is still being discovered, the tests become anchors
+    that resist necessary change. Wait until you know what you're building, then
+    lock it in.
+
+# ─────────────────────────────────────────────
+# Maintenance
+# ─────────────────────────────────────────────
+
+maintenance:
+  add_when: >
+    A testing paradigm insight is discovered during project work that would
+    benefit future projects. Add it with context and a concrete example.
+  review_cadence: "After major testing discussions or when mocking debates arise"

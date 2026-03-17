@@ -8,6 +8,25 @@
 
 Hybrid browser testing approach combining an AI-assisted browser tool for SDLC-aware exploration with Playwright CLI for fast, deterministic execution. Self-improving knowledge loop (Layers 0-6) reduces token cost and improves test quality over time. Testability is a first-class code quality concern.
 
+## Testing Paradigm — Code Structure & Test Type Selection
+
+See `knowledge/testing/testing-paradigm.yaml` for the full treatment. Key principles:
+
+**Functional Core, Imperative Shell.** Separate I/O from logic. Pure functions (the core) are unit tested with no mocks. I/O wrappers (the shell) are integration tested against real systems. If you need a mock, the code is structured wrong.
+
+**Test type selection by code layer:**
+
+| Code Layer | Test Type | Mock? |
+|------------|-----------|-------|
+| Pure logic (transforms, validators, parsers) | Unit test | Never |
+| I/O boundary (DB queries, API calls, file ops) | Integration test | Never — hit the real system |
+| Wiring (handlers, controllers, main) | Integration or E2E | Rarely |
+| User-facing flows | E2E (small, curated suite) | Never for your own services |
+
+**Regression-first for bug fixes.** Write a test that reproduces the bug (red) before fixing it (green). A fix without a regression test is a bug that will return.
+
+**When to write tests.** Not during prototyping (behavior is still being discovered). During implementation stabilization (unit tests for core logic). At feature complete (integration + E2E). At bug fix (regression test first, always).
+
 ## Mutation Verification — The Persistence Rule
 
 Any test that validates a write operation (create, update, delete) MUST verify persistence, not just UI response. Optimistic UI updates and HTTP 200s are not proof that data was saved.
