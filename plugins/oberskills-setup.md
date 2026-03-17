@@ -7,7 +7,7 @@ The `oberskills` plugin provides prompt engineering and web research utilities.
 | Skill | What It Does | Used By |
 |-------|-------------|---------|
 | `oberprompt` | Prompt engineering — fixes vague or flawed prompts. | Ad hoc prompt improvement |
-| `oberweb` | Multi-dimensional web research orchestrator. Runs parallel searches across different angles. | `design-consult`, `sdlc-planning` (research phase) |
+| `oberweb` | Multi-dimensional web research orchestrator. Runs parallel searches across different angles. | `design-consult`, `sdlc-plan` (research phase) |
 
 ## Installation
 
