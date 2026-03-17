@@ -34,6 +34,45 @@ Each entry contains:
 
 ---
 
+## 2026-03-17: Three-Tier Model, Testing Paradigm, and Plugin Overhaul
+
+**Origin:** CD-driven session — frustration with rigid ad-hoc/SDLC binary, Claude's assumption-making on library APIs, and missing guidance on code structure for testability.
+
+**What happened:** Five structural changes to the framework in a single session:
+
+1. **Context7 became the only required plugin.** Claude's training data goes stale on library APIs. Context7 MCP provides live documentation lookups. Wired into all 7 agent-dispatching skills with verification instructions. oberskills demoted to optional (consistent with the oberagent removal in 5dcc5c4).
+
+2. **Ad-hoc track renamed to SDLC-Lite.** "Ad hoc" now means untracked work generically. SDLC-Lite is the middle tier with a plan file but no deliverable tracking. Trigger changed from file count (3-6 files) to complexity — a 2-file cross-domain change warrants a plan, a 10-file rename might not.
+
+3. **Three-tier model formalized.** Full SDLC → SDLC-Lite → Direct Dispatch. Direct Dispatch is the new third tier for when CD steers in real-time. Keeps agent-first rule and review-before-commit, but drops plan files and approval gates. Includes escalation triggers for when to upgrade to a plan.
+
+4. **WHAT/WHY rule relaxed.** Plans now default to WHAT/WHY but planning agents may include implementation guidance (approach hints, key functions, file relationships) at their discretion. Removed the strict HOW compliance verification gate. Execution skills now pass full plan context to agents — no summarizing or omitting.
+
+5. **Testing paradigm codified.** New knowledge file (`testing-paradigm.yaml`) based on grug-brain philosophy: separate I/O from logic (functional core/imperative shell), test type selection by code layer, mocking is a code smell, regression-first for bug fixes. Wired into create-test-suite, test-loop, and sdlc-plan.
+
+**Changes made:**
+
+1. **`plugins/context7-setup.md`** (new) — Setup guide for Context7 MCP with installation options
+2. **`plugins/lsp-setup.md`** (new) — Setup guide for all 12 language-specific LSP plugins
+3. **`plugins/README.md`** — Three-tier plugin hierarchy: Required (context7), Highly Recommended (LSP), Optional (oberskills, design-for-ai)
+4. **`knowledge/testing/testing-paradigm.yaml`** (new) — Functional core/imperative shell, test type selection, mocking stance, regression-first rule
+5. **`CLAUDE-SDLC.md`** — Three-tier model, Direct Dispatch rules, Verification Policy (zero-assumption rule), LSP in Code Verification Rule, updated recommended settings
+6. **`skills/sdlc-plan/SKILL.md`** — WHAT/WHY relaxation, Context7 verification, testing strategy references paradigm
+7. **`skills/sdlc-lite-plan/SKILL.md`** — Same WHAT/WHY relaxation, complexity-based trigger
+8. **`skills/sdlc-execute/SKILL.md`** — Full plan context passthrough in dispatch prompts
+9. **`skills/sdlc-lite-execute/SKILL.md`** — Same context passthrough
+10. **`skills/create-test-suite/SKILL.md`** — SDET dispatch references testing paradigm
+11. **`skills/test-loop/SKILL.md`** — "Needs a mock" classified as code structure issue
+12. **All 7 agent-dispatching skills** — Context7 verification instructions added
+13. **`disciplines/coding.md`** — Promoted to active, testability architecture section
+14. **`disciplines/testing.md`** — Testing paradigm summary with test type selection table
+15. **`knowledge/agent-context-map.yaml`** — Testing paradigm mapped to sdet and code-reviewer
+16. **Skill renames** — ad-hoc-planning → sdlc-lite-plan, ad-hoc-execution → sdlc-lite-execute, sdlc-planning → sdlc-plan, sdlc-execution → sdlc-execute, sdlc-new merged into sdlc-plan Step 0, ad-hoc-review → diff-review
+
+**Rationale:** The old binary (SDLC vs ad hoc) didn't match how work actually happens. Most real sessions are CD-driven iteration with agents — not plan-driven execution. The three-tier model gives that pattern a name and rules. The WHAT/WHY relaxation stops throwing away useful planning context. Context7 and the testing paradigm address the two biggest quality gaps: stale API knowledge and untestable code structure.
+
+---
+
 ## 2026-03-16: Post-Audit Process Improvements
 
 **Origin:** Independent SDLC compliance audit of mission-control planning and execution sessions (02257258, db1105a9)
