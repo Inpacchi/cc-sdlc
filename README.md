@@ -21,7 +21,7 @@ The framework is designed to be adopted incrementally — start with the core pr
 | `skills/` | Claude Code skills for SDLC workflow automation |
 | `agents/` | Agent definitions — `sdlc-compliance-auditor` + `AGENT_TEMPLATE.md` for adding your own |
 | `skeleton/` | Directory structure manifest for bootstrapping new projects |
-| `plugins/` | Plugin setup guides (oberskills is required, design-for-ai is optional) |
+| `plugins/` | Plugin setup guides (context7 is required; oberskills, design-for-ai are optional) |
 | `improvement-ideas/` | Design proposals for evolving the SDLC itself |
 
 ## Quick Start
@@ -59,8 +59,8 @@ Idea → Spec (CD approves) → Plan (reviewed) → Execute → Review → Resul
 
 | Trigger | What Happens |
 |---------|-------------|
-| "Let's build X" / "New feature" | Invokes `sdlc-planning` — spec + plan |
-| "Execute the plan" | Invokes `sdlc-execution` — implement + review + result |
+| "Let's build X" / "New feature" | Invokes `sdlc-plan` — spec + plan |
+| "Execute the plan" | Invokes `sdlc-execute` — implement + review + result |
 | "Let's catalog our ad hoc work" | Invokes `sdlc-reconciliation` — reconciles untracked commits |
 | "Let's organize the chronicles" | Invokes `sdlc-archive` — moves completed work to archive |
 | "Let's run an SDLC compliance audit" | Invokes `sdlc-compliance-auditor` agent |
@@ -78,8 +78,8 @@ Sequential identifiers (D1, D2, ... Dnn) that track work across the project life
 - **CD (Claude Director):** The human — sets direction, approves specs, makes product decisions
 - **CC (Claude Code):** The entire agent system — specs, plans, implements, reviews
 
-### Ad Hoc Work
-Not everything needs a full spec → plan → result cycle. Bug fixes, UI tweaks, and config changes can proceed ad hoc. Reconcile periodically with `sdlc-reconciliation`.
+### Three Tiers
+Not everything needs a full spec → plan → result cycle. **SDLC-Lite** provides a lightweight plan without deliverable tracking. **Direct dispatch** skips the plan entirely — CD steers in real-time, agents do the work. Reconcile untracked work periodically with `sdlc-reconciliation`.
 
 ## Knowledge Layer
 
@@ -95,8 +95,12 @@ Disciplines (parking lots) → Knowledge YAMLs (structured patterns) → Skills 
 
 This layer starts mostly empty and fills in as your project accumulates insights.
 
-## Optional Plugins
+## Plugins
 
+### Required
+- **context7** — Live library/framework documentation lookups. Prevents stale API knowledge from training data. See `plugins/context7-setup.md`.
+
+### Optional
 - **oberskills** — Prompt engineering and web research utilities. See `plugins/oberskills-setup.md` for installation.
 - **design-for-ai** — Design theory integration (`[PLUGIN: design-for-ai]`). Enriches `design-consult` skill with Design for Hackers principles. See `plugins/design-for-ai-setup.md`.
 

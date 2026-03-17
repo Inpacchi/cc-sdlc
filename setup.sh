@@ -152,7 +152,11 @@ done
 [ -d "$SCRIPT_DIR/skills" ] && install_tree "$SCRIPT_DIR/skills" "$TARGET_DIR/.claude/skills" "$SCRIPT_DIR/skills"
 [ -d "$SCRIPT_DIR/agents" ] && install_tree "$SCRIPT_DIR/agents" "$TARGET_DIR/.claude/agents" "$SCRIPT_DIR/agents"
 
-# oberskills setup guide is always installed (required dependency)
+# context7 setup guide is always installed (required dependency)
+[ -f "$SCRIPT_DIR/plugins/context7-setup.md" ] && install_file "$SCRIPT_DIR/plugins/context7-setup.md" "$SDLC_TARGET/plugins/context7-setup.md"
+# LSP setup guide is always installed (highly recommended)
+[ -f "$SCRIPT_DIR/plugins/lsp-setup.md" ] && install_file "$SCRIPT_DIR/plugins/lsp-setup.md" "$SDLC_TARGET/plugins/lsp-setup.md"
+# oberskills setup guide is always installed (optional but recommended)
 [ -f "$SCRIPT_DIR/plugins/oberskills-setup.md" ] && install_file "$SCRIPT_DIR/plugins/oberskills-setup.md" "$SDLC_TARGET/plugins/oberskills-setup.md"
 [ -f "$SCRIPT_DIR/plugins/README.md" ] && install_file "$SCRIPT_DIR/plugins/README.md" "$SDLC_TARGET/plugins/README.md"
 
@@ -254,8 +258,14 @@ if [ "$WITH_OPTIONAL" = "false" ]; then
   echo "Optional: run with --with-optional to install design-for-ai plugin guide."
 fi
 echo ""
-echo "IMPORTANT: Install the oberskills plugin — it is required for agent dispatch."
-echo "  See ops/sdlc/plugins/oberskills-setup.md for instructions."
+echo "IMPORTANT: Install the context7 plugin — it is required for library doc verification."
+echo "  See ops/sdlc/plugins/context7-setup.md for instructions."
+echo ""
+echo "HIGHLY RECOMMENDED: Install the LSP plugin for your project's language(s)."
+echo "  See ops/sdlc/plugins/lsp-setup.md for the full list."
+echo ""
+echo "Optional plugins: oberskills (prompt engineering + web research), design-for-ai (design theory)."
+echo "  See ops/sdlc/plugins/README.md for details."
 
 [ "$FAILED" -gt 0 ] && exit 1
 exit 0

@@ -231,23 +231,20 @@ Execution phases are gated:
 
 ---
 
-## Ad Hoc Work
+## Work Without Plans
 
-Not everything needs the full Spec → Planning → Result flow.
+Not everything needs the full Spec → Planning → Result flow. The SDLC supports three tiers:
 
-**Legitimate ad hoc work:**
-- Bug fixes and CC corrections
-- UI tweaks (move a button, adjust spacing)
-- Missed requirements discovered during implementation
-- Quick iterations based on feedback
+| Tier | When | Artifact |
+|------|------|----------|
+| **Full SDLC** | New features, architectural changes, new subsystems | Deliverable ID, spec, plan, result doc |
+| **SDLC-Lite** | Complex enough to benefit from a reviewed plan, not full tracking | Plan file only |
+| **Direct dispatch** | CD steers in real-time, agents do the work | No artifact — scope stated in conversation |
 
-**When to go ad hoc:**
-- Work is small (<30 min)
-- It's a correction, not a new feature
-- Full spec would be overhead
+**Direct dispatch** covers what was previously called "ad hoc work" — bug fixes, UI tweaks, quick iterations, corrections. The key rule is that domain agents still do the implementation and review work, even without a plan file. CC orchestrates, never self-implements.
 
 **Reconciliation:** Periodically say **"Let's catalog our ad hoc work"** to:
-- Review what was done since last formal deliverable
+- Review what was done since the last formal deliverable
 - Update specs if requirements changed
 - Create lightweight completion records if needed
 - Resume formal process cleanly

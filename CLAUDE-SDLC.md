@@ -9,8 +9,8 @@ This file is a **drop-in addition** for your project's `CLAUDE.md`. Copy the rel
 This project follows a lightweight SDLC framework. Reference material lives in `ops/sdlc/`.
 
 The SDLC defines what artifacts a deliverable requires; two skills define how CC produces them:
-- `sdlc-planning` — spec + plan (domain agents write and review)
-- `sdlc-execution` — implement + review + commit (domain agents execute and review)
+- `sdlc-plan` — spec + plan (domain agents write and review)
+- `sdlc-execute` — implement + review + commit (domain agents execute and review)
 
 ### Roles
 - **CD (Claude Director):** Human — sets direction, approves specs, makes product decisions
@@ -42,49 +42,79 @@ CC produces SDLC artifacts across two skills:
 | Complete | `dNN_name_COMPLETE.md` | `d1_auth_COMPLETE.md` |
 | Blocked | `dNN_name_BLOCKED.md` | `d1_auth_BLOCKED.md` |
 
-### When to Use Full Process vs. Ad Hoc
-- **Full process (deliverable ID + skill):** New features, architectural changes, new integrations, multi-package work
-- **Ad hoc OK:** Bug fixes, UI tweaks, config changes, corrections (<30 min)
-- **Before touching any file:** If your planned changes span more than one file, or introduce anything new (component, hook, store, route, type), stop. State the scope out loud and ask CD whether to track it.
+### Three Tiers of Work
+
+| Tier | When | What Happens |
+|------|------|-------------|
+| **Full SDLC** (`sdlc-plan` → `sdlc-execute`) | New features, architectural changes, new integrations, new subsystems | Deliverable ID, spec, plan, result doc, chronicle |
+| **SDLC-Lite** (`sdlc-lite-plan` → `sdlc-lite-execute`) | Work complex enough to benefit from a reviewed plan up front, but doesn't warrant full tracking | Plan file, agent review, no deliverable tracking |
+| **Direct dispatch** (no skill) | CD is steering in real-time — describing goals, testing results, giving feedback | Agents do the work, CC orchestrates, CD drives iteration |
+
+**Choosing a tier:** The question is whether the work benefits from a **plan artifact that survives context clears**. If yes → SDLC or SDLC-Lite. If the user is actively steering and iterating in conversation → direct dispatch.
+
+**Before touching any file:** If you identify non-trivial complexity (cross-domain, non-obvious approach, new subsystems), surface the scope and ask CD which tier to use. The user should never be in the position of catching a missed planning gate.
+
+### Direct Dispatch Rules
+
+Direct dispatch is not "no process" — it's process without a plan file. These rules apply whenever you're doing work without invoking a planning or execution skill:
+
+**Agent-first, always.** Domain agents do the implementation and review work. You orchestrate. This is not optional just because there's no plan. If a domain agent exists for the work, dispatch them.
+
+**State scope before dispatching.** Before your first agent dispatch, output a brief scope statement:
+```
+Scope: [what we're doing and why]
+Agents: [who's doing the work]
+```
+This takes 10 seconds and prevents scope drift. It's not a plan — it's a one-time orientation.
+
+**Pass full context to agents.** The dispatch prompt must include everything the agent needs: what to build/fix, which files are involved, relevant constraints, library versions (verify via Context7 when external APIs are involved), and any context from the user's feedback. Agents start fresh — they don't see the conversation.
+
+**Iterate on CD feedback.** When the user tests and reports issues ("that didn't work", "why is this magenta?", screenshots), dispatch the relevant agent to fix — don't fix it yourself. Each round of feedback is a new dispatch with the user's observations as context.
+
+**Review before committing.** When the user signals they're satisfied (or when you've completed a coherent unit of work), dispatch all relevant agents to review the full set of changes before committing. This is the same review-fix loop used in the execution skills — dispatch ALL relevant agents, collect findings, triage, fix, re-review until clean.
+
+**Never self-implement.** The manager rule applies in direct dispatch exactly as it does in plan-based execution. "There's no plan so I'll just do it myself" is not valid. The absence of a plan changes what you produce (no artifact), not how you produce it (agents).
+
+### When to Escalate to a Plan
+
+If you're in direct dispatch and ANY of these become true, stop and ask CD about escalating to SDLC-Lite or full SDLC:
+
+- The scope has grown beyond what was originally stated
+- You're on your third dispatch round and the work isn't converging
+- The changes would benefit from surviving a context clear (long-running, will continue next session)
+- You're introducing new abstractions (components, hooks, stores, routes, types, events)
 
 ### Workflow Rules
 
-**STOP and invoke `sdlc-planning` when ANY of the following is true:**
+**STOP and invoke `sdlc-plan` when ANY of the following is true:**
 
-- You have finished exploring the codebase and find yourself forming a plan to change more than one file
-- The user asks to build, add, improve, or redesign any feature or page
-- The work would touch multiple files, multiple packages, or introduce new components, hooks, stores, routes, types, or events
-- You are about to spawn implementation agents
-- You are unsure whether something is ad hoc or substantial — default to planning, not implementation
+- The user asks to build a new feature, new integration, or new subsystem
+- The work introduces new architectural patterns
+- You are unsure whether something needs full tracking — default to asking, not implementing
 
-Note: these triggers fire on **your own intent to act**, not only on user keywords. If you explored code and concluded "I should implement X across files A, B, and C" — that is a planning trigger, regardless of what the user said.
+**STOP and invoke `sdlc-lite-plan` when:**
 
-**Invoke `sdlc-execution` only when:**
-- An approved plan exists at `docs/current_work/planning/dNN_name_plan.md`
+- The work is complex enough to benefit from agent review of a plan before execution
+- The work will likely span a context clear
+- Multiple interacting changes where getting the approach wrong is costly
+
+**Invoke `sdlc-execute` / `sdlc-lite-execute` only when:**
+- An approved plan exists at the expected path
 - The user explicitly says "execute the plan" or references a specific plan file
-
-**You MUST use domain agents (not do the work yourself) when:**
-- The task falls within a domain agent's expertise
-- You are writing specs, plans, or reviewing code — dispatch the relevant agents
-- The agent with domain expertise writes and reviews. You orchestrate.
-
-**Ad hoc work (no skill invocation required):**
-- Single-file bug fixes, config changes, dependency updates
-- Work completable in under 30 minutes that does not introduce new abstractions
 
 **When starting any session:** Check `docs/current_work/` for in-progress deliverables before accepting new work.
 
 ### The Failure Pattern (What Not To Do)
 
-This is the exact sequence that bypasses SDLC tracking incorrectly:
+This is the exact sequence that bypasses process incorrectly:
 
 1. User mentions improvements to a page or feature
 2. Claude Code explores the codebase and reads relevant files
 3. Claude Code identifies 4-6 files that need to change, new components needed, store interactions required
-4. **Claude Code begins spawning implementation agents or writing code**
-5. User has to interrupt: "should we make a plan?"
+4. **Claude Code begins writing code itself instead of dispatching agents**
+5. User has to interrupt: "should we make a plan?" or "use the agents"
 
-Step 4 is wrong. After step 3, the correct action is to surface the scope assessment and ask whether to plan or proceed ad hoc. The user should never be in the position of catching a missed planning gate.
+Step 4 is wrong. After step 3, the correct action is to surface the scope assessment and ask which tier to use — or if the user is already steering, state scope and start dispatching agents.
 
 ### Compliance Auditing
 Run `"Let's run an SDLC compliance audit"` periodically (~every 2-4 weeks or at each version bump). See `ops/sdlc/process/compliance_audit.md`.
@@ -105,12 +135,42 @@ Run `"Let's run an SDLC compliance audit"` periodically (~every 2-4 weeks or at 
 
 ---
 
+## Verification Policy (Zero-Assumption Rule)
+
+**Assumptions are forbidden.** Every claim about external behavior, API shape, library usage, or service configuration must be verified before acting on it. "I'm pretty sure" is not good enough — verify or disclose.
+
+### External Libraries & Frameworks
+- Before using any external library API, **verify it via Context7** (`mcp__context7__resolve-library-id` → `mcp__context7__query-docs`). Do not rely on training data for API signatures, parameter names, default behaviors, or version-specific features.
+- Check the project's actual dependency version (package.json, lock files, etc.) before querying docs — version matters.
+- If Context7 does not have docs for the library, say so and ask the user for a documentation source.
+
+### Codebase Knowledge
+- Before making claims about how this codebase works, **read the actual code**. Do not infer file structure, function signatures, or module behavior from naming conventions alone.
+- When modifying code, always read the target file and its immediate dependencies first.
+
+### External Services & APIs
+- Do not assume endpoint shapes, authentication methods, rate limits, or response formats. Look up documentation via Context7 or web search, or ask the user.
+- If an external API has changed between versions, verify the version in use before giving guidance.
+
+### When You Don't Know
+- **Say "I don't know" or "Let me verify that."** Do not fabricate an answer.
+- If verification tools are unavailable or inconclusive, explicitly flag the uncertainty: "I wasn't able to verify this — here's my best understanding, but please confirm."
+- Never present unverified information with confidence.
+
+### Agent Dispatch Integration
+When dispatching domain agents for phases that involve external library integration, include in the dispatch prompt:
+1. The specific libraries involved and their versions (from the project's dependency files)
+2. Instructions to use Context7 for API verification before writing integration code
+3. A reminder that training-data knowledge of library APIs is not sufficient — live docs are required
+
+---
+
 ## Use AskUserQuestion for All Questions
 
 **Always use the `AskUserQuestion` tool when you need user input.** Do not type questions as conversational text. This includes:
 
 - Design decisions and trade-offs
-- Scope confirmation ("should we plan or go ad hoc?")
+- Scope confirmation ("should we plan this, use SDLC-Lite, or direct dispatch?")
 - Data accuracy questions ("should this be X or Y?")
 - Clarification of ambiguous requirements
 - Escalation when stuck (3-strike rule, blocked work)
@@ -153,6 +213,14 @@ Assert (plausible) → Search to confirm → Correct when challenged
 
 If you haven't read the relevant file, say so: *"Let me check"* — then check.
 
+**Use LSP when available.** For type-system and call-graph questions, prefer LSP over Grep:
+- `hover` for type signatures (don't read a file and infer the type)
+- `goToDefinition` to navigate to source (don't Glob for the filename)
+- `findReferences` for all callers (don't Grep for the function name — it misses renames and aliased imports)
+- `goToImplementation` for interface implementations
+
+Fall back to Grep for string literals, config keys, and non-code content (YAML, markdown). See `ops/sdlc/plugins/lsp-setup.md` for setup.
+
 ---
 
 ## Debugging Escalation Rule
@@ -180,7 +248,10 @@ Add these to your project's `.claude/settings.json` (create if it doesn't exist)
       "Bash(git diff*)",
       "Bash(git log*)",
       "Bash(git add*)",
-      "Bash(git commit*)"
+      "Bash(git commit*)",
+      "mcp__context7__resolve-library-id",
+      "mcp__context7__query-docs",
+      "LSP"
     ]
   }
 }
@@ -189,6 +260,8 @@ Add these to your project's `.claude/settings.json` (create if it doesn't exist)
 **What these do:**
 - Pre-approve common git read operations so Claude Code can check status and history without prompting
 - Pre-approve git staging and commit so the commit skill runs without interruption
+- Pre-approve Context7 documentation lookups so verification happens without prompting (required by the Verification Policy)
+- Pre-approve LSP operations so code intelligence happens without prompting (highly recommended — see `ops/sdlc/plugins/lsp-setup.md`)
 
 **Optional additions** (tailor to your project's build tooling):
 

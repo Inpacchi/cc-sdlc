@@ -91,7 +91,7 @@ Ask: "Does this categorization look correct? Any adjustments before I create the
 Read `skeleton/manifest.json` from the cc-sdlc package to get the canonical directory list. Create each directory:
 
 ```bash
-mkdir -p docs/current_work/{specs,planning,results,issues,audits,ad-hoc}
+mkdir -p docs/current_work/{specs,planning,results,issues,audits,sdlc-lite}
 mkdir -p docs/chronicle
 mkdir -p docs/testing/{specs,knowledge}
 ```
@@ -180,9 +180,10 @@ Idea → Spec (CD approves) → Plan (reviewed) → Execute → Review → Resul
 - **Active work:** `docs/current_work/`
 - **Archived work:** `docs/chronicle/`
 
-### When to Use Full Process vs. Ad Hoc
-- **Full process (deliverable ID):** New features, architectural changes, multi-package work
-- **Ad hoc OK:** Bug fixes, UI tweaks, config changes, corrections (<30 min)
+### When to Use Full Process vs. SDLC-Lite vs. Direct Dispatch
+- **Full SDLC (deliverable ID):** New features, architectural changes, new integrations, new subsystems
+- **SDLC-Lite:** Complex enough to benefit from a reviewed plan, but doesn't need full tracking
+- **Direct dispatch:** CD steers in real-time — agents do the work, no plan file needed
 
 ### Commands
 | Command | Action |
@@ -250,7 +251,7 @@ Verify `docs/_index.md` exists and has the correct format.
 ## SDLC Implementation Complete
 
 ### Structure Created
-- current_work/: specs, planning, results, issues, audits, ad-hoc
+- current_work/: specs, planning, results, issues, audits, sdlc-lite
 - chronicle/: N concepts with indexes
 - templates/: M templates copied
 - docs/_index.md: deliverable catalog initialized
@@ -259,8 +260,11 @@ Verify `docs/_index.md` exists and has the correct format.
 ### Next Steps
 1. Review the concept indexes for accuracy
 2. Start using deliverable IDs (D1, D2, ...) for new work
-3. Run an SDLC compliance audit: "Let's run an SDLC compliance audit"
-4. See ops/sdlc/process/overview.md for workflow details
+3. Install required plugin: **context7** — see ops/sdlc/plugins/context7-setup.md
+4. Install LSP plugin for your language(s) (highly recommended) — see ops/sdlc/plugins/lsp-setup.md
+   - Optional: oberskills (prompt engineering + web research) — see ops/sdlc/plugins/oberskills-setup.md
+5. Run an SDLC compliance audit: "Let's run an SDLC compliance audit"
+6. See ops/sdlc/process/overview.md for workflow details
 ```
 
 ---
@@ -297,3 +301,4 @@ Verify `docs/_index.md` exists and has the correct format.
 4. **Adapt to project size** — Small projects may not need all concepts
 5. **Document decisions** — Record why things are organized the way they are
 6. **Install skills** — After bootstrapping, ask if the user wants the SDLC skills installed in `.claude/skills/`
+7. **Install required plugins** — Remind the user to install context7 (required) and optionally oberskills (see `ops/sdlc/plugins/README.md`)

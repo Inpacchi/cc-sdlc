@@ -50,20 +50,26 @@ Please read:
 
 | Task | What to Say |
 |------|-------------|
-| Start new deliverable | "Let's create a spec for D[next number]: [feature name]" |
+| Start new deliverable (Full SDLC) | "Let's create a spec for D[next number]: [feature name]" |
+| Lightweight plan (SDLC-Lite) | "Let's make a lite plan for [task]" |
 | Implement a spec | "Please implement D42 following the planning doc" |
 | Archive completed work | "Let's organize the chronicles" |
-| **Reconcile ad hoc work** | **"Let's catalog our ad hoc work"** |
+| **Reconcile untracked work** | **"Let's catalog our ad hoc work"** |
 | **Audit compliance** | **"Let's run an SDLC compliance audit"** |
 | **Create a new agent** | **Use `/plugin-dev:agent-development`** |
 | **Migrate framework** | **"Migrate my SDLC framework to the latest cc-sdlc version"** |
 | Check process | "What's our SDLC workflow?" |
 
+### Three Tiers of Work
+- **Full SDLC** — New features, architectural changes, new subsystems → deliverable ID, spec, plan, result
+- **SDLC-Lite** — Complex enough for a reviewed plan, doesn't need full tracking → plan file only
+- **Direct dispatch** — CD steers in real-time, agents do the work → no plan file, no skill invocation
+
 ---
 
-## After Ad Hoc Work
+## After Untracked Work
 
-Been doing quick fixes without formal specs? That's fine. When ready to reconcile:
+Been doing direct dispatch or quick fixes without formal specs? That's fine. When ready to reconcile:
 
 ```
 Let's catalog our ad hoc work.
