@@ -25,6 +25,7 @@ A compliance audit compares a project's current documentation structure and prac
 | current_work hygiene | No completed deliverables lingering | Specs/results archived after chronicle org |
 | Directory structure | Standard directories exist | `current_work/{specs,planning,results,issues}` |
 | Concept registry | Chronicle organization guide is current | All concepts listed |
+| Migration integrity | `.sdlc-manifest.json` version, framework file completeness, content-merge correctness, stale references | Manifest current, all framework files present, no stale references |
 
 ---
 
@@ -172,6 +173,9 @@ Use this as a quick pass/fail checklist:
 - [ ] No orphaned prompts for completed deliverables
 - [ ] Standard directory structure exists
 - [ ] Concept registry (if maintained) is up to date
+- [ ] `.sdlc-manifest.json` exists and `source_version` is current
+- [ ] All framework files from manifest's `source_files` are present
+- [ ] No stale references to removed framework features in skills or agents
 
 ---
 

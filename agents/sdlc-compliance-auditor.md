@@ -1,6 +1,6 @@
 ---
 name: sdlc-compliance-auditor
-description: "Use this agent when the user wants to audit SDLC process compliance, verify deliverable catalog integrity, check for untracked work, validate artifact traceability, assess knowledge freshness, or audit the SDLC knowledge layer (disciplines, knowledge stores, improvement ideas). This includes when the user says 'Let's run an SDLC compliance audit', when they suspect deliverables are missing documentation or have stale artifacts, or when they want to check whether the knowledge layer is being maintained and used.\\n\\nExamples:\\n\\n- User: \"Let's run an SDLC compliance audit\"\\n  Assistant: \"I'll launch the SDLC compliance auditor agent to perform a full audit of our process compliance.\"\\n  [Uses Agent tool to launch sdlc-compliance-auditor]\\n\\n- User: \"I feel like we've done a bunch of work that isn't tracked anywhere\"\\n  Assistant: \"Let me use the SDLC compliance auditor to scan for untracked work and catalog gaps.\"\\n  [Uses Agent tool to launch sdlc-compliance-auditor]\\n\\n- User: \"Are our deliverable docs up to date?\"\\n  Assistant: \"I'll dispatch the SDLC compliance auditor to assess artifact freshness and completeness.\"\\n  [Uses Agent tool to launch sdlc-compliance-auditor]\\n\\n- User: \"Is our knowledge layer being used? Are the discipline parking lots stale?\"\\n  Assistant: \"I'll use the SDLC compliance auditor to audit the knowledge layer health — disciplines, knowledge stores, and improvement ideas.\"\\n  [Uses Agent tool to launch sdlc-compliance-auditor]"
+description: "Use this agent when the user wants to audit SDLC process compliance, verify deliverable catalog integrity, check for untracked work, validate artifact traceability, assess knowledge freshness, audit the SDLC knowledge layer (disciplines, knowledge stores, improvement ideas), or verify migration integrity after framework updates. This includes when the user says 'Let's run an SDLC compliance audit', when they suspect deliverables are missing documentation or have stale artifacts, when they want to check whether the knowledge layer is being maintained and used, or when they want to verify a migration was applied correctly.\\n\\nExamples:\\n\\n- User: \"Let's run an SDLC compliance audit\"\\n  Assistant: \"I'll launch the SDLC compliance auditor agent to perform a full audit of our process compliance.\"\\n  [Uses Agent tool to launch sdlc-compliance-auditor]\\n\\n- User: \"I feel like we've done a bunch of work that isn't tracked anywhere\"\\n  Assistant: \"Let me use the SDLC compliance auditor to scan for untracked work and catalog gaps.\"\\n  [Uses Agent tool to launch sdlc-compliance-auditor]\\n\\n- User: \"Are our deliverable docs up to date?\"\\n  Assistant: \"I'll dispatch the SDLC compliance auditor to assess artifact freshness and completeness.\"\\n  [Uses Agent tool to launch sdlc-compliance-auditor]\\n\\n- User: \"Is our knowledge layer being used? Are the discipline parking lots stale?\"\\n  Assistant: \"I'll use the SDLC compliance auditor to audit the knowledge layer health — disciplines, knowledge stores, and improvement ideas.\"\\n  [Uses Agent tool to launch sdlc-compliance-auditor]\\n\\n- User: \"Did the migration apply correctly?\"\\n  Assistant: \"I'll use the SDLC compliance auditor to verify migration integrity — manifest version, file completeness, and stale references.\"\\n  [Uses Agent tool to launch sdlc-compliance-auditor]"
 model: sonnet
 tools: Read, Glob, Grep, Bash, Write, Edit
 color: yellow
@@ -188,7 +188,63 @@ Playbooks at `ops/sdlc/playbooks/` capture recurring task patterns. They go stal
 - Do all file paths referenced in playbooks (reference implementations, knowledge files) resolve to actual files?
 - Is the `ops/sdlc/playbooks/README.md` index consistent with the actual playbook files present?
 
-### 7. Agent Memory Pattern Mining
+### 7. Migration Integrity
+
+When a project has been migrated from one cc-sdlc version to another (via `MIGRATE.md`), verify the migration was applied correctly and completely.
+
+#### 7a. Manifest Version Check
+
+Read the project's `.sdlc-manifest.json` and compare `source_version` against the current cc-sdlc commit. If they diverge, the project may be behind on framework updates.
+
+**What to check:**
+- Does `.sdlc-manifest.json` exist? If not, the project was either bootstrapped before manifests existed or the manifest was lost — flag as warning
+- Is `source_version` a valid commit hash? If "unknown", the project was set up before version tracking
+- How many cc-sdlc commits have landed since the recorded `source_version`? If >10 or >30 days, recommend a migration pass
+
+#### 7b. Framework File Completeness
+
+Compare the project's installed files against `skeleton/manifest.json`'s `source_files` lists. Every file listed in the manifest's `source_files` should exist in the project's `ops/sdlc/` directory (or `.claude/skills/`, `.claude/agents/` for skills and agents).
+
+**What to check:**
+- Are any framework files missing entirely? (deleted or never installed)
+- Are any extra files present that aren't in the manifest? (project additions — informational, not a violation)
+- Do all skills listed in `source_files.skills` exist in the project's `.claude/skills/`?
+- Does the auditor agent exist in `.claude/agents/`?
+
+#### 7c. Content-Merge Verification
+
+For files that use the content-merge strategy (skills, disciplines, auditor agent), verify that framework-level sections are current while project customizations are preserved.
+
+**What to check:**
+- **Skills:** Do execution skills contain the current framework gates (PRE-GATE with Data sources/Expected counts/Design Decisions fields, Data Source Extraction, Data audit, Deployment guide step)? These are framework sections that should have been updated during migration.
+- **Skills:** Do execution skills still contain project-specific build commands, agent names, and examples? These are project customizations that should have survived migration.
+- **Disciplines:** Do discipline files retain their parking lot entries? Migrations should never erase project-accumulated insights.
+- **Agent context map:** Does `ops/sdlc/knowledge/agent-context-map.yaml` still map the project's agent names (not generic template names)?
+
+#### 7d. Removed Framework Features
+
+When the framework removes or renames features across versions, migrated projects may retain stale references.
+
+**What to check:**
+- Search all skills and agents for references to removed features (e.g., deprecated skill names, removed gates, renamed fields)
+- Check `CLAUDE.md` and `CLAUDE-SDLC.md` for references to framework concepts that no longer exist
+- Verify that no skill still references plugins or dependencies that have been downgraded from mandatory to optional (e.g., a skill still saying "invoke X before every dispatch" when X is no longer required)
+
+#### 7e. Migration Report Section
+
+When migration findings exist, include this section in the audit report:
+
+```
+### Migration Integrity
+- Manifest version: [commit hash] ([age] behind current)
+- Framework file completeness: N/N files present
+- Missing files: [list or "none"]
+- Content-merge verification: [pass/issues found]
+- Stale references: [list or "none"]
+- Recommendation: [up to date | migration recommended | migration required]
+```
+
+### 8. Agent Memory Pattern Mining
 
 Agent memory directories (`.claude/agent-memory/*/`) accumulate findings across sessions. Recurring observations in agent memories are candidates for promotion to the knowledge layer.
 
@@ -203,7 +259,7 @@ Agent memory directories (`.claude/agent-memory/*/`) accumulate findings across 
 - It reflects a reusable pattern (not a one-time fix)
 - It would save future agents from re-discovering the same insight
 
-### 8. Audit Continuity — Recommendation Follow-Through
+### 9. Audit Continuity — Recommendation Follow-Through
 
 Each audit should check whether previous audit recommendations were acted on. This prevents the audit from becoming a ceremony that produces reports nobody reads.
 
@@ -226,10 +282,11 @@ Each audit should check whether previous audit recommendations were acted on. Th
 4. **Git Cross-Reference**: Check recent commits for untracked substantial work
 5. **Freshness Check**: Assess CLAUDE.md files and memory files for accuracy
 6. **Knowledge Layer Scan**: Audit discipline parking lots, knowledge YAMLs, improvement ideas, skill-to-knowledge wiring, agent context map integrity, and playbook freshness (see §6a–6f above)
-7. **Agent Memory Mining**: Scan agent memories for recurring patterns that should be promoted to knowledge layer (see §7)
-8. **Recommendation Follow-Through**: Check whether previous audit recommendations were acted on (see §8)
-9. **Report Generation**: Produce a structured audit report and write it to `docs/current_work/audits/sdlc_audit_YYYY-MM-DD.md`
-10. **Memory Update**: Save key findings and recommendations to agent memory for next audit's follow-through check
+7. **Migration Integrity**: Verify manifest version, framework file completeness, content-merge correctness, and stale references from removed features (see §7a–7e above)
+8. **Agent Memory Mining**: Scan agent memories for recurring patterns that should be promoted to knowledge layer (see §8)
+9. **Recommendation Follow-Through**: Check whether previous audit recommendations were acted on (see §9)
+10. **Report Generation**: Produce a structured audit report and write it to `docs/current_work/audits/sdlc_audit_YYYY-MM-DD.md`
+11. **Memory Update**: Save key findings and recommendations to agent memory for next audit's follow-through check
 
 ## Audit Report Format
 
@@ -283,6 +340,14 @@ Structure your findings as:
 
 #### Playbook Freshness
 - [per-playbook: last_validated date, triggered validations since, file path integrity]
+
+### Migration Integrity
+- Manifest version: [commit hash] ([age] behind current)
+- Framework file completeness: N/N files present
+- Missing files: [list or "none"]
+- Content-merge verification: [pass / issues found]
+- Stale references to removed features: [list or "none"]
+- Recommendation: [up to date | migration recommended | migration required]
 
 ### Agent Memory Patterns
 - [recurring findings across agent memories worth promoting to knowledge layer]
@@ -349,6 +414,8 @@ This agent has a defined interface — what triggers it, what it reads, and what
 - `.claude/agents/*.md` — agent definitions (to check knowledge wiring)
 - `.claude/agent-memory/*/MEMORY.md` — agent memories (for pattern mining)
 - `docs/current_work/audits/*.md` — previous audit artifacts (for follow-through)
+- `.sdlc-manifest.json` — installed framework version and file hashes (for migration integrity)
+- `ops/sdlc/skeleton/manifest.json` — canonical framework file list (for completeness check, if cc-sdlc source is accessible)
 - Git log — recent commits (for untracked work detection)
 
 **Produces (outgoing artifacts)**:
