@@ -122,6 +122,32 @@ When you make changes to SDLC process files (skills, agents, process docs, CLAUD
 ### Compliance Auditing
 Run `"Let's run an SDLC compliance audit"` periodically (~every 2-4 weeks or at each version bump). See `ops/sdlc/process/compliance_audit.md`.
 
+**Presenting audit results:** When the auditor returns, present results to CD in this standardized format:
+
+```
+[Audit Type]: [Score]/10 — [Verdict]
+
+[Verdict Label]: [Pass/Fail/Partial]
+
+[1-2 sentence summary of what was checked and the outcome]
+
+Action Items
+
+| # | Severity | Finding | Action |
+|---|----------|---------|--------|
+| 1 | CRITICAL/WARNING/INFO | [concise finding] | [what to do] |
+| 2 | ... | ... | ... |
+```
+
+Rules:
+- One-line header with score and verdict
+- Brief summary paragraph — no more than 2 sentences
+- All findings in a single table with Severity, Finding, and Action columns
+- Severity levels: CRITICAL, WARNING, INFO, Cosmetic
+- Action column says what to do (not just "see report") — e.g., "Fixed during audit", "Remove old directory", "Historical only, no risk"
+- No narrative between findings — the table IS the report
+- Offer to fix actionable items at the end
+
 ### SDLC Commands
 
 | Command | Action |
