@@ -176,7 +176,7 @@ The centralized agent-to-knowledge mapping at `ops/sdlc/knowledge/agent-context-
 - Do all file paths listed in the map resolve to actual files?
 - Are there knowledge YAML files in `ops/sdlc/knowledge/` that exist but are NOT referenced by any agent mapping? (potential gap)
 - Are there agents in the planning/execution skills' agent tables that would clearly benefit from a knowledge mapping but are listed as unmapped?
-- Is the map referenced by the skills that should consult it? (`sdlc-execution`, `sdlc-planning`)
+- Is the map referenced by the skills that should consult it? (`sdlc-execute`, `sdlc-plan`)
 
 #### 6f. Playbook Freshness
 
@@ -405,7 +405,7 @@ This agent has a defined interface — what triggers it, what it reads, and what
 
 **Reads (incoming knowledge)**:
 - `docs/_index.md` — deliverable catalog
-- `docs/current_work/**/*` — active specs, plans, results, ad hoc plans
+- `docs/current_work/**/*` — active specs, plans, results, SDLC-Lite plans
 - `docs/chronicle/**/*` — archived deliverables
 - `ops/sdlc/disciplines/*.md` — discipline parking lots
 - `ops/sdlc/knowledge/**/*.yaml` — structured knowledge stores

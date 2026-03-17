@@ -44,7 +44,7 @@ Which deliverable do you want to resume? (number)
 
    | Stage | Suggested Action |
    |-------|-----------------|
-   | Spec written | "Spec needs CD approval, then planning. To start planning, say: **invoke sdlc-planning**" |
+   | Spec written | "Spec needs CD approval, then planning. To start planning, say: **invoke sdlc-plan**" |
    | Plan ready | "Plan is approved and ready. To execute, say: **Execute the plan at docs/current_work/planning/dNN_name_plan.md**" |
    | Complete | "Work is done. To archive, say: **Let's organize the chronicles**" |
    | Blocked | "This deliverable is blocked. Here's the issue:" then show the issue content |
@@ -53,7 +53,7 @@ Present the loaded artifact summary (title, key sections) and the suggested acti
 
 ## Integration
 - **Depends on:** `docs/current_work/` (scans for in-progress deliverables), `docs/_index.md` (catalog)
-- **Routes to:** `sdlc-planning` (if spec/plan stage), `sdlc-execution` (if plan approved), `sdlc-archive` (if complete)
+- **Routes to:** `sdlc-plan` (if spec/plan stage), `sdlc-execute` (if plan approved), `sdlc-archive` (if complete)
 
 ## Red Flags
 
@@ -64,5 +64,5 @@ Present the loaded artifact summary (title, key sections) and the suggested acti
 | "The stage is obvious, skip the assessment" | Cross-reference which artifacts exist. A missing plan file changes the suggested action. |
 
 ## Failure Guards
-- If `docs/current_work/` is empty or missing, tell the user and suggest `sdlc-new` or `sdlc-status`
+- If `docs/current_work/` is empty or missing, tell the user and suggest `sdlc-plan` or `sdlc-status`
 - If stage shows "Complete", remind the user that archiving is still pending via `sdlc-archive`

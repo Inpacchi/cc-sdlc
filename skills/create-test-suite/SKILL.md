@@ -2,12 +2,12 @@
 name: create-test-suite
 description: >
   Generate integration and E2E test suites for completed work by dispatching the SDET agent.
-  Analyzes scope (SDLC plan, ad-hoc plan, specific commit, or unstaged changes), designs test
+  Analyzes scope (SDLC plan, SDLC-Lite plan, specific commit, or unstaged changes), designs test
   cases covering happy paths, edge cases, and error scenarios, implements them, then hands off
   to test-loop for the red-green fix cycle.
   Trigger when someone says "create tests", "write tests", "generate test suite",
   "create test suite", "test this work", "write tests for this", or after completing
-  a deliverable or ad-hoc execution.
+  a deliverable or SDLC-Lite execution.
   Do NOT use for running or fixing existing tests — use test-loop for that.
 ---
 
@@ -27,7 +27,7 @@ Determine what work needs tests. If the user didn't specify, ask:
 What work should I create tests for?
 
 1. The current SDLC deliverable plan (docs/current_work/planning/)
-2. The current ad-hoc plan (docs/current_work/ad-hoc/)
+2. The current SDLC-Lite plan (docs/current_work/sdlc-lite/)
 3. A specific commit (provide SHA or "HEAD")
 4. Unstaged changes in the working tree
 ```
@@ -43,7 +43,7 @@ If the user already specified scope and test cases (or said none), skip the ques
 | Source | How to gather context |
 |--------|----------------------|
 | SDLC plan | Read `docs/current_work/planning/dNN_name_plan.md` — extract phases, files, acceptance criteria |
-| Ad-hoc plan | Read `docs/current_work/ad-hoc/{slug}_plan.md` — extract phases, files, acceptance criteria |
+| SDLC-Lite plan | Read `docs/current_work/sdlc-lite/{slug}_plan.md` — extract phases, files, acceptance criteria |
 | Specific commit | Run `git show --stat {sha}` + `git diff {sha}~1 {sha}` — extract changed files and diff |
 | Unstaged changes | Run `git diff` + `git diff --cached` — extract changed files and diff |
 
@@ -63,6 +63,7 @@ The dispatch prompt must include:
 - The scope context gathered in step 0 (changed files, packages, acceptance criteria)
 - Any user-suggested test cases
 - Cross-domain knowledge file paths from the feature's domain agents
+- **Library verification instructions** (when tests involve external library APIs — test frameworks, assertion libraries, mocking tools): verify API usage via Context7 (`mcp__context7__resolve-library-id` → `mcp__context7__query-docs`) before writing tests. Include the test framework name and version from the project's dependency files.
 - These instructions:
 
 ```
@@ -75,8 +76,11 @@ USER-REQUESTED TEST CASES:
 [paste user suggestions, or "None specified"]
 
 GUIDELINES:
-- Primarily write integration and E2E tests. Only write unit tests
-  where they genuinely make sense (pure utility functions, data transformations).
+- Apply the testing paradigm from ops/sdlc/knowledge/testing/testing-paradigm.yaml:
+  - Unit test pure logic (transforms, validators, parsers) — no mocks needed
+  - Integration test I/O boundaries (DB queries, API calls) — hit real systems
+  - E2E test critical user flows — small, curated suite
+  - If a function mixes I/O and logic, flag it as a testability issue — don't mock around it
 - Design test cases from a real user's perspective — what would a user do?
 - Cover: happy paths, edge cases, error scenarios. Use your judgment on which
   edge cases matter.
@@ -120,5 +124,5 @@ If compilation check fails, re-dispatch SDET with the error output. Do not fix t
 ## Integration
 
 - **test-loop** — Receives the created tests and runs the red-green fix cycle
-- **sdlc-execution** — Can be invoked after execution completes to generate tests for the deliverable
-- **ad-hoc-execution** — Same — invoke after ad-hoc work to generate tests
+- **sdlc-execute** — Can be invoked after execution completes to generate tests for the deliverable
+- **sdlc-lite-execute** — Same — invoke after SDLC-Lite work to generate tests

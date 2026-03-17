@@ -4,12 +4,12 @@ description: >
   Fix all findings from the most recent /commit-review — dispatches worker domain agents to fix,
   then runs the review-fix loop until all agents report clean. Triggers on "fix review findings",
   "fix the review", "/commit-fix", "address the findings", "fix all findings".
-  Do NOT use without a prior /commit-review or /ad-hoc-review in this conversation.
+  Do NOT use without a prior /commit-review or /diff-review in this conversation.
 ---
 
 # Fix Review Findings
 
-Fix ALL findings from the most recent `/commit-review` — every critical, major, and minor issue. No filtering, no skipping by severity. Then run the review-fix loop (same as `sdlc-execution` step 2) until every agent reports clean.
+Fix ALL findings from the most recent `/commit-review` — every critical, major, and minor issue. No filtering, no skipping by severity. Then run the review-fix loop (same as `sdlc-execute` step 2) until every agent reports clean.
 
 ## Precondition
 
@@ -55,6 +55,7 @@ Each agent receives:
 - The original diff for context
 - Cross-domain knowledge files from the finding agent (when fixer ≠ finder)
 - Instruction to make the minimal change that addresses each finding — no drive-by refactors, no scope expansion
+- **Library verification instructions** (when the fix involves external library APIs): verify API usage via Context7 (`mcp__context7__resolve-library-id` → `mcp__context7__query-docs`) before writing the fix. Do not rely on training data for API signatures or behaviors.
 
 Agents with no dependency between their fixes run in parallel.
 
@@ -64,7 +65,7 @@ After all agents complete, verify the project builds successfully (`[build comma
 
 ### 3. Review-Fix Loop
 
-Fixes can introduce new issues. Run the same review-fix loop defined in `sdlc-execution` (steps 2a-2d):
+Fixes can introduce new issues. Run the same review-fix loop defined in `sdlc-execute` (steps 2a-2d):
 
 #### 3a. Dispatch ALL Review Agents
 
@@ -174,5 +175,5 @@ Key feedback incorporated:
 Do NOT commit automatically — wait for the user to confirm.
 
 ## Integration
-- **Depends on:** `commit-review` or `ad-hoc-review` (must run first to produce findings)
-- **Sibling:** `ad-hoc-execution` (similar review-fix loop pattern)
+- **Depends on:** `commit-review` or `diff-review` (must run first to produce findings)
+- **Sibling:** `sdlc-lite-execute` (similar review-fix loop pattern)

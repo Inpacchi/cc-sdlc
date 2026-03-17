@@ -1,6 +1,6 @@
 ---
-name: sdlc-planning
-description: Use when starting any new feature, integration, or significant task that needs a spec and plan before implementation. Covers the full planning lifecycle — domain agents write the spec, CD approves it, domain agents write the plan, domain agents review the plan, and the approved plan is saved for handoff to sdlc-execution. Use this BEFORE sdlc-execution. If someone says "let's build X", "new feature", "add support for Y", or presents a problem statement, this skill comes first.
+name: sdlc-plan
+description: Use when starting any new feature, integration, or significant task that needs a spec and plan before implementation. Covers the full planning lifecycle — registers the deliverable ID, domain agents write the spec, CD approves it, domain agents write the plan, domain agents review the plan, and the approved plan is saved for handoff to sdlc-execute. Use this BEFORE sdlc-execute. If someone says "let's build X", "new feature", "add support for Y", "start a new deliverable", "new D-number", "create deliverable", or presents a problem statement, this skill comes first.
 ---
 
 # SDLC Planning
@@ -9,7 +9,7 @@ description: Use when starting any new feature, integration, or significant task
 
 Domain agents own the planning lifecycle: they write the spec, they write the plan, they review the plan. You are the orchestrator — you identify which agents are relevant, dispatch them, and ensure the plan is reviewed and approved before declaring it ready for execution.
 
-**This skill produces the plan. It does NOT execute it.** Execution happens via `sdlc-execution`.
+**This skill produces the plan. It does NOT execute it.** Execution happens via `sdlc-execute`.
 
 **Core principle:** The agent with domain expertise writes and reviews. Never do domain work yourself when an agent exists for it.
 
@@ -25,7 +25,7 @@ Domain agents own the planning lifecycle: they write the spec, they write the pl
 
 | User Intent | Mode | Entry Point |
 |-------------|------|-------------|
-| "Build X", "add Y", "new feature", problem statement | **APPLIER** | Full planning workflow (Step 1) |
+| "Build X", "add Y", "new feature", "start deliverable", problem statement | **APPLIER** | Full planning workflow (Step 0) |
 | "Review this plan", "audit the spec", "check coverage" | **CHECKER** | Audit Workflow below |
 | Unclear | Ask: "Are you starting new work, or reviewing existing?" | — |
 
@@ -49,10 +49,11 @@ When auditing an existing spec or plan (not creating new work):
 
 ## Output
 
-This skill produces two artifacts:
+This skill produces three artifacts:
 
 | Artifact | Path | Step |
 |----------|------|------|
+| Catalog entry | `docs/_index.md` (new row in Active Work table) | 0 |
 | Spec | `docs/current_work/specs/dNN_name_spec.md` | 2 |
 | Plan | `docs/current_work/planning/dNN_name_plan.md` | 5 |
 
@@ -94,6 +95,7 @@ Assess task scope before starting. Create the worktree **before** step 1 if need
 digraph planning {
     rankdir=TB;
 
+    "0. Register deliverable\n-> docs/_index.md" [shape=box];
     "1. Identify relevant domain agents" [shape=box];
     "1b. DISCOVERY-GATE\n- Min questions met?\n- Codebase searched?" [shape=box, style=bold, color=blue];
     "2. Domain agents WRITE the SPEC\n-> docs/current_work/specs/dNN_name_spec.md" [shape=box];
@@ -106,6 +108,7 @@ digraph planning {
     "Incorporate feedback, revise plan" [shape=box];
     "6. Prompt user to begin execution" [shape=doublecircle];
 
+    "0. Register deliverable\n-> docs/_index.md" -> "1. Identify relevant domain agents";
     "1. Identify relevant domain agents" -> "1b. DISCOVERY-GATE\n- Min questions met?\n- Codebase searched?";
     "1b. DISCOVERY-GATE\n- Min questions met?\n- Codebase searched?" -> "2. Domain agents WRITE the SPEC\n-> docs/current_work/specs/dNN_name_spec.md";
     "2. Domain agents WRITE the SPEC\n-> docs/current_work/specs/dNN_name_spec.md" -> "3. CD (human) approves the spec";
@@ -185,11 +188,27 @@ If an agent's domain touches **any aspect** of the task, include them. When in d
 
 ### Agent Dispatch Protocol
 
-Dispatch prompts must describe WHAT/WHY — implementation HOW is the agent's domain. Never narrate readiness ("Ready to dispatch") and wait for user confirmation. The plan is already approved; execution means continuous forward motion.
+Dispatch prompts must pass through all relevant context — outcomes, constraints, and any implementation guidance that would help the agent succeed. Never narrate readiness ("Ready to dispatch") and wait for user confirmation. The plan is already approved; execution means continuous forward motion.
+
+### 0. Register Deliverable
+
+**This step is mandatory for APPLIER mode.** Every new deliverable gets an ID before any planning begins.
+
+1. **Read `docs/_index.md`** to find the next deliverable ID (listed in the header as "Next ID: **DNN**").
+   - If `docs/_index.md` is missing or the Next ID field is absent, stop and alert the user.
+2. **Ask the user for a deliverable name** using AskUserQuestion:
+   > Starting deliverable **DNN**. What's the name? (e.g., "User Authentication", "Payment Integration")
+3. **Create the catalog entry.** Edit `docs/_index.md` to:
+   - Add a new row to the Active Work table with the ID, name, and status "Draft"
+   - Increment the "Next ID" counter in the header
+4. **Confirm and continue:**
+   > Deliverable **DNN — Name** registered. Proceeding to agent selection.
+
+**If a deliverable ID already exists** (user says "plan D7" or references an existing catalog entry), skip registration — read the catalog to confirm the ID exists and proceed to step 1.
 
 ### 1. Identify Relevant Domain Agents
 
-Before anything else, list which agents are relevant and why:
+List which agents are relevant and why:
 
 ```
 Relevant domain agents for this task:
@@ -240,6 +259,8 @@ The primary domain agent writes the core spec. Other relevant agents contribute 
 
 **Research integration:** If the spec requires research into external services, APIs, competitors, or technologies — invoke oberweb for multi-dimensional web research grounded in project context (CLAUDE.md). Incorporate findings into the spec's Design section.
 
+**Library verification:** When the spec involves external libraries or frameworks, verify API capabilities and constraints via Context7 (`mcp__context7__resolve-library-id` → `mcp__context7__query-docs`) before finalizing requirements. Check the project's actual dependency versions (package.json, lock files) — version-specific behavior matters. Pass verified API details to the spec-writing agent so requirements are grounded in real library capabilities, not training-data assumptions.
+
 Reference the template at `ops/sdlc/templates/spec_template.md`. Required fields:
 - Problem statement
 - Requirements (functional + non-functional)
@@ -248,7 +269,7 @@ Reference the template at `ops/sdlc/templates/spec_template.md`. Required fields
 - Data model changes
 - Interface/adapter changes required
 - Depends on (other deliverable IDs)
-- Testing strategy (build-only / manual QA / unit tests / E2E)
+- Testing strategy — informed by the testing paradigm (`ops/sdlc/knowledge/testing/testing-paradigm.yaml`): unit tests for pure logic, integration tests for I/O boundaries, E2E for critical user flows. Identify which code layers the feature introduces and match test types accordingly.
 - Success criteria
 - Constraints
 - Open questions / unknowns — explicitly state what the spec does NOT know yet. Each unknown is a risk; the plan must address or accept each one.
@@ -340,29 +361,34 @@ Example: For a new frontend feature, `frontend-developer` writes the plan, with 
 The plan MUST include:
 - **Phases with explicit dependencies** — which phases can run in parallel, which must sequence
 - **Agent assignments** — which domain agent owns each phase/task
-- **WHAT and WHY, never HOW** — Plans specify what must happen and why. Implementation details (HOW) are discovered by the executing agent with fresh context from the actual codebase. Over-specifying HOW in the plan removes the agent's domain contribution and turns execution into typing. Constraint values are part of WHAT — if a phase specifies a limit, threshold, maximum, or allowed set, the value must be concrete (e.g., "maximum 4 copies per card" not "a maximum copy count"). If the value is a product decision the user hasn't made, mark it explicitly (e.g., `USER DECISION NEEDED: max table count — what should the limit be?`) so the reviewer routes it as a product decision for CD.
+- **Outcomes, constraints, and acceptance criteria for every phase** — what must be true when the phase is done, what must not break, and how to verify success. These are always required regardless of how much implementation detail is included.
+- **Implementation guidance at the planning agent's discretion** — The default posture is WHAT and WHY: let the executing agent reason against the live codebase. But when the planning agent has specific knowledge that would help execution succeed — a non-obvious approach, a key function or file relationship, a migration pattern, a data flow that isn't apparent from reading the code — include it. The planning agent's judgment on what context is useful takes priority over withholding details. The goal is to give the executing agent everything it needs, not to enforce abstraction for its own sake.
 
-  **HOW (remove from plans):**
-  - Exact code snippets, pseudocode, or algorithms
-  - Specific line numbers or code patterns to insert
-  - Variable names, function signatures, or import statements
-  - Step-by-step implementation sequences ("first do X, then do Y at line 107")
-  - Examples of HOW violations: function names (`migrateV5toV6`), field paths (`store.cardQuantities.byId`), comment block positions ("add above line 42"), and ordered implementation steps ("first do X, then do Y")
-
-  **WHAT (keep in plans):**
+  **Always required (the WHAT):**
   - Outcome: "Egress and spectator identities must be unique across reconnects"
   - Constraint: "Must not break stable identities for player/caster/judge roles"
   - Acceptance criteria: "Two concurrent tabs requesting session tokens produce distinct identities"
-  - Approach hint (when non-obvious): "Use a random suffix on the identity string"
   - File scope: which files are affected and why
-  - Example of correct WHAT: "Update the persistence layer to handle the renamed field" — not "rename `considerations` to `shortlist` in `deckStore.ts` line 87"
+
+  **Include when the planning agent judges it useful (the HOW):**
+  - Approach guidance: "Use a random suffix on the identity string" / "Follow the pattern in `authAdapter.ts`"
+  - Key functions or files: "The `generateToken()` function in `session.ts` is the integration point"
+  - Data flow notes: "The field is persisted in Firestore, so renaming requires a migration"
+  - Architecture context: "This crosses the API boundary — both client and server adapters need changes"
+
+  **Avoid even when including HOW:**
+  - Verbatim code blocks to copy-paste (they go stale across context clears)
+  - Exact line numbers (they shift with any edit)
+  - Exhaustive step-by-step sequences that turn the executing agent into a typist
+
+  Constraint values must be concrete — "maximum 4 copies per card" not "a maximum copy count". If the value is a product decision the user hasn't made, mark it explicitly (e.g., `USER DECISION NEEDED: max table count — what should the limit be?`) so the reviewer routes it as a product decision for CD.
 - **A "Post-Execution Review" note at the end** — stating that all completed work must be reviewed by all relevant domain agents, and all findings must be fixed before the task is considered done
 
 **Phase limit:** Plans are capped at 7 phases. If a plan reaches phase 8, **stop writing and split into sub-deliverables** (D1a, D1b) before continuing. Over-phased plans signal insufficient decomposition.
 
 **The writing agent must produce the complete plan.** Every section required by the template — package impact, phase dependencies table, phases with agent assignments, and post-execution review — must be present in the agent's output. If the returned plan is missing any template section, re-dispatch the writing agent to complete it. Do not fill in missing sections yourself.
 
-**After the writing agent returns the plan, verify WHAT/WHY compliance before proceeding to review.** Read each phase's outcome and acceptance criteria. If any phase contains a function name, field path, line number, code snippet, or step-by-step algorithm, re-dispatch the writing agent to remove the HOW content. Do not proceed to step 5 with a plan that contains HOW violations. Do not fix HOW violations yourself — re-dispatch the writing agent.
+**After the writing agent returns the plan, verify completeness before proceeding to review.** Check that every phase has: (1) a clear outcome statement, (2) acceptance criteria, and (3) file scope. Implementation guidance beyond these is at the planning agent's discretion and should not be stripped. If a phase is missing outcome or acceptance criteria, re-dispatch the writing agent to add them.
 
 Save to: `docs/current_work/planning/dNN_name_plan.md`
 
@@ -480,7 +506,7 @@ Claude has written up a plan and is ready to execute. Would you like to proceed?
    4. Type here to tell Claude what to change
 ```
 
-When execution begins (whether in this session or a fresh one), `sdlc-execution` loads the plan from the saved file.
+When execution begins (whether in this session or a fresh one), `sdlc-execute` loads the plan from the saved file.
 
 ## SDLC Integration
 
@@ -504,7 +530,7 @@ Not every invocation needs a deliverable ID. For ad hoc work (bug fixes, small t
 | "The approach is obvious, no prototype needed" | Have we built this integration before? If no, define the question a prototype would answer. If yes, cite the precedent. |
 | "I don't have unknowns for this task" | All tasks have unknowns. If none surface, the spec hasn't been examined deeply enough. State at minimum: integration risks, performance unknowns, and third-party compatibility unknowns. |
 | "This plan needs 8+ phases" | Stop. Split into sub-deliverables before continuing. Over-phased plans mean insufficient decomposition. |
-| "I'll include the exact code so the executor knows what to write" | Plans specify WHAT and WHY. Code in plans becomes stale instructions that turn agents into typists. Write acceptance criteria instead. |
+| "I'll paste a full code block so the executor can copy it" | Verbatim code goes stale across context clears. Include approach guidance, key functions, and file relationships — but not copy-paste code blocks. |
 | "I'll revise the spec myself, it's just a wording change" | Classify first (SPEC-REVISION). SCOPE_CHANGE and PIVOT need agent dispatch. Only WORDING is orchestrator-editable. |
 | "The agent list from step 1 still applies" | Run AGENT-RECONFIRM. Scope changes during spec revision or plan writing can introduce domains not in the original list. |
 | "Package coverage is enough, no infrastructure specialists needed" | Generalists mask specialists. Run the infrastructure trigger table — it takes 30 seconds and catches what package-level checks miss. |
@@ -513,4 +539,4 @@ Not every invocation needs a deliverable ID. For ad hoc work (bug fixes, small t
 
 ## Integration
 
-- **sdlc-execution** — The next skill in the pipeline; executes the approved plan
+- **sdlc-execute** — The next skill in the pipeline; executes the approved plan

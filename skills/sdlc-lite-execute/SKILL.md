@@ -1,30 +1,30 @@
 ---
-name: ad-hoc-execution
+name: sdlc-lite-execute
 description: >
-  Execute a lightweight ad hoc plan that was produced by ad-hoc-planning. Worker domain agents implement the phases,
+  Execute a lightweight plan that was produced by sdlc-lite-plan. Worker domain agents implement the phases,
   review the completed work, and fix findings. No SDLC artifacts are created — no result doc, no deliverable tracking.
-  Trigger when someone says "execute the ad hoc plan", "go ahead with the plan", "start the ad hoc work",
-  or after ad-hoc-planning has produced a reviewed plan and the user confirms execution via the plan mode prompt.
-  The plan file lives at docs/current_work/ad-hoc/{slug}_plan.md — load it from there.
-  Do NOT use for SDLC deliverables — those use sdlc-execution.
-  Do NOT use without a plan — if no ad hoc plan file exists, use ad-hoc-planning first.
+  Trigger when someone says "execute the lite plan", "go ahead with the plan", "start the lite work",
+  or after sdlc-lite-plan has produced a reviewed plan and the user confirms execution via the plan mode prompt.
+  The plan file lives at docs/current_work/sdlc-lite/{slug}_plan.md — load it from there.
+  Do NOT use for full SDLC deliverables — those use sdlc-execute.
+  Do NOT use without a plan — if no plan file exists, use sdlc-lite-plan first.
 ---
 
-# Ad Hoc Execution
+# SDLC-Lite Execution
 
-This skill executes a plan produced by `ad-hoc-planning`. Worker domain agents implement the phases, review the result, and fix findings. You are the manager — dispatch agents, track completion, and run the review loop until clean.
+This skill executes a plan produced by `sdlc-lite-plan`. Worker domain agents implement the phases, review the result, and fix findings. You are the manager — dispatch agents, track completion, and run the review loop until clean.
 
-**Precondition:** A reviewed ad hoc plan must exist at `docs/current_work/ad-hoc/{slug}_plan.md`. If no plan file exists, stop and use `ad-hoc-planning` first.
+**Precondition:** A reviewed plan must exist at `docs/current_work/sdlc-lite/{slug}_plan.md`. If no plan file exists, stop and use `sdlc-lite-plan` first.
 
 ## The Process
 
 ```dot
-digraph ad_hoc_execution {
+digraph sdlc_lite_execution {
     rankdir=TB;
 
-    "0. Load plan from\ndocs/current_work/ad-hoc/" [shape=box];
+    "0. Load plan from\ndocs/current_work/sdlc-lite/" [shape=box];
     "Plan file exists?" [shape=diamond];
-    "STOP — run ad-hoc-planning first" [shape=doublecircle, color=red];
+    "STOP — run sdlc-lite-plan first" [shape=doublecircle, color=red];
 
     subgraph cluster_phase_loop {
         label="1. Per-Phase Loop";
@@ -44,8 +44,8 @@ digraph ad_hoc_execution {
     "3. Output Worker Agent Reviews" [shape=box];
     "4. Verify + commit + clean up" [shape=doublecircle];
 
-    "0. Load plan from\ndocs/current_work/ad-hoc/" -> "Plan file exists?";
-    "Plan file exists?" -> "STOP — run ad-hoc-planning first" [label="no"];
+    "0. Load plan from\ndocs/current_work/sdlc-lite/" -> "Plan file exists?";
+    "Plan file exists?" -> "STOP — run sdlc-lite-plan first" [label="no"];
     "Plan file exists?" -> "1a. PRE-GATE\n- Pattern Reuse Gate\n- Verify dependencies complete" [label="yes"];
     "1a. PRE-GATE\n- Pattern Reuse Gate\n- Verify dependencies complete" -> "1b. DISPATCH worker domain agent(s)\nper plan assignment";
     "1b. DISPATCH worker domain agent(s)\nper plan assignment" -> "1c. POST-GATE\n- [build command]\n- Files match plan?";
@@ -81,11 +81,11 @@ This rule has no exceptions for scope or completeness. Specifically:
 
 ### Agent Dispatch Protocol
 
-Dispatch prompts must describe WHAT/WHY — implementation HOW is the agent's domain. Never narrate readiness ("Ready to dispatch") and wait for user confirmation. The plan is already approved; execution means continuous forward motion.
+Dispatch prompts must pass through all relevant context from the plan — outcomes, constraints, acceptance criteria, and any implementation guidance the planning agent included. Never narrate readiness ("Ready to dispatch") and wait for user confirmation. The plan is already approved; execution means continuous forward motion.
 
 ### 0. Load the Plan
 
-Read the ad hoc plan file from `docs/current_work/ad-hoc/`. If multiple plan files exist, check conversation context or ask the user which plan to execute.
+Read the SDLC-Lite plan file from `docs/current_work/sdlc-lite/`. If multiple plan files exist, check conversation context or ask the user which plan to execute.
 
 **Read the plan file only.** Do not pre-read implementation files, existing components, or codebase patterns before dispatch. The plan file is sufficient context for the manager. Worker domain agents read the files relevant to their own phases when they execute. Pre-reading implementation files and accumulating context is not management — it is the first step toward self-implementation.
 
@@ -96,7 +96,7 @@ Extract from the plan:
 
 If no plan file exists, stop:
 
-> No ad hoc plan found at `docs/current_work/ad-hoc/`. Use `ad-hoc-planning` first.
+> No SDLC-Lite plan found at `docs/current_work/sdlc-lite/`. Use `sdlc-lite-plan` first.
 
 ### 1. Execute Phases
 
@@ -119,15 +119,15 @@ Agent: [agent-name]
 - Verify all dependency phases are complete
 - **File-Conflict Gate (parallel phases only):** Before dispatching two or more phases simultaneously, list every file each phase will modify. If any file appears in more than one phase, those phases MUST run sequentially — dispatch the first phase, wait for POST-GATE to pass, then dispatch the second. Do not rely on the plan's dependency table alone; verify file overlap yourself.
 - **Data Source Extraction (mandatory):** Read the plan's phase description and extract EVERY data source mentioned — external repos, APIs, URLs, documents, AND codebase files. List them all in the PRE-GATE block. If the plan says data comes from an external source, the dispatch prompt MUST tell the agent to fetch from that source. Omitting an external data source from the dispatch prompt causes agents to hallucinate values instead of reading from the defined source.
-- Confirm the dispatch prompt describes WHAT/WHY — the agent decides HOW
-
 **DISPATCH:** List the agent and phase description before dispatching. Every listed agent must have a corresponding dispatch. If you find yourself editing files directly instead of dispatching an agent, stop — that violates the Manager Rule.
 
 **EXECUTE:** Dispatch the assigned agent(s). The dispatch prompt must include:
-1. **All data sources** from the PRE-GATE extraction — external sources get explicit fetch instructions. For data extraction tasks, tell the agent to read ALL relevant pages from the source, extract ALL entries exhaustively, and cross-check the final count.
-2. **Expected counts** from the plan — the agent can self-check its output
-3. **Binding Design Decisions** that constrain this phase's implementation
-4. **Prior phase artifacts** — when this phase depends on a completed phase that produced data artifacts (seed scripts, config files, type definitions), the dispatch prompt must tell the agent to read those files as the canonical reference. Agents that produce coupled artifacts will fabricate their own values if not told where the canonical data lives.
+1. **The phase's full context from the plan** — outcome, constraints, acceptance criteria, AND any implementation guidance the planning agent included (approach hints, key functions, file relationships, migration notes, data flow context). The plan is the agent's primary briefing document — pass through everything relevant to this phase. Do not summarize or omit plan details; the executing agent benefits from the planning agent's full reasoning.
+2. **All data sources** from the PRE-GATE extraction — external sources get explicit fetch instructions. For data extraction tasks, tell the agent to read ALL relevant pages from the source, extract ALL entries exhaustively, and cross-check the final count.
+3. **Expected counts** from the plan — the agent can self-check its output
+4. **Binding Design Decisions** that constrain this phase's implementation
+5. **Prior phase artifacts** — when this phase depends on a completed phase that produced data artifacts (seed scripts, config files, type definitions), the dispatch prompt must tell the agent to read those files as the canonical reference. Agents that produce coupled artifacts will fabricate their own values if not told where the canonical data lives.
+6. **Library verification instructions** — when the phase involves external library/framework APIs, tell the agent to verify API usage via Context7 (`mcp__context7__resolve-library-id` → `mcp__context7__query-docs`) before writing integration code. Include the library names and versions from the project's dependency files. Agents must not rely on training data for API signatures, parameter names, or default behaviors.
 For independent phases, dispatch in parallel using multiple Agent tool calls in a single message.
 
 **Cross-domain knowledge injection:** When a phase requires an agent to work in a context outside its primary domain, consult `ops/sdlc/knowledge/agent-context-map.yaml` for the other domain's agent and include those knowledge files in the dispatch prompt. Use judgment — only inject when the agent is genuinely crossing into unfamiliar territory. Do not inject for routine single-domain work.
@@ -196,7 +196,7 @@ After fixes, return to 2a and dispatch ALL agents again — not just the ones wh
 
 ### 3. Worker Agent Reviews
 
-Every ad hoc execution ends with this section, presented in conversation. This step is only reached when 2b shows ALL agents reporting no issues.
+Every SDLC-Lite execution ends with this section, presented in conversation. This step is only reached when 2b shows ALL agents reporting no issues.
 
 ```markdown
 ## Worker Agent Reviews
@@ -227,7 +227,7 @@ Key feedback incorporated:
    Co-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>
    ```
 5. **Deployment guide (if applicable):** If the work touches infrastructure that requires manual deployment steps beyond an automatic CI/CD deploy (e.g., Cloud Functions, search index config, database indexes/rules, environment variables), present a concise deployment guide to the user. Include: deploy commands in order, any backfill/migration steps, and post-deploy verification checks. Skip this step for changes that deploy automatically.
-6. Move the plan file to `docs/current_work/ad-hoc/completed/` — preserves the "why this approach" context for reconciliation
+6. Move the plan file to `docs/current_work/sdlc-lite/completed/` — preserves the "why this approach" context for reconciliation
 7. Present the full commit to the user:
 
 ```
@@ -248,7 +248,7 @@ Files changed:
 
 | Thought | Reality |
 |---------|---------|
-| "There's no plan, I'll wing it" | Stop. Use `ad-hoc-planning` first. |
+| "There's no plan, I'll wing it" | Stop. Use `sdlc-lite-plan` first. |
 | "I'll implement this myself" | If a domain agent exists for it, dispatch them. |
 | "This phase is small and well-defined, I'll do it directly" | Size is not an exception. Dispatch the agent. |
 | "I'll implement directly to avoid context gaps from dispatching" | Complexity increases the need for agents, not decreases it. Pass the context you have to the agent in the dispatch prompt. |
@@ -269,6 +269,6 @@ Files changed:
 
 ## Integration
 
-- **ad-hoc-planning** — The prerequisite skill that produces the plan file
-- **sdlc-execution** — Use instead when executing SDLC deliverable plans
+- **sdlc-lite-plan** — The prerequisite skill that produces the plan file
+- **sdlc-execute** — Use instead when executing SDLC deliverable plans
 - **test-loop** — If the plan included test files, run after commit to verify tests pass and fix failures automatically

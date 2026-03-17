@@ -4,7 +4,7 @@ description: >
   Review a commit with domain agents — checks for overengineering, unnecessary code, DRY violations,
   and architecture adherence. Triggers on "review this commit", "check commit", "review HEAD",
   "/commit-review", "review the last commit", "code review".
-  Do NOT use for uncommitted changes — use ad-hoc-review for that.
+  Do NOT use for uncommitted changes — use diff-review for that.
 ---
 
 # Review Commit
@@ -186,5 +186,5 @@ Do NOT fix anything in this command. Do NOT offer partial fix options. The revie
 
 ## Integration
 - **Feeds into:** `commit-fix` (if findings need fixing)
-- **Sibling:** `ad-hoc-review` (same review lenses, targets working tree instead of commits)
-- **DRY note:** Agent selection criteria and review lenses are duplicated with `ad-hoc-review`. If you update one, update the other.
+- **Sibling:** `diff-review` (same review lenses, targets working tree instead of commits)
+- **DRY note:** Agent selection criteria and review lenses are duplicated with `diff-review`. If you update one, update the other.

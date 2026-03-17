@@ -8,14 +8,14 @@ description: >
   "help me design", "design this", "I need design help", "design consultation", "layout ideas",
   "UI concepts for".
   Do NOT use for implementation — this produces design direction only. Hand off to planning/execution skills.
-  Do NOT use for code review — use commit-review or ad-hoc-review.
+  Do NOT use for code review — use commit-review or diff-review.
 ---
 
 # Design Consultation
 
 Structured design consultation that produces 2-3 distinct design options for the user to evaluate, compare, and iterate on. Combines codebase-aware UI/UX expertise with design theory principles.
 
-**This skill produces design direction. It does NOT produce code or implementation plans.** When the user selects a final direction, hand off to `ad-hoc-planning` or `sdlc-planning` for implementation.
+**This skill produces design direction. It does NOT produce code or implementation plans.** When the user selects a final direction, hand off to `sdlc-lite-plan` or `sdlc-plan` for implementation.
 
 **Argument:** `$ARGUMENTS` (what to design — component, page, layout, feature area)
 
@@ -101,7 +101,7 @@ Research comparable products in your domain area for reference patterns. For spe
 Check the SDLC knowledge layer for context that should inform the design:
 
 1. **Active deliverables**: Read `docs/current_work/` — related specs or plans that set constraints?
-2. **Ad hoc work**: Check `docs/current_work/ad-hoc/` for plans touching the same UI surface
+2. **SDLC-Lite work**: Check `docs/current_work/sdlc-lite/` for plans touching the same UI surface
 3. **Archived decisions**: Check `docs/chronicle/` for past design decisions
 4. **Design discipline**: Read `ops/sdlc/disciplines/design.md` — UX modeling pipeline, parking lot items, trajectory
 5. **UX methodology**: Read `ops/sdlc/knowledge/design/ux-modeling-methodology.yaml`
@@ -264,8 +264,8 @@ When the user confirms a final direction:
 
 3. Recommend next step based on scope:
    - Single file → just implement it
-   - 2-3 files → suggest `ad-hoc-planning`
-   - 4+ files or new abstractions → suggest `sdlc-planning`
+   - 2-3 files → suggest `sdlc-lite-plan`
+   - 4+ files or new abstractions → suggest `sdlc-plan`
 
 Do NOT start implementing. The design consultation ends with a direction and a handoff.
 
@@ -289,7 +289,7 @@ Do NOT start implementing. The design consultation ends with a direction and a h
 
 ## Integration
 
-- **Feeds into:** `ad-hoc-planning` or `sdlc-planning` (for implementation)
+- **Feeds into:** `sdlc-lite-plan` or `sdlc-plan` (for implementation)
 - **Uses:** `ui-ux-designer` agent, `design-for-ai` skill ([PLUGIN: design-for-ai] — optional), `oberweb` skill (optional), Playwright MCP (for visual mockups)
 - **SDLC knowledge:** `ops/sdlc/knowledge/design/`, `ops/sdlc/disciplines/design.md`
 - **Does NOT replace:** `commit-review` (code review), `accessibility-auditor` (WCAG compliance on implemented code)

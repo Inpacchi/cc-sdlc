@@ -1,15 +1,15 @@
 ---
-name: sdlc-execution
-description: Use when executing an approved implementation plan. The plan must already exist at docs/current_work/planning/dNN_name_plan.md — written and reviewed by worker domain agents via sdlc-planning. This skill loads the plan, executes phases in parallel using worker domain agents, reviews all completed work with worker domain agents, fixes all findings, and commits. Use when someone says "execute the plan", "implement the plan", or references an existing plan file.
+name: sdlc-execute
+description: Use when executing an approved implementation plan. The plan must already exist at docs/current_work/planning/dNN_name_plan.md — written and reviewed by worker domain agents via sdlc-plan. This skill loads the plan, executes phases in parallel using worker domain agents, reviews all completed work with worker domain agents, fixes all findings, and commits. Use when someone says "execute the plan", "implement the plan", or references an existing plan file.
 ---
 
 # SDLC Execution
 
 ## Overview
 
-This skill executes an approved plan that was produced by `sdlc-planning`. Worker domain agents implement the phases, review the result, and fix findings. You are the manager — you dispatch worker agents, track phase completion, and ensure reviews pass before the task is done.
+This skill executes an approved plan that was produced by `sdlc-plan`. Worker domain agents implement the phases, review the result, and fix findings. You are the manager — you dispatch worker agents, track phase completion, and ensure reviews pass before the task is done.
 
-**Precondition:** A reviewed and approved plan must exist before this skill runs. If no plan exists, stop and use `sdlc-planning` first.
+**Precondition:** A reviewed and approved plan must exist before this skill runs. If no plan exists, stop and use `sdlc-plan` first.
 
 ## Mode Selection
 
@@ -47,7 +47,7 @@ Extract:
 
 If the plan file doesn't exist or can't be found, **stop immediately** and tell the user:
 
-> No approved plan found. Run `sdlc-planning` first to create and review the plan.
+> No approved plan found. Run `sdlc-plan` first to create and review the plan.
 
 Do NOT write a plan yourself. Do NOT proceed without one.
 
@@ -141,11 +141,13 @@ For **BUILD**: proceed to dispatch. For **SKIP** or **REVISE_PLAN**: stop and wa
 **Data Source Extraction (mandatory):** Read the plan's phase description and extract EVERY data source mentioned — external repos, APIs, URLs, documents, AND codebase files. List them all in the PRE-GATE block. If the plan says data comes from an external source, the dispatch prompt MUST tell the agent to fetch from that source. Omitting an external data source from the dispatch prompt causes agents to hallucinate values instead of reading from the defined source.
 
 **EXECUTE**: Dispatch assigned agent(s) per plan. Never narrate readiness ("Ready to dispatch") and pause for confirmation; the plan is already approved. The dispatch prompt must include:
-1. **All data sources** from the PRE-GATE extraction — external sources get explicit fetch instructions. For data extraction tasks, tell the agent to read ALL relevant pages from the source, extract ALL entries exhaustively, and cross-check the final count.
-2. **Expected counts** from the plan — the agent can self-check its output
-3. **Binding Design Decisions** that constrain this phase's implementation
-4. **Prior phase artifacts** — when this phase depends on a completed phase that produced data artifacts (seed scripts, config files, type definitions), the dispatch prompt must tell the agent to read those files as the canonical reference. Agents that produce coupled artifacts will fabricate their own values if not told where the canonical data lives.
-Implementation HOW is the agent's domain. Dispatch independent phases in parallel using multiple Agent tool calls in a single message. If you find yourself editing files directly instead of dispatching an agent, stop — that violates the Manager Rule.
+1. **The phase's full context from the plan** — outcome, constraints, acceptance criteria, AND any implementation guidance the planning agent included (approach hints, key functions, file relationships, migration notes, data flow context). The plan is the agent's primary briefing document — pass through everything relevant to this phase. Do not summarize or omit plan details; the executing agent benefits from the planning agent's full reasoning.
+2. **All data sources** from the PRE-GATE extraction — external sources get explicit fetch instructions. For data extraction tasks, tell the agent to read ALL relevant pages from the source, extract ALL entries exhaustively, and cross-check the final count.
+3. **Expected counts** from the plan — the agent can self-check its output
+4. **Binding Design Decisions** that constrain this phase's implementation
+5. **Prior phase artifacts** — when this phase depends on a completed phase that produced data artifacts (seed scripts, config files, type definitions), the dispatch prompt must tell the agent to read those files as the canonical reference. Agents that produce coupled artifacts will fabricate their own values if not told where the canonical data lives.
+6. **Library verification instructions** — when the phase involves external library/framework APIs, tell the agent to verify API usage via Context7 (`mcp__context7__resolve-library-id` → `mcp__context7__query-docs`) before writing integration code. Include the library names and versions from the project's dependency files. Agents must not rely on training data for API signatures, parameter names, or default behaviors.
+Dispatch independent phases in parallel using multiple Agent tool calls in a single message. If you find yourself editing files directly instead of dispatching an agent, stop — that violates the Manager Rule.
 
 **Cross-domain knowledge injection:** When a phase requires an agent to work in a context outside its primary domain, consult `ops/sdlc/knowledge/agent-context-map.yaml` for the other domain's agent and include those knowledge files in the dispatch prompt. Use judgment — only inject when the agent is genuinely crossing into unfamiliar territory (e.g., a backend agent implementing a feature that depends on real-time patterns, a frontend agent touching data layer code). Do not inject for routine single-domain work.
 
@@ -313,7 +315,7 @@ Files changed:
 
 ## Agent Selection Reference
 
-The plan identifies which agents are relevant. If you need to add agents not listed in the plan (e.g., a security concern surfaces during implementation), refer to the full agent tables in the `sdlc-planning` skill's Agent Selection section.
+The plan identifies which agents are relevant. If you need to add agents not listed in the plan (e.g., a security concern surfaces during implementation), refer to the full agent tables in the `sdlc-plan` skill's Agent Selection section.
 
 - **Project-level agents**: `.claude/agents/` (project root)
 - **Personal-level agents**: `~/.claude/agents/`
@@ -326,7 +328,7 @@ This skill produces the third SDLC artifact:
 |----------|----------|------|
 | Result | `docs/current_work/results/dNN_name_result.md` | 3 |
 
-The spec and plan were produced by `sdlc-planning`.
+The spec and plan were produced by `sdlc-plan`.
 
 When the deliverable is complete, the "Let's organize the chronicles" command moves artifacts from `current_work/` to `docs/chronicle/{concept}/` and updates `docs/_index.md`.
 
@@ -334,7 +336,7 @@ When the deliverable is complete, the "Let's organize the chronicles" command mo
 
 | Thought | Reality |
 |---------|---------|
-| "There's no plan, I'll wing it" | Stop. Use `sdlc-planning` first. |
+| "There's no plan, I'll wing it" | Stop. Use `sdlc-plan` first. |
 | "I'll implement this part myself" | If a worker domain agent exists for it, dispatch them. See Manager Rule. |
 | "This phase is small and well-defined, I'll do it directly" | Size is not an exception. Dispatch the agent. |
 | "I'll implement directly to avoid context gaps from dispatching" | Complexity increases the need for agents, not decreases it. Pass the context you have to the agent in the dispatch prompt. |
@@ -358,5 +360,5 @@ When the deliverable is complete, the "Let's organize the chronicles" command mo
 
 ## Integration
 
-- **sdlc-planning** — The prerequisite skill that produces the plan
+- **sdlc-plan** — The prerequisite skill that produces the plan
 - **test-loop** — If the plan included test files, run after commit to verify tests pass and fix failures automatically

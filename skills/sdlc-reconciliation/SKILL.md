@@ -23,7 +23,7 @@ Do not skip the categorization step. Every commit gets classified before a resol
 
 ## Cleanup
 
-After reconciliation is complete, check `docs/current_work/ad-hoc/completed/` for archived plan files. Apply this logic automatically — no need to ask:
+After reconciliation is complete, check `docs/current_work/sdlc-lite/completed/` for archived plan files. Apply this logic automatically — no need to ask:
 
 - **Delete** if the work was absorbed into a deliverable, batched into a polish deliverable, or classified as trivial
 - **Keep** if the plan documents a non-obvious approach decision that isn't captured in a spec, result doc, or commit message — it stays until the next chronicle pass
@@ -45,4 +45,4 @@ After reconciliation is complete, check `docs/current_work/ad-hoc/completed/` fo
 ## Integration
 - **Depends on:** `ops/sdlc/process/ad_hoc_reconciliation.md` (process definition), `docs/_index.md` (catalog + next ID)
 - **Fed by:** `sdlc-status` (user sees untracked work and decides to reconcile)
-- **Feeds into:** `sdlc-planning` (if reconciliation surfaces work needing a deliverable), `sdlc-archive` (if reconciled deliverables are complete)
+- **Feeds into:** `sdlc-plan` (if reconciliation surfaces work needing a deliverable), `sdlc-archive` (if reconciled deliverables are complete)

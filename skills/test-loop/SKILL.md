@@ -7,7 +7,7 @@ description: >
   Trigger when someone says "run the test loop", "test and fix loop", "run tests until green",
   "test-loop", or after test infrastructure is set up and the user wants automated red-green cycling.
   Do NOT use for writing new tests from scratch — use the SDET agent directly for that.
-  Do NOT use for reviewing code — use commit-review or ad-hoc-review.
+  Do NOT use for reviewing code — use commit-review or diff-review.
 ---
 
 # Automated Test-Fix Loop
@@ -150,6 +150,8 @@ For each failed test, classify the failure as **test-code** or **app-code** by a
 - Runtime errors in application code (console errors, unhandled rejections)
 - Auth flow broken — auth provider or guard component bug
 
+**Testability signal:** If a test failure requires adding a mock to fix, that's a **code structure issue**, not a test issue. The app code likely mixes I/O and logic. Classify as APP-CODE and dispatch the domain agent to separate I/O from logic (see `ops/sdlc/knowledge/testing/testing-paradigm.yaml`). Do not tell SDET to add mocks to work around poorly structured app code.
+
 **Classification signals:**
 - Stack trace points to test files → likely test-code
 - Stack trace points to application source files → likely app-code
@@ -157,6 +159,7 @@ For each failed test, classify the failure as **test-code** or **app-code** by a
 - "Timeout waiting for" + the condition is NOT met → app-code (feature not working)
 - Error shows auth required when auth should be injected → test-code (auth fixture)
 - Error shows correct auth but wrong UI state → app-code
+- Test requires mocking an internal dependency → app-code (restructure to separate I/O from logic)
 
 Output the classification table:
 
@@ -224,6 +227,7 @@ Group all TEST-CODE failures into a single SDET dispatch. The dispatch prompt mu
 - Screenshots/traces if available
 - What the test is trying to verify
 - Instruction: fix the test code to correctly verify the intended behavior. Do NOT change application code.
+- **Library verification instructions** (when the fix involves test framework APIs — selectors, assertions, fixtures, waits): verify API usage via Context7 (`mcp__context7__resolve-library-id` → `mcp__context7__query-docs`) before writing the fix. Include the test framework name and version.
 
 **Test isolation is mandatory.** If tests fail when run in parallel but pass serially, that is a test isolation bug — not a valid workaround. Do NOT accept serial execution as a fix. Dispatch SDET with an explicit instruction to fix isolation so each test uses unique namespaces per worker.
 
@@ -234,6 +238,7 @@ Group APP-CODE failures by assigned agent. Each agent receives:
 - The test that exposed the failure (for reproduction context)
 - The relevant application code paths (from stack trace)
 - Instruction: fix the application code so the described behavior works correctly. Do NOT modify test files.
+- **Library verification instructions** (when the fix involves external library APIs): verify API usage via Context7 (`mcp__context7__resolve-library-id` → `mcp__context7__query-docs`) before writing the fix. Do not rely on training data for API signatures or behaviors.
 
 **Cross-domain knowledge injection:** Domain agents fixing app bugs exposed by tests are working in a testing context they wouldn't normally encounter. Consult `ops/sdlc/knowledge/agent-context-map.yaml` for the `sdet` entry and include the SDET's testing knowledge files (e.g., `testing/gotchas.yaml`, `testing/timing-defaults.yaml`) in the domain agent's dispatch prompt. This helps the agent understand test-specific constraints like timing, fixture patterns, and known gotchas that may affect the fix.
 

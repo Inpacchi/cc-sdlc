@@ -1,13 +1,13 @@
 ---
-name: ad-hoc-review
+name: diff-review
 description: >
   Review all uncommitted changes in the working tree with domain agents — same lenses as commit-review
-  but for ad hoc work before committing. Triggers on "review uncommitted changes", "check my diff",
-  "review before committing", "ad hoc review", "review working tree", "look at my changes".
+  but targets the working tree before committing. Triggers on "review uncommitted changes", "check my diff",
+  "review before committing", "diff review", "review working tree", "look at my changes".
   Do NOT use for committed code — use commit-review for that.
 ---
 
-# Review Ad Hoc Changes
+# Review Uncommitted Changes
 
 Review all uncommitted changes (staged + unstaged) with relevant domain agents. Same review lenses as `/commit-review` but targets the working tree diff instead of a commit.
 
@@ -141,7 +141,7 @@ Each agent reviews through their domain expertise but applies all applicable len
 Collect all findings. Present them in a single structured report:
 
 ```markdown
-## Ad Hoc Review: uncommitted changes
+## Diff Review: uncommitted changes
 
 {N} files changed | Reviewed by {N} domain agents
 

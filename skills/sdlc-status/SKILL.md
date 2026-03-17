@@ -37,7 +37,7 @@ Scan the project's SDLC artifacts and present a status summary. This is read-onl
 | ID | Name | Stage | Next Action |
 |----|------|-------|-------------|
 | D1 | ... | Complete | Archive via "Let's organize the chronicles" |
-| D2 | ... | Plan ready | Execute via sdlc-execution |
+| D2 | ... | Plan ready | Execute via sdlc-execute |
 
 ## Blocked Items
 

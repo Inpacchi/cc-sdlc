@@ -1,43 +1,45 @@
 ---
-name: ad-hoc-planning
+name: sdlc-lite-plan
 description: >
-  Create lightweight plans for work that's too small for SDLC tracking but too complex to wing it.
-  Use this skill when changes span 3-6 files, involve a clear task with known scope, and would benefit from
-  worker domain agent review — but don't warrant a deliverable ID, spec, or result doc. Trigger when someone says
-  "make a quick plan", "ad hoc plan", "plan this out", "let's plan before we code", or when you identify
-  multi-file work during exploration that the user has confirmed should proceed ad hoc (not as a deliverable).
-  Also use when the user explicitly declines SDLC tracking but the work still touches multiple files or packages.
-  Do NOT use for single-file fixes, config changes, or typo corrections — those need no plan at all.
-  Do NOT use for new features, new integrations, or architectural changes — those need sdlc-planning.
+  Create lightweight plans for work that doesn't warrant full SDLC tracking but is too complex to wing it.
+  Use this skill when the work has moderate complexity — it benefits from domain agent review and a structured
+  plan but doesn't need a deliverable ID, spec, or result doc. Complexity is the trigger, not file count.
+  Trigger when someone says "make a quick plan", "lite plan", "plan this out", "let's plan before we code",
+  "sdlc lite", or when you identify work during exploration that the user has confirmed should proceed
+  without full SDLC tracking. Also use when the user explicitly declines SDLC tracking.
+  Do NOT use for trivial changes (single-file fixes, config changes, typo corrections) — those need no plan.
+  Do NOT use for new features, new integrations, or architectural changes — those need sdlc-plan.
 ---
 
-# Ad Hoc Planning
+# SDLC-Lite Planning
 
-Domain worker agents write the plan and review it. You are the manager and never do work yourself. This skill produces a plan saved to `docs/current_work/ad-hoc/`, then enters plan mode so the user gets the standard execution prompt with the option to clear context.
+Domain worker agents write the plan and review it. You are the manager and never do work yourself. This skill produces a plan saved to `docs/current_work/sdlc-lite/`, then enters plan mode so the user gets the standard execution prompt with the option to clear context.
 
-**This skill produces the plan. It does NOT execute it.** Execution happens via `ad-hoc-execution`.
+**This skill produces the plan. It does NOT execute it.** Execution happens via `sdlc-lite-execute`.
 
 ## When This Applies
 
-The sweet spot is work that:
-- Touches 3-6 files (too many to just start coding, too few for a deliverable)
+The trigger is **complexity**, not file count. Use SDLC-Lite when the work:
+- Is complex enough that winging it risks mistakes (multi-step, cross-domain, non-obvious approach)
 - Has clear, bounded scope (you know what "done" looks like)
-- Benefits from domain expertise (touches multiple domains — e.g., frontend + database, real-time + UI)
-- Was explicitly confirmed as ad hoc by the user
+- Benefits from domain agent review before execution
+- Was explicitly confirmed as not needing full SDLC tracking by the user
 
-If the work introduces new components, hooks, stores, routes, or event types — that's likely a deliverable, not ad hoc. Check with the user.
+A 2-file change that touches real-time + database warrants a lite plan. A 10-file rename refactor might not. Judge by the complexity of the decisions involved, not the number of files.
+
+If the work introduces entirely new subsystems or architectural patterns — that's likely a full SDLC deliverable. Check with the user.
 
 ## Output
 
 This skill produces two things:
 
-1. **Plan file** at `docs/current_work/ad-hoc/{slug}_plan.md` — persists across context clears
+1. **Plan file** at `docs/current_work/sdlc-lite/{slug}_plan.md` — persists across context clears
 2. **Plan mode prompt** via `EnterPlanMode` — gives the user the standard execution options (clear context, bypass permissions, etc.)
 
 ## The Process
 
 ```dot
-digraph ad_hoc_planning {
+digraph sdlc_lite_planning {
     rankdir=TB;
 
     "1. Identify relevant worker domain agents" [shape=box];
@@ -62,7 +64,7 @@ digraph ad_hoc_planning {
 
 Select from project-level worker agents (`.claude/agents/`). If a worker agent's domain touches any aspect of the task, include them. When in doubt, include — a quick review that finds nothing costs less than a shipped bug.
 
-Refer to the full agent table in the `sdlc-planning` skill if you need the complete list. The same worker agents are available here.
+Refer to the full agent table in the `sdlc-plan` skill if you need the complete list. The same worker agents are available here.
 
 ## Manager Rule
 
@@ -76,7 +78,9 @@ Refer to the full agent table in the `sdlc-planning` skill if you need the compl
 
 ### Agent Dispatch Protocol
 
-Dispatch prompts must describe WHAT/WHY — implementation HOW is the agent's domain. Never narrate readiness ("Ready to dispatch") and wait for user confirmation. Dispatch immediately when context is ready.
+Dispatch prompts must pass through all relevant context — outcomes, constraints, and any implementation guidance that would help the agent succeed. Never narrate readiness ("Ready to dispatch") and wait for user confirmation. Dispatch immediately when context is ready.
+
+**Library verification:** When the plan involves external libraries or frameworks, verify API capabilities and constraints via Context7 (`mcp__context7__resolve-library-id` → `mcp__context7__query-docs`) before dispatching the plan-writing agent. Check the project's actual dependency versions (package.json, lock files). Pass verified API details to the writing agent so the plan's scope and acceptance criteria are grounded in real library capabilities, not training-data assumptions.
 
 ### 1. Identify Relevant Worker Domain Agents
 
@@ -141,9 +145,9 @@ The most relevant worker domain agent writes the plan. Other worker agents contr
 **Plan structure:**
 
 ```markdown
-# Ad Hoc Plan: [Title]
+# SDLC-Lite Plan: [Title]
 
-**Execute this plan using the `ad-hoc-execution` skill.**
+**Execute this plan using the `sdlc-lite-execute` skill.**
 
 **Scope:** [1-2 sentences — what's changing and why]
 **Files:** [List all files that will be created or modified]
@@ -160,8 +164,9 @@ The most relevant worker domain agent writes the plan. Other worker agents contr
 
 ### Phase 1: [Name]
 **Agent:** [assigned agent]
-**What:** [What this phase produces — outcome, not implementation steps]
+**Outcome:** [What must be true when this phase is done]
 **Why:** [Why it matters]
+**Guidance:** [Optional — approach hints, key files/functions, non-obvious context that helps the executing agent]
 
 ### Phase 2: [Name]
 ...
@@ -173,9 +178,10 @@ Build must pass before work is considered done.
 ```
 
 **Plan rules:**
-- Always plan the **WHAT and WHY, never the HOW.** Phases describe outcomes and constraints. No code snippets, pseudocode, line numbers, or step-by-step algorithms. The executing agent reads the actual codebase and decides HOW. Constraint values are part of WHAT — if a phase specifies a limit, threshold, maximum, or allowed set, the value must be concrete (e.g., "maximum 4 items" not "a maximum count"). If the value is a product decision the user hasn't made, mark it explicitly (e.g., `USER DECISION NEEDED: max table count — what should the limit be?`) so the reviewer routes it as DECIDE. Examples of HOW violations: function names (`migrateV1toV2`), specific field paths (`store.someField.byId`), comment block positions ("add above line 42"), and ordered implementation steps ("first do X, then do Y"). Examples of correct WHAT: "Update the persistence layer to handle the renamed field" — not "rename `oldName` to `newName` in `store.ts` line 87."
-
-**After the writing agent returns the plan, verify WHAT/WHY compliance before proceeding to review.** Read each phase's What and Why fields. If any phase contains a function name, field path, line number, code snippet, or step-by-step algorithm, re-dispatch the writing agent to remove the HOW content. Do not proceed to step 3 with a plan that contains HOW violations.
+- **Default to WHAT and WHY.** Phases should lead with outcomes and constraints — what must be true when the phase is done, and why it matters. This is the baseline because it lets the executing agent reason against the live codebase rather than following stale instructions.
+- **Include implementation guidance when the planning agent deems it necessary.** If the planning agent has specific knowledge that would help the executing agent — a non-obvious approach, a specific function that needs modification, a migration pattern, a key file relationship — include it. The planning agent's judgment on what context is useful takes priority over a blanket prohibition on HOW details. The goal is to give the executing agent everything it needs to succeed, not to withhold information for purity's sake.
+- **What should always be present regardless:** Outcome (what "done" looks like), constraints (what must not break), and acceptance criteria. Implementation details are additive — they supplement the outcome description, they don't replace it.
+- **Constraint values must be concrete** — "maximum 4 items" not "a maximum count". If the value is a product decision the user hasn't made, mark it explicitly (e.g., `USER DECISION NEEDED: max table count — what should the limit be?`) so the reviewer routes it as DECIDE.
 
 - **Maximum 4 phases.** If you need more, this probably warrants a deliverable — check with the user.
 - **Assign each phase** to the worker domain agent with the most relevant expertise.
@@ -265,18 +271,18 @@ Key feedback incorporated:
 Save the reviewed plan (including Worker Agent Reviews) to:
 
 ```
-docs/current_work/ad-hoc/{slug}_plan.md
+docs/current_work/sdlc-lite/{slug}_plan.md
 ```
 
 Where `{slug}` is a short kebab-case name derived from the plan title (e.g., `card-overlay-controls_plan.md`).
 
-Create the `docs/current_work/ad-hoc/` directory if it doesn't exist.
+Create the `docs/current_work/sdlc-lite/` directory if it doesn't exist.
 
 ### 5. Enter Plan Mode
 
 Follow these sub-steps in exact order. Do not combine or skip any.
 
-**5a.** Use the `Read` tool to read the file saved in step 4 (`docs/current_work/ad-hoc/{slug}_plan.md`). You need the tool output — do not work from memory.
+**5a.** Use the `Read` tool to read the file saved in step 4 (`docs/current_work/sdlc-lite/{slug}_plan.md`). You need the tool output — do not work from memory.
 
 **5b.** Use `EnterPlanMode`. The content you pass to `EnterPlanMode` must be the complete file contents returned by the `Read` tool in step 5a — pasted in full, start to finish. Do not transform, shorten, summarize, or rephrase the read output in any way. Copy-paste it.
 
@@ -295,7 +301,7 @@ Claude has written up a plan and is ready to execute. Would you like to proceed?
    4. Type here to tell Claude what to change
 ```
 
-When execution begins (whether in this session or a fresh one), `ad-hoc-execution` loads the plan from the saved file.
+When execution begins (whether in this session or a fresh one), `sdlc-lite-execute` loads the plan from the saved file.
 
 ## Red Flags
 
@@ -305,13 +311,13 @@ When execution begins (whether in this session or a fresh one), `ad-hoc-executio
 | "I'll just incorporate this feedback myself" | Re-dispatch the writing worker agent with the findings. Manager Rule applies to revisions too. |
 | "I'll just add the structural elements myself — the worker agent wrote the content" | There is no structural/content distinction. Missing sections (phase dependencies, file list, agents, worker agent reviews) go back to the writing worker agent. Re-dispatch. |
 | "Skip plan review, it's simple" | Simple plans still have cross-domain blind spots. |
-| "This needs 5+ phases" | That's a deliverable, not ad hoc. Check with the user. |
-| "I'll include exact code so execution is easier" | Code in plans becomes stale. Write outcomes and constraints. |
+| "This needs 5+ phases" | That's a full SDLC deliverable. Check with the user. |
+| "I'll include exact code so execution is easier" | Full code blocks in plans go stale. Include implementation guidance when useful — function names, file relationships, approach hints — but not verbatim code to copy-paste. |
 | "The constraint is specified but the value isn't known yet" | That's a DECIDE finding. Mark it `USER DECISION NEEDED` so the reviewer routes it. |
 | "Only one domain is involved" | Most tasks touch 2+ domains. Check again. |
 | "I'll write the plan mode content from memory" | Follow step 5 exactly: Read the file with the Read tool, then paste the full Read output into EnterPlanMode. Working from memory produces summaries. |
 
 ## Integration
 
-- **ad-hoc-execution** — The next skill; executes the reviewed plan from the saved file
-- **sdlc-planning** — Use instead when work warrants SDLC tracking
+- **sdlc-lite-execute** — The next skill; executes the reviewed plan from the saved file
+- **sdlc-plan** — Use instead when work warrants SDLC tracking

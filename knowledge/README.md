@@ -59,8 +59,8 @@ Key files that reference `sdet` (your testing agent name will differ):
 - `.claude/skills/test-loop/SKILL.md`
 - `.claude/skills/create-test-suite/SKILL.md`
 - `.claude/skills/commit-review/SKILL.md`
-- `.claude/skills/ad-hoc-review/SKILL.md`
-- `.claude/skills/sdlc-planning/SKILL.md`
+- `.claude/skills/diff-review/SKILL.md`
+- `.claude/skills/sdlc-plan/SKILL.md`
 
 ### Step 3: Update discipline references
 
