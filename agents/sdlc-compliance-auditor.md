@@ -48,6 +48,7 @@ Before starting substantive work, consult `ops/sdlc/knowledge/agent-context-map.
 - Average artifact completeness per deliverable
 - Chronicle freshness (how long completed work sits in `current_work/` before archiving)
 - Spec approval coverage (deliverables that went through proper CD approval)
+- **Changelog freshness** — compare `ops/sdlc/process/sdlc_changelog.md` against recent commits that modified SDLC process files (skills, agents, process docs, CLAUDE-SDLC.md). If process changes exist in git that have no corresponding changelog entry, flag as a warning. The changelog captures the *why* behind process evolution — git log only captures the *what*.
 
 ### 6. Knowledge Layer Health
 
@@ -352,6 +353,11 @@ Structure your findings as:
 ### Agent Memory Patterns
 - [recurring findings across agent memories worth promoting to knowledge layer]
 - [stale agent memories that contradict current codebase]
+
+### Changelog Freshness
+- Last changelog entry: [date]
+- Process commits since last entry: [count]
+- Missing entries: [list of commits with process changes that lack changelog coverage, or "none"]
 
 ### Recommendation Follow-Through (from previous audit)
 - [previous recommendations: acted on / deferred / ignored]
