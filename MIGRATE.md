@@ -77,6 +77,8 @@ Skills have two layers:
    - Project-specific health check URLs and test commands
    - `[PLUGIN: ...]` guards that have been resolved to direct invocations
 
+**Verbatim rule:** Framework content must be copied verbatim from the cc-sdlc source — do not summarize, rephrase, condense, or rewrite in your own words. The source text is the canonical version. When merging, replace the project's framework sections with the exact cc-sdlc text, then re-apply project-specific values (build commands, agent names, etc.) into the appropriate placeholders. If a framework section contains `[build command]` or similar placeholders, substitute the project's actual values — but do not rephrase the surrounding framework text.
+
 **Key rule:** If a section exists in cc-sdlc but not in the project, add it. If a section was removed from cc-sdlc, remove it from the project. If a section was modified in cc-sdlc, update the framework logic while keeping project-specific values.
 
 ### 2.3 Content-Merge: Disciplines
@@ -86,7 +88,7 @@ Discipline files have:
 2. **Project additions** — parking lot entries, active questions, seeded insights
 
 **Migration process:**
-1. Update framework sections to match cc-sdlc
+1. Update framework sections to match cc-sdlc — **verbatim, not rephrased**
 2. Preserve all parking lot entries (these are project-specific knowledge)
 3. Preserve active questions
 4. Add any new seeded insights from cc-sdlc that the project doesn't have
@@ -97,7 +99,7 @@ The `sdlc-compliance-auditor.md` has framework audit logic that must stay curren
 
 1. Read the cc-sdlc source version
 2. Read the project's version
-3. Update all numbered sections (Core Responsibilities 1-8, severity levels, guiding principles)
+3. Update all numbered sections (Core Responsibilities 1-9, severity levels, guiding principles) — **verbatim from cc-sdlc source, not rephrased**
 4. Preserve the project's agent memory path
 5. Preserve any project-specific audit dimensions added by the project
 
