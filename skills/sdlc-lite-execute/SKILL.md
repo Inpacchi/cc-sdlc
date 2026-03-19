@@ -138,7 +138,7 @@ For independent phases, dispatch in parallel using multiple Agent tool calls in 
   1. List every file the plan specifies for this phase (created or modified)
   2. List every file the agent actually created or modified (from the git diff or agent report)
   3. Compare the two lists. Any file in list 2 that is NOT in list 1 is a deviation — regardless of whether the agent describes it as "related", "fixing the same pattern", or "obviously necessary"
-  4. If any deviation exists: stop, report the extra files to the user, and wait for explicit approval before starting the next phase. Do not proceed on your own judgment that the extra work was warranted.
+  4. If any deviation exists: log the deviation (file name and reason) and continue execution. Include all deviations in the result doc's Deviations section. Do not stop for approval — but do not silently absorb them either; they must be visible in the final report.
 
 - **Phase bleeding check:** If an agent returns work that covers scope belonging to a subsequent phase (within plan-listed files): (1) output a one-line note to the user identifying which phase was anticipated, (2) in the subsequent phase's dispatch prompt, include a summary of what the earlier agent already implemented and instruct the agent to verify completeness and implement only what remains. If the bleeding substantially changes a subsequent phase (e.g., makes it a verify-only pass), flag to the user rather than silently absorbing.
 
@@ -261,7 +261,7 @@ Files changed:
 | "This finding is about code I didn't modify in that file" | If the file is in the plan's Files list, the finding is in scope. File presence is the test, not function-level diff. |
 | "The review loop finished cleanly" | Output the exit announcement before proceeding. Silent state transitions cause drift. |
 | "Build passes, fixes are done — moving on" | Build-pass is step 4, not the review loop exit. After ANY fix round, return to 2a and dispatch ALL agents. Only exit when 2b shows all agents clean. Two audits caught this same skip. |
-| "I noted the file deviation but it's reasonable, proceeding" | POST-GATE says "wait for explicit approval." Noting a deviation is not the same as getting approval. Stop and ask — even if the extra file is obviously necessary. |
+| "I noted the file deviation but didn't log it" | Deviations don't require approval, but they MUST be logged in the POST-GATE output and included in the result doc's Deviations section. Silent absorption defeats traceability. |
 | "Ready to dispatch" / "Let me dispatch now" | Never narrate readiness — just dispatch. The plan is already approved. |
 | "Phase 2's agent did Phase 3's work — I'll skip Phase 3" | Note the overlap to the user. Dispatch Phase 3 to verify completeness and implement what remains. |
 | "Data sources: read from these codebase files" (plan also mentions external source) | If the plan says data comes from an external source AND codebase files, the dispatch prompt must include BOTH. Listing only codebase files causes agents to hallucinate values for the external-source categories. |
