@@ -3,11 +3,11 @@
 ## The Flow
 
 ```
-Idea → Spec → Planning → Implementation → Validation → Deploy → Result → Chronicle
+Idea → (optional: Explore) → Spec → Planning → Implementation → Validation → Deploy → Result → Chronicle
 ```
 
 ### 1. Idea
-A feature, fix, or improvement is identified. Assign a deliverable ID: **D1, D2, ... Dnn**
+A feature, fix, or improvement is identified. If the idea is vague or the user wants to explore before committing, use the `sdlc-idea` skill for open-ended exploration — Socratic questioning, codebase grounding, and conceptual sketching. When the idea is shaped enough, assign a deliverable ID: **D1, D2, ... Dnn**
 
 ### 2. Spec
 Create `docs/current_work/specs/dNN_name_spec.md`
@@ -235,10 +235,11 @@ Execution phases are gated:
 
 ## Work Without Plans
 
-Not everything needs the full Spec → Planning → Result flow. The SDLC supports three tiers:
+Not everything needs the full Spec → Planning → Result flow. The SDLC supports four tiers:
 
 | Tier | When | Artifact |
 |------|------|----------|
+| **Idea Exploration** | User has a thought or direction but isn't ready to commit to requirements | Idea brief (optional), saved to `docs/current_work/ideas/` |
 | **Full SDLC** | New features, architectural changes, new subsystems | Deliverable ID, spec, plan, result doc |
 | **SDLC-Lite** | Complex enough to benefit from a reviewed plan, doesn't need spec or result docs | Deliverable ID (tier: lite), catalog entry, plan file |
 | **Direct dispatch** | CD steers in real-time, agents do the work | No artifact — scope stated in conversation |

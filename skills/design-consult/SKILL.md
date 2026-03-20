@@ -292,4 +292,5 @@ Do NOT start implementing. The design consultation ends with a direction and a h
 - **Feeds into:** `sdlc-lite-plan` or `sdlc-plan` (for implementation)
 - **Uses:** `ui-ux-designer` agent, `design-for-ai` skill ([PLUGIN: design-for-ai] — optional), `oberweb` skill (optional), Playwright MCP (for visual mockups)
 - **SDLC knowledge:** `ops/sdlc/knowledge/design/`, `ops/sdlc/disciplines/design.md`
+- **Complements:** `sdlc-idea` (conceptual exploration) — `design-consult` explores visual direction, `sdlc-idea` explores conceptual direction. An idea brief from `sdlc-idea` can feed into `design-consult` when the concept needs visual exploration.
 - **Does NOT replace:** `commit-review` (code review), `accessibility-auditor` (WCAG compliance on implemented code)

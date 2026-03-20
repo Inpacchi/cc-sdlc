@@ -17,7 +17,7 @@ The SDLC defines what artifacts a deliverable requires; two skills define how CC
 - **CC (Claude Code):** The entire agent system — specs, plans, implements, reviews via domain-agent-driven skills
 
 ### Deliverable Workflow
-Idea → Spec (CD approves) → Plan (reviewed) → Execute → Review → Result → Chronicle
+Idea → (optional: `sdlc-idea` for exploration) → Spec (CD approves) → Plan (reviewed) → Execute → Review → Result → Chronicle
 
 CC produces SDLC artifacts across two skills:
 - **Spec** → `docs/current_work/specs/dNN_name_spec.md` (planning skill, CD must approve)
@@ -46,11 +46,12 @@ CC produces SDLC artifacts across two skills:
 
 | Tier | When | What Happens |
 |------|------|-------------|
+| **Idea Exploration** (`sdlc-idea`) | The user has a thought or direction but isn't ready to commit to requirements | Idea brief (optional), saved to `docs/current_work/ideas/` |
 | **Full SDLC** (`sdlc-plan` → `sdlc-execute`) | New features, architectural changes, new integrations, new subsystems | Deliverable ID, spec, plan, result doc, chronicle |
 | **SDLC-Lite** (`sdlc-lite-plan` → `sdlc-lite-execute`) | Work complex enough to benefit from a reviewed plan up front, but doesn't need spec or result docs | Deliverable ID (tier: lite), plan file, agent review, catalog entry |
 | **Direct dispatch** (no skill) | CD is steering in real-time — describing goals, testing results, giving feedback | Agents do the work, CC orchestrates, CD drives iteration |
 
-**Choosing a tier:** The question is whether the work benefits from a **plan artifact that survives context clears**. If yes → SDLC or SDLC-Lite. If the user is actively steering and iterating in conversation → direct dispatch.
+**Choosing a tier:** If the user isn't sure what they want yet → `sdlc-idea`. If the work benefits from a **plan artifact that survives context clears** → SDLC or SDLC-Lite. If the user is actively steering and iterating in conversation → direct dispatch.
 
 **Before touching any file:** If you identify non-trivial complexity (cross-domain, non-obvious approach, new subsystems), surface the scope and ask CD which tier to use. The user should never be in the position of catching a missed planning gate.
 
@@ -85,6 +86,12 @@ If you're in direct dispatch and ANY of these become true, stop and ask CD about
 - You're introducing new abstractions (components, hooks, stores, routes, types, events)
 
 ### Workflow Rules
+
+**STOP and invoke `sdlc-idea` when:**
+
+- The user has a vague idea, question, or direction they want to explore ("what if we...", "I'm thinking about...", "could we...")
+- The user describes a problem without proposing a solution and wants to think it through
+- Multiple viable approaches exist and the user hasn't chosen — exploration before commitment
 
 **STOP and invoke `sdlc-plan` when ANY of the following is true:**
 

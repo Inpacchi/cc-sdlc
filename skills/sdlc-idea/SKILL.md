@@ -1,0 +1,232 @@
+---
+name: sdlc-idea
+description: >
+  Open-ended exploration and iterative concept development for ideas that aren't ready to plan yet.
+  Focuses on Socratic questioning, codebase-aware research, and sketching multiple conceptual
+  approaches before committing to any direction. Produces an idea brief, not a spec or plan.
+  Triggers on "I have an idea", "let's explore", "what if we", "brainstorm", "how should we approach",
+  "I'm thinking about", "explore this concept", "idea for", "could we", "what would it take to",
+  "kick around an idea", "spitball", "before we plan anything", "I want to think through".
+  Do NOT use for work that already has clear requirements — use sdlc-plan or sdlc-lite-plan.
+  Do NOT use for visual/UI exploration — use design-consult.
+  Do NOT use for active bug investigation — use commit-fix or direct dispatch.
+---
+
+# Idea Exploration
+
+Structured but open-ended exploration for ideas that aren't ready for planning. The goal is to deepen understanding of the problem space, surface constraints and possibilities, and sketch conceptual approaches — without committing to any single direction.
+
+**This skill produces an idea brief. It does NOT produce a spec, plan, or design.** When the user is ready to commit, hand off to the appropriate next skill.
+
+**Argument:** `$ARGUMENTS` (the seed idea — however vague or specific)
+
+## When This Applies
+
+Use this when the user has a thought, question, or direction they want to explore before writing requirements. The hallmark is uncertainty — the user doesn't yet know what they want to build, or they know the problem but not the shape of the solution.
+
+Signs this skill is appropriate:
+- "What if we..." / "Could we..." / "I'm wondering about..."
+- The user describes a problem without proposing a solution
+- The user has a solution idea but hasn't thought through implications
+- Multiple viable approaches exist and the user hasn't chosen
+- The idea crosses domain boundaries and the right framing isn't obvious
+
+Signs this skill is NOT appropriate:
+- Clear requirements already exist → `sdlc-plan` or `sdlc-lite-plan`
+- The question is purely visual/UI → `design-consult`
+- The user says "build this" with specifics → planning skill, not exploration
+
+## Core Principles
+
+**No premature convergence.** The instinct to propose solutions immediately is the enemy of good exploration. Stay in the question space longer than feels comfortable.
+
+**Codebase-first.** Before asking the user anything, search the codebase. The idea may already be partially implemented, previously attempted, or constrained by existing architecture. Discovery that ignores existing reality wastes the user's time.
+
+**One question at a time.** Batched questions get shallow answers. Ask the most important question, let the answer inform the next one.
+
+**Sketch, don't spec.** Conceptual approaches are rough shapes — "we could use a queue" not "implement a RabbitMQ consumer with retry policy X". Keep the altitude high enough that pivoting is cheap.
+
+**The user decides when to stop.** There is no gate, no minimum question count, no mandatory output. The user may explore for 2 minutes or 2 hours. Follow their energy.
+
+## Workflow
+
+```
+SEED → GROUND → QUESTION → RESEARCH → SKETCH → ITERATE → (optional) CRYSTALLIZE
+```
+
+The flow is non-linear. Any step can loop back to any earlier step. New information from research may reframe the seed entirely. A sketch may reveal that the wrong question was asked. This is expected.
+
+## Steps
+
+### 1. Receive the Seed
+
+Acknowledge what the user brought. Restate the idea in your own words to confirm understanding. If the idea is vague, that's fine — name the vagueness explicitly:
+
+> "So the seed is: [restatement]. What I'm not clear on yet is [the fuzzy parts]. Let me look at the codebase before I ask questions."
+
+Do NOT immediately propose solutions or ask a list of questions. Ground first.
+
+### 2. Ground in the Codebase
+
+Before asking the user anything, search for relevant context:
+
+1. **Existing implementations** — Is anything like this already built? Partially built? Previously attempted and removed?
+2. **Architectural constraints** — What patterns exist that this idea must work within? What boundaries exist (API layers, module boundaries, data flow)?
+3. **Related systems** — What adjacent code would this idea touch or depend on?
+4. **Chronicle context** — Scan `docs/chronicle/` for related concepts. Read `_index.md` for any that match. Prior deliverables may have explored adjacent territory.
+5. **Knowledge layer** — Check `ops/sdlc/knowledge/` and `ops/sdlc/disciplines/` for relevant domain knowledge, especially methodology files that define how the project approaches this domain.
+6. **Active work** — Check `docs/current_work/` for in-flight deliverables that might overlap or conflict.
+
+Use LSP (`goToDefinition`, `findReferences`, `hover`) for type-system questions. Use Grep for text patterns. Do NOT ask the user what you can discover by reading code.
+
+**Present a grounding summary** before asking questions:
+
+```
+GROUNDING
+Existing relevant code: [what exists and where]
+Architectural context: [patterns, boundaries, constraints discovered]
+Related chronicle entries: [prior decisions that inform this space]
+Active work that may intersect: [in-flight deliverables, or "none"]
+```
+
+This summary serves two purposes: it shows the user you've done homework, and it often reframes the idea based on what actually exists.
+
+### 3. Socratic Questioning
+
+Ask questions that deepen understanding of the problem space. The goal is NOT to gather requirements (that's planning) — it's to help the user think through what they actually want and why.
+
+**Question categories** (use as a menu, not a checklist):
+
+| Category | Purpose | Example |
+|----------|---------|---------|
+| **Problem** | Understand the pain | "What's the actual friction today? Walk me through a concrete scenario where this hurts." |
+| **Audience** | Who benefits and how | "Who encounters this problem? Is it every user or a specific workflow?" |
+| **Constraints** | Surface hidden limits | "Are there performance/cost/timeline constraints that would shape the solution?" |
+| **Tradeoffs** | Explore the tension | "If you had to choose between X and Y, which matters more?" |
+| **Prior art** | Learn from the past | "Have you seen this solved well somewhere else? What did you like about their approach?" |
+| **Scope** | Understand boundaries | "What's explicitly NOT part of this idea?" |
+| **Risk** | Identify the scary parts | "What's the part of this that makes you most nervous?" |
+| **Value** | Clarify motivation | "If this existed and worked perfectly, what changes for the user/team/product?" |
+
+**Questioning discipline:**
+- Ask ONE question per turn
+- Let the answer land before pivoting to a new category
+- Follow threads — if the user says something surprising, go deeper on that
+- Share your reasoning: "I'm asking because [context from grounding] suggests..."
+- If the user gives a short answer, that's a signal — don't push. Move to a different angle.
+- When you learn something that changes the picture, say so: "That reframes this — now I'm thinking about it as [new framing]."
+
+There is no minimum question count. The user may answer two questions and have full clarity. They may explore for twenty questions and still be uncertain. Both are valid.
+
+### 4. Research (as needed)
+
+During or after questioning, specific unknowns may emerge that require research:
+
+**Codebase deep-dives** — Trace specific code paths, read specific modules, verify what the architecture actually supports vs. what seems possible.
+
+**Web research** — If available, invoke `oberweb` for multi-dimensional research on approaches, technologies, or patterns relevant to the idea. Frame searches around the specific unknowns that emerged from questioning.
+
+**Library/API verification** — If the idea involves external libraries or services, verify capabilities via Context7 (`mcp__context7__resolve-library-id` → `mcp__context7__query-docs`). Do NOT assume library capabilities from training data.
+
+**Knowledge store consultation** — Read relevant methodology files in `ops/sdlc/knowledge/` that define how the project approaches this domain (e.g., testing paradigm for test-related ideas, data modeling patterns for schema ideas).
+
+Share research findings with the user as they come in. New information often shifts the conversation.
+
+### 5. Sketch Conceptual Approaches
+
+When enough understanding exists (the user will signal this, or you'll notice the conversation naturally shifting from "what's the problem" to "how might we solve it"), sketch 2-3 conceptual approaches.
+
+**Sketches are NOT specs.** They are rough shapes — each one a different way to think about the solution:
+
+For each approach:
+- **Name** — 2-4 words capturing the philosophy
+- **Core idea** — 2-3 sentences: what this approach bets on
+- **How it works** — High-level description (a paragraph, not implementation steps)
+- **What it gets right** — Strengths relative to the problem as understood
+- **What it gives up** — Honest tradeoffs
+- **Open questions** — What would need to be figured out to pursue this approach
+- **Feasibility signal** — Based on grounding: how much existing code supports vs. works against this approach
+
+Present sketches side by side. Do NOT rank them or recommend one. The user chooses the direction.
+
+After presenting: **"Any of these resonate? We can go deeper on one, combine elements, or throw them all out and come at this differently."**
+
+### 6. Iterate
+
+The user may:
+- **Go deeper** on one approach → refine the sketch, explore its implications
+- **Combine** elements from multiple approaches → sketch the hybrid
+- **Pivot** entirely → new seed, back to questioning
+- **Ask new questions** → follow the thread
+- **Bring new constraints** → re-evaluate approaches against them
+- **Request research** on a specific unknown → investigate and report back
+- **Decide they're done** → move to crystallize or just stop
+
+There is no iteration limit. After 3-4 rounds of refinement on the same approach, offer a soft prompt: "This is getting pretty shaped. Want to crystallize it into a brief, or keep exploring?"
+
+### 7. Crystallize (optional)
+
+When the user signals readiness (or when the conversation has naturally converged), produce an **idea brief** — a lightweight document that captures the exploration:
+
+```markdown
+## Idea Brief: [Title]
+
+**Explored:** [date]
+**Seed:** [original idea as stated by the user]
+
+### Problem Understanding
+[2-3 sentences: the problem as understood after exploration]
+
+### Key Insights from Exploration
+- [Insight from questioning or research that shaped thinking]
+- [Constraint discovered that wasn't obvious at the start]
+- [Pattern from codebase that informs the approach]
+
+### Direction
+[The approach the user gravitated toward — name and 3-4 sentence description]
+
+### Open Questions
+- [What still needs answering before this can be planned]
+- [Technical unknowns that require prototyping or deeper research]
+
+### Feasibility Notes
+[What the codebase grounding revealed about effort and risk]
+
+### Recommended Next Step
+- [Specific skill to use next and why]
+```
+
+Save to: `docs/current_work/ideas/{slug}_idea-brief.md`
+
+If the `docs/current_work/ideas/` directory doesn't exist, create it.
+
+**Recommend next step based on what emerged:**
+- Clear requirements, bounded scope → `sdlc-lite-plan`
+- Complex feature, needs spec → `sdlc-plan`
+- Visual/UI direction needed → `design-consult`
+- Technical unknown needs prototyping → suggest a spike (direct dispatch)
+- Still too vague → keep exploring (this skill isn't done yet)
+
+Do NOT start planning or implementing. The idea exploration ends with a direction and a handoff.
+
+## Red Flags
+
+| Thought | Reality |
+|---------|---------|
+| "I already know the right approach, skip to sketching" | The user came to explore, not to receive a recommendation. Ask questions first. |
+| "The user's idea is obviously X, let me reframe it better" | Confirm understanding, don't overwrite. The user knows their context better than you. |
+| "I should ask all the question categories" | The categories are a menu, not a checklist. Ask what's relevant. |
+| "The user only answered two questions, that's not enough" | The user decides when enough is enough. There is no minimum. |
+| "This approach is clearly better, I should recommend it" | Present options without ranking. The user chooses. |
+| "We've explored enough, time to write a spec" | This skill produces an idea brief, not a spec. Hand off to planning when the user is ready. |
+| "The user said 'build this' — I should start planning" | If they said it during exploration, ask: "Ready to move to planning, or still exploring?" |
+| "I'll skip codebase grounding, the idea is conceptual" | Every idea lives in a codebase context. Ground first, always. |
+| "The user seems to know what they want — skip questioning" | Even confident users benefit from one or two probing questions. The question may not change the direction, but it often sharpens it. |
+| "Let me batch 5 questions to save time" | One question at a time. Batched questions get shallow answers. |
+
+## Integration
+
+- **Feeds into:** `sdlc-plan` (full planning), `sdlc-lite-plan` (lightweight planning), `design-consult` (visual design exploration)
+- **Uses:** LSP, Grep, Context7, `oberweb` (optional), chronicle and knowledge layer
+- **Complements:** `design-consult` explores visual direction; `idea` explores conceptual direction. They can feed into each other.
+- **Does NOT replace:** DISCOVERY-GATE in `sdlc-plan` (that gate validates minimum discovery before spec writing; this skill is unbounded exploration before any commitment)
