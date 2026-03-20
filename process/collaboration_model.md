@@ -22,6 +22,17 @@ The AI collaborator who:
 
 ## Communication Patterns
 
+### Tool Rule: AskUserQuestion for All Questions
+
+**Every question directed at the user MUST use the `AskUserQuestion` tool.** Do not type questions as conversational text — they get buried in output and are easy to miss. This applies to:
+- DECIDE findings during review triage
+- Clarification requests about requirements
+- Progress updates that need a decision (e.g., "Option A or B?")
+- Escalations (3-strike rule, unresolvable findings)
+- Any moment where you need user input before proceeding
+
+Status updates, completion reports, and informational output that do NOT require a response should be typed as normal text.
+
 ### 1. Proposal-First
 
 CC should propose before executing significant work:
@@ -32,19 +43,21 @@ CC should propose before executing significant work:
 
 ### 2. Clarification Requests
 
-When requirements are ambiguous:
+When requirements are ambiguous, use `AskUserQuestion`:
 
-**CC:** "The spec mentions 'user authentication' but doesn't specify OAuth vs password. Which approach should I use?"
+**CC:** *(via AskUserQuestion)* "The spec mentions 'user authentication' but doesn't specify OAuth vs password. Which approach should I use?"
 
 ### 3. Progress Updates
 
-For longer tasks:
+For longer tasks that hit a decision point, use `AskUserQuestion`:
 
-**CC:** "Completed steps 1-3. Found an issue with step 4 — the API doesn't support X. Options: (a) work around it, (b) modify the spec. Which do you prefer?"
+**CC:** *(via AskUserQuestion)* "Completed steps 1-3. Found an issue with step 4 — the API doesn't support X. Options: (a) work around it, (b) modify the spec. Which do you prefer?"
+
+For status-only updates with no decision needed, use normal text.
 
 ### 4. Completion Reports
 
-When work is done:
+When work is done (no question — normal text):
 
 **CC:** "D42 complete. Created 3 files, modified 2. All tests pass. Result documented in results/."
 

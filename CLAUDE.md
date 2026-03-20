@@ -35,3 +35,4 @@ See `plugins/README.md` for details and `plugins/*-setup.md` for installation in
 - Test changes by running `setup.sh` against a scratch directory
 - The `skeleton/manifest.json` is the source of truth for what gets installed — keep it in sync
 - CLAUDE-SDLC.md is the drop-in that target projects add to their CLAUDE.md — it must be self-contained
+- **Changelog rule:** When you change any process file (skills, agents, process docs, CLAUDE-SDLC.md, disciplines, knowledge), update `process/sdlc_changelog.md` **immediately in the same step** — not as a follow-up. If the user has to ask for the changelog update, it was already too late.

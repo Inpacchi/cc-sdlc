@@ -177,12 +177,14 @@ Classify each finding individually — no blanket dismissals. Every finding gets
 
 | Classification | When | Action |
 |---------------|------|--------|
-| **FIX** | Confident in diagnosis and fix | Dispatch the most relevant domain agent to fix it |
+| **FIX** | Confident in diagnosis and fix, AND the correct resolution is clear without user input | Dispatch the most relevant domain agent to fix it |
 | **INVESTIGATE** | Need more info | Dispatch relevant agent to diagnose |
-| **DECIDE** | Trade-off or business decision | Invoke the `AskUserQuestion` tool with the finding description and options. Do not type the question as conversational text. Block until the user answers. |
+| **DECIDE** | Trade-off, product decision, or any finding where the resolution requires choosing between alternatives the user should weigh in on | Invoke the `AskUserQuestion` tool with the finding description and options. Do not type the question as conversational text. Block until the user answers. |
 | **PRE-EXISTING** | Finding exists in code this work did not touch | No action — cite the file and explain why it's out of scope |
 
 **Use only these four classifications.** If a finding doesn't fit, use DECIDE.
+
+**Misclassification guard:** Before dispatching FIX findings, scan each one. If you are about to type a question to the user about a FIX finding, STOP — that finding is DECIDE, not FIX. Reclassify it and invoke `AskUserQuestion`.
 
 **PRE-EXISTING** qualifies ONLY if the finding's file is not in the plan's Files list AND was not created or modified by an agent during execution. If the file appears in the Files list, or if an agent touched it during this execution, any finding about that file is in scope — regardless of whether the finding is about the specific function the plan modifies.
 

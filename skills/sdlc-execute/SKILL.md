@@ -230,13 +230,15 @@ For each finding, classify before acting:
 | Question | If YES → |
 |----------|----------|
 | Is it systemic (many files, architecture change)? | **PLAN** — needs a sub-plan, flag to CD |
-| Am I confident about diagnosis AND fix? | **FIX** — apply minimal change. If the fix fails twice, reclassify as INVESTIGATE or PLAN |
-| Is it a trade-off or product decision? | **DECIDE** — invoke the `AskUserQuestion` tool with the finding description and options. Do not type the question as conversational text. Block until CD answers. |
+| Am I confident about diagnosis AND fix, AND the correct resolution is clear without user input? | **FIX** — apply minimal change. If the fix fails twice, reclassify as INVESTIGATE or PLAN |
+| Is it a trade-off, product decision, or does the resolution require choosing between alternatives the user should weigh in on? | **DECIDE** — invoke the `AskUserQuestion` tool with the finding description and options. Do not type the question as conversational text. Block until CD answers. |
 | None of the above | **INVESTIGATE** — dispatch relevant agent to diagnose |
 
 | **PRE-EXISTING** | Finding exists in code this work did not touch | No action — cite the file and explain why it's out of scope |
 
 **Use only these five classifications.** If a finding doesn't fit, use DECIDE.
+
+**Misclassification guard:** Before dispatching FIX findings, scan each one. If you are about to type a question to the user about a FIX finding, STOP — that finding is DECIDE, not FIX. Reclassify it and invoke `AskUserQuestion`.
 
 **PRE-EXISTING** qualifies ONLY if the finding's file is not in the plan's Files list AND was not created or modified by an agent during execution. If the file appears in the Files list, or if an agent touched it during this execution, any finding about that file is in scope — regardless of whether the finding is about the specific function the plan modifies.
 

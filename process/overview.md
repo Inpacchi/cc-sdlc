@@ -182,8 +182,10 @@ CC will:
 - Read the current SDLC changelog at `process/sdlc_changelog.md`
 - Discuss the proposed addition or change
 - Update the relevant canonical files
-- Append to the changelog with date, description, and rationale
+- Append to the changelog with date, description, and rationale **immediately after making the change** — do not defer to a later step or session
 - Wait for approval before committing
+
+**Timing rule:** The changelog entry must be written in the same step as the process change, not as a separate follow-up task. Every process decision change — new rules, classification adjustments, workflow modifications, guard additions — gets a changelog entry before moving on to other work. If CD has to ask for the changelog update, it was already too late.
 
 The changelog serves as a living record of how the process evolves through use. Not every change needs a formal proposal — often the best improvements emerge from noticing friction during real work.
 

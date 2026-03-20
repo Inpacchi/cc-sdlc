@@ -196,8 +196,8 @@ Severity applies only to FIX findings. DECIDE and PRE-EXISTING leave Severity bl
 
 | Classification | When | Action |
 |---------------|------|--------|
-| **FIX** | Finding is in scope and the plan should address it — including low-severity or stylistic findings that have a clear corrective action | Include in revision dispatch |
-| **DECIDE** | Trade-off or product decision the user should make | Invoke the `AskUserQuestion` tool with the finding description and options. Do not type the question as conversational text. Block until the user answers. |
+| **FIX** | Finding is in scope, the plan should address it, AND the correct resolution is clear without user input | Include in revision dispatch |
+| **DECIDE** | Trade-off, product decision, or any finding where the resolution requires choosing between alternatives the user should weigh in on | Invoke the `AskUserQuestion` tool with the finding description and options. Do not type the question as conversational text. Block until the user answers. |
 | **PRE-EXISTING** | Finding exists in code the plan does not touch | No action — must cite the file and explain why it's out of scope |
 
 **These are the only valid classification types. Do not invent new ones. Severity labels belong in the Severity column, not the Classification column. Do not use narrative dismissals ("ignoring," "off-track," "not relevant"). Every finding gets a row in the table.**
@@ -207,6 +207,8 @@ Severity applies only to FIX findings. DECIDE and PRE-EXISTING leave Severity bl
 **PRE-EXISTING rules:** A finding qualifies as pre-existing ONLY if the finding's file is not in the plan's Files list. If the file appears in the Files list, any finding about that file is in scope — regardless of whether the finding is about the specific function the plan modifies.
 
 Only FIX findings go to the writing worker agent for revision. DECIDE findings go to the user. PRE-EXISTING findings require no action but must appear in the table.
+
+**Misclassification guard:** Before dispatching FIX findings, scan each one. If you are about to type a question to the user about a FIX finding (e.g., "Is this the interaction model you want?", "Which approach do you prefer?"), STOP — that finding is DECIDE, not FIX. Reclassify it and invoke `AskUserQuestion`. A FIX finding must have a clear corrective action that does not require choosing between alternatives.
 
 If there are FIX findings, re-dispatch the worker domain agent who wrote the plan (from step 2) with only the FIX findings. That worker agent produces the revision. You do not write the revision. Output a dispatch checklist before re-dispatching:
 

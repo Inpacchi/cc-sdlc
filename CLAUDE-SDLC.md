@@ -117,7 +117,7 @@ This is the exact sequence that bypasses process incorrectly:
 Step 4 is wrong. After step 3, the correct action is to surface the scope assessment and ask which tier to use — or if the user is already steering, state scope and start dispatching agents.
 
 ### Process Changelog
-When you make changes to SDLC process files (skills, agents, process docs, CLAUDE-SDLC.md, disciplines, knowledge), update `ops/sdlc/process/sdlc_changelog.md` in the same session. The changelog captures *why* process changes were made — context that git log alone doesn't preserve. Don't backdate entries for changes made in prior sessions.
+When you make changes to SDLC process files (skills, agents, process docs, CLAUDE-SDLC.md, disciplines, knowledge), update `ops/sdlc/process/sdlc_changelog.md` **immediately after the change, in the same step**. Do not defer changelog updates to a later step, a separate commit, or a future session. Every process decision change — new rules, classification changes, workflow adjustments, guard additions — must have a changelog entry written before moving on to other work. The changelog captures *why* process changes were made — context that git log alone doesn't preserve. Don't backdate entries for changes made in prior sessions.
 
 ### Compliance Auditing
 Run `"Let's run an SDLC compliance audit"` periodically (~every 2-4 weeks or at each version bump). See `ops/sdlc/process/compliance_audit.md`.
