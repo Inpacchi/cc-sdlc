@@ -238,7 +238,7 @@ Not everything needs the full Spec → Planning → Result flow. The SDLC suppor
 | Tier | When | Artifact |
 |------|------|----------|
 | **Full SDLC** | New features, architectural changes, new subsystems | Deliverable ID, spec, plan, result doc |
-| **SDLC-Lite** | Complex enough to benefit from a reviewed plan, not full tracking | Plan file only |
+| **SDLC-Lite** | Complex enough to benefit from a reviewed plan, doesn't need spec or result docs | Deliverable ID (tier: lite), catalog entry, plan file |
 | **Direct dispatch** | CD steers in real-time, agents do the work | No artifact — scope stated in conversation |
 
 **Direct dispatch** covers what was previously called "ad hoc work" — bug fixes, UI tweaks, quick iterations, corrections. The key rule is that domain agents still do the implementation and review work, even without a plan file. CC orchestrates, never self-implements.

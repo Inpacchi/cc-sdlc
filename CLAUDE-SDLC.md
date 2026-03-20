@@ -47,7 +47,7 @@ CC produces SDLC artifacts across two skills:
 | Tier | When | What Happens |
 |------|------|-------------|
 | **Full SDLC** (`sdlc-plan` → `sdlc-execute`) | New features, architectural changes, new integrations, new subsystems | Deliverable ID, spec, plan, result doc, chronicle |
-| **SDLC-Lite** (`sdlc-lite-plan` → `sdlc-lite-execute`) | Work complex enough to benefit from a reviewed plan up front, but doesn't warrant full tracking | Plan file, agent review, no deliverable tracking |
+| **SDLC-Lite** (`sdlc-lite-plan` → `sdlc-lite-execute`) | Work complex enough to benefit from a reviewed plan up front, but doesn't need spec or result docs | Deliverable ID (tier: lite), plan file, agent review, catalog entry |
 | **Direct dispatch** (no skill) | CD is steering in real-time — describing goals, testing results, giving feedback | Agents do the work, CC orchestrates, CD drives iteration |
 
 **Choosing a tier:** The question is whether the work benefits from a **plan artifact that survives context clears**. If yes → SDLC or SDLC-Lite. If the user is actively steering and iterating in conversation → direct dispatch.

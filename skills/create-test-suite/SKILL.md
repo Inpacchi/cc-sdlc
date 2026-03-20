@@ -43,7 +43,7 @@ If the user already specified scope and test cases (or said none), skip the ques
 | Source | How to gather context |
 |--------|----------------------|
 | SDLC plan | Read `docs/current_work/planning/dNN_name_plan.md` — extract phases, files, acceptance criteria |
-| SDLC-Lite plan | Read `docs/current_work/sdlc-lite/{slug}_plan.md` — extract phases, files, acceptance criteria |
+| SDLC-Lite plan | Read `docs/current_work/sdlc-lite/dNN_{slug}_plan.md` — extract phases, files, acceptance criteria |
 | Specific commit | Run `git show --stat {sha}` + `git diff {sha}~1 {sha}` — extract changed files and diff |
 | Unstaged changes | Run `git diff` + `git diff --cached` — extract changed files and diff |
 

@@ -3,7 +3,7 @@ name: sdlc-lite-plan
 description: >
   Create lightweight plans for work that doesn't warrant full SDLC tracking but is too complex to wing it.
   Use this skill when the work has moderate complexity — it benefits from domain agent review and a structured
-  plan but doesn't need a deliverable ID, spec, or result doc. Complexity is the trigger, not file count.
+  plan but doesn't need a spec or result doc. Registers a deliverable ID (tier: lite). Complexity is the trigger, not file count.
   Trigger when someone says "make a quick plan", "lite plan", "plan this out", "let's plan before we code",
   "sdlc lite", or when you identify work during exploration that the user has confirmed should proceed
   without full SDLC tracking. Also use when the user explicitly declines SDLC tracking.
@@ -33,7 +33,7 @@ If the work introduces entirely new subsystems or architectural patterns — tha
 
 This skill produces two things:
 
-1. **Plan file** at `docs/current_work/sdlc-lite/{slug}_plan.md` — persists across context clears
+1. **Plan file** at `docs/current_work/sdlc-lite/dNN_{slug}_plan.md` — persists across context clears, uses a deliverable ID from the catalog
 2. **Plan mode prompt** via `EnterPlanMode` — gives the user the standard execution options (clear context, bypass permissions, etc.)
 
 ## The Process
@@ -75,6 +75,14 @@ Refer to the full agent table in the `sdlc-plan` skill if you need the complete 
 **Orchestrator-editable content:** Process documentation (Worker Agent Reviews section, dependency table metadata, date stamps, mechanical count updates) is not domain content — the orchestrator may write these directly. The boundary is: if it requires domain judgment about code, architecture, or implementation, dispatch. If it's summarizing review outcomes or fixing table formatting, do it yourself.
 
 ## Steps
+
+### 0. Register Deliverable ID
+
+1. **Read `docs/_index.md`** to find the next deliverable ID (listed in the header as "Next ID: **DNN**").
+2. Claim the ID by incrementing the "Next ID" counter in the catalog.
+3. Add the deliverable to the catalog table with status `In Progress (lite)`.
+
+This ID will be used in the plan filename (`dNN_{slug}_plan.md`).
 
 ### Agent Dispatch Protocol
 
@@ -142,40 +150,7 @@ This prevents re-inventing patterns established by prior deliverables.
 
 The most relevant worker domain agent writes the plan. Other worker agents contribute to sections in their domain.
 
-**Plan structure:**
-
-```markdown
-# SDLC-Lite Plan: [Title]
-
-**Execute this plan using the `sdlc-lite-execute` skill.**
-
-**Scope:** [1-2 sentences — what's changing and why]
-**Files:** [List all files that will be created or modified]
-**Agents:** [List assigned worker domain agents]
-
-## Phase Dependencies
-
-| Phase | Depends On | Agent | Can Parallel With |
-|-------|-----------|-------|-------------------|
-| 1     | —         | agent | —                 |
-| 2     | Phase 1   | agent | Phase 3           |
-
-## Phases
-
-### Phase 1: [Name]
-**Agent:** [assigned agent]
-**Outcome:** [What must be true when this phase is done]
-**Why:** [Why it matters]
-**Guidance:** [Optional — approach hints, key files/functions, non-obvious context that helps the executing agent]
-
-### Phase 2: [Name]
-...
-
-## Post-Execution Review
-All completed work must be reviewed by all relevant worker domain agents.
-All findings must be fixed by the most relevant domain agent.
-Build must pass before work is considered done.
-```
+**Plan structure:** Use the template at `ops/sdlc/templates/sdlc_lite_plan_template.md`. Read it before writing the plan.
 
 **Plan rules:**
 - **Default to WHAT and WHY.** Phases should lead with outcomes and constraints — what must be true when the phase is done, and why it matters. This is the baseline because it lets the executing agent reason against the live codebase rather than following stale instructions.
@@ -271,10 +246,10 @@ Key feedback incorporated:
 Save the reviewed plan (including Worker Agent Reviews) to:
 
 ```
-docs/current_work/sdlc-lite/{slug}_plan.md
+docs/current_work/sdlc-lite/dNN_{slug}_plan.md
 ```
 
-Where `{slug}` is a short kebab-case name derived from the plan title (e.g., `card-overlay-controls_plan.md`).
+Where `NN` is the deliverable ID from step 0 and `{slug}` is a short snake_case name derived from the plan title (e.g., `d8_card_overlay_controls_plan.md`).
 
 Create the `docs/current_work/sdlc-lite/` directory if it doesn't exist.
 
@@ -282,7 +257,7 @@ Create the `docs/current_work/sdlc-lite/` directory if it doesn't exist.
 
 Follow these sub-steps in exact order. Do not combine or skip any.
 
-**5a.** Use the `Read` tool to read the file saved in step 4 (`docs/current_work/sdlc-lite/{slug}_plan.md`). You need the tool output — do not work from memory.
+**5a.** Use the `Read` tool to read the file saved in step 4 (`docs/current_work/sdlc-lite/dNN_{slug}_plan.md`). You need the tool output — do not work from memory.
 
 **5b.** Use `EnterPlanMode`. The content you pass to `EnterPlanMode` must be the complete file contents returned by the `Read` tool in step 5a — pasted in full, start to finish. Do not transform, shorten, summarize, or rephrase the read output in any way. Copy-paste it.
 

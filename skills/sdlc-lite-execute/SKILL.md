@@ -2,10 +2,10 @@
 name: sdlc-lite-execute
 description: >
   Execute a lightweight plan that was produced by sdlc-lite-plan. Worker domain agents implement the phases,
-  review the completed work, and fix findings. No SDLC artifacts are created — no result doc, no deliverable tracking.
+  review the completed work, and fix findings. No spec or result doc — just the plan. Deliverable is tracked in the catalog with tier: lite.
   Trigger when someone says "execute the lite plan", "go ahead with the plan", "start the lite work",
   or after sdlc-lite-plan has produced a reviewed plan and the user confirms execution via the plan mode prompt.
-  The plan file lives at docs/current_work/sdlc-lite/{slug}_plan.md — load it from there.
+  The plan file lives at docs/current_work/sdlc-lite/dNN_{slug}_plan.md — load it from there.
   Do NOT use for full SDLC deliverables — those use sdlc-execute.
   Do NOT use without a plan — if no plan file exists, use sdlc-lite-plan first.
 ---
@@ -14,7 +14,7 @@ description: >
 
 This skill executes a plan produced by `sdlc-lite-plan`. Worker domain agents implement the phases, review the result, and fix findings. You are the manager — dispatch agents, track completion, and run the review loop until clean.
 
-**Precondition:** A reviewed plan must exist at `docs/current_work/sdlc-lite/{slug}_plan.md`. If no plan file exists, stop and use `sdlc-lite-plan` first.
+**Precondition:** A reviewed plan must exist at `docs/current_work/sdlc-lite/dNN_{slug}_plan.md`. If no plan file exists, stop and use `sdlc-lite-plan` first.
 
 ## The Process
 
@@ -242,7 +242,7 @@ Files changed:
 
 ## What This Skill Does NOT Do
 
-- **No SDLC artifacts.** No result doc, no deliverable tracking, no catalog entry.
+- **Lite artifacts only.** No spec or result doc. The deliverable is tracked in the catalog (tier: lite) and has a plan file, but no other SDLC artifacts.
 
 ## Red Flags
 

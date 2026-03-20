@@ -62,7 +62,7 @@ Please read:
 
 ### Three Tiers of Work
 - **Full SDLC** — New features, architectural changes, new subsystems → deliverable ID, spec, plan, result
-- **SDLC-Lite** — Complex enough for a reviewed plan, doesn't need full tracking → plan file only
+- **SDLC-Lite** — Complex enough for a reviewed plan, doesn't need spec or result docs → deliverable ID (tier: lite), plan file
 - **Direct dispatch** — CD steers in real-time, agents do the work → no plan file, no skill invocation
 
 ---

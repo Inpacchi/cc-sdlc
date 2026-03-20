@@ -79,7 +79,7 @@ Sequential identifiers (D1, D2, ... Dnn) that track work across the project life
 - **CC (Claude Code):** The entire agent system — specs, plans, implements, reviews
 
 ### Three Tiers
-Not everything needs a full spec → plan → result cycle. **SDLC-Lite** provides a lightweight plan without deliverable tracking. **Direct dispatch** skips the plan entirely — CD steers in real-time, agents do the work. Reconcile untracked work periodically with `sdlc-reconciliation`.
+Not everything needs a full spec → plan → result cycle. **SDLC-Lite** registers a deliverable ID (tier: lite) and produces a plan — no spec or result doc. **Direct dispatch** skips the plan entirely — CD steers in real-time, agents do the work. Reconcile untracked work periodically with `sdlc-reconciliation`.
 
 ## Knowledge Layer
 
