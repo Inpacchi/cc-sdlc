@@ -178,6 +178,8 @@ Plan review — dispatching:
 
 **Every checkbox must have a corresponding agent dispatch. Count the checkboxes. Count the dispatches. They must match.** If the count doesn't match, stop and fix.
 
+**Writing agent in review:** The worker agent that wrote the plan (step 2) may be included as a reviewer for self-verification, but cross-domain reviewers typically provide higher marginal value. Whether or not the writing agent reviews, the checklist must reflect only the agents actually dispatched — the count-must-match rule applies to the dispatched set, not the step-1 list.
+
 Dispatch all review worker agents in parallel. Collect feedback.
 
 If agents have findings, classify each finding individually in a table before acting — no narrative paragraphs, no blanket dismissals:
@@ -280,6 +282,16 @@ Claude has written up a plan and is ready to execute. Would you like to proceed?
 
 When execution begins (whether in this session or a fresh one), `sdlc-lite-execute` loads the plan from the saved file.
 
+### Session Handoff
+
+After entering plan mode, the Manager Rule remains in effect for the entire session. If the user requests additional changes unrelated to the plan:
+
+- **Single-file, same domain:** Dispatch the relevant domain agent. Do NOT implement directly — the Manager Rule has no size exception.
+- **Multi-file or cross-domain:** Offer to invoke the appropriate planning skill for the new scope.
+- **Crossing a domain boundary:** Identify the domain split explicitly and dispatch separate agents — one per domain.
+
+There is no "post-plan wind-down mode" where direct implementation becomes acceptable.
+
 ## Red Flags
 
 | Thought | Reality |
@@ -293,6 +305,7 @@ When execution begins (whether in this session or a fresh one), `sdlc-lite-execu
 | "The constraint is specified but the value isn't known yet" | That's a DECIDE finding. Mark it `USER DECISION NEEDED` so the reviewer routes it. |
 | "Only one domain is involved" | Most tasks touch 2+ domains. Check again. |
 | "I'll write the plan mode content from memory" | Follow step 5 exactly: Read the file with the Read tool, then paste the full Read output into EnterPlanMode. Working from memory produces summaries. |
+| "The plan is done, let me just quickly fix this other thing" | Manager Rule applies for the full session. Dispatch the domain agent. |
 
 ## Integration
 

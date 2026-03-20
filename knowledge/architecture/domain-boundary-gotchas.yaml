@@ -1,0 +1,45 @@
+# Domain Boundary Gotchas
+# Common patterns where work crosses agent domain boundaries.
+# Include in agent dispatch prompts when cross-domain risk is identified.
+# Last updated: 2026-03-20
+
+last_updated: 2026-03-20
+id: domain-boundary-gotchas
+name: "Domain Boundary Crossing Patterns"
+description: >
+  Recurring patterns where implementation work crosses from one agent's domain
+  into another's. These gotchas help the orchestrator recognize boundary crossings
+  before they happen and dispatch the correct agents.
+
+gotchas:
+  - id: frontend-triggers-api-change
+    pattern: "UI component needs a new API endpoint or modified response shape"
+    example: "Dashboard widget needs aggregated data → requires new route handler"
+    risk: "Frontend developer agent modifies API route handler outside its domain"
+    correct_approach: >
+      Frontend agent documents the data contract it needs. Backend agent implements
+      the endpoint. Frontend agent consumes it. Two dispatches, shared contract.
+
+  - id: feature-triggers-schema-change
+    pattern: "New feature requires database schema migration"
+    example: "Adding tags to items → requires new table/column + migration"
+    risk: "Implementation agent writes migration SQL alongside feature code"
+    correct_approach: >
+      Data architect or backend-developer handles schema. Feature agent handles
+      application code. Schema change commits before feature code.
+
+  - id: conversational-drift-after-skill
+    pattern: "User asks about code behavior after structured skill completes"
+    example: "After sdlc-lite-execute commits, user asks 'how does status work?'"
+    risk: >
+      Orchestrator answers from context without reading code, then implements
+      a fix directly when the answer reveals a gap. No agent dispatch, no tracking.
+    correct_approach: >
+      Read code before answering factual questions (Code Verification Rule).
+      If the answer reveals work to do, re-enter a skill or dispatch an agent.
+      The Manager Rule does not end when the skill completes.
+
+recognition_signals:
+  - "Editing files outside the dispatched agent's 'owns' path"
+  - "User question transitions from 'how does X work' to 'let's fix X'"
+  - "Orchestrator opens an Edit tool after a skill has completed"

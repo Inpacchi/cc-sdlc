@@ -538,6 +538,18 @@ Not every invocation needs a deliverable ID. For ad hoc work (bug fixes, small t
 | "Package coverage is enough, no infrastructure specialists needed" | Generalists mask specialists. Run the infrastructure trigger table — it takes 30 seconds and catches what package-level checks miss. |
 | "I'll incorporate the review findings myself, it's faster" | Re-dispatch the writing agent with the findings. Manager Rule applies to revisions too. |
 | "I'll just add the structural elements myself — the agent wrote the content" | There is no structural/content distinction. Missing sections (phase dependencies, file list, agents, domain agent reviews) go back to the writing agent. Re-dispatch. |
+| "The plan is done, let me just quickly fix this other thing" | Manager Rule applies for the full session. Dispatch the domain agent. |
+| "While we're here, I'll also update the server code" | Domain crossing. Dispatch the relevant domain agent for that scope. |
+
+### Session Handoff
+
+After presenting the plan and entering plan mode, the Manager Rule remains in effect for the entire session. If the user requests additional changes unrelated to the plan:
+
+- **Single-file, same domain:** Dispatch the relevant domain agent. Do NOT implement directly — the Manager Rule has no size exception.
+- **Multi-file or cross-domain:** Offer to invoke the appropriate planning skill for the new scope.
+- **Crossing a domain boundary** (e.g., frontend work + backend services in the same request): Identify the domain split explicitly and dispatch separate agents — one per domain.
+
+There is no "post-plan wind-down mode" where direct implementation becomes acceptable. The plan is produced — execution is a separate skill invocation.
 
 ## Integration
 

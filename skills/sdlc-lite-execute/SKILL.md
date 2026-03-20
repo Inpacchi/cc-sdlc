@@ -134,6 +134,7 @@ For independent phases, dispatch in parallel using multiple Agent tool calls in 
 
 **POST-GATE:**
 - Verify build passes: `[build command]` — see project CLAUDE.md
+- **Stale diagnostic dismissal (anti-pattern):** Do not dismiss build warnings or diagnostics as "stale" or "LSP catching intermediate state." Every warning is potentially real. If a build tool reports an unused variable, type error, or import issue, dispatch the phase agent to verify and fix — do not reason the warning away yourself. Warnings dismissed as stale in one round reliably resurface as real findings in the next review round.
 - **File deviation check (mandatory):**
   1. List every file the plan specifies for this phase (created or modified)
   2. List every file the agent actually created or modified (from the git diff or agent report)
@@ -141,6 +142,8 @@ For independent phases, dispatch in parallel using multiple Agent tool calls in 
   4. If any deviation exists: log the deviation (file name and reason) and continue execution. Include all deviations in the result doc's Deviations section. Do not stop for approval — but do not silently absorb them either; they must be visible in the final report.
 
 - **Phase bleeding check:** If an agent returns work that covers scope belonging to a subsequent phase (within plan-listed files): (1) output a one-line note to the user identifying which phase was anticipated, (2) in the subsequent phase's dispatch prompt, include a summary of what the earlier agent already implemented and instruct the agent to verify completeness and implement only what remains. If the bleeding substantially changes a subsequent phase (e.g., makes it a verify-only pass), flag to the user rather than silently absorbing.
+
+- **Re-dispatch within the same phase (partial completion):** If an agent returns work that is incomplete (missed a component, left TODOs, partially implemented scope), re-dispatch that agent with a PRE-GATE block labeled `Phase [N] re-dispatch — [brief reason]`. The PRE-GATE documents what was missed and why the re-dispatch occurred. Omitting the PRE-GATE for re-dispatches creates untracked sub-phases that can cause drift between the plan and the implementation.
 
 - **Data audit (mandatory for phases that produce data artifacts):** If this phase created or modified a seed script, scraper, allowlist, or any file containing data values (not just code logic), verify the data against its authoritative source before marking the phase complete. For each data category: check the count matches the plan's expected count, confirm no fabricated entries exist, and confirm no entries are missing. If any value cannot be traced to a source, flag it via `AskUserQuestion`. Code review catches code quality — the data audit catches data accuracy. These are separate concerns.
 
@@ -242,6 +245,16 @@ Files changed:
 - {file path}
 ```
 
+### Session Handoff
+
+After presenting the commit summary, the Manager Rule remains in effect for the entire session. If the user requests additional changes:
+
+- **Single-file, same domain:** Dispatch the relevant domain agent. Do NOT implement directly — the Manager Rule has no size exception.
+- **Multi-file or cross-domain:** Offer to invoke `sdlc-lite-plan` for the new scope. These changes benefit from the planning loop.
+- **Crossing a domain boundary** (e.g., TUI work + server services in the same request): Identify the domain split explicitly and dispatch separate agents — one per domain.
+
+There is no "post-commit wind-down mode" where direct implementation becomes acceptable.
+
 ## What This Skill Does NOT Do
 
 - **Lite artifacts only.** No spec or result doc. The deliverable is tracked in the catalog (tier: lite) and has a plan file, but no other SDLC artifacts.
@@ -268,6 +281,8 @@ Files changed:
 | "Phase 2's agent did Phase 3's work — I'll skip Phase 3" | Note the overlap to the user. Dispatch Phase 3 to verify completeness and implement what remains. |
 | "Data sources: read from these codebase files" (plan also mentions external source) | If the plan says data comes from an external source AND codebase files, the dispatch prompt must include BOTH. Listing only codebase files causes agents to hallucinate values for the external-source categories. |
 | "This phase produces a scraper/consumer that should align with the seed/config from Phase N" | Tell the agent to READ the Phase N output file for canonical values. Agents will fabricate their own allowlists if not pointed at the canonical source. |
+| "The plan is committed, this is just a small follow-up" | Manager Rule applies for the full session. Dispatch the domain agent. |
+| "The user asked about the server code — I'll just fix it while I'm here" | Domain crossing. Dispatch the relevant domain agent for that scope. Read domain boundaries in agent definitions. |
 
 ## Integration
 
