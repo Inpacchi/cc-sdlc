@@ -233,6 +233,23 @@ Execution phases are gated:
 
 ---
 
+## Project Initialization
+
+To adopt cc-sdlc in a new or existing project, invoke the `sdlc-initialize` skill. It detects the project state and selects the appropriate mode:
+
+| Mode | When | What Happens |
+|------|------|-------------|
+| **Greenfield** | New repo, no existing code or docs | Spec first (defines the project), then scaffold, agents, knowledge, disciplines |
+| **Retrofit** | Existing project with code and docs | Discovery of existing artifacts, proposal for categorization, then scaffold and integration |
+
+**Trigger:** Say **"Initialize SDLC in this project"** or **"Bootstrap SDLC"**
+
+The skill walks through: skeleton installation (`setup.sh`), CLAUDE.md authoring, deliverable catalog setup, domain agent creation (via `/plugin-dev:agent-development`), agent-context map wiring, knowledge seeding, discipline initialization, testing gotcha seeding, plugin verification, and a final checklist.
+
+See `BOOTSTRAP.md` for the retrofit reference.
+
+---
+
 ## Work Without Plans
 
 Not everything needs the full Spec → Planning → Result flow. The SDLC supports four tiers:

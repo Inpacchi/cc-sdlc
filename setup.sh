@@ -145,7 +145,7 @@ done
 
 [ -d "$SCRIPT_DIR/knowledge" ] && install_tree "$SCRIPT_DIR/knowledge" "$SDLC_TARGET/knowledge" "$SCRIPT_DIR/knowledge"
 
-for f in README.md BOOTSTRAP.md MIGRATE.md initial-prompt.md CLAUDE-SDLC.md; do
+for f in README.md BOOTSTRAP.md MIGRATE.md CLAUDE-SDLC.md; do
   [ -f "$SCRIPT_DIR/$f" ] && install_file "$SCRIPT_DIR/$f" "$SDLC_TARGET/$f"
 done
 
@@ -247,11 +247,10 @@ if [ "$SKIPPED" -gt 50 ] && [ "$INSTALLED" -lt 5 ]; then
   echo "  (This triggers the content-aware migration in ops/sdlc/MIGRATE.md)"
 else
   echo "Next steps:"
-  echo "  1. Add ops/sdlc/CLAUDE-SDLC.md content to your project's CLAUDE.md"
-  echo "  2. In Claude Code, say: 'I'd like to bootstrap the SDLC process in this project'"
-  echo "  3. During bootstrap, use /plugin-dev:agent-development to create domain agents"
+  echo "  1. In Claude Code, say: 'Initialize SDLC in this project'"
+  echo "     (This invokes sdlc-initialize, which handles CLAUDE.md, agents, knowledge, and everything else)"
 fi
-echo "  See ops/sdlc/initial-prompt.md for more prompts and quick reference"
+echo "  See ops/sdlc/CLAUDE-SDLC.md for commands and quick reference"
 
 if [ "$WITH_OPTIONAL" = "false" ]; then
   echo ""

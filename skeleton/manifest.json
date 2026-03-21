@@ -51,7 +51,7 @@
     "top_level": [
       "README.md",
       "BOOTSTRAP.md",
-      "initial-prompt.md",
+
       "CLAUDE-SDLC.md"
     ],
     "process": [
@@ -151,7 +151,8 @@
       "skills/sdlc-resume/SKILL.md",
       "skills/sdlc-status/SKILL.md",
       "skills/test-loop/SKILL.md",
-      "skills/sdlc-idea/SKILL.md"
+      "skills/sdlc-idea/SKILL.md",
+      "skills/sdlc-initialize/SKILL.md"
     ],
     "agents": [
       "agents/AGENT_TEMPLATE.md",

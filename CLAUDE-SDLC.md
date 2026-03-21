@@ -159,10 +159,12 @@ Rules:
 
 | Command | Action |
 |---------|--------|
+| "Initialize SDLC in this project" | Invokes `sdlc-initialize` — detects greenfield vs retrofit, walks through full framework setup |
 | "Let's catalog our ad hoc work" | Invokes the `sdlc-reconciliation` skill — reconciles untracked ad hoc commits back into the deliverable catalog |
 | "Let's organize the chronicles" | Archive completed deliverables from `current_work/` to `chronicle/`. See `ops/sdlc/process/chronicle_organization.md` |
 | "Let's run an SDLC compliance audit" | Audit spec coverage, chronicle freshness, index completeness. See `ops/sdlc/process/compliance_audit.md` |
 | "Let's update the SDLC" | Propose process improvement. See `ops/sdlc/process/sdlc_changelog.md` |
+| "Migrate my SDLC framework" | Apply cc-sdlc upstream updates while preserving project customizations. See `ops/sdlc/MIGRATE.md` |
 
 ### Key References
 - `ops/sdlc/process/overview.md` — Full workflow

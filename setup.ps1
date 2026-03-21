@@ -168,7 +168,7 @@ if (Test-Path $knowledgePath -PathType Container) {
     Install-SdlcTree $knowledgePath "$sdlcTarget\knowledge" $knowledgePath
 }
 
-$topLevelFiles = @("README.md", "BOOTSTRAP.md", "MIGRATE.md", "initial-prompt.md", "CLAUDE-SDLC.md")
+$topLevelFiles = @("README.md", "BOOTSTRAP.md", "MIGRATE.md", "CLAUDE-SDLC.md")
 foreach ($f in $topLevelFiles) {
     $srcPath = Join-Path $ScriptDir $f
     if (Test-Path $srcPath) {
@@ -293,11 +293,10 @@ if ($script:Skipped -gt 50 -and $script:Installed -lt 5) {
     Write-Host "  (This triggers the content-aware migration in ops/sdlc/MIGRATE.md)"
 } else {
     Write-Host "Next steps:"
-    Write-Host "  1. Add ops/sdlc/CLAUDE-SDLC.md content to your project's CLAUDE.md"
-    Write-Host "  2. In Claude Code, say: 'I'd like to bootstrap the SDLC process in this project'"
-    Write-Host "  3. During bootstrap, use /plugin-dev:agent-development to create domain agents"
+    Write-Host "  1. In Claude Code, say: 'Initialize SDLC in this project'"
+    Write-Host "     (This invokes sdlc-initialize, which handles CLAUDE.md, agents, knowledge, and everything else)"
 }
-Write-Host "  See ops/sdlc/initial-prompt.md for more prompts and quick reference"
+Write-Host "  See CLAUDE-SDLC.md for commands and quick reference"
 
 if (-not $WithOptional) {
     Write-Host ""
