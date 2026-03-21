@@ -211,13 +211,39 @@ Report the output to CD. If any files were skipped (already exist), note them.
 
 **1c. Verify installation.**
 
+Validate against `skeleton/manifest.json` source_files — every file listed must exist at its target path. Report any missing files.
+
 ```
 SKELETON CHECK
 Directories created: [count]
 Files installed: [count]
 Files skipped: [count]
 .sdlc-manifest.json: [exists/missing]
+
+Required directories:
+[ ] docs/current_work/audits/
+[ ] ops/sdlc/improvement-ideas/
+[ ] ops/sdlc/playbooks/
+[ ] ops/sdlc/plugins/
+[ ] ops/sdlc/examples/
+
+Required files (commonly missed):
+[ ] ops/sdlc/knowledge/README.md
+[ ] ops/sdlc/knowledge/architecture/README.md
+[ ] ops/sdlc/knowledge/data-modeling/README.md
+[ ] ops/sdlc/knowledge/design/README.md
+[ ] ops/sdlc/knowledge/product-research/README.md
+[ ] ops/sdlc/knowledge/testing/README.md
+[ ] ops/sdlc/MIGRATE.md
+[ ] .claude/agents/AGENT_TEMPLATE.md
+[ ] .claude/agents/AGENT_SUGGESTIONS.md
+[ ] .claude/agents/sdlc-compliance-auditor.md
+[ ] ops/sdlc/plugins/README.md
+[ ] ops/sdlc/plugins/context7-setup.md
+[ ] ops/sdlc/plugins/lsp-setup.md
 ```
+
+If any are missing, re-run `setup.sh` with `--force` or copy them manually. Do not proceed to Phase 2 with missing files.
 
 ### Phase 2: Write CLAUDE.md
 
@@ -293,6 +319,21 @@ The `sdlc-compliance-auditor` is already installed by setup.sh — do not recrea
 **4c. Report progress.**
 
 After each agent is created, report to CD: "Created [agent-name] — [domain coverage]." After all agents are created, list the full roster.
+
+**4d. Spec-vs-roster reconciliation.**
+
+Before moving to Phase 5, compare the created agent roster against any agent roles mentioned in the spec (e.g., FR requirements that reference "domain agents" or list specific roles). If the spec lists agents that were not created, or agents were created that the spec doesn't mention:
+
+```
+ROSTER RECONCILIATION
+Spec-listed roles:    [list from spec FRs/NFRs]
+Created agents:       [list from .claude/agents/]
+Match:                [yes / deviations listed below]
+Deviations:
+  - [role] — [not created / created but not in spec] — [reason]
+```
+
+Present deviations to CD. This prevents the neuroloom-bootstrap gap where spec-listed agents were silently dropped without a deviation record.
 
 ### Phase 5: Wire the Agent-Context Map
 
@@ -403,20 +444,31 @@ Run through the verification checklist:
 ```
 INITIALIZATION COMPLETE — VERIFICATION
 
+Skeleton & Infrastructure:
 [ ] Spec: D1 spec exists in docs/current_work/specs/
 [ ] Skeleton: setup.sh completed, .sdlc-manifest.json present
+[ ] All upstream READMEs copied (knowledge/README.md, knowledge/*/README.md)
+[ ] All scaffold directories exist: improvement-ideas/, playbooks/, plugins/, examples/, docs/current_work/audits/
 [ ] CLAUDE.md: exists with all required sections
 [ ] Catalog: docs/_index.md has D1 registered
-[ ] Agents: created via /plugin-dev:agent-development
+
+Agents:
+[ ] All agents created via /plugin-dev:agent-development — confirmed
     Created: [list all agents]
+[ ] Spec-vs-roster reconciliation complete — all spec-listed roles created or deviation logged
+[ ] AGENT_TEMPLATE.md and AGENT_SUGGESTIONS.md present in .claude/agents/
 [ ] Context map: agent-context-map.yaml wired to actual agent filenames
+[ ] All knowledge files mapped in agent-context-map.yaml (no unmapped YAMLs)
+
+Knowledge & Disciplines:
 [ ] Knowledge: upstream carried + stack-specific seeded
     Stack-specific files: [list]
 [ ] Disciplines: all 9 initialized with project context
 [ ] Testing: gotchas.yaml seeded with stack-specific entries
-[ ] Plugins:
-    context7: [installed / NOT INSTALLED]
-    LSP: [installed / not applicable / NOT INSTALLED]
+
+Plugins:
+[ ] context7: [installed / NOT INSTALLED]
+[ ] LSP: [installed / not applicable / NOT INSTALLED]
 ```
 
 Present the checklist to CD. If any items failed, note them and suggest remediation.

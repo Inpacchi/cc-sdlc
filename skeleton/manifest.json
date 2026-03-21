@@ -51,7 +51,7 @@
     "top_level": [
       "README.md",
       "BOOTSTRAP.md",
-
+      "MIGRATE.md",
       "CLAUDE-SDLC.md"
     ],
     "process": [
@@ -70,7 +70,8 @@
       "templates/cc_prompt_template.md",
       "templates/compliance_audit_template.md",
       "templates/concept_index_template.md",
-      "templates/test_spec_template.md"
+      "templates/test_spec_template.md",
+      "templates/sdlc_lite_plan_template.md"
     ],
     "examples": [
       "examples/spec_example.md",
@@ -113,6 +114,7 @@
       "knowledge/architecture/risk-assessment-framework.yaml",
       "knowledge/architecture/security-review-taxonomy.yaml",
       "knowledge/architecture/technology-patterns.yaml",
+      "knowledge/architecture/domain-boundary-gotchas.yaml",
       "knowledge/architecture/typescript-patterns.yaml",
       "knowledge/data-modeling/README.md",
       "knowledge/data-modeling/anti-patterns/common-modeling-mistakes.yaml",
@@ -156,7 +158,20 @@
     ],
     "agents": [
       "agents/AGENT_TEMPLATE.md",
+      "agents/AGENT_SUGGESTIONS.md",
       "agents/sdlc-compliance-auditor.md"
+    ],
+    "plugins": [
+      "plugins/README.md",
+      "plugins/context7-setup.md",
+      "plugins/lsp-setup.md",
+      "plugins/oberskills-setup.md"
+    ],
+    "optional_plugins": [
+      "plugins/design-for-ai-setup.md"
+    ],
+    "improvement_ideas": [
+      "improvement-ideas/.gitkeep"
     ]
   }
 }
