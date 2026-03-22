@@ -54,6 +54,7 @@
       "CLAUDE-SDLC.md"
     ],
     "process": [
+      "process/README.md",
       "process/overview.md",
       "process/deliverable_lifecycle.md",
       "process/collaboration_model.md",
