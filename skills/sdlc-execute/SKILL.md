@@ -282,7 +282,11 @@ Key feedback incorporated:
 - Omit agents that found no issues (don't write "[agent] no issues found")
 - This section is **mandatory** — the task cannot be marked complete without it
 
-### 3a. Per-Phase Commits (Mandatory)
+### 3a. Discipline Capture
+
+Run the discipline capture protocol per `ops/sdlc/process/discipline_capture.md`. Context format: `[DNN — phase N]`.
+
+### 3b. Per-Phase Commits (Mandatory)
 
 After each phase's POST-GATE clears, commit the phase's work before starting the next phase:
 

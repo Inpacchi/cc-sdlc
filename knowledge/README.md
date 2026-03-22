@@ -21,8 +21,8 @@ Other disciplines (coding, deployment, etc.) will add directories here as their 
 
 | Directory | Purpose |
 |-----------|---------|
-| `disciplines/` | Overviews — *what* each discipline covers, when to engage it |
-| `knowledge/` | Deep content — *how* to apply the discipline (patterns, rubrics, gotchas) |
+| `disciplines/` | Overviews — *what* each discipline covers, plus parking lot entries with triage markers (`[READY TO PROMOTE]`, `[NEEDS VALIDATION]`, `[DEFERRED]`) |
+| `knowledge/` | Deep content — *how* to apply the discipline (patterns, rubrics, gotchas). Promoted from discipline parking lots when validated. |
 
 ## How This Gets Used
 

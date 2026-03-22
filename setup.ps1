@@ -155,7 +155,7 @@ try {
 
 $sdlcTarget = Join-Path $TargetDir "ops\sdlc"
 
-$contentDirs = @("process", "templates", "examples", "disciplines", "playbooks", "improvement-ideas")
+$contentDirs = @("process", "templates", "examples", "disciplines", "playbooks")
 foreach ($dir in $contentDirs) {
     $srcPath = Join-Path $ScriptDir $dir
     if (Test-Path $srcPath -PathType Container) {

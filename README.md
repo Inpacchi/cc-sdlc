@@ -22,7 +22,6 @@ The framework is designed to be adopted incrementally — start with the core pr
 | `agents/` | Agent definitions — `sdlc-compliance-auditor` + `AGENT_TEMPLATE.md` for adding your own |
 | `skeleton/` | Directory structure manifest for bootstrapping new projects |
 | `plugins/` | Plugin setup guides (context7 is required; oberskills, design-for-ai are optional) |
-| `improvement-ideas/` | Design proposals for evolving the SDLC itself |
 
 ## Quick Start
 
@@ -83,17 +82,17 @@ Not everything needs a full spec → plan → result cycle. **SDLC-Lite** regist
 
 ## Knowledge Layer
 
-The framework includes a three-tier knowledge layer:
+The framework includes a two-tier knowledge layer:
 
 ```
-Disciplines (parking lots) → Knowledge YAMLs (structured patterns) → Skills (automation)
+Disciplines (parking lots + triage markers) → Knowledge YAMLs / Skills (structured patterns + automation)
 ```
 
-- `disciplines/` — Persistent files for capturing insights per domain as they emerge
-- `knowledge/` — Structured YAML patterns that skills load at runtime
+- `disciplines/` — Persistent files for capturing insights per domain as they emerge. Entries are triaged with markers (`[READY TO PROMOTE]`, `[NEEDS VALIDATION]`, `[DEFERRED]`) and promoted directly to knowledge or skills when validated.
+- `knowledge/` — Structured YAML patterns that agents load at runtime via `agent-context-map.yaml`
 - `skills/` — Automation that queries the knowledge layer before dispatching agents
 
-This layer starts mostly empty and fills in as your project accumulates insights.
+This layer starts mostly empty and fills in as your project accumulates insights. Planning and execution skills prompt for discipline capture at natural checkpoints.
 
 ## Plugins
 

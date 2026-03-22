@@ -222,7 +222,6 @@ Files skipped: [count]
 
 Required directories:
 [ ] docs/current_work/audits/
-[ ] ops/sdlc/improvement-ideas/
 [ ] ops/sdlc/playbooks/
 [ ] ops/sdlc/plugins/
 [ ] ops/sdlc/examples/
@@ -448,7 +447,7 @@ Skeleton & Infrastructure:
 [ ] Spec: D1 spec exists in docs/current_work/specs/
 [ ] Skeleton: setup.sh completed, .sdlc-manifest.json present
 [ ] All upstream READMEs copied (knowledge/README.md, knowledge/*/README.md)
-[ ] All scaffold directories exist: improvement-ideas/, playbooks/, plugins/, examples/, docs/current_work/audits/
+[ ] All scaffold directories exist: playbooks/, plugins/, examples/, docs/current_work/audits/
 [ ] CLAUDE.md: exists with all required sections
 [ ] Catalog: docs/_index.md has D1 registered
 

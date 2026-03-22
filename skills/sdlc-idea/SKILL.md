@@ -212,6 +212,8 @@ If the `docs/current_work/ideas/` directory doesn't exist, create it.
 - Technical unknown needs prototyping → suggest a spike (direct dispatch)
 - Still too vague → keep exploring (this skill isn't done yet)
 
+**Discipline capture:** Run the protocol per `ops/sdlc/process/discipline_capture.md`. Context format: `[idea: {slug}]`.
+
 Do NOT start planning or implementing. The idea exploration ends with a direction and a handoff.
 
 ## Red Flags

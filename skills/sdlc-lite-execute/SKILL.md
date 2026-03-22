@@ -218,6 +218,10 @@ Key feedback incorporated:
 - Omit agents that found no issues
 - This section is mandatory — the work is not done without it
 
+### 3a. Discipline Capture
+
+Run the discipline capture protocol per `ops/sdlc/process/discipline_capture.md`. Context format: `[DNN — phase N]`.
+
 ### 4. Verify, Commit, and Clean Up
 
 1. Run `[build command]` — confirm zero errors (see project CLAUDE.md)

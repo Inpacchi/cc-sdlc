@@ -483,6 +483,10 @@ Key feedback incorporated:
 
 **Format check:** After appending the Domain Agent Reviews section, verify that every bullet begins with `[agent-name]` in square brackets. If any bullet is missing the bracket prefix, correct only the bracket prefix — do not rephrase the finding.
 
+### 5a. Discipline Capture
+
+Run the discipline capture protocol per `ops/sdlc/process/discipline_capture.md`. Context format: `[DNN — planning]`.
+
 ### 6. Prompt for Execution
 
 The plan is reviewed and approved. Enter plan mode so the user gets the standard execution prompt with the option to clear context.

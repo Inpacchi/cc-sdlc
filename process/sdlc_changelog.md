@@ -34,6 +34,41 @@ Each entry contains:
 
 ---
 
+## 2026-03-22: Formalize Discipline Capture Pipeline and Remove improvement-ideas
+
+**Origin:** CD review of the SDLC's discipline/improvement-ideas/knowledge architecture. Identified that disciplines were only being written to during compliance audits — defeating their purpose as a real-time capture mechanism. Also identified that `improvement-ideas/` was an unnecessary staging area that added overhead without adding value.
+
+**What happened:** The intended pipeline was: discipline parking lot → improvement-ideas/ → knowledge/skill/process change. In practice, the middle step (improvement-ideas/) was never used — the directory was always empty. Meanwhile, the planning and execution skills had no discipline capture step, so parking lots only got written during audits (post-mortems) rather than during active work (real-time capture).
+
+**Changes made:**
+
+1. **`improvement-ideas/` removed as a concept** — deleted directory, removed from `skeleton/manifest.json`, `setup.sh`, `setup.ps1`, `README.md`, `sdlc-initialize`, and `sdlc-compliance-auditor`. The promotion pipeline is now: discipline parking lot → `[READY TO PROMOTE]` marker → CD approves → knowledge YAML or skill/process change.
+
+2. **Inline triage markers added to discipline parking lots** — `disciplines/README.md` updated with `[READY TO PROMOTE]`, `[NEEDS VALIDATION]`, `[DEFERRED]` convention. Replaces the separate improvement-ideas folder with inline status tracking.
+
+3. **Discipline capture steps added to 6 skills:**
+   - `sdlc-execute` (step 3a, post-execution before commit)
+   - `sdlc-lite-execute` (step 3a, post-execution before commit)
+   - `sdlc-plan` (step 5a, after agent review before plan mode)
+   - `sdlc-lite-plan` (step 3a, after agent review before save)
+   - `sdlc-idea` (in Crystallize step, after exploration)
+   - `design-consult` (in Finalize step, after design direction chosen)
+   All capture steps are lightweight (<2 min), optional (skip if nothing surfaced), and use a consistent format: `- **[date] [context]**: [insight]. [triage marker]`
+
+4. **Compliance auditor strengthened (§6a, §6c):**
+   - §6a now checks discipline write dates *between* audits and flags if parking lots are only written during audits
+   - §6c replaced: was improvement-ideas triage, now discipline triage status — scans for `[READY TO PROMOTE]` items and surfaces them to CD
+   - Severity levels updated: "improvement ideas accumulating" → "[READY TO PROMOTE] items pending CD approval"
+   - Knowledge layer description updated from 3-tier to 2-tier architecture
+
+5. **`process/discipline_capture.md`** (new) — Single reference file defining the discipline capture protocol (what to look for, how to capture, triage markers, rules). All 6 skills point here with a one-liner instead of duplicating the protocol. Added to `skeleton/manifest.json`.
+
+6. **Related docs updated:** `knowledge/README.md` (promotion flow), `disciplines/process-improvement.md` (disciplines→skills progression), `README.md` (knowledge layer section — 3-tier → 2-tier)
+
+**Rationale:** Discipline parking lots are only valuable if they capture insights in real-time during active work — not as audit after-the-fact observations. By baking capture prompts into the skills that produce insights (execution, planning, exploration, design), the parking lots become a living knowledge feed. Removing improvement-ideas/ simplifies the pipeline from three stages to two while losing nothing — the triage markers serve the same purpose with less overhead.
+
+---
+
 ## 2026-03-22: sdlc-idea Skill Refinements from Paire-Appetit Usage Review
 
 **Origin:** Review of the sous-improvement-planning session in paire-appetit, which produced two idea briefs (Sous Autonomous Marketing Intelligence, Sous Unified Search Router) using the sdlc-idea skill.

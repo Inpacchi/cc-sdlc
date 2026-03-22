@@ -52,7 +52,7 @@ Each discipline has a file in this directory. Each file serves as a **parking lo
 ```
 disciplines/
 ├── README.md                  ← This file (mental model + structure)
-├── testing.md                 ← Most developed (active work in improvement-ideas/)
+├── testing.md                 ← Most developed (active knowledge stores in knowledge/testing/)
 ├── design.md                  ← UI/UX, visual design, interaction patterns
 ├── coding.md                  ← Implementation patterns, conventions, tech debt
 ├── architecture.md            ← System design, component boundaries, integration
@@ -70,26 +70,40 @@ disciplines/
 2. Add the insight under the appropriate heading (with date and source context)
 3. Continue your current work
 
+**SDLC skills automatically prompt for discipline capture** at key points:
+- After execution completes (sdlc-execute, sdlc-lite-execute) — before committing
+- After planning completes (sdlc-plan, sdlc-lite-plan) — after agent review
+- During idea exploration (sdlc-idea) — insights from research
+- During design consultation (design-consult) — design insights
+
+**Triage markers** — when adding parking lot entries, optionally mark their readiness for promotion:
+
+| Marker | Meaning | Action |
+|--------|---------|--------|
+| `[READY TO PROMOTE]` | Validated through real use, reusable, stable | Auditor surfaces to CD for promotion to knowledge/skill/process |
+| `[NEEDS VALIDATION]` | Promising but not yet confirmed through use | Leave in parking lot until validated |
+| `[DEFERRED]` | Acknowledged but not a priority (include reason) | Revisit at next planning boundary |
+| *(no marker)* | Newly captured, not yet triaged | Auditor flags after 2 audit cycles without triage |
+
 **At planning boundaries** (deliverable kickoff, quarterly review, new project):
 
 1. Read the relevant discipline parking lots
-2. Identify items worth promoting to formal SDLC artifacts (specs, deliverables)
-3. Triage: do now, plan for later, or archive as "noted"
+2. Scan for `[READY TO PROMOTE]` items — promote directly to knowledge YAML, skill update, or process change
+3. Triage unmarked items: mark as `[NEEDS VALIDATION]`, `[DEFERRED]`, or `[READY TO PROMOTE]`
 
 **When a discipline matures** (enough patterns to formalize):
 
-1. Distill parking lot into structured knowledge (like knowledge/testing/ YAML files)
-2. Design skill definitions from the patterns
-3. Parking lot becomes the skill's design history
+1. Promote `[READY TO PROMOTE]` items directly to structured knowledge (knowledge/ YAML files)
+2. Design skill definitions from the validated patterns
+3. Parking lot entries remain as history — mark them `Promoted → [target file]`
 
 ## Relationship to Existing SDLC
 
 | Existing | Discipline view |
 |----------|-----------------|
 | `process/` | Phase definitions — *when* work happens |
-| `disciplines/` | Capability definitions — *what* capabilities are applied |
+| `disciplines/` | Capability definitions — *what* capabilities are applied, plus parking lot entries with triage markers |
 | `templates/` | Phase-oriented artifacts (spec, plan, result) |
 | `knowledge/` | Discipline-specific knowledge stores (testing, data-modeling, etc.) |
-| `improvement-ideas/` | Active design work on discipline improvements |
 
 The phase and discipline views are complementary, not competing. A deliverable still flows through phases (Spec → Plan → Implement → Result). But at each phase, multiple disciplines contribute — and each discipline accumulates knowledge that persists beyond any single deliverable.

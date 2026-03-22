@@ -245,6 +245,10 @@ Key feedback incorporated:
 
 **Format check:** After appending the Worker Agent Reviews section, verify that every bullet begins with `[agent-name]` in square brackets. If any bullet is missing the bracket prefix, correct only the bracket prefix — do not rephrase the finding.
 
+### 3a. Discipline Capture
+
+Run the discipline capture protocol per `ops/sdlc/process/discipline_capture.md`. Context format: `[DNN — planning]`.
+
 ### 4. Save Plan to File
 
 Save the reviewed plan (including Worker Agent Reviews) to:

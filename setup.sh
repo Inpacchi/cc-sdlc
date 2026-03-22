@@ -143,16 +143,6 @@ for dir in process templates examples disciplines playbooks; do
   [ -d "$SCRIPT_DIR/$dir" ] && install_tree "$SCRIPT_DIR/$dir" "$SDLC_TARGET/$dir" "$SCRIPT_DIR/$dir"
 done
 
-# improvement-ideas — create with .gitkeep if empty
-if [ -d "$SCRIPT_DIR/improvement-ideas" ]; then
-  install_tree "$SCRIPT_DIR/improvement-ideas" "$SDLC_TARGET/improvement-ideas" "$SCRIPT_DIR/improvement-ideas"
-else
-  mkdir -p "$SDLC_TARGET/improvement-ideas" 2>/dev/null
-  if [ ! -f "$SDLC_TARGET/improvement-ideas/.gitkeep" ]; then
-    touch "$SDLC_TARGET/improvement-ideas/.gitkeep" && increment installed
-  fi
-fi
-
 [ -d "$SCRIPT_DIR/knowledge" ] && install_tree "$SCRIPT_DIR/knowledge" "$SDLC_TARGET/knowledge" "$SCRIPT_DIR/knowledge"
 
 # Ensure docs/current_work/audits/ exists (audit output directory)

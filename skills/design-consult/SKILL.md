@@ -267,6 +267,8 @@ When the user confirms a final direction:
    - 2-3 files → suggest `sdlc-lite-plan`
    - 4+ files or new abstractions → suggest `sdlc-plan`
 
+**Discipline capture:** Run the protocol per `ops/sdlc/process/discipline_capture.md`. Context format: `[design-consult: {slug}]`.
+
 Do NOT start implementing. The design consultation ends with a direction and a handoff.
 
 ## Red Flags

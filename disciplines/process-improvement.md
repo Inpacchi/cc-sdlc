@@ -30,7 +30,7 @@ This principle is the governor on all other process improvement. If an improveme
 
 - **CMMI maturity progression as roadmap.** Level 1 (ad hoc) → Level 2 (managed, documented) → Level 3 (standardized across projects) → Level 4 (measured) → Level 5 (self-improving). Build Level 2 with the architecture to support 3-5. Each level is earned by demonstrating it works at the current level.
 
-- **Disciplines → Skills progression.** Each discipline parking lot is raw material for a future Claude Code skill. The pattern: manual process → documented steps → structured knowledge → skill definition → skill suite. Each discipline follows the same path at its own pace.
+- **Disciplines → Skills progression.** Each discipline parking lot is raw material for a future Claude Code skill. The pattern: parking lot insight → `[READY TO PROMOTE]` triage → knowledge YAML → skill definition → skill suite. Each discipline follows the same path at its own pace.
 
 - **The self-improving loop generalizes.** A layered knowledge store with a capture-accumulate-feed-forward cycle applies to every discipline. Design knowledge, architecture knowledge, BA knowledge all benefit from the same structure. Consider a generic "discipline knowledge store" template.
 
