@@ -136,6 +136,8 @@ Share research findings with the user as they come in. New information often shi
 
 When enough understanding exists (the user will signal this, or you'll notice the conversation naturally shifting from "what's the problem" to "how might we solve it"), sketch 2-3 conceptual approaches.
 
+**This step is expected but not mandatory.** If the exploration converges quickly on a single obvious direction (e.g., the codebase architecture makes one approach clearly natural), it's fine to skip straight to Crystallize with a single Direction. But when multiple viable approaches exist and the user hasn't explicitly chosen, present sketches — don't collapse the option space on their behalf.
+
 **Sketches are NOT specs.** They are rough shapes — each one a different way to think about the solution:
 
 For each approach:
@@ -172,7 +174,7 @@ When the user signals readiness (or when the conversation has naturally converge
 ## Idea Brief: [Title]
 
 **Explored:** [date]
-**Seed:** [original idea as stated by the user]
+**Seed:** [original idea — use the user's actual words, not a cleaned-up restatement]
 
 ### Problem Understanding
 [2-3 sentences: the problem as understood after exploration]
@@ -188,6 +190,9 @@ When the user signals readiness (or when the conversation has naturally converge
 ### Open Questions
 - [What still needs answering before this can be planned]
 - [Technical unknowns that require prototyping or deeper research]
+
+### Codebase Context
+[Key files, modules, and patterns discovered during grounding that inform the direction — name specific paths]
 
 ### Feasibility Notes
 [What the codebase grounding revealed about effort and risk]
