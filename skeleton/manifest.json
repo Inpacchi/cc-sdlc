@@ -61,7 +61,10 @@
       "process/chronicle_organization.md",
       "process/ad_hoc_reconciliation.md",
       "process/sdlc_changelog.md",
-      "process/discipline_capture.md"
+      "process/discipline_capture.md",
+      "process/manager-rule.md",
+      "process/review-fix-loop.md",
+      "process/finding-classification.md"
     ],
     "templates": [
       "templates/spec_template.md",

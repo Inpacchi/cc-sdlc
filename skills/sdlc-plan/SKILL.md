@@ -15,11 +15,7 @@ Domain agents own the planning lifecycle: they write the spec, they write the pl
 
 ## Manager Rule
 
-**The orchestrator never writes spec, plan, or review content.** This applies unconditionally: before dispatching agents, while incorporating review feedback, after re-review, and at every other point in this skill. There is no phase of this skill in which it is correct for you to produce domain content yourself. If you need a spec written or revised — dispatch the domain agent who owns it. If you need a plan revised — dispatch the writing agent. If you notice a problem — dispatch the relevant domain agent to fix it. Noticing a problem yourself does not authorize you to fix it yourself.
-
-**The size of a revision is not a valid reason to self-revise.** "This is a small wording change" or "I'm just incorporating the feedback" is not an exception. Every content change goes through the domain agent who wrote it.
-
-**Orchestrator-editable content:** WORDING-classified spec revisions (typos, phrasing — not meaning changes), date stamps, mechanical count updates (e.g., "3 widgets" → "4 widgets"), and process documentation (Domain Agent Reviews section, dependency table metadata). The boundary is: if it requires domain judgment about code, architecture, or implementation, dispatch. If it's summarizing review outcomes or fixing table formatting, do it yourself.
+Read and follow `ops/sdlc/process/manager-rule.md` — the canonical definition of this rule. It applies unconditionally for the entire session.
 
 ## Mode Selection
 
@@ -420,35 +416,11 @@ Plan review — dispatching:
 
 Dispatch all review agents in parallel. Collect feedback.
 
-If agents have findings, classify each finding individually in a table before acting — no narrative paragraphs, no blanket dismissals:
+If agents have findings, classify per `ops/sdlc/process/finding-classification.md`. Planning context uses FIX, DECIDE, and PRE-EXISTING only. Output the classification table, then:
 
-```
-| # | Finding | Agent | Classification | Severity | Rationale |
-|---|---------|-------|---------------|----------|-----------|
-| 1 | specific finding | agent-name | FIX / DECIDE / PRE-EXISTING | critical / major / minor | why |
-| 2 | ... | ... | ... | ... | ... |
-```
-
-Severity applies only to FIX findings. DECIDE and PRE-EXISTING leave Severity blank.
-- **critical**: changes the approach, adds or removes files, or changes a phase assignment
-- **major**: in-scope quality issue that doesn't change scope
-- **minor**: style, polish, or low-impact correction
-
-| Classification | When | Action |
-|---------------|------|--------|
-| **FIX** | Finding is in scope, the plan should address it, AND the correct resolution is clear without user input | Include in revision dispatch |
-| **DECIDE** | Trade-off, product decision, or any finding where the resolution requires choosing between alternatives the user should weigh in on | Invoke the `AskUserQuestion` tool with the finding description and options. Do not type the question as conversational text. Block until CD answers. |
-| **PRE-EXISTING** | Finding exists in code the plan does not touch | No action — cite the file and explain why it's out of scope |
-
-**These are the only valid classification types. Do not invent new ones. Severity labels belong in the Severity column, not the Classification column. Do not use narrative dismissals ("ignoring," "off-track," "not relevant"). Every finding gets a row in the table.**
-
-**Low-severity in-scope findings:** If a finding is in scope but has no actionable correction (e.g., purely informational, already consistent with the plan), classify it as FIX with a rationale of "acknowledged, no revision needed." It still gets a row. Do not create a new classification for it.
-
-**PRE-EXISTING rules:** A finding qualifies as pre-existing ONLY if the finding's file is not in the plan's Files list. If the file appears in the Files list, any finding about that file is in scope — regardless of whether the finding is about the specific function the plan modifies.
-
-Only FIX findings go to the writing agent for revision. DECIDE findings go to the user. PRE-EXISTING findings require no action but must appear in the table.
-
-**Misclassification guard:** Before dispatching FIX findings, scan each one. If you are about to type a question to the user about a FIX finding (e.g., "Is this the interaction model you want?", "Which approach do you prefer?"), STOP — that finding is DECIDE, not FIX. Reclassify it and invoke `AskUserQuestion`. A FIX finding must have a clear corrective action that does not require choosing between alternatives.
+- Only FIX findings go to the writing agent for revision
+- DECIDE findings go to the user via `AskUserQuestion`
+- PRE-EXISTING findings require no action but must appear in the table
 
 **Incorporating findings:** If there are FIX findings, re-dispatch the domain agent who wrote the plan (from step 4) with only the FIX findings. That agent produces the revision. **You do not write the revision.** This is the Manager Rule — if you find yourself editing the plan directly instead of dispatching the writing agent, stop. Output a dispatch checklist before re-dispatching:
 
@@ -547,13 +519,7 @@ Not every invocation needs a deliverable ID. For ad hoc work (bug fixes, small t
 
 ### Session Handoff
 
-After presenting the plan and entering plan mode, the Manager Rule remains in effect for the entire session. If the user requests additional changes unrelated to the plan:
-
-- **Single-file, same domain:** Dispatch the relevant domain agent. Do NOT implement directly — the Manager Rule has no size exception.
-- **Multi-file or cross-domain:** Offer to invoke the appropriate planning skill for the new scope.
-- **Crossing a domain boundary** (e.g., frontend work + backend services in the same request): Identify the domain split explicitly and dispatch separate agents — one per domain.
-
-There is no "post-plan wind-down mode" where direct implementation becomes acceptable. The plan is produced — execution is a separate skill invocation.
+The Manager Rule remains in effect per `ops/sdlc/process/manager-rule.md` — see the Session Scope section.
 
 ## Integration
 

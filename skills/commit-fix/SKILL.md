@@ -21,7 +21,7 @@ A `/commit-review` must have been run in this conversation. If no review finding
 
 ### Manager Rule
 
-**The manager (you) never edits code files.** This applies unconditionally: before dispatching agents, while waiting for agents, after receiving agent results, during triage, and during the review loop. There is no phase of this command in which it is correct for you to open a file and make a change. If you notice a problem — before dispatch, mid-loop, anywhere — the correct action is to dispatch the relevant agent. Noticing a problem yourself does not authorize you to fix it yourself.
+Read and follow `ops/sdlc/process/manager-rule.md` — the canonical definition of this rule.
 
 ### 1. Load Findings
 
@@ -65,83 +65,9 @@ After all agents complete, verify the project builds successfully (`[build comma
 
 ### 3. Review-Fix Loop
 
-Fixes can introduce new issues. Run the same review-fix loop defined in `sdlc-execute` (steps 2a-2d):
+Fixes can introduce new issues. Run the **Review-Fix Loop** per `ops/sdlc/process/review-fix-loop.md`. Agent source: the original `/commit-review` agent list. Classifications: FIX, INVESTIGATE, DECIDE, PRE-EXISTING per `ops/sdlc/process/finding-classification.md` (no PLAN — commit fixes are scoped to the current diff).
 
-#### 3a. Dispatch ALL Review Agents
-
-Re-dispatch ALL relevant agents from the original review — not just those who had findings.
-
-**Review agents report findings only. They do NOT fix anything.** Fixes are dispatched in step 3c after the manager classifies each finding. An agent that fixes inline during review has bypassed the triage gate — that is a process failure, not a shortcut.
-
-Output a checklist before dispatching:
-
-```
-Review round N — dispatching:
-- [ ] code-reviewer
-- [ ] frontend-developer
-- [ ] performance-engineer
-```
-
-Every box must have a corresponding agent dispatch.
-
-#### 3b. Collect Findings
-
-Wait for all agents to return. Output a findings table:
-
-```
-Review round N results:
-| Agent | Findings | Severity |
-|-------|----------|----------|
-| agent-1 | specific finding | critical/major/minor |
-| agent-2 | no issues | — |
-```
-
-**All agents clean -> go to step 4.**
-**Any findings -> go to 3c.**
-
-"Clean" means zero findings. Not "findings I consider pre-existing." Not "only minor suggestions." Zero.
-
-#### 3c. Triage + Fix
-
-For each finding, classify individually in a table before acting — no narrative paragraphs, no blanket dismissals:
-
-```
-| # | Finding | Agent | Classification | Rationale |
-|---|---------|-------|---------------|-----------|
-| 1 | specific finding | agent-name | FIX / INVESTIGATE / DECIDE / PRE-EXISTING | why |
-| 2 | ... | ... | ... | ... |
-```
-
-| Classification | When | Action |
-|---------------|------|--------|
-| **FIX** | Confident in diagnosis and fix | Dispatch the most relevant domain agent to fix it |
-| **INVESTIGATE** | Need more info | Dispatch relevant agent to diagnose |
-| **DECIDE** | Trade-off or business decision | Invoke the `AskUserQuestion` tool with the finding description and options. Do not type the question as conversational text. Block until the user answers. |
-| **PRE-EXISTING** | Finding exists in code the fixes did not touch | No action — but must cite the file and explain why it's out of scope |
-
-**These are the only valid classifications. Do not invent new ones (STALE, DUPLICATE, INTENTIONAL, or any other). If a finding does not fit one of the four above, classify it as DECIDE and present it to the user.**
-
-**PRE-EXISTING rules:** A finding qualifies as pre-existing ONLY if the fix diff did not modify the code in question. If the fix moved, hoisted, or refactored the code — even without changing its logic — it is in scope and must be classified as FIX, INVESTIGATE, or DECIDE.
-
-After classification, output a dispatch checklist before taking any action:
-
-```
-Round N triage — dispatching:
-- [ ] agent-name: finding description (FIX)
-- [ ] agent-name: finding description (FIX)
-```
-
-**Every FIX row in the table must have a corresponding checkbox. Count the FIX rows. Count the checkboxes. They must match. If you find yourself editing files directly instead of dispatching an agent, stop — that violates this command.**
-
-**The size of a fix is not a valid reason to self-fix.** "This is a small change" or "this is targeted" is not an exception. A one-line fix still gets dispatched to the relevant domain agent. There are no small-fix exceptions.
-
-Then: dispatch agents for all FIX findings, present DECIDE findings to user, re-review. PRE-EXISTING findings do not block the loop from completing.
-
-#### 3d. Re-Review (Mandatory)
-
-After fixes, return to 3a and dispatch ALL agents again — not just the ones who found issues. Fixes can introduce new problems in other domains.
-
-**3-strike rule:** Same finding category 3 times in a row — stop iterating. Document what was tried and flag to the user.
+When the loop exits cleanly, go to step 4.
 
 ### 4. Worker Agent Reviews
 

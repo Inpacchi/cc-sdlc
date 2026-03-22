@@ -101,18 +101,7 @@ digraph execution {
 
 ## Manager Rule
 
-**The manager (you) never edits code files.** This applies unconditionally: before dispatching agents, while waiting for agents, after receiving agent results, during the review loop, and at every other point in this skill. There is no phase of this skill — not Phase 1, not any phase — in which it is correct for you to open a file and make a change. If you notice a problem, the correct action is to dispatch the relevant worker domain agent.
-
-**The size of a change is not a valid reason to self-implement.** "This is small, well-defined, and bounded" is not an exception. A one-line type change still gets dispatched. A targeted edit to a single file still gets dispatched. There are no small-change exceptions.
-
-**Complexity is not a valid reason to self-implement.** "I'll implement this directly to avoid context gaps" or "dispatching agents would lose the patterns I've read" reverses the logic entirely. Complexity increases the need for worker domain agents — it does not reduce it. When you have gathered context from reading files, your role is to pass that context to the worker domain agent in the dispatch prompt, not to implement the work yourself.
-
-**If an agent returns without applying its work** (change not reflected in files, agent reported an error, or the change is missing): re-dispatch that agent with the same instructions. Do NOT apply the change yourself. The rule is re-dispatch, not self-implement.
-
-This rule has no exceptions for scope or completeness. Specifically:
-
-- **Parallel agents produced a file conflict** (one agent's write overwrote another's): re-dispatch the overwritten agent with the current file state and instructions to re-apply its changes. Framing the situation as a "merge task" does not make self-implementation appropriate.
-- **An agent's work is mostly complete but has gaps or loose ends**: re-dispatch that agent to close the gaps. "Mostly done" is not done. Finishing the last 10% yourself is the same violation as doing 100% yourself.
+Read and follow `ops/sdlc/process/manager-rule.md` — the canonical definition of this rule. It applies unconditionally for the entire session.
 
 ## Phase Details
 
@@ -188,78 +177,9 @@ Phase 3: UI components (depends on Phase 1, NOT Phase 2)
 
 ### 2. Completion Review
 
-After ALL phases are done, run the **Review-Fix Loop** (steps 2a–2d). This loop is mandatory and repeats until every agent reports clean.
+After ALL phases are done, run the **Review-Fix Loop** per `ops/sdlc/process/review-fix-loop.md`. Agent source: the plan's agent assignment table. Classifications: use all five per `ops/sdlc/process/finding-classification.md` (FIX, PLAN, INVESTIGATE, DECIDE, PRE-EXISTING).
 
-#### 2a. Dispatch ALL Review Agents
-
-Use the plan's agent assignment table as the starting set — do not re-evaluate relevance from scratch. Add agents if new domains surfaced during implementation; do not remove agents from the plan's list. Dispatch **every single one** — not a subset.
-
-**Review agents report findings only. They do NOT fix anything.** Fixes are dispatched in step 2c after the manager classifies each finding. An agent that fixes inline during review has bypassed the triage gate — that is a process failure, not a shortcut.
-
-Before dispatching, output this checklist:
-
-```
-Review round N — dispatching:
-- [ ] agent-name-1
-- [ ] agent-name-2
-- [ ] agent-name-3
-- [ ] agent-name-4
-```
-
-Every box must have a corresponding agent dispatch. If the number of dispatched agents doesn't match the checklist count, **stop and fix before proceeding**.
-
-#### 2b. Collect Findings
-
-Wait for ALL agents to return. For each agent, record:
-- Agent name
-- Findings (or "no issues")
-
-Output a findings table:
-
-```
-Review round N results:
-| Agent | Findings | Severity |
-|-------|----------|----------|
-| agent-1 | specific finding | critical/major/minor |
-| agent-2 | no issues | — |
-```
-
-**If any agent has findings → go to 2c.**
-**If ALL agents report no issues → output "Review loop complete — all agents clean. Proceeding to Worker Agent Reviews." then go to step 3.**
-
-#### 2c. Problem Triage + Fix
-
-For each finding, classify before acting:
-
-| Question | If YES → |
-|----------|----------|
-| Is it systemic (many files, architecture change)? | **PLAN** — needs a sub-plan, flag to CD |
-| Am I confident about diagnosis AND fix, AND the correct resolution is clear without user input? | **FIX** — apply minimal change. If the fix fails twice, reclassify as INVESTIGATE or PLAN |
-| Is it a trade-off, product decision, or does the resolution require choosing between alternatives the user should weigh in on? | **DECIDE** — invoke the `AskUserQuestion` tool with the finding description and options. Do not type the question as conversational text. Block until CD answers. |
-| None of the above | **INVESTIGATE** — dispatch relevant agent to diagnose |
-
-| **PRE-EXISTING** | Finding exists in code this work did not touch | No action — cite the file and explain why it's out of scope |
-
-**Use only these five classifications.** If a finding doesn't fit, use DECIDE.
-
-**Misclassification guard:** Before dispatching FIX findings, scan each one. If you are about to type a question to the user about a FIX finding, STOP — that finding is DECIDE, not FIX. Reclassify it and invoke `AskUserQuestion`.
-
-**PRE-EXISTING** qualifies ONLY if the finding's file is not in the plan's Files list AND was not created or modified by an agent during execution. If the file appears in the Files list, or if an agent touched it during this execution, any finding about that file is in scope — regardless of whether the finding is about the specific function the plan modifies.
-
-Dispatch the most relevant domain agent to fix each finding — this is often the agent who found it, but may be a different agent with deeper expertise in the affected file. If multiple findings need fixes, dispatch all of them before re-reviewing.
-
-For anything that isn't a FIX, state what you don't know:
-```
-**Unknown**: [specific thing you haven't verified]
-```
-
-#### 2d. Re-Review (Mandatory)
-
-After ALL fixes from 2c are applied, **return to 2a**. Before dispatching, check whether any fixes in 2c introduced new domains not covered by the existing agent list. If yes, add the relevant agent(s) to the checklist for this round. Then dispatch ALL agents — not just the ones who found issues. Fixes can introduce new problems in other domains.
-
-**This loop repeats until 2b shows ALL agents reporting no issues.** There is no shortcut. Do not claim the loop is closed without a clean round.
-
-**3-strike rule:** If the same agent reports the same finding category in 3 consecutive review rounds — regardless of what was changed between rounds — stop iterating. Output: (1) the finding text, (2) the agent dispatched to fix it, (3) what each attempt returned, (4) your hypothesis for why attempts are failing. Then invoke `AskUserQuestion` to escalate to CD — do not type the escalation as conversational text. Save progress in a partial result doc.
+This loop is mandatory and repeats until every agent reports clean. When the loop exits cleanly, output "Review loop complete — all agents clean. Proceeding to Worker Agent Reviews." then go to step 3.
 
 ### 3. Worker Agent Reviews Output
 
@@ -325,13 +245,7 @@ Files changed:
 
 ### Session Handoff
 
-After presenting the commit summary, the Manager Rule remains in effect for the entire session. If the user requests additional changes:
-
-- **Single-file, same domain:** Dispatch the relevant domain agent. Do NOT implement directly — the Manager Rule has no size exception.
-- **Multi-file or cross-domain:** Offer to invoke `sdlc-plan` for the new scope. These changes benefit from the planning loop.
-- **Crossing a domain boundary** (e.g., TUI work + server services in the same request): Identify the domain split explicitly and dispatch separate agents — one per domain.
-
-There is no "post-commit wind-down mode" where direct implementation becomes acceptable.
+The Manager Rule remains in effect per `ops/sdlc/process/manager-rule.md` — see the Session Scope section.
 
 ## Agent Selection Reference
 
