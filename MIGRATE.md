@@ -88,7 +88,7 @@ Group the changed cc-sdlc files by migration strategy:
 | **Process docs** | `process/*.md` | Direct copy (framework-level) |
 | **Templates** | `templates/*.md` | Direct copy (framework-level) |
 | **Disciplines** | `disciplines/*.md` | Content-merge: update framework guidance, preserve project parking lot entries |
-| **Bootstrap/migration** | `BOOTSTRAP.md`, `MIGRATE.md` | Direct copy (framework-level) |
+| **Migration** | `MIGRATE.md` | Direct copy (framework-level) |
 | **Context map** | `knowledge/agent-context-map.yaml` | Never overwrite — project has its own agent names. Update paths for moved/deleted files (§3.3) |
 | **Project agents** | Project `.claude/agents/*.md` | Targeted section updates (see Phase 3) |
 
@@ -103,7 +103,7 @@ For files with no project customizations, copy directly from cc-sdlc to the proj
 - `process/*.md`
 - `templates/*.md`
 - `knowledge/**/*.yaml` (but NOT `agent-context-map.yaml`)
-- `BOOTSTRAP.md`, `MIGRATE.md`, `README.md`, `CLAUDE-SDLC.md`
+- `MIGRATE.md`, `README.md`, `CLAUDE-SDLC.md`
 - `agents/AGENT_TEMPLATE.md`, `agents/AGENT_SUGGESTIONS.md`
 - `playbooks/*.md` (unless the project has written its own playbooks — check git blame)
 - `examples/*.md`
@@ -360,10 +360,10 @@ After migration, update `.sdlc-manifest.json` with the new source version and fi
 
 ---
 
-## Migration vs Bootstrap
+## Migration vs Initialization
 
-| Concern | Bootstrap | Migration |
-|---------|-----------|-----------|
+| Concern | Initialization (`sdlc-initialize`) | Migration |
+|---------|-------------------------------------|-----------|
 | When | First install | Framework update |
 | Agent creation | Creates new agents from scratch | Updates template-derived sections in existing agents |
 | Skills | Copies from cc-sdlc | Merges framework changes into project-customized skills |

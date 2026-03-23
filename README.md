@@ -20,35 +20,27 @@ The framework is designed to be adopted incrementally — start with the core pr
 | `playbooks/` | Recipes for recurring task types (add your own as patterns emerge) |
 | `skills/` | Claude Code skills for SDLC workflow automation |
 | `agents/` | Agent definitions — `sdlc-compliance-auditor` + `AGENT_TEMPLATE.md` for adding your own |
-| `skeleton/` | Directory structure manifest for bootstrapping new projects |
+| `skeleton/` | Directory structure manifest for project initialization |
 | `plugins/` | Plugin setup guides (context7 is required; oberskills, design-for-ai are optional) |
 
 ## Quick Start
 
-### 1. Bootstrap a New Project
+### 1. Initialize a Project
 
 ```bash
-# Clone or copy cc-sdlc to your machine
+# Clone cc-sdlc to your machine
 git clone https://github.com/Inpacchi/cc-sdlc ~/src/ops/sdlc
-
-# Or set it up as a pnpm/npm package — see skeleton/manifest.json
 ```
 
 Open your project in Claude Code and say:
 
-> "Let's implement the SDLC process from `~/src/ops/sdlc`"
+> "Initialize SDLC in this project"
 
-CC will scan your existing documentation, propose a categorization, create the directory structure, and add the SDLC compliance section to your CLAUDE.md.
+The `sdlc-initialize` skill auto-detects whether this is a greenfield project or a retrofit (existing code/docs), then walks through: skeleton installation, CLAUDE.md authoring, agent creation, knowledge wiring, and verification.
 
-See `BOOTSTRAP.md` for the full CC initialization walkthrough.
+### 2. Use the Process
 
-### 2. Adopt the Skills
-
-Copy the `skills/` directory into your project's `.claude/skills/` and the `agents/` directory into `.claude/agents/`. Add the `CLAUDE-SDLC.md` content to your project's `CLAUDE.md`.
-
-### 3. Use the Process
-
-Once bootstrapped, the core workflow is:
+Once initialized, the core workflow is:
 
 ```
 Idea → Spec (CD approves) → Plan (reviewed) → Execute → Review → Result → Chronicle

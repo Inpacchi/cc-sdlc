@@ -59,7 +59,7 @@ if [ ! -f "$SCRIPT_DIR/skeleton/manifest.json" ]; then
   exit 1
 fi
 
-for f in process/overview.md process/deliverable_lifecycle.md templates/spec_template.md BOOTSTRAP.md README.md; do
+for f in process/overview.md process/deliverable_lifecycle.md templates/spec_template.md README.md; do
   if [ ! -f "$SCRIPT_DIR/$f" ]; then
     echo "Error: cc-sdlc source incomplete. Missing: $f" >&2
     exit 1
@@ -148,7 +148,7 @@ done
 # Ensure docs/current_work/audits/ exists (audit output directory)
 mkdir -p "$TARGET_DIR/docs/current_work/audits" 2>/dev/null
 
-for f in README.md BOOTSTRAP.md MIGRATE.md CLAUDE-SDLC.md; do
+for f in README.md MIGRATE.md CLAUDE-SDLC.md; do
   [ -f "$SCRIPT_DIR/$f" ] && install_file "$SCRIPT_DIR/$f" "$SDLC_TARGET/$f"
 done
 

@@ -1,5 +1,5 @@
 {
-  "_comment": "Canonical directory structure and file list for a project using cc-sdlc. Used by setup.sh and BOOTSTRAP.md.",
+  "_comment": "Canonical directory structure and file list for a project using cc-sdlc. Used by setup.sh.",
   "_version": "1.0.0",
   "directories": [
     "docs",
@@ -51,7 +51,6 @@
     "_comment": "Canonical list of all files installed by setup.sh. Each path is relative to the cc-sdlc source root. Used for completeness validation.",
     "top_level": [
       "README.md",
-      "BOOTSTRAP.md",
       "MIGRATE.md",
       "CLAUDE-SDLC.md"
     ],

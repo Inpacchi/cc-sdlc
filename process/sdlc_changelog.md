@@ -34,6 +34,27 @@ Each entry contains:
 
 ---
 
+## 2026-03-22: Remove BOOTSTRAP.md — sdlc-initialize Supersedes It
+
+**Origin:** CD review of how existing repos get bootstrapped. BOOTSTRAP.md was a legacy manual reference that predated the `sdlc-initialize` skill.
+
+**What happened:** BOOTSTRAP.md contained a manual Phase 1-4 walkthrough for initializing cc-sdlc in a project. The `sdlc-initialize` skill was built later and handles the same flow (greenfield + retrofit) with mode detection, CD approval gates, and structured phases. BOOTSTRAP.md was redundant — and worse, its retrofit instructions diverged from the skill's (the skill had been updated while BOOTSTRAP.md stayed stale).
+
+**Changes made:**
+
+1. **`BOOTSTRAP.md`** — Deleted.
+2. **`skills/sdlc-initialize/SKILL.md`** — Inlined the retrofit discovery categorization table and proposal steps (previously referenced BOOTSTRAP.md Phase 1-2). Removed `BOOTSTRAP.md` from Integration references.
+3. **`setup.sh`** — Removed BOOTSTRAP.md from required files check and copy list.
+4. **`skeleton/manifest.json`** — Removed from source_files list and updated comment.
+5. **`MIGRATE.md`** — Removed from categorization table (§1.3) and direct copy list (§2.1). Updated "Migration vs Bootstrap" to "Migration vs Initialization" referencing `sdlc-initialize`.
+6. **`process/overview.md`** — Removed BOOTSTRAP.md reference, added note that retrofit mode is built into the skill.
+7. **`CLAUDE.md`** — Replaced BOOTSTRAP.md entry with MIGRATE.md in project structure table.
+8. **`README.md`** — Rewrote Quick Start to point to `sdlc-initialize` instead of BOOTSTRAP.md. Removed manual "Adopt the Skills" step (the skill handles it).
+
+**Rationale:** One source of truth for initialization. When the skill and a reference doc cover the same ground, the doc drifts and becomes a liability. The skill is the canonical entry point; MIGRATE.md handles updates. No manual bootstrap doc needed.
+
+---
+
 ## 2026-03-22: Add Phase 0 Self-Update to MIGRATE.md
 
 **Origin:** CD identified that the migrator reads the project's (old) copy of MIGRATE.md, not the source repo's (current) copy. New gates and strategies added in this session would not take effect until one migration too late.

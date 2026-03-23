@@ -505,18 +505,24 @@ For existing projects with code and documentation that need cc-sdlc integrated.
 
 ### Phase R1: Discovery
 
-Follow BOOTSTRAP.md Phase 1 exactly:
-
 1. Scan the project for existing documentation (markdown files, docs/, design/, specs/)
-2. Categorize each document: Spec, Planning, Result, Roadmap, Reference, Issue
-3. Group related documents into logical concepts
+2. Categorize each document:
+
+| Category | Indicators |
+|----------|------------|
+| **Spec** | "Specification", "Design", requirements, API definitions |
+| **Planning** | "Instructions", "How to", implementation steps |
+| **Result** | "COMPLETE", "DONE", completion records |
+| **Roadmap** | Future plans, phases, milestones |
+| **Reference** | API docs, architecture overview, README |
+| **Issue** | "BLOCKED", problems, open questions |
+
+3. Group related documents into logical concepts (domains/features)
 4. Check for existing agents in `.claude/agents/`
 
 ### Phase R2: Proposal
 
-Follow BOOTSTRAP.md Phase 2:
-
-1. Present categorization table to CD
+1. Present categorization table to CD (files found, proposed type, proposed concept)
 2. Propose concept groupings for the chronicle
 3. Propose which existing docs map to which SDLC artifact types
 4. Get CD approval via `AskUserQuestion` before acting
@@ -569,7 +575,6 @@ Same as Greenfield Phase 10, plus:
 ## Integration
 
 - **Feeds into:** `sdlc-plan` (first deliverable), `sdlc-lite-plan` (first lightweight task), `sdlc-status` (health check)
-- **References:** `BOOTSTRAP.md` (retrofit reference)
 - **Uses:** `/plugin-dev:agent-development` (agent creation), Context7 (knowledge verification), `AskUserQuestion` (CD gates)
 - **Produces:** Fully initialized SDLC framework with project-specific agents, knowledge, and disciplines
 - **Borrows from:** `sdlc-idea` (ideation principles for Phase 0), spec template (Phase 0c structure)

@@ -244,9 +244,7 @@ To adopt cc-sdlc in a new or existing project, invoke the `sdlc-initialize` skil
 
 **Trigger:** Say **"Initialize SDLC in this project"** or **"Bootstrap SDLC"**
 
-The skill walks through: skeleton installation (`setup.sh`), CLAUDE.md authoring, deliverable catalog setup, domain agent creation (via `/plugin-dev:agent-development`), agent-context map wiring, knowledge seeding, discipline initialization, testing gotcha seeding, plugin verification, and a final checklist.
-
-See `BOOTSTRAP.md` for the retrofit reference.
+The skill walks through: skeleton installation (`setup.sh`), CLAUDE.md authoring, deliverable catalog setup, domain agent creation (via `/plugin-dev:agent-development`), agent-context map wiring, knowledge seeding, discipline initialization, testing gotcha seeding, plugin verification, and a final checklist. Retrofit mode handles existing projects with code and documentation.
 
 ---
 
