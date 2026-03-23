@@ -219,7 +219,7 @@ Key feedback incorporated:
 
 ### 3a. Discipline Capture
 
-Run the discipline capture protocol per `ops/sdlc/process/discipline_capture.md`. Context format: `[DNN — planning]`.
+Run the discipline capture protocol per `ops/sdlc/process/discipline_capture.md`. Context format: `[DNN — planning]`. This includes structured gap detection (using the finding classification table and agent dispatch data from this session) followed by the freeform insight scan.
 
 ### 4. Save Plan to File
 

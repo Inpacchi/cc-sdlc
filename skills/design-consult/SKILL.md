@@ -267,7 +267,7 @@ When the user confirms a final direction:
    - 2-3 files → suggest `sdlc-lite-plan`
    - 4+ files or new abstractions → suggest `sdlc-plan`
 
-**Discipline capture:** Run the protocol per `ops/sdlc/process/discipline_capture.md`. Context format: `[design-consult: {slug}]`.
+**Discipline capture:** Run the protocol per `ops/sdlc/process/discipline_capture.md`. Context format: `[design-consult: {slug}]`. Structured gap detection: comparison #2 (cross-domain friction) only — comparisons #1 and #3 are not applicable without a review-fix loop.
 
 Do NOT start implementing. The design consultation ends with a direction and a handoff.
 

@@ -212,7 +212,7 @@ If the `docs/current_work/ideas/` directory doesn't exist, create it.
 - Technical unknown needs prototyping → suggest a spike (direct dispatch)
 - Still too vague → keep exploring (this skill isn't done yet)
 
-**Discipline capture:** Run the protocol per `ops/sdlc/process/discipline_capture.md`. Context format: `[idea: {slug}]`.
+**Discipline capture:** Run the protocol per `ops/sdlc/process/discipline_capture.md`. Context format: `[idea: {slug}]`. Structured gap detection: comparison #2 (cross-domain friction) only — comparisons #1 and #3 are not applicable without a review-fix loop.
 
 Do NOT start planning or implementing. The idea exploration ends with a direction and a handoff.
 
