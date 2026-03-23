@@ -34,6 +34,24 @@ Each entry contains:
 
 ---
 
+## 2026-03-22: Fix Migration Gaps — New Role Entries and Tracker Markers
+
+**Origin:** Bootstrap/migrate verification agent identified two gaps in MIGRATE.md coverage after the parking lot promotion commit.
+
+**What happened:** The parking lot promotion added a new `business-analyst` role to the agent-context-map. MIGRATE.md §3.3 only covered adding files to existing roles, moved files, and removed files — not adding entirely new role sections. Separately, the Process Maturity Tracker lacked structural markers, making it dependent on migrator judgment to avoid overwriting project-assessed levels.
+
+**Changes made:**
+
+1. **`MIGRATE.md` §3.3** — Added fourth scenario: "New role entries." When cc-sdlc adds a new role to the agent-context-map, the migrator checks if the downstream project has a matching agent (by role or responsibility), wires accordingly, and notes the addition in the migration report.
+
+2. **`disciplines/process-improvement.md`** — Added `<!-- PROJECT-TRACKER-START -->` and `<!-- PROJECT-TRACKER-END -->` HTML comment markers around the Process Maturity Tracker table. These are machine-readable boundaries that prevent accidental overwrite during content-merge.
+
+3. **`MIGRATE.md` §2.3 rule 6** — Updated to reference the structural markers. Migrators now look for the marker boundaries instead of relying on judgment. Includes fallback for downstream files that predate the markers.
+
+**Rationale:** Migration safety requires mechanical precision, not judgment calls. The new role scenario was a genuine gap — BA knowledge files would be installed but never wired. The structural markers convert a "be careful here" instruction into a "stop at this boundary" instruction, which is more reliable for both human and AI migrators.
+
+---
+
 ## 2026-03-22: Promote 4 Parking Lot Items Across Disciplines
 
 **Origin:** CD-initiated triage of parking lot items across all disciplines.
@@ -220,6 +238,25 @@ agents report feedback → cycle continues
 2. **`disciplines/process-improvement.md`** — CMMI parking lot entry changed from `[DEFERRED]` to `Promoted →` since the formal definitions now supersede the sketch. Status updated from "Parking lot" to "Active".
 
 **Rationale:** Maturity levels without definitions are aspirational labels, not assessment criteria. Formalizing what "Level 2" means (knowledge store + agent wiring + triage pass) makes the tracker verifiable: the compliance auditor can check evidence against criteria rather than asking "does this feel like Level 2?" The definitions are calibrated to this framework's "toolbox not recipe" principle — Level 2 doesn't mean "always invoked", it means "documented and repeatable when invoked."
+
+---
+
+## 2026-03-22: Fix Compliance Audit Findings (W1, W2, I1-I4)
+
+**Origin:** Follow-up fixes from the 2026-03-22 compliance audit (score 8.5/10).
+
+**What happened:** Audit identified 2 warnings and 4 info items. W1: `domain-boundary-gotchas.yaml` was unmapped in the agent-context-map. W2: `coding.md` knowledge store header pointed to testing-paradigm.yaml instead of `knowledge/coding/`. I1-I3: stale README structure listings and missing inventory entries. I4: process-improvement Level 2 definitional ambiguity — the meta-discipline's "knowledge" is process docs, not YAML files.
+
+**Changes made:**
+
+1. **`knowledge/agent-context-map.yaml`** — Wired `domain-boundary-gotchas.yaml` to architect, code-reviewer, and sdlc-compliance-auditor.
+2. **`disciplines/coding.md`** — Fixed knowledge store header to reference `knowledge/coding/`.
+3. **`knowledge/testing/README.md`** — Added missing entries for testing-paradigm.yaml and advanced-test-patterns.yaml.
+4. **`knowledge/data-modeling/README.md`** — Fixed assessment section placeholder to reference actual `model-health-check.yaml`.
+5. **`disciplines/architecture.md`** — Added `domain-boundary-gotchas.yaml` to inventory table.
+6. **`disciplines/process-improvement.md`** — Added exception clause to Level 2 evidence: the meta-discipline satisfies Level 2 via `process/` docs rather than `knowledge/` YAML files.
+
+**Rationale:** Audit findings should be fixed promptly. W1 was the highest-impact fix — an unmapped knowledge file means agents never see it. I4 resolved a definitional edge case where the process-improvement discipline was unfairly penalized for not having YAML files when its "knowledge" is inherently process documentation.
 
 ---
 

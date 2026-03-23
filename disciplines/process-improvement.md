@@ -90,6 +90,7 @@ The discipline has documented, reusable knowledge. Methodology exists, patterns 
 
 ### Process Maturity Tracker
 
+<!-- PROJECT-TRACKER-START: Do not overwrite during migration. These levels are project-assessed. -->
 | Discipline | Level | Evidence |
 |-----------|-------|----------|
 | Testing | 2 | 7-file knowledge store, testing paradigm, gotchas, tool patterns |
@@ -103,4 +104,5 @@ The discipline has documented, reusable knowledge. Methodology exists, patterns 
 | Process Improvement | 2 | Changelog, discipline capture pipeline, maturity levels, process docs |
 
 *Last updated: 2026-03-22. Actual discipline health is tracked by the compliance auditor's §6g Discipline Usage Audit, not by levels alone.*
+<!-- PROJECT-TRACKER-END -->
 

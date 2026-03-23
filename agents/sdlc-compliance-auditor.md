@@ -102,7 +102,8 @@ Structured YAML files containing distilled, reusable patterns. These are the "ho
 
 | Directory | File Count | Purpose |
 |-----------|------------|---------|
-| `architecture/` | 16 | System design, debugging, security, payments, ML, deployment, agent protocols |
+| `architecture/` | 17 | System design, debugging, security, payments, ML, deployment, agent protocols, token economics |
+| `business-analysis/` | 1 | Requirements feedback loops, bidirectional acceptance criteria |
 | `coding/` | 2 | Code quality principles, TypeScript patterns, testability, mocking stance |
 | `data-modeling/` | 4 (in subdirs) | UDM patterns, anti-patterns, assessment templates |
 | `design/` | 3 | UX modeling methodology, ASCII conventions, accessibility-testability principles |

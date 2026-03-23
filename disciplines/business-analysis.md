@@ -1,6 +1,7 @@
 # Business Analysis Discipline
 
-**Status**: Parking lot — capturing ideas as they emerge from other work
+**Status**: Active — requirements feedback loop patterns codified
+**Knowledge store**: `knowledge/business-analysis/` (cross-project)
 
 ## Scope
 

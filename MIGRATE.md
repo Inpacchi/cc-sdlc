@@ -113,7 +113,7 @@ Discipline files have:
 3. Preserve active questions
 4. Preserve project context sections (added by `sdlc-initialize` Phase 7)
 5. Add any new seeded insights from cc-sdlc that the project doesn't have — but do NOT overwrite triage markers on existing entries (the project may have triaged differently than the source repo)
-6. **Preserve the Process Maturity Tracker table as-is.** The tracker reflects the project's assessed levels (set during initialization or audits). The cc-sdlc source repo's tracker reflects the *source repo's* levels, which are different. Update the framework sections surrounding the tracker (level definitions, assessment procedure) but never overwrite the tracker data rows.
+6. **Preserve the Process Maturity Tracker table as-is.** The tracker is delimited by `<!-- PROJECT-TRACKER-START -->` and `<!-- PROJECT-TRACKER-END -->` markers. Everything between these markers (including the table and last-updated note) reflects the project's assessed levels — never overwrite it. Update the framework sections *outside* the markers (level definitions, assessment procedure) to match cc-sdlc. If the downstream file lacks these markers, treat the entire `### Process Maturity Tracker` section through the next heading as project data and preserve it.
 
 ### 2.4 Content-Merge: Auditor Agent
 
@@ -153,10 +153,17 @@ For each agent in `.claude/agents/`:
 
 The agent-context-map is **never overwritten** because projects have their own agent names. But it must be updated for three scenarios:
 
-**New knowledge files:** If cc-sdlc added new YAML files that are relevant to existing agents:
+**New knowledge files added to existing roles:** If cc-sdlc added new YAML files that are relevant to existing agents:
 1. Read the project's `agent-context-map.yaml`
 2. Read the cc-sdlc source's `agent-context-map.yaml` for the new mappings
 3. Add new file paths to the project's existing agent entries (matching by role, not by exact name)
+
+**New role entries:** If cc-sdlc added an entirely new role section to the agent-context-map (e.g., `business-analyst`):
+1. Read the project's `agent-context-map.yaml`
+2. Check if the project has an agent that matches the new role (by role name or responsibility — e.g., the project may use `ba-agent` instead of `business-analyst`)
+3. If a matching agent exists: add the new role section using the project's agent name, with the cc-sdlc knowledge file paths
+4. If no matching agent exists: add the role section as-is (the project can customize or remove it later)
+5. Note the addition in the migration report so the project team can review the wiring
 
 **Moved/renamed knowledge files:** If cc-sdlc moved a file from one directory to another (identified in §2.1a):
 1. Search the project's `agent-context-map.yaml` for the old path
