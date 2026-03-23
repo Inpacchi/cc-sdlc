@@ -25,7 +25,36 @@ git -C [cc-sdlc-path] diff --name-only [source_version]..HEAD
 
 If `source_version` is "unknown" or `.sdlc-manifest.json` doesn't exist, treat this as a full migration — compare all framework files.
 
-### 1.2 Categorize Changes
+### 1.2 Changelog Review Gate
+
+**Before categorizing or applying anything**, read the changelog entries since the project's source version:
+
+```bash
+# Read all changelog entries between source version and HEAD
+```
+
+Read `process/sdlc_changelog.md` from the top, stopping when you reach entries older than the project's `source_version` date. This is the migration's release notes — it surfaces:
+
+- **Breaking changes** — renamed concepts, moved files, added structural markers, changed conventions
+- **New capabilities** — new knowledge files, new disciplines, new agent roles the project may want
+- **Human-judgment items** — changes where the project team should decide (e.g., "do you want the new BA discipline wired to an agent?")
+
+**Gate rule:** If any changelog entry describes a breaking change or convention rename, note it for the CLAUDE-SDLC.md compatibility check in §4.3a. If any entry describes a new capability that requires project-team input (new agent roles, new discipline areas), flag it for user review before applying.
+
+Present a brief migration summary to the user before proceeding:
+
+```
+Migration summary: [source_version] → [HEAD]
+- N commits, M changelog entries
+- Breaking changes: [list or "none"]
+- New capabilities: [list or "none"]
+- Items needing your input: [list or "none"]
+Proceed with migration?
+```
+
+Wait for user confirmation before continuing to Phase 2.
+
+### 1.3 Categorize Changes
 
 Group the changed cc-sdlc files by migration strategy:
 
@@ -125,6 +154,30 @@ The `sdlc-compliance-auditor.md` has framework audit logic that must stay curren
 4. Preserve the project's agent memory path
 5. Preserve any project-specific audit dimensions added by the project
 
+### 2.5 Content-Merge Verification Gate
+
+**Before proceeding to agent updates**, verify the content-merge results from §2.2–2.4 didn't corrupt project data. This catches merge errors before they propagate into agent wiring.
+
+**Quick checks (< 2 minutes):**
+
+1. **Tracker integrity** — read `disciplines/process-improvement.md` and verify:
+   - `<!-- PROJECT-TRACKER-START -->` / `<!-- PROJECT-TRACKER-END -->` markers are present
+   - The table between markers contains the project's levels (not the cc-sdlc source repo's levels)
+   - Level definitions outside the markers were updated to match cc-sdlc
+
+2. **Parking lot preservation** — spot-check 2 discipline files:
+   - Project-specific entries (dates, deliverable references) are still present
+   - Triage markers (`[NEEDS VALIDATION]`, `[DEFERRED]`, `Promoted →`) were not overwritten
+   - New seeded insights from cc-sdlc were added without disturbing existing entries
+
+3. **Skill customization preservation** — spot-check 1 skill:
+   - Project-specific build commands, agent names, and examples are intact
+   - Framework sections were updated (compare against cc-sdlc source)
+
+4. **Auditor agent** — verify the project's memory path was preserved (not overwritten with cc-sdlc's path)
+
+**Gate rule:** If any check fails, fix the merge before continuing. Do not proceed to Phase 3 with corrupted content — agent wiring decisions depend on accurate discipline and knowledge state.
+
 ---
 
 ## Phase 3: Update Project Agents
@@ -206,6 +259,22 @@ Spot-check 2-3 skills to confirm:
 - Project customizations preserved
 - No orphaned references to removed framework features
 
+### 4.3a CLAUDE-SDLC.md Compatibility Check
+
+The project's `CLAUDE.md` contains CLAUDE-SDLC.md content — skill names, process file paths, conventions, and workflow rules. If the migration renamed a skill, changed a convention, or modified a path, the project's CLAUDE.md will have stale references.
+
+**Check for:**
+
+1. **Skill name references** — verify all skill names mentioned in CLAUDE.md (`sdlc-plan`, `sdlc-execute`, `sdlc-lite-plan`, `sdlc-lite-execute`, `sdlc-idea`, `sdlc-initialize`, `sdlc-reconciliation`) still match the actual skill directory names in `ops/sdlc/skills/`
+
+2. **Process file paths** — verify paths like `ops/sdlc/process/overview.md`, `ops/sdlc/process/sdlc_changelog.md`, `ops/sdlc/process/compliance_audit.md` still exist
+
+3. **Convention changes** — if the changelog (§1.2) flagged breaking convention changes (renamed concepts, changed workflow rules), check whether the project's CLAUDE.md still uses the old terminology
+
+4. **New sections in CLAUDE-SDLC.md** — compare the project's CLAUDE.md SDLC sections against the current `CLAUDE-SDLC.md` source. If new sections were added (e.g., new workflow rules, new verification policies), they should be merged into the project's CLAUDE.md
+
+**Gate rule:** If the project's CLAUDE.md references a renamed skill or removed path, fix it. Stale CLAUDE.md content causes silent process failures — Claude Code follows the instructions but they point nowhere.
+
 ### 4.4 Post-Migration Audit
 
 Run the `sdlc-compliance-auditor` agent to verify migration integrity. The auditor's §7 (Migration Integrity) checks manifest version, framework file completeness, content-merge correctness, and stale references to removed features — exactly what needs validation after a migration.
@@ -238,11 +307,13 @@ After migration, update `.sdlc-manifest.json` with the new source version and fi
 - Skills updated: N (framework sections merged, project customizations preserved)
 - Knowledge files added/updated: N (direct copy)
 - Knowledge files removed (moved/deleted in source): N [list old paths]
+- New agent roles added to context-map: N [list roles]
 - Process docs updated: N (direct copy)
 - Agent template updated: yes/no
 - Agents updated: N (Knowledge Context / Communication Protocol sections)
 - Agent-context-map paths updated: N (moved/removed file paths corrected)
 - Auditor updated: yes/no
+- CLAUDE-SDLC.md sections updated in CLAUDE.md: yes/no/not needed
 
 ### Preserved
 - Project-specific skill customizations (build commands, agent names, examples)
@@ -250,6 +321,11 @@ After migration, update `.sdlc-manifest.json` with the new source version and fi
 - Process Maturity Tracker (project-assessed levels, not source repo levels)
 - Agent-context-map agent names and project-specific mappings
 - Project agent domain content (scope, principles, workflow, anti-rationalization)
+
+### Gates Passed
+- §1.2 Changelog review: user confirmed migration summary
+- §2.5 Content-merge verification: tracker intact, parking lots preserved, skills spot-checked
+- §4.3a CLAUDE-SDLC.md compatibility: no stale references / [list fixes]
 
 ### Verification
 - All agent-context-map paths resolve: yes/no

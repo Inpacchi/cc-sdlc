@@ -34,6 +34,26 @@ Each entry contains:
 
 ---
 
+## 2026-03-22: Add Migration Gates to MIGRATE.md
+
+**Origin:** CD review of migration flow after fixing GAP-1 (new role entries) and RISK-1 (tracker markers). Identified that the migration was a single pass with all verification deferred to the end.
+
+**What happened:** For small migrations, single-pass works. For large ones (5+ commits, new directories, structural marker additions), deferring all verification to Phase 4 puts too much trust in the final audit. Three gaps: (1) the migrator starts applying changes without reading the changelog — misses breaking changes and items needing user input, (2) content-merge errors aren't caught until Phase 4 — by which time agent wiring decisions may already be wrong, (3) CLAUDE-SDLC.md compatibility is never checked — renamed skills or changed conventions leave stale references in the project's CLAUDE.md.
+
+**Changes made:**
+
+1. **`MIGRATE.md` §1.2** (new) — Changelog Review Gate. Before categorizing or applying anything, the migrator reads all changelog entries since the project's source version. Surfaces breaking changes, new capabilities, and items needing user input. Presents a migration summary and waits for user confirmation before proceeding. Old §1.2 renumbered to §1.3.
+
+2. **`MIGRATE.md` §2.5** (new) — Content-Merge Verification Gate. After applying framework updates (§2.1–2.4) but before touching project agents (Phase 3), the migrator spot-checks: tracker integrity (markers present, project levels preserved), parking lot preservation (triage markers intact), skill customization preservation, and auditor memory path. Catches merge corruption before it propagates into agent wiring.
+
+3. **`MIGRATE.md` §4.3a** (new) — CLAUDE-SDLC.md Compatibility Check. Verifies that the project's CLAUDE.md still references valid skill names, process file paths, and conventions. Checks for new sections in CLAUDE-SDLC.md that should be merged. Flags stale references from renamed skills or changed conventions.
+
+4. **`MIGRATE.md` §4.6** — Updated migration report format: added "New agent roles" and "CLAUDE-SDLC.md sections updated" to Changes Applied. Added "Gates Passed" section documenting §1.2, §2.5, and §4.3a gate results.
+
+**Rationale:** Migration safety scales with gate count, not audit thoroughness. A single audit at the end catches errors but can't prevent them from compounding. Three lightweight gates (changelog read, merge spot-check, CLAUDE.md compatibility) add ~5 minutes to a migration and catch the three failure modes that compound: applying changes without context, propagating merge errors, and leaving stale CLAUDE.md references.
+
+---
+
 ## 2026-03-22: Fix Migration Gaps — New Role Entries and Tracker Markers
 
 **Origin:** Bootstrap/migrate verification agent identified two gaps in MIGRATE.md coverage after the parking lot promotion commit.
