@@ -14,7 +14,7 @@ description: >
 
 Apply cc-sdlc upstream updates to a project while preserving project-specific customizations. Unlike `setup.sh` (which copies files and skips modified ones), this skill is **content-aware** — it understands which sections are framework-level vs project-customized and updates them independently.
 
-**Argument:** `$ARGUMENTS` (optional — cc-sdlc source repo path. If omitted, check `.sdlc-manifest.json` for `source_path`, or ask user.)
+**Argument:** `$ARGUMENTS` (optional — local path to a cc-sdlc clone. If omitted, resolve via `.sdlc-manifest.json` → `source_repo`, or ask user.)
 
 ## Source Repo Access Rule
 
@@ -42,7 +42,17 @@ cc-sdlc source repo: [path] (verified via `git -C [path] rev-parse HEAD`)
 
 If `ops/sdlc/` doesn't exist → tell user to run `sdlc-initialize` instead and stop.
 
-Verify the source repo path by running `git -C [cc-sdlc-path] rev-parse HEAD`. If this fails, the path is wrong — ask the user.
+**Resolving the cc-sdlc source** (in priority order):
+1. `$ARGUMENTS` — if the user passed a local clone path
+2. `.sdlc-manifest.json` → `source_repo` field (git remote URL)
+3. Ask the user
+
+**If the manifest has a `source_repo` URL but no local clone path was given:**
+1. Clone to a temporary directory: `git clone --depth=1 [source_repo] /tmp/cc-sdlc-migrate-$$`
+2. Use that as `[cc-sdlc-path]` for the rest of the migration
+3. Clean up the temp clone after migration completes
+
+**If the user provides a local path:** Verify it by running `git -C [cc-sdlc-path] rev-parse HEAD`. If this fails, the path is wrong — ask the user.
 
 ---
 
@@ -50,7 +60,9 @@ Verify the source repo path by running `git -C [cc-sdlc-path] rev-parse HEAD`. I
 
 ### 1.1 Identify Source Version
 
-Read the project's `.sdlc-manifest.json` to get the `source_version` (commit hash) from the last install/migration.
+Read the project's `.sdlc-manifest.json` to get:
+- `source_repo` — the git remote URL for the cc-sdlc repo (used to clone if no local path given)
+- `source_version` — the commit hash from the last install/migration
 
 Then check what changed in cc-sdlc since that commit (using git, not filesystem):
 
@@ -59,7 +71,7 @@ git -C [cc-sdlc-path] log --oneline [source_version]..HEAD
 git -C [cc-sdlc-path] diff --name-only [source_version]..HEAD
 ```
 
-If `source_version` is "unknown" or `.sdlc-manifest.json` doesn't exist, treat this as a full migration — compare all framework files.
+If `source_version` is `"unknown"` or missing, treat this as a **full migration** — compare all framework files against the project. Do not stop or ask the user — a full migration is the correct fallback.
 
 ### 1.2 Changelog Review Gate
 

@@ -34,6 +34,22 @@ Each entry contains:
 
 ---
 
+## 2026-03-23: Add `source_repo` to Manifest and Fix Migration Source Resolution
+
+**Origin:** User ran `/sdlc-migrate` from neuroloom and the skill couldn't locate the cc-sdlc source repo — it asked for the path, and the user had to decline because there was no way to auto-resolve it.
+
+**What happened:** `setup.sh` wrote `source_version` (commit hash) to `.sdlc-manifest.json` but never wrote the source repo location. The migrate skill had no way to find the cc-sdlc repo without user input. Additionally, when `source_version` was `"unknown"`, the skill treated this as a blocker instead of falling back to a full migration.
+
+**Changes made:**
+
+1. **`setup.sh`** — Added `source_repo` field to the manifest, set to the git remote origin URL (not a local path — local paths break on different machines or when the repo moves).
+2. **`skills/sdlc-migrate/SKILL.md` Pre-Flight Check** — Added explicit source resolution order: `$ARGUMENTS` (local path) → manifest `source_repo` (git URL, cloned to temp dir) → ask user.
+3. **`skills/sdlc-migrate/SKILL.md` §1.1** — Clarified that `source_version: "unknown"` triggers a full migration (compare all files) instead of blocking.
+
+**Rationale:** Migration should work without manual input when the manifest has enough information. The git remote URL is stable across machines and clones — unlike a local absolute path which breaks if the repo moves or the user is on a different machine.
+
+---
+
 ## 2026-03-23: New Skill — sdlc-ingest (Bulk Knowledge Import)
 
 **Origin:** Analysis of a real ingestion session on paire-appetit that processed 27 UI/UX video transcripts into design knowledge files. The session produced 50+ structured rules across 5 YAML files, 8 parking lot entries, and a playbook — revealing a repeatable, high-value workflow with no formal process.
