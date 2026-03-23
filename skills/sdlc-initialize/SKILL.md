@@ -233,7 +233,7 @@ Required files (commonly missed):
 [ ] ops/sdlc/knowledge/design/README.md
 [ ] ops/sdlc/knowledge/product-research/README.md
 [ ] ops/sdlc/knowledge/testing/README.md
-[ ] ops/sdlc/MIGRATE.md
+[ ] .claude/skills/sdlc-migrate/SKILL.md
 [ ] .claude/agents/AGENT_TEMPLATE.md
 [ ] .claude/agents/AGENT_SUGGESTIONS.md
 [ ] .claude/agents/sdlc-compliance-auditor.md

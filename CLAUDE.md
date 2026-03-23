@@ -15,7 +15,7 @@ This is the **source repository** for the cc-sdlc framework. It contains SDLC sk
 | `plugins/` | Required/optional plugin setup guides (installed to target's `ops/sdlc/plugins/`) |
 | `skeleton/` | `manifest.json` — canonical directory structure and file list |
 | `CLAUDE-SDLC.md` | Drop-in CLAUDE.md addition for target projects |
-| `MIGRATE.md` | Content-aware migration instructions for framework updates |
+| `skills/sdlc-migrate/` | Skill for content-aware framework updates to existing projects |
 | `setup.sh` | Installation script |
 
 ## Plugin Dependencies

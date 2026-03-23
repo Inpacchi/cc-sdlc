@@ -1,28 +1,34 @@
-# SDLC Migration Instructions
-
-**For Claude Code:** Follow these instructions when a user asks to update their project's SDLC framework to the latest cc-sdlc version. Unlike `setup.sh` (which copies files and skips modified ones), migration is **content-aware** — it understands which sections are framework-level vs project-customized and updates them independently.
-
-**When to use:** After the cc-sdlc framework has been updated (new features, bug fixes, pattern changes) and projects need those changes without losing their project-specific customizations.
-
+---
+name: sdlc-migrate
+description: >
+  Migrate a project's cc-sdlc framework to the latest version — content-aware updates that preserve
+  project-specific customizations (parking lots, agent names, build commands, maturity tracker) while
+  updating framework sections (skills, knowledge, process docs, agents) to match the current cc-sdlc.
+  Triggers on "migrate my SDLC", "update the SDLC", "migrate SDLC framework", "update SDLC framework",
+  "upgrade SDLC", "sync SDLC with upstream".
+  Do NOT use for first-time installation — use sdlc-initialize.
+  Do NOT use when ops/sdlc/ does not exist — use sdlc-initialize.
 ---
 
-## Phase 0: Self-Update
+# SDLC Migrate
 
-**Before doing anything else**, read the cc-sdlc source repo's `MIGRATE.md` — not the project's copy:
+Apply cc-sdlc upstream updates to a project while preserving project-specific customizations. Unlike `setup.sh` (which copies files and skips modified ones), this skill is **content-aware** — it understands which sections are framework-level vs project-customized and updates them independently.
 
-```bash
-git -C [cc-sdlc-path] show HEAD:MIGRATE.md
+**Argument:** `$ARGUMENTS` (optional — cc-sdlc source repo path. If omitted, check `.sdlc-manifest.json` for `source_path`, or ask user.)
+
+## Pre-Flight Check
+
+Before starting, verify this is a migration (not initialization):
+
+```
+MIGRATION ASSESSMENT
+Has ops/sdlc/: [yes/no]
+Has .sdlc-manifest.json: [yes/no]
+Has .claude/agents/: [yes/no]
+Has .claude/skills/: [yes/no]
 ```
 
-If the source repo's MIGRATE.md differs from the project's copy, **follow the source repo's version** for this migration. The project's copy is from the previous migration and may lack new gates, strategies, or file handling rules.
-
-Copy the updated MIGRATE.md to the project immediately so the rest of the migration follows current instructions:
-
-```bash
-git -C [cc-sdlc-path] show HEAD:MIGRATE.md > [project-path]/ops/sdlc/MIGRATE.md
-```
-
-**Why this matters:** MIGRATE.md is both a framework file (gets updated) and the instructions being followed (governs the update). Without self-update, a migration that adds new gates or merge strategies will execute under the old rules — the new rules only take effect on the *next* migration, one version too late.
+If `ops/sdlc/` doesn't exist → tell user to run `sdlc-initialize` instead and stop.
 
 ---
 
@@ -31,10 +37,6 @@ git -C [cc-sdlc-path] show HEAD:MIGRATE.md > [project-path]/ops/sdlc/MIGRATE.md
 ### 1.1 Identify Source Version
 
 Read the project's `.sdlc-manifest.json` to get the `source_version` (commit hash) from the last install/migration.
-
-```bash
-cat .sdlc-manifest.json | grep source_version
-```
 
 Then check what changed in cc-sdlc since that commit:
 
@@ -47,13 +49,9 @@ If `source_version` is "unknown" or `.sdlc-manifest.json` doesn't exist, treat t
 
 ### 1.2 Changelog Review Gate
 
-**Before categorizing or applying anything**, read the changelog entries since the project's source version:
+**Before categorizing or applying anything**, read the changelog entries since the project's source version.
 
-```bash
-# Read all changelog entries between source version and HEAD
-```
-
-Read `process/sdlc_changelog.md` from the top, stopping when you reach entries older than the project's `source_version` date. This is the migration's release notes — it surfaces:
+Read `process/sdlc_changelog.md` from the cc-sdlc source repo (via `git -C [cc-sdlc-path] show HEAD:process/sdlc_changelog.md`), stopping when you reach entries older than the project's `source_version` date. This is the migration's release notes — it surfaces:
 
 - **Breaking changes** — renamed concepts, moved files, added structural markers, changed conventions
 - **New capabilities** — new knowledge files, new disciplines, new agent roles the project may want
@@ -61,7 +59,7 @@ Read `process/sdlc_changelog.md` from the top, stopping when you reach entries o
 
 **Gate rule:** If any changelog entry describes a breaking change or convention rename, note it for the CLAUDE-SDLC.md compatibility check in §4.3a. If any entry describes a new capability that requires project-team input (new agent roles, new discipline areas), flag it for user review before applying.
 
-Present a brief migration summary to the user before proceeding:
+Present a brief migration summary to the user via `AskUserQuestion`:
 
 ```
 Migration summary: [source_version] → [HEAD]
@@ -72,7 +70,7 @@ Migration summary: [source_version] → [HEAD]
 Proceed with migration?
 ```
 
-Wait for user confirmation before continuing to Phase 2.
+**Gate:** Wait for user confirmation before continuing to Phase 2.
 
 ### 1.3 Categorize Changes
 
@@ -88,7 +86,6 @@ Group the changed cc-sdlc files by migration strategy:
 | **Process docs** | `process/*.md` | Direct copy (framework-level) |
 | **Templates** | `templates/*.md` | Direct copy (framework-level) |
 | **Disciplines** | `disciplines/*.md` | Content-merge: update framework guidance, preserve project parking lot entries |
-| **Migration** | `MIGRATE.md` | Direct copy (framework-level) |
 | **Context map** | `knowledge/agent-context-map.yaml` | Never overwrite — project has its own agent names. Update paths for moved/deleted files (§3.3) |
 | **Project agents** | Project `.claude/agents/*.md` | Targeted section updates (see Phase 3) |
 
@@ -103,18 +100,20 @@ For files with no project customizations, copy directly from cc-sdlc to the proj
 - `process/*.md`
 - `templates/*.md`
 - `knowledge/**/*.yaml` (but NOT `agent-context-map.yaml`)
-- `MIGRATE.md`, `README.md`, `CLAUDE-SDLC.md`
+- `README.md`, `CLAUDE-SDLC.md`
 - `agents/AGENT_TEMPLATE.md`, `agents/AGENT_SUGGESTIONS.md`
 - `playbooks/*.md` (unless the project has written its own playbooks — check git blame)
 - `examples/*.md`
 
+**All reads from the cc-sdlc source repo must use git commands** (e.g., `git -C [cc-sdlc-path] show HEAD:path/to/file`), not filesystem reads. This ensures you're reading committed state, not working tree.
+
 ### 2.1a Remove Deleted and Moved Files
 
-Check the cc-sdlc changelog (`process/sdlc_changelog.md`) for files that were **deleted, moved, or renamed** since the project's `source_version`. These require explicit cleanup in the downstream project — direct copy only adds files, it doesn't remove stale ones.
+Check the cc-sdlc changelog for files that were **deleted, moved, or renamed** since the project's `source_version`. These require explicit cleanup in the downstream project — direct copy only adds files, it doesn't remove stale ones.
 
 **Process:**
 
-1. From the diff in Phase 1.1, identify any files that were deleted or moved (appear in `--diff-filter=D` or `--diff-filter=R`):
+1. From the diff in Phase 1.1, identify any files that were deleted or moved:
    ```bash
    git -C [cc-sdlc-path] diff --name-status [source_version]..HEAD | grep -E '^[DR]'
    ```
@@ -224,7 +223,7 @@ For each agent in `.claude/agents/`:
 
 ### 3.3 Update Agent-Context-Map (if needed)
 
-The agent-context-map is **never overwritten** because projects have their own agent names. But it must be updated for three scenarios:
+The agent-context-map is **never overwritten** because projects have their own agent names. But it must be updated for four scenarios:
 
 **New knowledge files added to existing roles:** If cc-sdlc added new YAML files that are relevant to existing agents:
 1. Read the project's `agent-context-map.yaml`
@@ -248,7 +247,7 @@ The agent-context-map is **never overwritten** because projects have their own a
 2. Remove those references
 3. Note the removal in the migration report
 
-Never remove project-specific mappings that aren't in the cc-sdlc source — those were added during bootstrap or by the project team.
+Never remove project-specific mappings that aren't in the cc-sdlc source — those were added during initialization or by the project team.
 
 ---
 
@@ -307,11 +306,10 @@ Fix any findings before committing the migration.
 
 ### 4.5 Update Manifest
 
-After migration, update `.sdlc-manifest.json` with the new source version and file hashes:
+After migration, update `.sdlc-manifest.json` with the new source version:
 
 ```bash
-# Re-run setup.sh in diff mode to regenerate the manifest
-# Or manually update source_version to the current cc-sdlc commit hash
+# Update source_version to the current cc-sdlc commit hash
 ```
 
 ### 4.6 Report to User
@@ -360,10 +358,29 @@ After migration, update `.sdlc-manifest.json` with the new source version and fi
 
 ---
 
+## Red Flags
+
+| Thought | Reality |
+|---------|---------|
+| "I'll just copy all files from cc-sdlc" | Content-merge exists for a reason — direct copy overwrites project customizations |
+| "The project's agent names match cc-sdlc's" | They almost never do. Always read the project's context-map, not the source's |
+| "I'll skip the changelog review" | Breaking changes and new capabilities need user input before applying |
+| "The tracker levels look right, I'll overwrite them" | The source repo's tracker reflects the source repo's levels, not this project's |
+| "I'll rephrase the framework sections to be clearer" | Verbatim rule. Copy exactly from cc-sdlc. Do not rephrase. |
+| "I'll remove this agent mapping that cc-sdlc doesn't have" | Project-specific mappings are intentional. Never remove them. |
+| "No files were deleted, so §2.1a doesn't apply" | Always check. Moved files appear as add+delete pairs, not renames. |
+
+## Integration
+
+- **Feeds into:** `sdlc-compliance-auditor` (post-migration audit)
+- **Depends on:** cc-sdlc source repo (reads via git), `.sdlc-manifest.json` (version tracking)
+- **Uses:** `AskUserQuestion` (changelog review gate, user confirmation)
+- **Related:** `sdlc-initialize` (first-time setup — use that, not this, for new projects)
+
 ## Migration vs Initialization
 
-| Concern | Initialization (`sdlc-initialize`) | Migration |
-|---------|-------------------------------------|-----------|
+| Concern | Initialization (`sdlc-initialize`) | Migration (`sdlc-migrate`) |
+|---------|-------------------------------------|----------------------------|
 | When | First install | Framework update |
 | Agent creation | Creates new agents from scratch | Updates template-derived sections in existing agents |
 | Skills | Copies from cc-sdlc | Merges framework changes into project-customized skills |

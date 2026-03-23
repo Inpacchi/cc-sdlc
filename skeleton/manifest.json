@@ -51,7 +51,6 @@
     "_comment": "Canonical list of all files installed by setup.sh. Each path is relative to the cc-sdlc source root. Used for completeness validation.",
     "top_level": [
       "README.md",
-      "MIGRATE.md",
       "CLAUDE-SDLC.md"
     ],
     "process": [
@@ -165,7 +164,8 @@
       "skills/sdlc-status/SKILL.md",
       "skills/test-loop/SKILL.md",
       "skills/sdlc-idea/SKILL.md",
-      "skills/sdlc-initialize/SKILL.md"
+      "skills/sdlc-initialize/SKILL.md",
+      "skills/sdlc-migrate/SKILL.md"
     ],
     "agents": [
       "agents/AGENT_TEMPLATE.md",

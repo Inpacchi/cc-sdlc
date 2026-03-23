@@ -34,6 +34,27 @@ Each entry contains:
 
 ---
 
+## 2026-03-22: Convert MIGRATE.md to sdlc-migrate Skill
+
+**Origin:** Same reasoning as BOOTSTRAP.md removal — a doc drifts, a skill is the canonical entry point. MIGRATE.md had a Phase 0 self-update workaround because the doc being followed was itself subject to the update. Converting to a skill eliminates the bootstrapping problem entirely — skills are always installed from the source repo.
+
+**What happened:** MIGRATE.md was the last standalone instruction doc. BOOTSTRAP.md was already converted to `sdlc-initialize`. The migration flow had the same drift risk — and an additional self-referential problem where the migration instructions needed to update themselves before executing.
+
+**Changes made:**
+
+1. **`skills/sdlc-migrate/SKILL.md`** (new) — Full migration skill with frontmatter, trigger phrases, pre-flight check, and Red Flags table. Content from MIGRATE.md with Phase 0 (self-update) removed (unnecessary as a skill). Added pre-flight check to verify this is a migration not an initialization.
+2. **`MIGRATE.md`** — Deleted.
+3. **`setup.sh`** — Removed MIGRATE.md from copy list and required files. Updated manifest comment and user-facing messages.
+4. **`skeleton/manifest.json`** — Removed MIGRATE.md from top_level. Added `skills/sdlc-migrate/SKILL.md` to skills list.
+5. **`CLAUDE.md`** — Replaced MIGRATE.md entry with sdlc-migrate skill reference.
+6. **`CLAUDE-SDLC.md`** — Updated "Migrate my SDLC framework" command to reference the skill.
+7. **`agents/sdlc-compliance-auditor.md`** — Updated migration integrity reference from MIGRATE.md to sdlc-migrate skill.
+8. **`skills/sdlc-initialize/SKILL.md`** — Updated skeleton check from MIGRATE.md to sdlc-migrate skill path.
+
+**Rationale:** Skills are the canonical interface. They're installed from the source repo, so they're always current. They have frontmatter for trigger detection. They have Red Flags tables for anti-patterns. A standalone doc has none of this. With both BOOTSTRAP.md and MIGRATE.md converted to skills, all SDLC entry points are now skills — no orphan docs to drift.
+
+---
+
 ## 2026-03-22: Remove BOOTSTRAP.md — sdlc-initialize Supersedes It
 
 **Origin:** CD review of how existing repos get bootstrapped. BOOTSTRAP.md was a legacy manual reference that predated the `sdlc-initialize` skill.

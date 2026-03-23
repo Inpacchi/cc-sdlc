@@ -287,7 +287,7 @@ Levels tell you whether a discipline has formalized its knowledge. Usage tells y
 
 ### 7. Migration Integrity
 
-When a project has been migrated from one cc-sdlc version to another (via `MIGRATE.md`), verify the migration was applied correctly and completely.
+When a project has been migrated from one cc-sdlc version to another (via `sdlc-migrate` skill), verify the migration was applied correctly and completely.
 
 #### 7a. Manifest Version Check
 

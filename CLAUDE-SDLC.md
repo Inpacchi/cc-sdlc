@@ -164,7 +164,7 @@ Rules:
 | "Let's organize the chronicles" | Archive completed deliverables from `current_work/` to `chronicle/`. See `ops/sdlc/process/chronicle_organization.md` |
 | "Let's run an SDLC compliance audit" | Audit spec coverage, chronicle freshness, index completeness. See `ops/sdlc/process/compliance_audit.md` |
 | "Let's update the SDLC" | Propose process improvement. See `ops/sdlc/process/sdlc_changelog.md` |
-| "Migrate my SDLC framework" | Apply cc-sdlc upstream updates while preserving project customizations. See `ops/sdlc/MIGRATE.md` |
+| "Migrate my SDLC framework" | Apply cc-sdlc upstream updates while preserving project customizations. Invokes `sdlc-migrate` skill |
 
 ### Key References
 - `ops/sdlc/process/overview.md` — Full workflow
