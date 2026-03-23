@@ -1,0 +1,105 @@
+# Requirements Feedback Loops
+# How requirements flow between BA and other disciplines bidirectionally.
+# Promoted from disciplines/business-analysis.md parking lot.
+# Last updated: 2026-03-22
+
+last_updated: 2026-03-22
+id: requirements-feedback-loops
+name: "Requirements Feedback Loops"
+description: >
+  Patterns for bidirectional flow of requirements and acceptance criteria between
+  the business analysis discipline and other disciplines. Covers: how testing
+  discovers missing acceptance criteria and feeds them back to BA, how test data
+  design acts as lightweight domain modeling, and how architect-proposed values
+  need domain validation.
+
+# ─────────────────────────────────────────────
+# Acceptance Criteria Flow Both Directions
+# ─────────────────────────────────────────────
+
+bidirectional_acceptance_criteria:
+  principle: >
+    BA writes acceptance criteria in specs. Testing verifies them. But testing also
+    *discovers* missing acceptance criteria — edge cases, boundary conditions, and
+    unstated assumptions that the spec didn't cover. These discoveries must flow back
+    to BA for future specs, not just get fixed silently in the test suite.
+
+  forward_flow:
+    direction: "BA → Testing"
+    what: "Acceptance criteria in specs define what tests verify"
+    mechanism: "Spec document → test plan → test cases"
+
+  reverse_flow:
+    direction: "Testing → BA"
+    what: "Test execution reveals missing or ambiguous acceptance criteria"
+    mechanism: "Test findings → disciplines/business-analysis.md parking lot → BA incorporates in future specs"
+    examples:
+      - "Spec said 'user can enter a value' but didn't specify: what happens with negative numbers? Empty string? 1000-character input?"
+      - "Spec defined the happy path but not the error recovery: what does the user see when the save fails?"
+      - "Spec assumed single-user context but the feature has multi-user implications (concurrent edits, shared state)"
+
+  how_to_apply:
+    testers: >
+      When a test reveals an unstated assumption or missing boundary, don't just
+      write the test — also record the missing acceptance criterion. The test covers
+      this instance; the BA record prevents the pattern from recurring in future specs.
+    ba_practitioners: >
+      At spec review time, scan recent test findings for patterns of missing criteria.
+      Common categories: boundary conditions, error states, concurrent access, empty/null
+      states, permission boundaries. Build a personal checklist from recurring gaps.
+    architects: >
+      During plan review, flag areas where acceptance criteria are vague on technical
+      boundaries (performance thresholds, data size limits, timeout behavior). These
+      are the criteria that testing will inevitably discover are missing.
+
+# ─────────────────────────────────────────────
+# Test Data Design as Domain Modeling
+# ─────────────────────────────────────────────
+
+test_data_as_domain_modeling:
+  principle: >
+    Designing test data for a feature requires reasoning about valid ranges, allowed
+    states, and legal transitions — this is lightweight domain analysis happening inside
+    the testing discipline. The BA discipline should feed valid domain ranges and business
+    rules into test specs, and test specs should surface domain questions back to BA.
+
+  what_test_data_reveals:
+    - aspect: "Valid ranges"
+      question: "What numeric values are meaningful? What are the min/max?"
+      example: "A quantity field: is 0 valid? Negative? Decimal? What's the upper bound?"
+    - aspect: "State space"
+      question: "What states can this entity be in? What transitions are allowed?"
+      example: "An order: draft → submitted → approved → shipped. Can it go back to draft after submission?"
+    - aspect: "Combinatorial constraints"
+      question: "Which combinations of field values are valid together?"
+      example: "If status is 'shipped', tracking_number must be non-null. If type is 'digital', weight must be null."
+
+  cross_discipline_flow: >
+    BA feeds domain rules → test data design uses them as constraints →
+    test data design surfaces questions BA didn't answer → BA refines domain model.
+    This is a specific instance of the bidirectional acceptance criteria pattern.
+
+# ─────────────────────────────────────────────
+# Architect-Proposed Values Need Domain Validation
+# ─────────────────────────────────────────────
+
+domain_validation_of_computed_values:
+  principle: >
+    For computed or formula-derived values, the architect proposes expected results
+    based on code understanding, but the domain expert validates against real-world
+    knowledge. This is a BA function — ensuring computed values make domain sense,
+    not just mathematical sense.
+
+  examples:
+    - scenario: "Financial calculation produces a negative balance"
+      architect_view: "Code correctly implements the formula"
+      ba_view: "A negative balance may be technically correct but domain-invalid for this account type"
+    - scenario: "Date calculation produces a result 10 years in the future"
+      architect_view: "The projection algorithm works correctly"
+      ba_view: "Business policy caps projections at 5 years — the result is technically right but domain-wrong"
+
+  how_to_apply: >
+    When test expected values involve domain-specific computations (financial formulas,
+    date logic, status transitions, scoring algorithms), the architect proposes the
+    expected value and the BA validates it. Neither alone is sufficient — the architect
+    knows the code, the BA knows the business rules.

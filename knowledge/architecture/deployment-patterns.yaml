@@ -325,3 +325,54 @@ deployment_safety_controls:
       max_retries: 3
       per_try_timeout: "Set to p99 latency of downstream, not global timeout"
     timeout_hierarchy: "Client timeout > gateway timeout > service timeout > downstream timeout"
+
+# ─────────────────────────────────────────────
+# Pre-Deploy Readiness Checks
+# ─────────────────────────────────────────────
+
+pre_deploy_readiness_checks:
+  description: >
+    A deployment readiness gate that reuses the same health checks the testing discipline
+    runs before test sessions. Same checks, different context: pre-deploy instead of
+    pre-test. If the health checks fail before deployment, the deployment should not
+    proceed — the environment is not in a known-good state.
+
+  origin: "Promoted from disciplines/deployment.md parking lot. Validated through testing discipline's prerequisites health check recipe (knowledge/testing/gotchas.yaml#server-down-false-negatives)."
+
+  checks:
+    frontend_server:
+      what: "UI dev server or built frontend is serving responses"
+      how: "HTTP GET to frontend URL; expect 200 or redirect to login"
+      failure_means: "Build failed, server didn't start, or port conflict"
+
+    api_server:
+      what: "Backend API is running and responding"
+      how: "HTTP GET to API health endpoint (e.g., /api/health, /health/ready)"
+      failure_means: "Backend crash, missing env vars, database connection failure"
+
+    proxy_passthrough:
+      what: "If a proxy sits between frontend and API (Vite proxy, nginx, Next.js rewrites), requests reach the backend"
+      how: "HTTP GET through the frontend URL to an API endpoint; verify response is from API, not a proxy error page"
+      failure_means: "Proxy misconfiguration, port mismatch, CORS issue"
+
+    database_connectivity:
+      what: "Database is accessible and migrations are current"
+      how: "API health endpoint that includes a DB ping, or a dedicated migration status check"
+      failure_means: "Database down, credentials expired, pending migrations"
+
+  when_to_run:
+    - "Before every deployment (automated in CI pipeline)"
+    - "After environment provisioning (new staging, new preview)"
+    - "After infrastructure changes (DB migration, env var rotation, proxy config change)"
+
+  integration_with_testing:
+    shared_recipe: >
+      The testing discipline's prerequisites health check (gotchas.yaml#server-down-false-negatives)
+      and this deployment readiness check are the same recipe. Maintain one implementation,
+      invoke it from both contexts. If the testing check evolves (e.g., adds WebSocket
+      connectivity), the deployment check inherits the improvement automatically.
+
+  pipeline_position: >
+    Run readiness checks as the first stage of the deployment pipeline, before any
+    build artifacts are promoted. A failed readiness check halts the pipeline with a
+    clear diagnostic — not a cryptic deployment error 10 stages later.

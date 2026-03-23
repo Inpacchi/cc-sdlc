@@ -84,7 +84,7 @@ The discipline has documented, reusable knowledge. Methodology exists, patterns 
 
 - **The self-improving loop generalizes.** [NEEDS VALIDATION] A layered knowledge store with a capture-accumulate-feed-forward cycle applies to every discipline. Design knowledge, architecture knowledge, BA knowledge all benefit from the same structure. Consider a generic "discipline knowledge store" template.
 
-- **Cross-discipline remediation flow.** [NEEDS VALIDATION] One discipline captures factual observations → knowledge store → another discipline polls at planning boundaries → triages into backlog. Example: tester captures testability gaps → architect polls at planning boundaries → triages into backlog. The same flow applies to any discipline pair.
+- **Cross-discipline remediation flow.** Promoted → `knowledge/architecture/knowledge-management-methodology.yaml` (cross_discipline_remediation section)
 
 - **Disciplines-as-skills orchestration.** [DEFERRED] When individual discipline skills exist, the SDLC becomes an orchestrator that invokes discipline skills at appropriate phases with appropriate intensity. *Reason: future vision, no discipline skills exist yet.*
 
@@ -95,10 +95,10 @@ The discipline has documented, reusable knowledge. Methodology exists, patterns 
 | Testing | 2 | 7-file knowledge store, testing paradigm, gotchas, tool patterns |
 | Design | 2 | 3-file knowledge store, UX modeling methodology, a11y-testability principles |
 | Coding | 2 | 3-file knowledge store, code quality principles, TypeScript patterns |
-| Architecture | 2 | 16-file knowledge store, comprehensive methodology coverage |
+| Architecture | 2 | 17-file knowledge store, comprehensive methodology coverage |
 | Data Modeling | 2 | 5-file knowledge store, UDM patterns, assessment templates |
 | Product Research | 2 | 5-file knowledge store, competitive analysis methodology, risk assessment |
-| Business Analysis | 1 | Parking lot only, 3 seeded insights |
+| Business Analysis | 2 | 1-file knowledge store (requirements-feedback-loops.yaml), agent wiring, all 3 insights promoted |
 | Deployment | 1 | Parking lot only, 4 seeded insights |
 | Process Improvement | 2 | Changelog, discipline capture pipeline, maturity levels, process docs |
 

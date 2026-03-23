@@ -34,6 +34,36 @@ Each entry contains:
 
 ---
 
+## 2026-03-22: Promote 4 Parking Lot Items Across Disciplines
+
+**Origin:** CD-initiated triage of parking lot items across all disciplines.
+
+**What happened:** Reviewed all 9 discipline parking lots for items mature enough to promote. Identified 4 items with strong evidence from actual framework usage: cross-discipline remediation flow (validated through 4 real instances), health check prerequisite pattern (validated through testing discipline's recipe), bidirectional acceptance criteria (validated through testing practice), and token economics (validated through daily framework usage). All 4 were `[NEEDS VALIDATION]`; all had cross-discipline evidence.
+
+**Changes made:**
+
+1. **`knowledge/architecture/knowledge-management-methodology.yaml`** — Added `cross_discipline_remediation` section documenting the generalized pattern (producer captures → parking lot → consumer polls → triage) with 4 validated instances, how-to-apply guidance, and anti-patterns. Promoted from `disciplines/process-improvement.md`.
+
+2. **`knowledge/architecture/deployment-patterns.yaml`** — Added `pre_deploy_readiness_checks` section recontextualizing the testing discipline's health check recipe as a deployment gate (frontend, API, proxy, database checks). Promoted from `disciplines/deployment.md`.
+
+3. **`knowledge/business-analysis/requirements-feedback-loops.yaml`** (new file) — BA's first knowledge store file. Three sections: bidirectional acceptance criteria flow, test data design as domain modeling, and domain validation of computed values. Promotes all 3 seeded insights from `disciplines/business-analysis.md`.
+
+4. **`knowledge/business-analysis/README.md`** (new file) — Knowledge store README for BA discipline.
+
+5. **`knowledge/architecture/token-economics.yaml`** (new file) — Context window constraints as architectural constraint. Four dimensions: knowledge retrieval, codebase scope, workflow accumulation, review depth. Promoted from `disciplines/architecture.md`.
+
+6. **`knowledge/agent-context-map.yaml`** — Added `business-analyst` role mapping to `requirements-feedback-loops.yaml`. Added `token-economics.yaml` to `architect` mapping.
+
+7. **`disciplines/process-improvement.md`** — Updated maturity tracker: BA upgraded from Level 1 to Level 2 (knowledge store + agent wiring + all insights promoted). Architecture file count updated to 17.
+
+8. **`disciplines/*.md`** (4 files) — All promoted entries marked with `Promoted →` and target file references.
+
+9. **`skeleton/manifest.json`** — Added `knowledge/business-analysis/` directory, `requirements-feedback-loops.yaml`, `README.md`, and `token-economics.yaml` to canonical file list.
+
+**Rationale:** Parking lot triage keeps the discipline pipeline healthy. These 4 items had accumulated enough evidence through real framework usage to graduate from speculative insights to validated knowledge. The BA promotion is notable — it bootstraps BA from Level 1 to Level 2, leaving only Deployment at Level 1. The cross-discipline remediation flow promotion codifies a pattern that was already working implicitly across 4 discipline pairs.
+
+---
+
 ## 2026-03-22: Implement Self-Improving Discipline Process (3 Phases)
 
 **Origin:** CD requested a mechanism to make disciplines, knowledge stores, and skills self-improving — closing the feedback loop from "agent does work" to "knowledge improves" with minimal manual gates.

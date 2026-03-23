@@ -1,0 +1,88 @@
+# Token Economics as Architectural Constraint
+# How context window size and token budgets constrain AI-assisted workflows.
+# Promoted from disciplines/architecture.md parking lot.
+# Last updated: 2026-03-22
+
+last_updated: 2026-03-22
+id: token-economics
+name: "Token Economics as Architectural Constraint"
+description: >
+  In AI-assisted workflows, context window size and token budgets are real
+  architectural constraints — as real as memory limits or network bandwidth.
+  Architecture decisions must account for what is feasible within token budgets,
+  especially for knowledge retrieval, agent dispatch, and large-scale refactors.
+
+# ─────────────────────────────────────────────
+# Core Principle
+# ─────────────────────────────────────────────
+
+principle: >
+  Token budgets constrain the amount of context an agent can hold simultaneously.
+  This affects: how many knowledge files an agent can consult, how large a codebase
+  change can be reviewed in a single pass, and how many steps a workflow can
+  accumulate before context degrades. Architecture should design for these limits
+  rather than fighting them.
+
+# ─────────────────────────────────────────────
+# Constraint Dimensions
+# ─────────────────────────────────────────────
+
+constraint_dimensions:
+  knowledge_retrieval:
+    constraint: "Each agent dispatch can load a limited number of knowledge files before context fills"
+    implication: >
+      Knowledge files should be focused and modular — one topic per file, not monolithic
+      reference documents. The agent-context-map must be precise (map only what's relevant)
+      rather than comprehensive (map everything that might be useful).
+    design_rule: "Prefer many small files over few large ones. A 500-line YAML is harder to load selectively than five 100-line YAMLs."
+
+  codebase_scope:
+    constraint: "Large-scale refactors that touch dozens of files may exceed what an agent can hold in context"
+    implication: >
+      Architecture should favor designs that localize change. A refactor that touches
+      3 files is feasible in one agent pass. A refactor that touches 30 files needs
+      to be decomposed into phases, each scoped to fit in context.
+    design_rule: "When planning a refactor, estimate the number of files touched. If > 10, decompose into independent phases that can be executed in separate agent sessions."
+
+  workflow_accumulation:
+    constraint: "Multi-step workflows accumulate context (previous step results, tool call history) that reduces available space for new work"
+    implication: >
+      Long workflows should checkpoint and summarize intermediate results rather than
+      carrying full history. The Workflow DevKit's step isolation is the architectural
+      answer — each step gets a fresh context with only the inputs it needs.
+    design_rule: "Design workflow steps to be self-contained. Pass structured summaries between steps, not raw conversation history."
+
+  review_depth:
+    constraint: "Code review quality degrades when the diff exceeds context capacity"
+    implication: >
+      PRs should be scoped to fit in a single review pass. Monolithic PRs that change
+      hundreds of lines across many files get shallower review — the reviewer runs out
+      of context to track all the implications.
+    design_rule: "Prefer smaller, focused PRs. If a change is large, split into stacked PRs with clear dependency order."
+
+# ─────────────────────────────────────────────
+# Practical Guidelines
+# ─────────────────────────────────────────────
+
+practical_guidelines:
+  knowledge_file_sizing:
+    target: "< 200 lines per YAML knowledge file"
+    rationale: "Keeps individual file load cost manageable; allows loading 3-5 files per agent dispatch"
+
+  agent_dispatch_budget:
+    rule: "When dispatching an agent, estimate total context load: knowledge files + codebase reads + prompt + expected output"
+    warning_threshold: "If estimated load exceeds 60% of context window, reduce knowledge files or split the task"
+
+  refactor_decomposition:
+    phases: "Identify → Plan → Execute phase-by-phase → Verify"
+    key_insight: >
+      The planning phase can see the whole picture (reading files is cheap).
+      The execution phase should work on focused subsets (writing changes is expensive
+      in context). Plan wide, execute narrow.
+
+  knowledge_store_maintenance:
+    implication: >
+      Token economics is the architectural reason the two-tier knowledge architecture
+      exists. Cross-project knowledge must be compact and high-signal because every
+      byte competes for context space. Project-specific knowledge can be larger because
+      it's loaded selectively by agents working in that project.

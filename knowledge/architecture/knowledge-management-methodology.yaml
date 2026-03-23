@@ -311,3 +311,65 @@ two_tier_architecture:
     addition_to_existing_file: "When new pattern fits under existing taxonomy"
     memory_file_update: "When learning is agent-specific rather than universal"
     skill_instruction_update: "When learning should become mandatory process step"
+
+# ─────────────────────────────────────────────
+# Cross-Discipline Remediation Flow
+# ─────────────────────────────────────────────
+
+cross_discipline_remediation:
+  description: >
+    A generalized pattern where one discipline captures factual observations during its
+    work, deposits them in a knowledge store or parking lot, and another discipline polls
+    at planning boundaries to triage them into actionable backlog items. The flow is
+    pull-based (the consuming discipline decides when to poll) and low-ceremony (the
+    producing discipline writes a one-line entry, not a formal report).
+
+  pattern: >
+    Discipline A (producer) captures observation → parking lot or knowledge store →
+    Discipline B (consumer) polls at planning boundary → triages into backlog or knowledge.
+
+  validated_instances:
+    - producer: "Testing"
+      consumer: "Coding"
+      flow: "Tester captures testability gap → disciplines/coding.md parking lot → architect triages at planning boundary → backlog item for implementation"
+      evidence: "Codified in code-quality-principles.yaml (testability_as_code_quality.cross_discipline_flow)"
+
+    - producer: "Testing"
+      consumer: "Design"
+      flow: "Tester discovers accessibility gap → disciplines/design.md parking lot → design review incorporates fix"
+      evidence: "Codified in accessibility-testability-principles.yaml (unified_concern)"
+
+    - producer: "Architecture"
+      consumer: "Testing"
+      flow: "Architect spots code risk during plan review → feeds risk areas to SDET agent dispatch → targeted test probes"
+      evidence: "Codified in domain-boundary-gotchas.yaml (architect-feeds-testing-risk-areas)"
+
+    - producer: "Coding"
+      consumer: "Architecture"
+      flow: "Developer finds validation gap via test data design → architect decides whether to fix or accept"
+      evidence: "Validated through testing paradigm's boundary case discovery"
+
+  how_to_apply:
+    producing_discipline: >
+      When you observe something outside your discipline's scope during normal work,
+      write a one-line entry in the relevant discipline's parking lot with [NEEDS VALIDATION].
+      Do not solve the other discipline's problem — just record the observation.
+    consuming_discipline: >
+      At planning boundaries (spec review, plan review, sprint planning), scan parking
+      lots of disciplines that feed into yours. Triage entries: promote to knowledge,
+      defer, or create a backlog item.
+    architect_role: >
+      The architect is the natural polling hub — they see code being written (testing
+      risk areas), review plans (design implications), and assess cost (BA scope
+      questions). Architect polls all discipline parking lots at planning boundaries.
+
+  anti_patterns:
+    - name: "Fire-and-forget capture"
+      description: "Producer writes entry but no one ever polls. Parking lot grows without triage."
+      fix: "Compliance auditor §6a checks for stale entries. Architect polls at planning boundaries."
+    - name: "Producer solves consumer's problem"
+      description: "Tester fixes the testability gap themselves instead of recording it for the coder."
+      fix: "Record the observation. Let the owning discipline decide approach and priority."
+    - name: "Formal handoff ceremony"
+      description: "Requiring a meeting or structured report to pass an observation between disciplines."
+      fix: "One-line parking lot entry. The consuming discipline decides how much ceremony the response needs."

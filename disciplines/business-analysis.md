@@ -12,8 +12,8 @@ Requirements elicitation, domain modeling, stakeholder needs, acceptance criteri
 
 ### Seeded Insights
 
-- **Test data design is lightweight domain modeling.** [NEEDS VALIDATION] When building test data for a feature, you must reason about: What are valid ranges for numeric fields? What states exist? What transitions are allowed? This is domain analysis happening inside the testing discipline. The BA discipline should feed valid domain ranges and business rules into test specs — and test specs should surface domain questions back to BA.
+- **Test data design is lightweight domain modeling.** Promoted → `knowledge/business-analysis/requirements-feedback-loops.yaml` (test_data_as_domain_modeling section)
 
-- **Acceptance criteria flow both directions.** [NEEDS VALIDATION] BA writes acceptance criteria in specs. Testing verifies them. But testing also *discovers* missing acceptance criteria (e.g., "the spec didn't say what happens when you enter an invalid value in this field"). These discoveries should flow back to BA for future specs.
+- **Acceptance criteria flow both directions.** Promoted → `knowledge/business-analysis/requirements-feedback-loops.yaml` (bidirectional_acceptance_criteria section)
 
-- **Architect-proposed expected values need domain validation.** [NEEDS VALIDATION] For computed or formula-derived values, the architect proposes expected results based on code understanding, but the domain expert validates against real-world knowledge. This is a BA function — ensuring computed values make domain sense.
+- **Architect-proposed expected values need domain validation.** Promoted → `knowledge/business-analysis/requirements-feedback-loops.yaml` (domain_validation_of_computed_values section)

@@ -50,6 +50,7 @@ spec → plan → implement
 | `ml-system-design.yaml` | ML inference pipelines, model lifecycle | [ml-architect] |
 | `prompt-engineering-patterns.yaml` | LLM prompt design, evaluation patterns | [ml-architect] |
 | `domain-boundary-gotchas.yaml` | Cross-domain work patterns, orchestrator signals | [architect], [code-reviewer] |
+| `token-economics.yaml` | Context window constraints on AI-assisted workflows | [architect] |
 | `database-optimization-methodology.yaml` | Query optimization, index strategy | [data-engineer], [backend-developer] |
 
 ## Parking Lot
@@ -62,4 +63,4 @@ spec → plan → implement
 
 - **Two-tier knowledge architecture.** Promoted → `knowledge/architecture/knowledge-management-methodology.yaml` (two_tier_architecture section)
 
-- **Token economics as an architectural constraint.** [NEEDS VALIDATION] In AI-assisted workflows, token budgets are real constraints. Architecture should consider what patterns are feasible within context budgets. Context window size affects feasibility of large-scale refactors.
+- **Token economics as an architectural constraint.** Promoted → `knowledge/architecture/token-economics.yaml`

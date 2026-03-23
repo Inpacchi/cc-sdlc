@@ -18,4 +18,4 @@ CI/CD, infrastructure, release management, monitoring, rollback strategies.
 
 - **Playwright runs headless by default — good for CI.** [DEFERRED] Playwright CLI can be invoked from GitHub Actions without a display server. Auth state persistence (`storageState`) handles authentication across CI runs without re-authenticating each time. *Reason: documentation fact about Playwright, not a discipline insight.*
 
-- **Health check prerequisite pattern.** [NEEDS VALIDATION] The testing discipline's health check recipe (verify frontend, API, and any proxy endpoints are up) should become a deployment readiness check. Same checks, different context: pre-deploy instead of pre-test.
+- **Health check prerequisite pattern.** Promoted → `knowledge/architecture/deployment-patterns.yaml` (pre_deploy_readiness_checks section)
