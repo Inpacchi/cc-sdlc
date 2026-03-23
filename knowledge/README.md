@@ -8,14 +8,15 @@ Deep, structured knowledge organized by discipline. Each subdirectory contains p
 knowledge/
 ├── README.md                  ← This file
 ├── agent-context-map.yaml     ← Maps agents to their knowledge files
-├── architecture/              ← 18 files: system design, debugging, security, payments, ML, deployment
+├── architecture/              ← 16 files: system design, debugging, security, payments, ML, deployment
+├── coding/                    ← Code quality principles, TypeScript patterns, testability, mocking stance
 ├── data-modeling/             ← UDM patterns, anti-patterns, assessment templates
-├── design/                    ← UX modeling methodology, ASCII conventions
-├── product-research/          ← Competitive analysis, data source evaluation, product methodology
+├── design/                    ← UX modeling methodology, ASCII conventions, accessibility-testability
+├── product-research/          ← Competitive analysis, data source evaluation, product methodology, risk assessment
 └── testing/                   ← Tool patterns, component strategies, gotchas, timing, advanced patterns
 ```
 
-Other disciplines (coding, deployment, etc.) will add directories here as their knowledge matures beyond the parking-lot stage in `disciplines/`.
+Other disciplines (business-analysis, deployment, process-improvement) will add directories here as their knowledge matures beyond the parking-lot stage in `disciplines/`.
 
 ## Relationship to Other Directories
 
@@ -81,8 +82,19 @@ done
 
 **Why this matters:** Skills silently fail to dispatch the correct agent if the name doesn't match. The context map lookup returns nothing, so agents don't receive knowledge files. Both failures are silent — no errors, just degraded output quality.
 
-## Adding a New Discipline
+## Adding a Knowledge Store for a Discipline
 
-1. Create `knowledge/<discipline-name>/` with a `README.md`
-2. Add structured files (YAML preferred for AI-parseable content)
-3. Update the discipline overview in `disciplines/<discipline-name>.md` to point here
+A knowledge store is created when a discipline reaches Level 2 (Managed) — meaning its parking lot has validated, promotable entries. See `disciplines/README.md` § "Creating a New Discipline" for the full lifecycle.
+
+**Prerequisites:** The discipline file (`disciplines/<name>.md`) must already exist with triaged parking lot entries marked `[READY TO PROMOTE]`.
+
+**Steps:**
+
+1. Create `knowledge/<discipline-name>/` with a `README.md` describing the store's purpose, structure, and relationships
+2. Promote `[READY TO PROMOTE]` entries from the parking lot to structured YAML files
+3. Mark promoted parking lot entries with `Promoted → [target file]`
+4. Update `agent-context-map.yaml` — wire the new knowledge files to relevant agent roles
+5. Update the discipline file's status from "Parking lot" to "Active" and add a knowledge store reference
+6. Update the Process Maturity Tracker in `disciplines/process-improvement.md` — upgrade to Level 2
+7. Add the directory and files to `skeleton/manifest.json`
+8. Update this README's structure listing

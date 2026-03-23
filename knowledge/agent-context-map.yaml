@@ -17,7 +17,7 @@ mappings:
     - ops/sdlc/knowledge/architecture/backend-capability-assessment.yaml
     - ops/sdlc/knowledge/architecture/technology-patterns.yaml
     - ops/sdlc/knowledge/architecture/pipeline-design-patterns.yaml
-    - ops/sdlc/knowledge/architecture/typescript-patterns.yaml
+    - ops/sdlc/knowledge/coding/typescript-patterns.yaml
     - ops/sdlc/knowledge/architecture/agent-communication-protocol.yaml
     - ops/sdlc/knowledge/architecture/api-design-methodology.yaml
     - ops/sdlc/knowledge/architecture/deployment-patterns.yaml
@@ -46,18 +46,22 @@ mappings:
   ui-ux-designer:
     - ops/sdlc/knowledge/design/ux-modeling-methodology.yaml
     - ops/sdlc/knowledge/design/ascii-conventions.yaml
+    - ops/sdlc/knowledge/design/accessibility-testability-principles.yaml
     - ops/sdlc/knowledge/architecture/agent-communication-protocol.yaml
 
   frontend-developer:
+    - ops/sdlc/knowledge/coding/code-quality-principles.yaml
     - ops/sdlc/knowledge/design/ux-modeling-methodology.yaml
-    - ops/sdlc/knowledge/architecture/typescript-patterns.yaml
+    - ops/sdlc/knowledge/design/accessibility-testability-principles.yaml
+    - ops/sdlc/knowledge/coding/typescript-patterns.yaml
     - ops/sdlc/knowledge/architecture/agent-communication-protocol.yaml
 
   # ── Backend ────────────────────────────────────────────────────────
   backend-developer:
+    - ops/sdlc/knowledge/coding/code-quality-principles.yaml
     - ops/sdlc/knowledge/architecture/technology-patterns.yaml
     - ops/sdlc/knowledge/data-modeling/anti-patterns/common-modeling-mistakes.yaml
-    - ops/sdlc/knowledge/architecture/typescript-patterns.yaml
+    - ops/sdlc/knowledge/coding/typescript-patterns.yaml
     - ops/sdlc/knowledge/architecture/pipeline-design-patterns.yaml
     - ops/sdlc/knowledge/architecture/agent-communication-protocol.yaml
     - ops/sdlc/knowledge/architecture/api-design-methodology.yaml
@@ -66,13 +70,14 @@ mappings:
 
   # ── Review / Quality ───────────────────────────────────────────────
   code-reviewer:
+    - ops/sdlc/knowledge/coding/code-quality-principles.yaml
     - ops/sdlc/knowledge/architecture/technology-patterns.yaml
     - ops/sdlc/knowledge/testing/testing-paradigm.yaml
     - ops/sdlc/knowledge/testing/gotchas.yaml
     - ops/sdlc/knowledge/testing/tool-patterns.yaml
     - ops/sdlc/knowledge/testing/component-catalog.yaml
     - ops/sdlc/knowledge/architecture/debugging-methodology.yaml
-    - ops/sdlc/knowledge/architecture/typescript-patterns.yaml
+    - ops/sdlc/knowledge/coding/typescript-patterns.yaml
     - ops/sdlc/knowledge/architecture/security-review-taxonomy.yaml
     - ops/sdlc/knowledge/architecture/agent-communication-protocol.yaml
     - ops/sdlc/knowledge/architecture/investigation-report-format.yaml
@@ -90,6 +95,7 @@ mappings:
 
   accessibility-auditor:
     - ops/sdlc/knowledge/design/ux-modeling-methodology.yaml
+    - ops/sdlc/knowledge/design/accessibility-testability-principles.yaml
     - ops/sdlc/knowledge/architecture/agent-communication-protocol.yaml
     - ops/sdlc/knowledge/architecture/investigation-report-format.yaml
 
@@ -150,7 +156,7 @@ mappings:
 
   refactor-engineer:
     - ops/sdlc/knowledge/architecture/technology-patterns.yaml
-    - ops/sdlc/knowledge/architecture/typescript-patterns.yaml
+    - ops/sdlc/knowledge/coding/typescript-patterns.yaml
     - ops/sdlc/knowledge/architecture/agent-communication-protocol.yaml
 
   # ── ML / AI ────────────────────────────────────────────────────────
@@ -163,18 +169,18 @@ mappings:
   ml-engineer:
     - ops/sdlc/knowledge/architecture/ml-system-design.yaml
     - ops/sdlc/knowledge/architecture/pipeline-design-patterns.yaml
-    - ops/sdlc/knowledge/architecture/typescript-patterns.yaml
+    - ops/sdlc/knowledge/coding/typescript-patterns.yaml
     - ops/sdlc/knowledge/architecture/agent-communication-protocol.yaml
     - ops/sdlc/knowledge/architecture/prompt-engineering-patterns.yaml
 
   # ── Payments / Legal ───────────────────────────────────────────────
   payment-engineer:
     - ops/sdlc/knowledge/architecture/payment-state-machine.yaml
-    - ops/sdlc/knowledge/architecture/risk-assessment-framework.yaml
+    - ops/sdlc/knowledge/product-research/risk-assessment-framework.yaml
     - ops/sdlc/knowledge/architecture/agent-communication-protocol.yaml
 
   legal-advisor:
-    - ops/sdlc/knowledge/architecture/risk-assessment-framework.yaml
+    - ops/sdlc/knowledge/product-research/risk-assessment-framework.yaml
     - ops/sdlc/knowledge/architecture/agent-communication-protocol.yaml
 
   # ── SDLC ───────────────────────────────────────────────────────────

@@ -1,0 +1,95 @@
+# Code Quality Principles
+# Structural rules that affect testability, maintainability, and review quality.
+# Companion to knowledge/testing/testing-paradigm.yaml (test strategy side).
+# Promoted from disciplines/coding.md parking lot entries validated through real use.
+# Last updated: 2026-03-22
+
+last_updated: 2026-03-22
+id: code-quality-principles
+name: "Code Quality Principles"
+description: >
+  Cross-project code structure rules focused on testability and maintainability.
+  Covers: testability as a code quality concern (not just a testing concern),
+  the mocking-is-a-code-smell stance, and structural patterns that make code
+  inherently easier to test, review, and maintain.
+
+# ─────────────────────────────────────────────
+# Testability Is a Code Quality Concern
+# ─────────────────────────────────────────────
+
+testability_as_code_quality:
+  principle: >
+    When the testing agent has to use coordinate-based clicks, fragile DOM selectors,
+    or complex mocking to test a feature, the problem is in the code — not the test.
+    Testability debt items (missing data-testid, no aria-labels, timing-dependent state,
+    I/O-logic entanglement) are code quality items, triaged by the architect at planning
+    boundaries.
+
+  implication: >
+    Testability is owned by the coding discipline, not the testing discipline. The tester
+    surfaces testability gaps; the coder fixes them. The architect triages priority.
+
+  examples:
+    - symptom: "Test requires mocking an internal dependency"
+      diagnosis: "Code mixes I/O and logic in the same function"
+      fix: "Split into pure logic function + thin I/O wrapper"
+
+    - symptom: "Test relies on CSS selectors or DOM structure"
+      diagnosis: "Component lacks semantic accessibility attributes"
+      fix: "Add data-testid, aria-label, or semantic HTML elements"
+
+    - symptom: "Test uses sleep/waitFor with arbitrary timeouts"
+      diagnosis: "UI state transitions lack programmatic indicators"
+      fix: "Add loading states, aria-busy, or data-state attributes"
+
+  cross_discipline_flow: >
+    Tester captures testability gap → disciplines/coding.md parking lot →
+    architect triages at planning boundary → backlog item for implementation.
+
+# ─────────────────────────────────────────────
+# Mocking Is a Code Smell
+# ─────────────────────────────────────────────
+
+mocking_stance:
+  principle: >
+    If a unit test requires mocking an internal dependency, the code structure is wrong —
+    not the test. Restructure to separate I/O from logic. Mocks are acceptable only for
+    genuinely external third-party services you cannot control.
+
+  root_pattern: "Functional Core, Imperative Shell"
+  reference: "knowledge/testing/testing-paradigm.yaml"
+
+  when_mocking_is_acceptable:
+    - "Third-party APIs you don't own (payment gateways, external auth providers)"
+    - "Services with rate limits or costs per call in test environments"
+    - "Hardware interfaces not available in CI"
+
+  when_mocking_is_a_smell:
+    - "Mocking your own database layer → split query from transform"
+    - "Mocking your own API client → split fetch from process"
+    - "Mocking a sibling module → the two modules are too coupled"
+
+  action_on_smell: >
+    When a developer or reviewer encounters a mock for an internal dependency:
+    1. Do NOT add the mock and move on
+    2. Identify the I/O-logic entanglement in the code under test
+    3. Refactor: extract pure logic into a separate function
+    4. Unit test the pure function with no mocks
+    5. Integration test the I/O wrapper against the real system
+
+# ─────────────────────────────────────────────
+# Validation Gaps from Test Data Design
+# ─────────────────────────────────────────────
+
+validation_gaps:
+  observation: >
+    Designing boundary test cases often reveals missing or incomplete validation
+    in the implementation (e.g., no numeric range validation, no string length limits).
+    These are coding concerns surfaced by the testing discipline.
+
+  status: "NEEDS_VALIDATION — observed but no structured methodology yet"
+
+  recommended_flow: >
+    When test data design reveals a validation gap, capture it as a finding in the
+    test spec and surface it during plan review. The architect decides whether to
+    fix (add validation) or accept (document the gap as intentional).

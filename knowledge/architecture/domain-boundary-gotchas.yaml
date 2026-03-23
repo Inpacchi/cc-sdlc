@@ -3,7 +3,7 @@
 # Include in agent dispatch prompts when cross-domain risk is identified.
 # Last updated: 2026-03-20
 
-last_updated: 2026-03-20
+last_updated: 2026-03-22
 id: domain-boundary-gotchas
 name: "Domain Boundary Crossing Patterns"
 description: >
@@ -38,6 +38,17 @@ gotchas:
       Read code before answering factual questions (Code Verification Rule).
       If the answer reveals work to do, re-enter a skill or dispatch an agent.
       The Manager Rule does not end when the skill completes.
+
+  - id: architect-feeds-testing-risk-areas
+    pattern: "Architect sees code patterns that imply testing risk but testing agent doesn't know about them"
+    example: "Architect reads code during plan review, spots a race condition in state management — testing agent wouldn't probe for it without being told"
+    risk: "Testing agent writes tests that cover happy paths but misses architecture-visible risks (race conditions, state bugs, fragile patterns)"
+    correct_approach: >
+      Architect captures risk observations during plan review and feeds them to the
+      testing discipline. The mechanism: risk areas noted in the plan (or as dispatch
+      context for the SDET agent) become targeted test probes. This is the Layer 0
+      (upstream SDLC context) function — the architect sees code being written and
+      flags concerns that are invisible from the UI testing perspective.
 
 recognition_signals:
   - "Editing files outside the dispatched agent's 'owns' path"

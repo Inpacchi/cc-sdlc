@@ -37,7 +37,6 @@ spec → plan → implement
 |------|--------|-------------------|
 | `backend-capability-assessment.yaml` | Capability matrix, cost estimation | [architect] |
 | `technology-patterns.yaml` | Stack-specific patterns | [architect], [backend-developer], [build-engineer] |
-| `typescript-patterns.yaml` | TypeScript conventions, strict mode patterns | [architect], [frontend-developer], [code-reviewer] |
 | `pipeline-design-patterns.yaml` | ETL, data pipeline, background processing patterns | [architect], [data-engineer] |
 | `api-design-methodology.yaml` | REST API design, route conventions | [architect], [backend-developer] |
 | `deployment-patterns.yaml` | CI/CD, hosting deploy patterns | [architect], [backend-developer], [build-engineer] |
@@ -47,7 +46,6 @@ spec → plan → implement
 | `investigation-report-format.yaml` | Structured investigation output format | [debug-specialist], [code-reviewer] |
 | `error-cascade-methodology.yaml` | Error propagation tracing, failure chains | [debug-specialist], [performance-engineer] |
 | `security-review-taxonomy.yaml` | Security assessment categories, OWASP mapping | [security-engineer], [code-reviewer] |
-| `risk-assessment-framework.yaml` | Risk scoring, mitigation planning | [architect] |
 | `payment-state-machine.yaml` | Payment flow states, gateway integration | [payment-engineer] |
 | `ml-system-design.yaml` | ML inference pipelines, model lifecycle | [ml-architect] |
 | `prompt-engineering-patterns.yaml` | LLM prompt design, evaluation patterns | [ml-architect] |
@@ -59,8 +57,8 @@ spec → plan → implement
 
 ### Seeded Insights
 
-- **Layer 0 (upstream SDLC context) is an architectural function.** The architect sees code being written and flags concerns (race conditions, state management bugs, fragile patterns) that are invisible from the UI. These become targeted test probes. Architecture should feed the testing discipline's risk area section.
+- **Layer 0 (upstream SDLC context) is an architectural function.** Promoted → `knowledge/architecture/domain-boundary-gotchas.yaml` (architect-feeds-testing-risk-areas entry)
 
-- **Two-tier knowledge architecture.** Cross-project knowledge (framework patterns, general conventions) lives in `ops/sdlc/knowledge/`. Project-specific knowledge (routes, data, business logic) lives in the project. This pattern generalizes beyond testing to all disciplines.
+- **Two-tier knowledge architecture.** Promoted → `knowledge/architecture/knowledge-management-methodology.yaml` (two_tier_architecture section)
 
-- **Token economics as an architectural constraint.** In AI-assisted workflows, token budgets are real constraints. Architecture should consider what patterns are feasible within context budgets. Context window size affects feasibility of large-scale refactors.
+- **Token economics as an architectural constraint.** [NEEDS VALIDATION] In AI-assisted workflows, token budgets are real constraints. Architecture should consider what patterns are feasible within context budgets. Context window size affects feasibility of large-scale refactors.

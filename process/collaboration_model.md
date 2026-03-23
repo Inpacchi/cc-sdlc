@@ -113,6 +113,7 @@ For long-running work, CC should:
 - Making data exclusion decisions without surfacing them (e.g., stripping fields from indexes to meet size limits — this silently breaks downstream features that depend on that data)
 - Ignoring existing patterns in the codebase
 - Over-engineering beyond requirements
+- **Code assertion without verification** — answering factual questions about how specific code behaves without reading the code first. Most common during conversational interludes after a structured skill completes, where PRE/POST-GATE enforcement is absent. The correct sequence is always: grep/read → reason → answer. If the question is "when does X happen" or "how does Y work", never assert specific code behavior from memory or context alone.
 
 > **Data visibility** includes decisions to exclude, transform, or omit fields from indexes, caches, or API responses — anything that changes what data reaches the frontend. These are product decisions, not implementation details, because they affect what users can see and do.
 

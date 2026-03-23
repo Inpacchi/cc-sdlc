@@ -6,9 +6,10 @@ Knowledge for structured UX modeling during SDLC work. When a feature scope has 
 
 ```
 knowledge/design/
-├── README.md                          ← This file
-├── ux-modeling-methodology.yaml       ← Process an agent follows end-to-end
-└── ascii-conventions.yaml             ← Reusable ASCII diagramming conventions
+├── README.md                                    ← This file
+├── ux-modeling-methodology.yaml                 ← Process an agent follows end-to-end
+├── ascii-conventions.yaml                       ← Reusable ASCII diagramming conventions
+└── accessibility-testability-principles.yaml    ← A11y and testability as a single concern
 ```
 
 ## How This Gets Used

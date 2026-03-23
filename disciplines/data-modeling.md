@@ -46,9 +46,9 @@ Industry overlays: Healthcare, Insurance, Financial Services, Telecom, Manufactu
 
 ### Seeded Insights
 
-- **AI agents as modeled entities.** AI agents can be represented as Parties with Roles in UDM-style systems (meta-pattern: the AI itself is modeled using the same data model it operates on). UDM provides stable "what", AI provides intelligent "how". natural_language_query → UDM_structured_query → business_result workflow. Memory systems enable continuous learning and pattern recognition across UDM entities.
+- **AI agents as modeled entities.** [NEEDS VALIDATION] AI agents can be represented as Parties with Roles in UDM-style systems (meta-pattern: the AI itself is modeled using the same data model it operates on). UDM provides stable "what", AI provides intelligent "how". natural_language_query → UDM_structured_query → business_result workflow. Memory systems enable continuous learning and pattern recognition across UDM entities.
 
-- **Entity-Party-Role (EPR) pattern.** Entity → has many PartyRoles → Party + Role. Three-tier assignment UX: bulk (fast) → individual with role (medium) → full RACI matrix (detailed). The pattern generalizes: ResourceAssignment, transaction party roles, and account party roles all use EPR.
+- **Entity-Party-Role (EPR) pattern.** [NEEDS VALIDATION] Entity → has many PartyRoles → Party + Role. Three-tier assignment UX: bulk (fast) → individual with role (medium) → full RACI matrix (detailed). The pattern generalizes: ResourceAssignment, transaction party roles, and account party roles all use EPR.
 
 ### Skill Trajectory
 

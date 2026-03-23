@@ -28,20 +28,14 @@ This applies during plan review (architects check for I/O-logic entanglement) an
 
 ### Seeded Insights
 
-- **Testability is a code quality concern.** When the testing agent has to use coordinate-based clicks or fragile DOM selectors, the code should change — not just the test. Testability debt items (missing data-testid, no aria-labels, timing-dependent state) are code quality items, triaged by the architect at planning boundaries.
+- **Testability is a code quality concern.** Promoted → `knowledge/coding/code-quality-principles.yaml` (testability_as_code_quality section)
 
-- **Validation gaps found via test data design.** Designing boundary test cases often reveals missing or incomplete validation in the implementation (e.g., no numeric range validation, no string length limits). These are coding concerns surfaced by the testing discipline. The architect decides whether to fix or accept.
+- **Validation gaps found via test data design.** [NEEDS VALIDATION] Designing boundary test cases often reveals missing or incomplete validation in the implementation (e.g., no numeric range validation, no string length limits). These are coding concerns surfaced by the testing discipline. The architect decides whether to fix or accept.
 
-- **Reusable patterns belong in a shared library.** When a pattern solves a recurring problem (e.g., a hook pattern for React StrictMode double-mount, or a slot replacement pattern for a UI library), document it as a coding pattern for the shared library — not buried in a single component file.
+- **Reusable patterns belong in a shared library.** [DEFERRED] When a pattern solves a recurring problem (e.g., a hook pattern for React StrictMode double-mount, or a slot replacement pattern for a UI library), document it as a coding pattern for the shared library — not buried in a single component file. *Reason: generic advice, not actionable until a project builds a patterns library.*
 
-- **Mocking is a code smell.** If a unit test requires mocking an internal dependency, the code structure is wrong — not the test. Restructure to separate I/O from logic. Mocks are acceptable only for genuinely external third-party services you cannot control. See `knowledge/testing/testing-paradigm.yaml` for the full mocking stance.
+- **Mocking is a code smell.** Promoted → `knowledge/coding/code-quality-principles.yaml` (mocking_stance section)
 
 ### Code Assertion Without Verification (Anti-Pattern)
 
-**Pattern:** Orchestrator answers factual questions about how specific code behaves without reading the code first. Most common during conversational interludes after a skill has completed — PRE/POST-GATE structure enforces reads, but conversational mode doesn't.
-
-**Root cause:** Structured phases (PRE-GATE) enforce file reads before reasoning. Conversational mode has no such gate. The orchestrator defaults to answering from training knowledge or recent context.
-
-**Correction:** Apply the Code Verification Rule in all modes, not just structured phases. If the question is "when does X happen" or "how does Y work", the correct sequence is: grep/read → reason → answer. Never assert specific code behavior without reading the code first.
-
-**Seen in:** Multiple sessions across projects. Tends to appear in post-skill conversational interludes where the structured enforcement disappears.
+Promoted → `process/collaboration_model.md` (CC Anti-Patterns section, "Code assertion without verification" bullet)

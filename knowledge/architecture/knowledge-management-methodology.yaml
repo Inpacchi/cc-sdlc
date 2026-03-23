@@ -4,7 +4,7 @@
 # learning distribution architecture, emergence detection, and interaction mining.
 # Last updated: 2026-03-14
 
-last_updated: 2026-03-14
+last_updated: 2026-03-22
 id: knowledge-management-methodology
 name: "Knowledge Management Methodology"
 description: >
@@ -254,6 +254,52 @@ interaction_mining:
     gap_analysis:
       method: "Review agent context map; identify agents with few or no knowledge files"
       action: "Prioritize knowledge creation for agents with most frequent dispatch"
+
+# ─────────────────────────────────────────────
+# Two-Tier Knowledge Architecture
+# ─────────────────────────────────────────────
+
+two_tier_architecture:
+  description: >
+    Knowledge is organized into two tiers with distinct scopes, ownership, and
+    update cadences. This separation prevents cross-project knowledge from being
+    polluted with project-specific details, and prevents project-specific knowledge
+    from being lost when it's only stored in the cross-project tier.
+
+  cross_project_tier:
+    location: "ops/sdlc/knowledge/"
+    scope: "Framework patterns, general conventions, methodology, anti-patterns"
+    examples:
+      - "Functional Core / Imperative Shell pattern (applies to any project)"
+      - "Competitive analysis methodology (reusable research process)"
+      - "UX modeling methodology (reusable design process)"
+      - "Agent communication protocol (cross-project agent behavior)"
+    ownership: "SDLC framework maintainer — changes propagate to all downstream projects on migration"
+    update_cadence: "When patterns are validated across 2+ projects"
+    promotion_source: "disciplines/*.md parking lots with [READY TO PROMOTE] marker"
+
+  project_specific_tier:
+    location: "docs/<discipline>/knowledge/ (e.g., docs/testing/knowledge/)"
+    scope: "Project routes, component catalog, business logic, domain-specific gotchas"
+    examples:
+      - "Element catalog for this project's DataGrid (project-specific locators)"
+      - "API route map (project-specific endpoints)"
+      - "Domain-specific validation rules (business logic this project implements)"
+    ownership: "Project team — never propagated upstream"
+    update_cadence: "During active development, as discoveries are made"
+    promotion_source: "Agent session outputs, test discoveries, code review findings"
+
+  boundary_rule: >
+    If a pattern applies to any project using this framework, it belongs in the
+    cross-project tier. If it requires knowledge of this specific project's
+    codebase, domain, or business rules, it belongs in the project-specific tier.
+    When in doubt, start in the project tier and promote to cross-project after
+    validating on a second project.
+
+  migration_behavior: >
+    setup.sh installs cross-project knowledge into ops/sdlc/knowledge/.
+    Project-specific knowledge directories are created by sdlc-initialize but
+    never overwritten by migrations. The two tiers coexist without conflict.
 
   mining_cadence:
     continuous: "Flag interesting interactions during session for later review"

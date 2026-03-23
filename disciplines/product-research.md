@@ -48,9 +48,9 @@ THEN:    Package as /feature-compare skill
 
 ### Seeded Insights
 
-- **Advanced UI components as product differentiators.** Complex components (Gantt charts, flowcharts, custom visualizations) are what make apps look purposeful rather than template-generated. Product research should track: which advanced components deliver the most user value? Which are table stakes vs differentiators?
+- **Advanced UI components as product differentiators.** [NEEDS VALIDATION] Complex components (Gantt charts, flowcharts, custom visualizations) are what make apps look purposeful rather than template-generated. Product research should track: which advanced components deliver the most user value? Which are table stakes vs differentiators?
 
-- **Testability as product quality signal.** Apps that are easy to test tend to be more reliable, more accessible, and more polished. The testing discipline's investment in testability directly improves the product experience. Product research should consider: how do users perceive quality differences between well-tested and poorly-tested features?
+- **Testability as product quality signal.** [NEEDS VALIDATION] Apps that are easy to test tend to be more reliable, more accessible, and more polished. The testing discipline's investment in testability directly improves the product experience. Product research should consider: how do users perceive quality differences between well-tested and poorly-tested features?
 
 ### Future Questions Template
 

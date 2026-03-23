@@ -1,0 +1,60 @@
+# Accessibility-Testability Principles (Design Side)
+# The design discipline's view of the a11y-testability duality.
+# Companion entry exists in knowledge/testing/ for the testing-side view.
+# Promoted from disciplines/design.md parking lot.
+# Last updated: 2026-03-22
+
+last_updated: 2026-03-22
+id: accessibility-testability-principles
+name: "Accessibility-Testability Principles"
+description: >
+  Design principles that treat accessibility and testability as a single concern.
+  Components that render meaningful accessibility trees are inherently more testable.
+  Investing in one yields both.
+
+# ─────────────────────────────────────────────
+# Core Principle: A11y and Testability Are One Concern
+# ─────────────────────────────────────────────
+
+unified_concern:
+  principle: >
+    Components that render meaningful accessibility trees are inherently more testable.
+    When we invest in testability (data-testid, aria-label, semantic roles), we
+    simultaneously improve accessibility. Design should treat these as one concern,
+    not two.
+
+  implication_for_design: >
+    Every design spec for a component should include its accessibility contract:
+    what roles, labels, and states it exposes. This is not an afterthought —
+    it's part of the component's interface definition.
+
+  implication_for_review: >
+    During design review, check: can the proposed component be tested without
+    pixel comparison or coordinate-based interaction? If not, the accessibility
+    contract is incomplete.
+
+# ─────────────────────────────────────────────
+# Never Convey Meaning Through Color Alone
+# ─────────────────────────────────────────────
+
+color_meaning_rule:
+  principle: >
+    Components that convey status via color only (not in accessibility tree) create
+    both an accessibility gap and a testability gap. Every visual state must have a
+    programmatic equivalent (aria attribute, data attribute) that can be verified
+    without pixel comparison.
+
+  design_requirement: >
+    For every visual state (success, error, warning, active, disabled, selected):
+    1. Define the visual indicator (color, icon, border)
+    2. Define the programmatic indicator (aria-label, aria-invalid, data-state, role)
+    3. Both must be present — the visual for humans, the programmatic for
+       assistive technology and automated tests
+
+  failure_mode: >
+    A badge showing "fx" text was present in the DOM and accessibility tree but
+    invisible to users (foreground matched background color, opacity 0.15).
+    DOM-only assertions passed. Visual verification failed. The programmatic
+    state did not reflect the visual state.
+
+  testing_cross_reference: "knowledge/testing/gotchas.yaml#dom-not-visual"

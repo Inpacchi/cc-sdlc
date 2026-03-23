@@ -1,7 +1,7 @@
 # Cross-Project Gotchas
 # Failure patterns learned from test runs. Read before every test session.
 # Each entry: symptom, cause, resolution, prevention.
-# Last updated: 2026-03-15
+# Last updated: 2026-03-22
 
 - id: dom-not-visual
   severity: high
@@ -110,6 +110,15 @@
   prevention: "When writing tests for both desktop and mobile, check both viewports' DOM before choosing locators. Consider a locator helper that returns viewport-appropriate selectors."
   applies_to: "all projects with responsive/mobile layouts"
 
+
+- id: color-only-status-indicators
+  severity: medium
+  symptom: "Test asserts element exists in DOM but cannot verify its visual state programmatically"
+  cause: "Component conveys status via color only — no aria attribute, data attribute, or text alternative encodes the state"
+  resolution: "Add programmatic state indicator (aria-invalid, data-state, aria-label with status text) alongside the visual indicator"
+  prevention: "Design specs must define both visual and programmatic indicators for every state. See knowledge/design/accessibility-testability-principles.yaml"
+  discovered: "Promoted from disciplines/design.md — pattern observed across multiple projects where visual states had no programmatic equivalent"
+  applies_to: "all projects — any component with color-based status indicators"
 
 # ─── Project-Specific Gotchas ───
 # Add project-specific gotchas here as they are discovered.

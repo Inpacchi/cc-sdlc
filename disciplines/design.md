@@ -68,10 +68,10 @@ Normal SDLC: spec → plan → implement
 
 ### Seeded Insights
 
-- **Accessibility and testability are the same problem.** Components that render meaningful accessibility trees are inherently more testable. When we invest in testability (data-testid, aria-label, semantic roles), we're simultaneously improving accessibility. Design should treat these as one concern, not two.
+- **Accessibility and testability are the same problem.** Promoted → `knowledge/design/accessibility-testability-principles.yaml` (unified_concern section) + `knowledge/testing/gotchas.yaml` (color-only-status-indicators entry)
 
-- **Advanced components as product differentiators.** Complex UI components (Gantt charts, flowcharts, custom widgets, rich data visualizations) are what make apps look purposeful. The shared component library is a design asset, not just a code asset. Test automation strategies for these components protect design investment.
+- **Advanced components as product differentiators.** [NEEDS VALIDATION] Complex UI components (Gantt charts, flowcharts, custom widgets, rich data visualizations) are what make apps look purposeful. The shared component library is a design asset, not just a code asset. Test automation strategies for these components protect design investment.
 
-- **Never convey meaning through color alone.** Components that convey status via color only (not in accessibility tree) create both an accessibility gap and a testability gap. Design principle: every visual state must have a programmatic equivalent (aria attribute, data attribute) that can be verified without pixel comparison.
+- **Never convey meaning through color alone.** Promoted → `knowledge/design/accessibility-testability-principles.yaml` (color_meaning_rule section) + `knowledge/testing/gotchas.yaml` (color-only-status-indicators entry)
 
-- **Visual verification requires computed style checks.** DOM correctness does not equal visual correctness. Design should ensure that visual states have programmatic equivalents (aria attributes, data attributes) that can be verified without pixel comparison.
+- **Visual verification requires computed style checks.** [NEEDS VALIDATION] DOM correctness does not equal visual correctness. Design should ensure that visual states have programmatic equivalents (aria attributes, data attributes) that can be verified without pixel comparison.

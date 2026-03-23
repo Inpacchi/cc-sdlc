@@ -67,12 +67,12 @@ This rule exists because of a real failure mode: a test agent declared a feature
 
 ### Seeded Insights
 
-- **Cross-discipline**: Testability debt remediation flow (tester captures → architect polls → backlog) generalizes to other debt types (design debt, architecture debt, documentation debt).
+- **Cross-discipline**: [DEFERRED] Testability debt remediation flow (tester captures → architect polls → backlog) generalizes to other debt types (design debt, architecture debt, documentation debt). *Reason: duplicate of process-improvement entry; not testing-specific.*
 
-- **Skill readiness**: Test spec format sections map to skill input schema; knowledge layers map to skill context loading; scenarios map to skill execution instructions.
+- **Skill readiness**: [DEFERRED] Test spec format sections map to skill input schema; knowledge layers map to skill context loading; scenarios map to skill execution instructions. *Reason: meta-observation about skill design, not testing knowledge.*
 
-- **Element catalog needs an operations layer.** The element catalog captures elements (nouns — how to find them) and locators (automation access paths). Advanced components (Gantt charts, Kanban boards) need an operations layer (verbs — how to interact): multi-step interaction sequences with choreography, coordinate math, settlement timing, and success verification. Each operation also carries a tool selection dimension (playwright-only for drag, browser tool for visual exploration, either for clicks). Build this when advanced components arrive; the element catalog structure is ready to host it.
+- **Element catalog needs an operations layer.** [NEEDS VALIDATION] The element catalog captures elements (nouns — how to find them) and locators (automation access paths). Advanced components (Gantt charts, Kanban boards) need an operations layer (verbs — how to interact): multi-step interaction sequences with choreography, coordinate math, settlement timing, and success verification. Each operation also carries a tool selection dimension (playwright-only for drag, browser tool for visual exploration, either for clicks). Build this when advanced components arrive; the element catalog structure is ready to host it.
 
-- **CLI auto-generates idiomatic locator code.** When using Playwright's interactive CLI, every command outputs the equivalent Playwright JS. The catalog should capture these directly as the canonical access path.
+- **CLI auto-generates idiomatic locator code.** [NEEDS VALIDATION] When using Playwright's interactive CLI, every command outputs the equivalent Playwright JS. The catalog should capture these directly as the canonical access path.
 
-- **Mobile testing pipeline.** Playwright's `devices` config (e.g., `devices['Pixel 7']`) enables mobile emulation. Auth fixtures must forward `contextOptions` through the context factory so device emulation (viewport, userAgent, hasTouch, isMobile) carries through. Use viewport-aware storageState cache keys (e.g., `_mobile` suffix for viewports < 768px) to prevent desktop/mobile auth state cross-contamination.
+- **Mobile testing pipeline.** [NEEDS VALIDATION] Playwright's `devices` config (e.g., `devices['Pixel 7']`) enables mobile emulation. Auth fixtures must forward `contextOptions` through the context factory so device emulation (viewport, userAgent, hasTouch, isMobile) carries through. Use viewport-aware storageState cache keys (e.g., `_mobile` suffix for viewports < 768px) to prevent desktop/mobile auth state cross-contamination.
