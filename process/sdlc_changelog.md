@@ -34,6 +34,20 @@ Each entry contains:
 
 ---
 
+## 2026-03-22: Add Phase 0 Self-Update to MIGRATE.md
+
+**Origin:** CD identified that the migrator reads the project's (old) copy of MIGRATE.md, not the source repo's (current) copy. New gates and strategies added in this session would not take effect until one migration too late.
+
+**What happened:** MIGRATE.md is listed in §2.1 as a direct-copy file — it gets overwritten during migration. But the migrator is already executing the old version's instructions. If the new version adds a gate (like §1.2 Changelog Review), that gate doesn't exist in the old instructions, so it's skipped. The fix arrives on disk during §2.1, but by then the migrator has already passed Phase 1 without the gate.
+
+**Changes made:**
+
+1. **`MIGRATE.md` Phase 0** (new) — Self-Update. Before doing anything, the migrator reads the cc-sdlc source repo's MIGRATE.md and copies it to the project. The rest of the migration then follows current instructions. Includes rationale for why this must be first.
+
+**Rationale:** Classic bootstrapping problem. The instructions governing the update are themselves subject to the update. Phase 0 ensures the migrator always runs the latest instructions, not the previous version's. This is the same pattern as a package manager updating itself before updating packages.
+
+---
+
 ## 2026-03-22: Add Migration Gates to MIGRATE.md
 
 **Origin:** CD review of migration flow after fixing GAP-1 (new role entries) and RISK-1 (tracker markers). Identified that the migration was a single pass with all verification deferred to the end.

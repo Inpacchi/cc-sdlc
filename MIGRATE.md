@@ -6,6 +6,26 @@
 
 ---
 
+## Phase 0: Self-Update
+
+**Before doing anything else**, read the cc-sdlc source repo's `MIGRATE.md` — not the project's copy:
+
+```bash
+cat [cc-sdlc-path]/MIGRATE.md
+```
+
+If the source repo's MIGRATE.md differs from the project's copy, **follow the source repo's version** for this migration. The project's copy is from the previous migration and may lack new gates, strategies, or file handling rules.
+
+Copy the updated MIGRATE.md to the project immediately so the rest of the migration follows current instructions:
+
+```bash
+cp [cc-sdlc-path]/MIGRATE.md [project-path]/ops/sdlc/MIGRATE.md
+```
+
+**Why this matters:** MIGRATE.md is both a framework file (gets updated) and the instructions being followed (governs the update). Without self-update, a migration that adds new gates or merge strategies will execute under the old rules — the new rules only take effect on the *next* migration, one version too late.
+
+---
+
 ## Phase 1: Detect What Changed
 
 ### 1.1 Identify Source Version
