@@ -52,7 +52,7 @@ Before starting substantive work, consult `ops/sdlc/knowledge/agent-context-map.
 
 ### 6. Knowledge Layer Health
 
-The SDLC includes a three-tier knowledge layer that captures cross-project and project-specific wisdom. This layer is only valuable if it's maintained and consumed. Audit all three tiers:
+The SDLC includes a two-tier knowledge layer: discipline parking lots (raw insights) and knowledge stores (structured, validated patterns). This layer is only valuable if it's maintained and consumed. Audit both tiers plus their supporting infrastructure:
 
 #### 6a. Discipline Parking Lots (`ops/sdlc/disciplines/`)
 
