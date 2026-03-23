@@ -310,13 +310,22 @@ The project's `CLAUDE.md` contains CLAUDE-SDLC.md content — skill names, proce
 
 ### 4.4 Post-Migration Audit
 
-Run the `sdlc-compliance-auditor` agent to verify migration integrity. The auditor's §7 (Migration Integrity) checks manifest version, framework file completeness, content-merge correctness, and stale references to removed features — exactly what needs validation after a migration.
+Dispatch the `sdlc-compliance-auditor` agent directly — do not ask the user to invoke it separately. The auditor's §7 (Migration Integrity) checks manifest version, framework file completeness, content-merge correctness, and stale references to removed features.
 
-```
-"Let's run an SDLC compliance audit"
-```
+**Dispatch prompt:**
 
-Fix any findings before committing the migration.
+> Run a post-migration compliance audit. Focus on §7 (Migration Integrity) — verify:
+> - All framework files match the cc-sdlc source at [new commit hash]
+> - No orphaned files from previous versions remain
+> - Agent-context-map paths all resolve
+> - Content-merge preserved project data (tracker levels, parking lot entries, skill customizations)
+> - CLAUDE-SDLC.md references in CLAUDE.md are valid
+>
+> Report findings as WARNING/INFO. This is a migration from [old hash] to [new hash].
+
+If the auditor returns findings:
+- **WARNING or higher:** Fix before continuing. Re-run the auditor after fixes.
+- **INFO only:** Log in the migration report, continue to §4.5.
 
 ### 4.5 Update Manifest
 
@@ -363,7 +372,7 @@ After migration, update `.sdlc-manifest.json` with the new source version:
 - All agent-context-map paths resolve: yes/no
 - All agents have Knowledge Context: yes/no
 - Spot-check passed: yes/no
-- Post-migration audit: passed/findings fixed
+- Post-migration audit: passed/findings fixed (auditor dispatched automatically in §4.4)
 
 ### Next Steps
 1. Review the migration diff: `git diff`
