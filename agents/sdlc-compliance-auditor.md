@@ -118,16 +118,31 @@ Structured YAML files containing distilled, reusable patterns. These are the "ho
 - **Growth**: Have new YAML files been added since the initial seeding? If not, the knowledge layer is static — insights from recent work aren't being captured in structured form
 - **Cross-project vs project-specific**: Knowledge here should be cross-project. Project-specific knowledge belongs in the project (e.g., `docs/` or CLAUDE.md). Flag any project-specific content that leaked into the cross-project store
 
-#### 6c. Discipline Triage Status
+#### 6c. Discipline Triage Status and Auto-Triage
 
-Discipline parking lot entries can be marked with inline triage markers to indicate readiness for promotion to the knowledge layer. The auditor checks for these during each audit cycle.
+Discipline parking lot entries can be marked with inline triage markers to indicate readiness for promotion to the knowledge layer. The auditor both checks existing markers AND applies low-risk triage transitions automatically.
 
 **Triage markers:**
 - `[READY TO PROMOTE]` — Validated through real use, reusable, stable. Ready for CD approval to promote to knowledge YAML or skill automation.
 - `[NEEDS VALIDATION]` — Promising but not yet confirmed through use on this project. Leave in parking lot.
 - `[DEFERRED]` — Acknowledged but not a priority. Include reason.
 
-**What to check:**
+**Triage authority matrix:**
+
+| Transition | Authority | Condition |
+|-----------|-----------|-----------|
+| unmarked → `[NEEDS VALIDATION]` | Auditor auto-applies | Unmarked for ≥2 audit cycles |
+| `[NEEDS VALIDATION]` → `[DEFERRED]` | Auditor auto-applies | Unvalidated for ≥3 cycles AND no agent `knowledge_feedback.missing` references it AND discipline not exercised (§6g shows Dormant) |
+| Any → `[READY TO PROMOTE]` | **CD only** | Auditor proposes with evidence, CD confirms |
+| `[READY TO PROMOTE]` → `Promoted →` | **CD only** | Actual knowledge file creation |
+
+**Auto-triage procedure:**
+1. Scan all parking lot entries for their current marker status
+2. For entries matching auto-triage conditions above, apply the marker directly to the discipline file
+3. Log every auto-triage action in the audit report (see format below)
+4. CD has full visibility and can override any auto-triage action
+
+**What to check (beyond auto-triage):**
 - Scan all discipline parking lot entries for `[READY TO PROMOTE]` markers
 - For each `[READY TO PROMOTE]` entry, verify the promotion criteria are met:
   - The pattern has been validated through real use (not just proposed)
@@ -135,17 +150,45 @@ Discipline parking lot entries can be marked with inline triage markers to indic
   - An agent or skill would benefit from loading it as context
   - The insight has been stable (not changing with each session)
 - Surface `[READY TO PROMOTE]` items to CD with a recommendation for where they should land (knowledge YAML, skill update, or process change)
-- Flag parking lot entries that have been sitting without any triage marker for >2 audit cycles — they may need triage
+
+**Promotion drafts:** When the auditor identifies a strong promotion candidate, draft a recommendation:
+
+```markdown
+#### Promotion Draft: [entry summary]
+
+**Source:** disciplines/[name].md, entry dated [date]
+**Target:** knowledge/[discipline]/[proposed-filename].yaml
+**Evidence:**
+- Validated in: [deliverable IDs or sessions where the pattern was exercised]
+- Agent feedback references: [count from knowledge_feedback.missing data, if available]
+- Stability: unchanged since [date] across [N] sessions
+
+**Draft YAML skeleton:**
+```yaml
+id: [proposed-id]
+name: "[proposed name]"
+description: >
+  [description derived from parking lot entry]
+```
+
+**CD Decision needed:** Approve promotion / Reject / Revise
+```
+
+**Feedback-informed triage** (when agent `knowledge_feedback` data is available from result docs):
+- Entry referenced by ≥2 agent `missing` reports → strong promotion candidate, flag with evidence for CD
+- Entry never referenced after ≥3 cycles in an active discipline → deferral candidate
+- `GAP:MISSING_KNOWLEDGE` entry matching an existing `[NEEDS VALIDATION]` entry → strengthens promotion case. **Matching criteria:** both must describe the same knowledge domain AND the GAP must reference a specific agent finding (not just a topic area). At least one of: same agent name, same domain keyword, or same described gap type. Fuzzy topic similarity alone is not sufficient.
 
 **What to report:**
 
+Report the triage status table as before. Additionally, emit the "Auto-Triage Actions Taken" table **only when at least one action was taken** (omit when no auto-triage occurred):
+
 ```
-#### Discipline Triage Status
-| Discipline | Entry | Marker | Recommendation |
-|-----------|-------|--------|----------------|
-| testing | Mutation persistence rule | [READY TO PROMOTE] | Promote to knowledge/testing/ YAML |
-| coding | Testability debt pattern | [NEEDS VALIDATION] | Leave in parking lot |
-| architecture | Service boundary gotcha | (unmarked) | Needs triage — 3 audit cycles old |
+#### Auto-Triage Actions Taken
+| Discipline | Entry | Previous Marker | New Marker | Reason |
+|-----------|-------|----------------|------------|--------|
+| coding | testability debt pattern | (unmarked) | [NEEDS VALIDATION] | Unmarked for 3 audit cycles |
+| deployment | CI cache gotcha | [NEEDS VALIDATION] | [DEFERRED] | No agent feedback, deployment not exercised in 4 cycles |
 ```
 
 #### 6d. Knowledge-to-Skill Wiring
@@ -216,6 +259,13 @@ Levels tell you whether a discipline has formalized its knowledge. Usage tells y
    - Check whether this discipline's parking lot has entries with context tags from other disciplines' skills (e.g., a coding insight captured during a testing session, tagged `[DNN — testing]`)
    - **Connected**: receives cross-discipline insights
    - **Isolated**: only receives insights from its own domain work
+
+5. **Agent knowledge feedback** (when available) — Are agents reporting on this discipline's knowledge quality?
+   - Scan recent result docs for `knowledge_feedback` sections in agent handoffs
+   - For each discipline's knowledge files, aggregate: how often marked `useful`, `not_relevant`, or referenced in `missing`
+   - **Informed**: agents are providing feedback on this discipline's knowledge
+   - **Silent**: no agent feedback data available (agents may not have updated definitions yet — gradual adoption expected)
+   - This signal strengthens the other four: a discipline with "Consumed" knowledge AND "Informed" feedback has the richest health picture. A discipline with "Consumed" but "Silent" is still healthy, just less observable.
 
 **What to report:**
 

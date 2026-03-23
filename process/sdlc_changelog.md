@@ -34,6 +34,42 @@ Each entry contains:
 
 ---
 
+## 2026-03-22: Implement Self-Improving Discipline Process (3 Phases)
+
+**Origin:** CD requested a mechanism to make disciplines, knowledge stores, and skills self-improving — closing the feedback loop from "agent does work" to "knowledge improves" with minimal manual gates.
+
+**What happened:** The discipline pipeline had manual gates at every step: CD notices a pattern → tells CC to capture it → triages at planning boundaries → approves promotion. Detection and capture were entirely vibes-based. Agents consumed knowledge silently with no feedback mechanism. The auditor surfaced triage items but never acted on them.
+
+**Changes made (Phase 1 — Enhanced Discipline Capture):**
+
+1. **`process/discipline_capture.md`** — Added "Structured Gap Detection" section before the existing freeform scan. Three comparisons: knowledge loaded vs. needed (conditional on Phase 2 data), cross-domain friction, and iteration cost (judgment-based). Added skill applicability table, GAP entry format with 5 types (`MISSING_KNOWLEDGE`, `UNMAPPED_KNOWLEDGE`, `STALE_KNOWLEDGE`, `CROSS_DOMAIN_FRICTION`, `RESURFACING_PATTERN`), updated time budget to <3min, and added auditor triage carve-out for Manager Rule.
+
+2. **7 skill files updated** — sdlc-execute (step 3a), sdlc-lite-execute (step 3a), sdlc-plan (step 5a), sdlc-lite-plan (step 3a): one-line addition noting structured gap detection with triage/dispatch data. sdlc-idea (crystallize), design-consult (finalize): one-line addition noting only comparison #2 applies.
+
+**Changes made (Phase 2 — Agent Knowledge Feedback):**
+
+3. **`knowledge/architecture/agent-communication-protocol.yaml`** — Added `knowledge_feedback` section under handoff format. Four optional string array fields: `loaded`, `useful`, `not_relevant`, `missing`. Includes consumer documentation (discipline capture and compliance auditor).
+
+4. **`agents/AGENT_TEMPLATE.md`** — One sentence added to Knowledge Context paragraph instructing agents to optionally include feedback in their handoff.
+
+**Changes made (Phase 3 — Auditor Auto-Triage):**
+
+5. **`agents/sdlc-compliance-auditor.md` §6c** — Added triage authority matrix (auditor auto-applies unmarked→[NEEDS VALIDATION] after ≥2 cycles, [NEEDS VALIDATION]→[DEFERRED] after ≥3 cycles; CD-only for [READY TO PROMOTE] and promotions). Added auto-triage logging format (conditional — emitted only when actions taken). Added promotion draft format with YAML skeleton. Added feedback-informed triage with matching confidence criteria.
+
+6. **`agents/sdlc-compliance-auditor.md` §6g** — Added 5th usage signal: agent knowledge feedback aggregation from result docs.
+
+**How the cycle closes:**
+```
+Agent work → knowledge_feedback in handoff → structured gap detection writes GAP entries →
+parking lots accumulate → auditor auto-triages low-risk items + drafts promotions →
+CD approves → knowledge YAML created → agent-context-map updated → agents load new knowledge →
+agents report feedback → cycle continues
+```
+
+**Rationale:** Three mechanisms that compose into a feedback loop. Phase 1 (enhanced capture) detects gaps using data already in context. Phase 2 (agent feedback) provides the data source that makes Phase 1 most effective. Phase 3 (auto-triage) acts on accumulated data to keep parking lots curated. CD retains approval authority for all promotions — automation handles detection and curation only.
+
+---
+
 ## 2026-03-22: Fix migration gaps for moved files, context-map paths, and maturity tracker
 
 **Origin:** Tracing this session's changes through the migration path revealed three gaps: moved files leave orphans, agent-context-map path changes aren't handled, and the maturity tracker gets overwritten with source-repo levels.
