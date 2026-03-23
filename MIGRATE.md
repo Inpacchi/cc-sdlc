@@ -35,12 +35,12 @@ Group the changed cc-sdlc files by migration strategy:
 | **Agent template** | `agents/AGENT_TEMPLATE.md` | Direct copy (no project customizations) |
 | **Agent suggestions** | `agents/AGENT_SUGGESTIONS.md` | Direct copy (no project customizations) |
 | **Auditor agent** | `agents/sdlc-compliance-auditor.md` | Content-merge: update audit logic, preserve project-specific memory paths |
-| **Knowledge YAMLs** | `knowledge/**/*.yaml` | Direct copy (cross-project, no customizations) |
+| **Knowledge YAMLs** | `knowledge/**/*.yaml` | Direct copy (cross-project, no customizations). Check for moved/deleted files (§2.1a) |
 | **Process docs** | `process/*.md` | Direct copy (framework-level) |
 | **Templates** | `templates/*.md` | Direct copy (framework-level) |
 | **Disciplines** | `disciplines/*.md` | Content-merge: update framework guidance, preserve project parking lot entries |
 | **Bootstrap/migration** | `BOOTSTRAP.md`, `MIGRATE.md` | Direct copy (framework-level) |
-| **Context map** | `knowledge/agent-context-map.yaml` | Never overwrite — project has its own agent names |
+| **Context map** | `knowledge/agent-context-map.yaml` | Never overwrite — project has its own agent names. Update paths for moved/deleted files (§3.3) |
 | **Project agents** | Project `.claude/agents/*.md` | Targeted section updates (see Phase 3) |
 
 ---
@@ -58,6 +58,25 @@ For files with no project customizations, copy directly from cc-sdlc to the proj
 - `agents/AGENT_TEMPLATE.md`, `agents/AGENT_SUGGESTIONS.md`
 - `playbooks/*.md` (unless the project has written its own playbooks — check git blame)
 - `examples/*.md`
+
+### 2.1a Remove Deleted and Moved Files
+
+Check the cc-sdlc changelog (`process/sdlc_changelog.md`) for files that were **deleted, moved, or renamed** since the project's `source_version`. These require explicit cleanup in the downstream project — direct copy only adds files, it doesn't remove stale ones.
+
+**Process:**
+
+1. From the diff in Phase 1.1, identify any files that were deleted or moved (appear in `--diff-filter=D` or `--diff-filter=R`):
+   ```bash
+   git -C [cc-sdlc-path] diff --name-status [source_version]..HEAD | grep -E '^[DR]'
+   ```
+
+2. For each deleted file: remove it from the downstream project's `ops/sdlc/` directory.
+
+3. For each moved/renamed file: the new location was already copied in §2.1. Remove the old location. Then check whether the project's `agent-context-map.yaml` references the old path — if so, update the path (see §3.3).
+
+4. Log all removals so the migration report (Phase 4.6) includes them.
+
+**Why this matters:** Without cleanup, downstream projects accumulate orphan files. Worse, if a file was moved (e.g., `knowledge/architecture/foo.yaml` → `knowledge/coding/foo.yaml`), agents mapped to the old path load a stale copy while the updated version sits unwired at the new path.
 
 ### 2.2 Content-Merge: Skills
 
@@ -84,14 +103,17 @@ Skills have two layers:
 ### 2.3 Content-Merge: Disciplines
 
 Discipline files have:
-1. **Framework structure** — status line, knowledge store reference, summary, mutation verification rules
-2. **Project additions** — parking lot entries, active questions, seeded insights
+1. **Framework structure** — status line, knowledge store reference, summary, mutation verification rules, level definitions (in process-improvement.md only)
+2. **Project additions** — parking lot entries (with triage markers), active questions, project context sections
+3. **Project-assessed data** — the Process Maturity Tracker in `process-improvement.md` (levels reflect the downstream project's state, not the source repo's)
 
 **Migration process:**
 1. Update framework sections to match cc-sdlc — **verbatim, not rephrased**
-2. Preserve all parking lot entries (these are project-specific knowledge)
+2. Preserve all parking lot entries with their triage markers (these are project-specific knowledge)
 3. Preserve active questions
-4. Add any new seeded insights from cc-sdlc that the project doesn't have
+4. Preserve project context sections (added by `sdlc-initialize` Phase 7)
+5. Add any new seeded insights from cc-sdlc that the project doesn't have — but do NOT overwrite triage markers on existing entries (the project may have triaged differently than the source repo)
+6. **Preserve the Process Maturity Tracker table as-is.** The tracker reflects the project's assessed levels (set during initialization or audits). The cc-sdlc source repo's tracker reflects the *source repo's* levels, which are different. Update the framework sections surrounding the tracker (level definitions, assessment procedure) but never overwrite the tracker data rows.
 
 ### 2.4 Content-Merge: Auditor Agent
 
@@ -129,10 +151,24 @@ For each agent in `.claude/agents/`:
 
 ### 3.3 Update Agent-Context-Map (if needed)
 
-If cc-sdlc added new knowledge YAML files that are relevant to existing agents:
+The agent-context-map is **never overwritten** because projects have their own agent names. But it must be updated for three scenarios:
+
+**New knowledge files:** If cc-sdlc added new YAML files that are relevant to existing agents:
 1. Read the project's `agent-context-map.yaml`
-2. Check if new YAML files should be mapped to existing agents
-3. Add new mappings — never remove existing ones (they were set during bootstrap)
+2. Read the cc-sdlc source's `agent-context-map.yaml` for the new mappings
+3. Add new file paths to the project's existing agent entries (matching by role, not by exact name)
+
+**Moved/renamed knowledge files:** If cc-sdlc moved a file from one directory to another (identified in §2.1a):
+1. Search the project's `agent-context-map.yaml` for the old path
+2. Replace with the new path
+3. Verify the new path exists on disk
+
+**Removed knowledge files:** If cc-sdlc deleted a knowledge file:
+1. Search the project's `agent-context-map.yaml` for references to the deleted file
+2. Remove those references
+3. Note the removal in the migration report
+
+Never remove project-specific mappings that aren't in the cc-sdlc source — those were added during bootstrap or by the project team.
 
 ---
 
@@ -193,16 +229,19 @@ After migration, update `.sdlc-manifest.json` with the new source version and fi
 
 ### Changes Applied
 - Skills updated: N (framework sections merged, project customizations preserved)
-- Knowledge files updated: N (direct copy)
+- Knowledge files added/updated: N (direct copy)
+- Knowledge files removed (moved/deleted in source): N [list old paths]
 - Process docs updated: N (direct copy)
 - Agent template updated: yes/no
 - Agents updated: N (Knowledge Context / Communication Protocol sections)
+- Agent-context-map paths updated: N (moved/removed file paths corrected)
 - Auditor updated: yes/no
 
 ### Preserved
 - Project-specific skill customizations (build commands, agent names, examples)
-- Discipline parking lot entries
-- Agent-context-map agent names and mappings
+- Discipline parking lot entries and triage markers
+- Process Maturity Tracker (project-assessed levels, not source repo levels)
+- Agent-context-map agent names and project-specific mappings
 - Project agent domain content (scope, principles, workflow, anti-rationalization)
 
 ### Verification

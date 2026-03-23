@@ -34,6 +34,28 @@ Each entry contains:
 
 ---
 
+## 2026-03-22: Fix migration gaps for moved files, context-map paths, and maturity tracker
+
+**Origin:** Tracing this session's changes through the migration path revealed three gaps: moved files leave orphans, agent-context-map path changes aren't handled, and the maturity tracker gets overwritten with source-repo levels.
+
+**What happened:** We moved `typescript-patterns.yaml` and `risk-assessment-framework.yaml` to new directories. Migration's direct-copy strategy would create the new files but leave the old copies in place. The agent-context-map (marked "never overwrite") would keep pointing to the old paths. And the discipline content-merge would overwrite the downstream project's maturity tracker with the source repo's levels.
+
+**Changes made:**
+
+1. **`MIGRATE.md` §2.1a** (new) — "Remove Deleted and Moved Files." Uses `git diff --diff-filter=DR` to identify files that were deleted or moved in cc-sdlc, removes old copies from downstream, and updates agent-context-map paths. Includes rationale for why orphan files are dangerous (agents load stale copies).
+
+2. **`MIGRATE.md` §3.3** — Expanded from "add new mappings" to handle three scenarios: new knowledge files, moved/renamed files (path replacement), and removed files (reference cleanup). Still preserves project-specific mappings.
+
+3. **`MIGRATE.md` §2.3** — Updated discipline content-merge to explicitly preserve: parking lot triage markers (project may have triaged differently), project context sections (from sdlc-initialize Phase 7), and the Process Maturity Tracker table (project-assessed levels, not source repo levels).
+
+4. **`MIGRATE.md` §1.2** — Updated categorization table: knowledge YAMLs note §2.1a check, context map notes §3.3 path updates.
+
+5. **`MIGRATE.md` §4.6** — Updated migration report format to include file removals and context-map path changes.
+
+**Rationale:** Migration must be safe for the changes it carries. Every session that moves, deletes, or reorganizes framework files creates a migration hazard if MIGRATE.md doesn't account for it. These three gaps (orphan files, stale map paths, tracker overwrite) would have caused silent failures in downstream projects — agents loading stale knowledge, levels that don't reflect reality, and growing file cruft.
+
+---
+
 ## 2026-03-22: Wire sdlc-initialize to Maturity Level Assessment
 
 **Origin:** Gap analysis of which skills reference the new process docs. Only `sdlc-initialize` had a real gap — it seeds disciplines and knowledge stores but doesn't assess or set initial maturity levels, meaning the tracker is copied from the source repo with source-repo levels rather than reflecting the downstream project's actual state.
