@@ -57,8 +57,8 @@ grep -r '`sdet`\|`architect`\|`backend-developer`\|`frontend-developer`' .claude
 ```
 
 Key files that reference `sdet` (your testing agent name will differ):
-- `.claude/skills/test-loop/SKILL.md`
-- `.claude/skills/create-test-suite/SKILL.md`
+- `.claude/skills/sdlc-tests-run/SKILL.md`
+- `.claude/skills/sdlc-tests-create/SKILL.md`
 - `.claude/skills/commit-review/SKILL.md`
 - `.claude/skills/diff-review/SKILL.md`
 - `.claude/skills/sdlc-plan/SKILL.md`

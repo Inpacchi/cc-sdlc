@@ -231,4 +231,4 @@ The Manager Rule remains in effect per `ops/sdlc/process/manager-rule.md` — se
 
 - **sdlc-lite-plan** — The prerequisite skill that produces the plan file
 - **sdlc-execute** — Use instead when executing SDLC deliverable plans
-- **test-loop** — If the plan included test files, run after commit to verify tests pass and fix failures automatically
+- **sdlc-tests-run** — If the plan included test files, run after commit to verify tests pass and fix failures automatically

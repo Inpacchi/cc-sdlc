@@ -87,5 +87,5 @@ Ask for confirmation before committing.
 
 ## Integration
 - **Depends on:** `docs/current_work/` (source of completed deliverables), `docs/_index.md` (catalog)
-- **Fed by:** `sdlc-status` (identifies archivable work), `sdlc-reconciliation` (catalogs ad hoc work first)
+- **Fed by:** `sdlc-status` (identifies archivable work), `sdlc-reconcile` (catalogs ad hoc work first)
 - **Updates:** `docs/_index.md`, `docs/chronicle/`

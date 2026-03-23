@@ -1,12 +1,12 @@
 ---
-name: test-loop
+name: sdlc-tests-run
 description: >
   Automated test-fix loop — runs tests, classifies failures as test-code vs application-code,
   dispatches SDET to fix test issues and domain agents to fix app issues, then re-runs until all tests pass.
   Max 5 rounds. Auto-commits when green.
   Trigger when someone says "run the test loop", "test and fix loop", "run tests until green",
-  "test-loop", or after test infrastructure is set up and the user wants automated red-green cycling.
-  Do NOT use for writing new tests from scratch — use the SDET agent directly for that.
+  "sdlc-tests-run", "test-loop", or after test infrastructure is set up and the user wants automated red-green cycling.
+  Do NOT use for writing new tests from scratch — use sdlc-tests-create for that.
   Do NOT use for reviewing code — use commit-review or diff-review.
 ---
 

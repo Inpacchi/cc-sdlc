@@ -284,7 +284,7 @@ The project's `CLAUDE.md` contains CLAUDE-SDLC.md content — skill names, proce
 
 **Check for:**
 
-1. **Skill name references** — verify all skill names mentioned in CLAUDE.md (`sdlc-plan`, `sdlc-execute`, `sdlc-lite-plan`, `sdlc-lite-execute`, `sdlc-idea`, `sdlc-initialize`, `sdlc-reconciliation`) still match the actual skill directory names in `ops/sdlc/skills/`
+1. **Skill name references** — verify all skill names mentioned in CLAUDE.md (`sdlc-plan`, `sdlc-execute`, `sdlc-lite-plan`, `sdlc-lite-execute`, `sdlc-idea`, `sdlc-initialize`, `sdlc-reconcile`) still match the actual skill directory names in `ops/sdlc/skills/`
 
 2. **Process file paths** — verify paths like `ops/sdlc/process/overview.md`, `ops/sdlc/process/sdlc_changelog.md`, `ops/sdlc/process/compliance_audit.md` still exist
 

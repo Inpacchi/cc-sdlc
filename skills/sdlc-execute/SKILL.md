@@ -297,4 +297,4 @@ When the deliverable is complete, the "Let's organize the chronicles" command mo
 ## Integration
 
 - **sdlc-plan** — The prerequisite skill that produces the plan
-- **test-loop** — If the plan included test files, run after commit to verify tests pass and fix failures automatically
+- **sdlc-tests-run** — If the plan included test files, run after commit to verify tests pass and fix failures automatically

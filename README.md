@@ -52,7 +52,7 @@ Idea → Spec (CD approves) → Plan (reviewed) → Execute → Review → Resul
 |---------|-------------|
 | "Let's build X" / "New feature" | Invokes `sdlc-plan` — spec + plan |
 | "Execute the plan" | Invokes `sdlc-execute` — implement + review + result |
-| "Let's catalog our ad hoc work" | Invokes `sdlc-reconciliation` — reconciles untracked commits |
+| "Let's catalog our ad hoc work" | Invokes `sdlc-reconcile` — reconciles untracked commits |
 | "Let's organize the chronicles" | Invokes `sdlc-archive` — moves completed work to archive |
 | "Let's run an SDLC compliance audit" | Invokes `sdlc-compliance-auditor` agent |
 
@@ -70,7 +70,7 @@ Sequential identifiers (D1, D2, ... Dnn) that track work across the project life
 - **CC (Claude Code):** The entire agent system — specs, plans, implements, reviews
 
 ### Three Tiers
-Not everything needs a full spec → plan → result cycle. **SDLC-Lite** registers a deliverable ID (tier: lite) and produces a plan — no spec or result doc. **Direct dispatch** skips the plan entirely — CD steers in real-time, agents do the work. Reconcile untracked work periodically with `sdlc-reconciliation`.
+Not everything needs a full spec → plan → result cycle. **SDLC-Lite** registers a deliverable ID (tier: lite) and produces a plan — no spec or result doc. **Direct dispatch** skips the plan entirely — CD steers in real-time, agents do the work. Reconcile untracked work periodically with `sdlc-reconcile`.
 
 ## Knowledge Layer
 

@@ -1,5 +1,5 @@
 ---
-name: sdlc-reconciliation
+name: sdlc-reconcile
 description: >
   Reconcile untracked ad hoc work back into the SDLC process. Trigger when the user says
   "Let's catalog our ad hoc work", "Let's catch up the docs", "What have we done since D[last]?",

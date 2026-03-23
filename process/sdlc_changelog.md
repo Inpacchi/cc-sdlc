@@ -34,6 +34,24 @@ Each entry contains:
 
 ---
 
+## 2026-03-23: Rename Skills for Consistent sdlc- Prefix
+
+**Origin:** CD requested skill name standardization. Three skills used inconsistent naming: `sdlc-reconciliation` (too long), `test-loop` (no prefix), `create-test-suite` (no prefix).
+
+**What happened:** All other skills use the `sdlc-` prefix convention. These three predated the convention and were never renamed.
+
+**Changes made:**
+
+1. `sdlc-reconciliation` → `sdlc-reconcile` — directory, frontmatter name
+2. `test-loop` → `sdlc-tests-run` — directory, frontmatter name, trigger phrases
+3. `create-test-suite` → `sdlc-tests-create` — directory, frontmatter name, all internal references to `test-loop`
+
+**Cross-references updated:** `sdlc-execute`, `sdlc-lite-execute`, `sdlc-archive`, `sdlc-migrate`, `CLAUDE-SDLC.md`, `README.md`, `skeleton/manifest.json`, `knowledge/README.md`, `sdlc-tests-create` (internal refs to test-loop), `sdlc-tests-run` (trigger phrases + "do not use" guidance).
+
+**Migration note:** Old skill directories will be orphaned in downstream projects. The `sdlc-migrate` skill's §2.1a (deleted file detection) will clean them up. `setup.sh` will install the new directories automatically (new files are always installed).
+
+---
+
 ## 2026-03-22: Convert MIGRATE.md to sdlc-migrate Skill
 
 **Origin:** Same reasoning as BOOTSTRAP.md removal — a doc drifts, a skill is the canonical entry point. MIGRATE.md had a Phase 0 self-update workaround because the doc being followed was itself subject to the update. Converting to a skill eliminates the bootstrapping problem entirely — skills are always installed from the source repo.

@@ -1,19 +1,19 @@
 ---
-name: create-test-suite
+name: sdlc-tests-create
 description: >
   Generate integration and E2E test suites for completed work by dispatching the SDET agent.
   Analyzes scope (SDLC plan, SDLC-Lite plan, specific commit, or unstaged changes), designs test
   cases covering happy paths, edge cases, and error scenarios, implements them, then hands off
-  to test-loop for the red-green fix cycle.
+  to sdlc-tests-run for the red-green fix cycle.
   Trigger when someone says "create tests", "write tests", "generate test suite",
   "create test suite", "test this work", "write tests for this", or after completing
   a deliverable or SDLC-Lite execution.
-  Do NOT use for running or fixing existing tests — use test-loop for that.
+  Do NOT use for running or fixing existing tests — use sdlc-tests-run for that.
 ---
 
 # Create Test Suite
 
-Dispatch the SDET agent to design and implement tests for completed work. You are the manager — you identify what was built, gather scope context, and dispatch. The SDET agent decides test cases, writes the tests, and verifies they compile. Then hand off to `test-loop`.
+Dispatch the SDET agent to design and implement tests for completed work. You are the manager — you identify what was built, gather scope context, and dispatch. The SDET agent decides test cases, writes the tests, and verifies they compile. Then hand off to `sdlc-tests-run`.
 
 ## Manager Rule
 
@@ -100,10 +100,10 @@ After SDET returns:
 
 1. **Check that test files were created** — verify via `git diff --stat` or agent report
 2. **Run a compilation check** — run the test list command for your framework on the new test files to confirm they parse
-3. **Invoke `test-loop`** — hand off to the test-loop skill targeting the newly created test files
+3. **Invoke `sdlc-tests-run`** — hand off to the sdlc-tests-run skill targeting the newly created test files
 
 ```
-Test suite created. Handing off to test-loop to run and fix.
+Test suite created. Handing off to sdlc-tests-run to run and fix.
 Target: tests/{path-to-new-tests}
 ```
 
@@ -115,14 +115,14 @@ If compilation check fails, re-dispatch SDET with the error output. Do not fix t
 |---------|---------|
 | "I'll write a quick test myself" | SDET writes all test code. Manager Rule. |
 | "I'll specify exactly which test cases to write" | Provide scope context, not test prescriptions. SDET has domain expertise. |
-| "Skip test-loop, the tests already pass" | test-loop catches what a single run misses. Always hand off. |
-| "Let me ask if they want to run test-loop" | Step 2 says invoke test-loop, not ask about it. Hand off automatically. |
+| "Skip sdlc-tests-run, the tests already pass" | sdlc-tests-run catches what a single run misses. Always hand off. |
+| "Let me ask if they want to run sdlc-tests-run" | Step 2 says invoke sdlc-tests-run, not ask about it. Hand off automatically. |
 | "The scope is obvious, skip step 0" | Ask if not specified. Wrong scope = wrong tests. |
 | "Unit tests are enough for this" | Default to integration/E2E. Unit tests only where they genuinely fit. |
 | "I'll fix the compilation error, it's one line" | Re-dispatch SDET. Size is not an exception. |
 
 ## Integration
 
-- **test-loop** — Receives the created tests and runs the red-green fix cycle
+- **sdlc-tests-run** — Receives the created tests and runs the red-green fix cycle
 - **sdlc-execute** — Can be invoked after execution completes to generate tests for the deliverable
 - **sdlc-lite-execute** — Same — invoke after SDLC-Lite work to generate tests
