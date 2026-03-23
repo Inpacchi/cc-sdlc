@@ -436,6 +436,22 @@ Check for language-appropriate LSP plugin based on the spec's technology stack.
 
 **Optional plugins:** Mention oberskills and design-for-ai if relevant to the project type. Do not block on these.
 
+### Phase 9a: Assess Initial Maturity Levels
+
+Read the maturity level definitions in `ops/sdlc/disciplines/process-improvement.md` (§ Process Maturity Levels). For each of the 9 disciplines, assess the initial level based on what was just set up:
+
+**Level 1 (Initial)** — parking lot file exists with at least one entry but no knowledge store directory for this discipline.
+
+**Level 2 (Managed)** — knowledge store directory exists with at least one validated YAML file AND the agent-context-map wires those files to relevant agents AND parking lot has been seeded.
+
+For most fresh installations, the assessment is straightforward:
+- Disciplines that received knowledge seeding in Phases 6-8 AND have entries in `agent-context-map.yaml` → Level 2
+- Disciplines with only parking lot seeding from Phase 7 → Level 1
+
+Update the Process Maturity Tracker table in `ops/sdlc/disciplines/process-improvement.md` with the assessed levels and evidence. The tracker was copied from the cc-sdlc source with source-repo levels — it must be adjusted to reflect this project's actual state.
+
+This is a quick assessment (2-3 minutes total), not a gate. Present the tracker to CD as informational.
+
 ### Phase 10: Final Verification
 
 Run through the verification checklist:
@@ -464,6 +480,7 @@ Knowledge & Disciplines:
     Stack-specific files: [list]
 [ ] Disciplines: all 9 initialized with project context
 [ ] Testing: gotchas.yaml seeded with stack-specific entries
+[ ] Maturity tracker: updated with project-assessed levels (not source-repo levels)
 
 Plugins:
 [ ] context7: [installed / NOT INSTALLED]
@@ -516,6 +533,7 @@ Follow BOOTSTRAP.md Phase 2:
 6. Create domain agents (same as Greenfield Phase 4 — via `/plugin-dev:agent-development`)
 7. Wire agent-context map (same as Greenfield Phase 5)
 8. Seed knowledge and disciplines (same as Greenfield Phases 6–8, informed by existing codebase patterns)
+9. Assess initial maturity levels (same as Greenfield Phase 9a)
 
 ### Phase R4: Verification
 

@@ -34,6 +34,24 @@ Each entry contains:
 
 ---
 
+## 2026-03-22: Wire sdlc-initialize to Maturity Level Assessment
+
+**Origin:** Gap analysis of which skills reference the new process docs. Only `sdlc-initialize` had a real gap — it seeds disciplines and knowledge stores but doesn't assess or set initial maturity levels, meaning the tracker is copied from the source repo with source-repo levels rather than reflecting the downstream project's actual state.
+
+**What happened:** After `setup.sh` copies the framework (including the maturity tracker), Phase 7 seeds discipline parking lots and Phases 6/8 seed knowledge stores. But the maturity tracker was never updated to reflect the downstream project's state — it still showed the source repo's levels. A fresh project with only parking lot seeding would claim Level 2 for disciplines it hadn't actually validated.
+
+**Changes made:**
+
+1. **`skills/sdlc-initialize/SKILL.md`** — Added Phase 9a (Assess Initial Maturity Levels) between plugin readiness and final verification. Reads the level definitions, assesses each discipline based on what was actually set up (knowledge store + agent wiring = Level 2; parking lot only = Level 1), and updates the tracker.
+
+2. **`skills/sdlc-initialize/SKILL.md`** — Added maturity tracker verification to the Phase 10 checklist.
+
+3. **`skills/sdlc-initialize/SKILL.md`** — Added maturity assessment as step 9 in retrofit mode.
+
+**Rationale:** The maturity tracker must reflect the downstream project's reality, not the source repo's. A fresh installation inherits all knowledge files but hasn't validated them in the project's context. Phase 9a takes 2-3 minutes and ensures the tracker starts honest.
+
+---
+
 ## 2026-03-22: Replace Level 3-5 with Discipline Usage Audit
 
 **Origin:** During Level 3 verification design, realized that Level 3 ("validated on 2+ projects") is inherently unverifiable — it's a cross-project claim that no single-project auditor can check. Adaptations to knowledge files aren't failures (they're the two-tier architecture working), so file diffs can't distinguish "major revision" from "healthy adaptation." Levels 4-5 (Measured, Self-Improving) were aspirational targets no discipline was close to reaching.
