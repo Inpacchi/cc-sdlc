@@ -50,7 +50,7 @@ The discipline has documented, reusable knowledge. Methodology exists, patterns 
 - Parking lot entries are being triaged (markers applied)
 - Methodology or principles documented well enough that a new agent (or person) could follow them
 
-**Evidence required:** Knowledge store with validated files + agent wiring + at least one triage pass on parking lot.
+**Evidence required:** Knowledge store with validated files + agent wiring + at least one triage pass on parking lot. *Exception: the process-improvement meta-discipline satisfies Level 2 via `process/` docs (changelog, discipline capture, maturity levels) rather than `knowledge/` YAML files — its "knowledge" is the process documentation itself.*
 
 ### Level Rules
 
