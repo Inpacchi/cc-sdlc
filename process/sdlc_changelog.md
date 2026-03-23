@@ -34,6 +34,20 @@ Each entry contains:
 
 ---
 
+## 2026-03-23: Fix Migration Pre-Flight to Auto-Clone from `source_repo`
+
+**Origin:** Even after adding `source_repo` to the manifest, the migrate skill still asked the user for a local path instead of cloning automatically.
+
+**What happened:** The pre-flight instructions presented the clone step as a conditional afterthought ("If the manifest has a `source_repo` URL but no local clone path was given..."). The assessment template also showed `cc-sdlc source repo: [path]` implying a local path was required before reporting. Claude read this as "I need a local path first" and prompted the user instead of cloning.
+
+**Changes made:**
+
+1. **`skills/sdlc-migrate/SKILL.md` Pre-Flight Check** — Restructured into two explicit steps: Step 1 resolves the source (clone immediately if `source_repo` is a URL), Step 2 reports the assessment. The clone command is now presented as the default action for URL sources with explicit reassurance ("This is safe and expected"). Fixed `/tmp` path to use a static name instead of shell `$$` variable.
+
+**Rationale:** Skill instructions must be unambiguous about what to do vs what to ask about. Presenting the clone as a conditional buried after the assessment template caused Claude to skip it and prompt instead.
+
+---
+
 ## 2026-03-23: Add `source_repo` to Manifest and Fix Migration Source Resolution
 
 **Origin:** User ran `/sdlc-migrate` from neuroloom and the skill couldn't locate the cc-sdlc source repo — it asked for the path, and the user had to decline because there was no way to auto-resolve it.

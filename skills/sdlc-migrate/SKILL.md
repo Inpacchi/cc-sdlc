@@ -31,28 +31,28 @@ Never use `cat`, `cp`, `ls`, or direct file reads against `[cc-sdlc-path]`. The 
 
 Before starting, verify this is a migration (not initialization):
 
+If `ops/sdlc/` doesn't exist → tell user to run `sdlc-initialize` instead and stop.
+
+**Step 1 — Resolve cc-sdlc source to a local path** (in priority order):
+1. `$ARGUMENTS` — if the user passed a local clone path, verify with `git -C [path] rev-parse HEAD`
+2. `.sdlc-manifest.json` → `source_repo` field (git remote URL) — **clone it immediately:**
+   ```bash
+   git clone --depth=1 [source_repo] /tmp/cc-sdlc-migrate
+   ```
+   This is safe and expected — it's a shallow clone of the user's own repo. Use `/tmp/cc-sdlc-migrate` as `[cc-sdlc-path]` for all subsequent phases. Clean up with `rm -rf /tmp/cc-sdlc-migrate` after migration completes.
+3. If neither is available, ask the user.
+
+**Step 2 — Report assessment:**
+
 ```
 MIGRATION ASSESSMENT
 Has ops/sdlc/: [yes/no]
 Has .sdlc-manifest.json: [yes/no]
 Has .claude/agents/: [yes/no]
 Has .claude/skills/: [yes/no]
-cc-sdlc source repo: [path] (verified via `git -C [path] rev-parse HEAD`)
+cc-sdlc source: [local path or "cloned from [URL] to /tmp/cc-sdlc-migrate"]
+cc-sdlc HEAD: [commit hash from git -C [cc-sdlc-path] rev-parse HEAD]
 ```
-
-If `ops/sdlc/` doesn't exist → tell user to run `sdlc-initialize` instead and stop.
-
-**Resolving the cc-sdlc source** (in priority order):
-1. `$ARGUMENTS` — if the user passed a local clone path
-2. `.sdlc-manifest.json` → `source_repo` field (git remote URL)
-3. Ask the user
-
-**If the manifest has a `source_repo` URL but no local clone path was given:**
-1. Clone to a temporary directory: `git clone --depth=1 [source_repo] /tmp/cc-sdlc-migrate-$$`
-2. Use that as `[cc-sdlc-path]` for the rest of the migration
-3. Clean up the temp clone after migration completes
-
-**If the user provides a local path:** Verify it by running `git -C [cc-sdlc-path] rev-parse HEAD`. If this fails, the path is wrong — ask the user.
 
 ---
 
