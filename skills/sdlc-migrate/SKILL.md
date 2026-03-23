@@ -16,6 +16,17 @@ Apply cc-sdlc upstream updates to a project while preserving project-specific cu
 
 **Argument:** `$ARGUMENTS` (optional — cc-sdlc source repo path. If omitted, check `.sdlc-manifest.json` for `source_path`, or ask user.)
 
+## Source Repo Access Rule
+
+**All reads from the cc-sdlc source repo MUST use git commands**, not filesystem reads. This ensures you're reading committed state, not the working tree.
+
+- Read a file: `git -C [cc-sdlc-path] show HEAD:<path>`
+- List files: `git -C [cc-sdlc-path] ls-tree -r --name-only HEAD`
+- Extract a file to the project: `git -C [cc-sdlc-path] show HEAD:<path> > [project-path]/ops/sdlc/<path>`
+- Diff since version: `git -C [cc-sdlc-path] diff [source_version]..HEAD`
+
+Never use `cat`, `cp`, `ls`, or direct file reads against `[cc-sdlc-path]`. The source repo may have uncommitted work in progress.
+
 ## Pre-Flight Check
 
 Before starting, verify this is a migration (not initialization):
@@ -26,9 +37,12 @@ Has ops/sdlc/: [yes/no]
 Has .sdlc-manifest.json: [yes/no]
 Has .claude/agents/: [yes/no]
 Has .claude/skills/: [yes/no]
+cc-sdlc source repo: [path] (verified via `git -C [path] rev-parse HEAD`)
 ```
 
 If `ops/sdlc/` doesn't exist → tell user to run `sdlc-initialize` instead and stop.
+
+Verify the source repo path by running `git -C [cc-sdlc-path] rev-parse HEAD`. If this fails, the path is wrong — ask the user.
 
 ---
 
@@ -38,7 +52,7 @@ If `ops/sdlc/` doesn't exist → tell user to run `sdlc-initialize` instead and 
 
 Read the project's `.sdlc-manifest.json` to get the `source_version` (commit hash) from the last install/migration.
 
-Then check what changed in cc-sdlc since that commit:
+Then check what changed in cc-sdlc since that commit (using git, not filesystem):
 
 ```bash
 git -C [cc-sdlc-path] log --oneline [source_version]..HEAD
@@ -369,6 +383,7 @@ After migration, update `.sdlc-manifest.json` with the new source version:
 | "I'll rephrase the framework sections to be clearer" | Verbatim rule. Copy exactly from cc-sdlc. Do not rephrase. |
 | "I'll remove this agent mapping that cc-sdlc doesn't have" | Project-specific mappings are intentional. Never remove them. |
 | "No files were deleted, so §2.1a doesn't apply" | Always check. Moved files appear as add+delete pairs, not renames. |
+| "I'll just read the file from the cc-sdlc directory" | Use `git -C [path] show HEAD:file` — never raw filesystem reads. The repo may have uncommitted WIP. |
 
 ## Integration
 
