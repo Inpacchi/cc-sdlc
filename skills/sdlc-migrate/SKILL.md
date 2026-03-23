@@ -136,9 +136,15 @@ Check the cc-sdlc changelog for files that were **deleted, moved, or renamed** s
 
 3. For each moved/renamed file: the new location was already copied in §2.1. Remove the old location. Then check whether the project's `agent-context-map.yaml` references the old path — if so, update the path (see §3.3).
 
-4. Log all removals so the migration report (Phase 4.6) includes them.
+4. **Scan agent memory files for stale paths.** Agent memory files (`.claude/agent-memory/*.md`) can contain hardcoded knowledge file paths that bypass the context map. For each deleted or moved file path, grep agent memories:
+   ```bash
+   grep -rl "old/path/to/file.yaml" .claude/agent-memory/ 2>/dev/null
+   ```
+   Update any matches to the new path, or remove references to deleted files.
 
-**Why this matters:** Without cleanup, downstream projects accumulate orphan files. Worse, if a file was moved (e.g., `knowledge/architecture/foo.yaml` → `knowledge/coding/foo.yaml`), agents mapped to the old path load a stale copy while the updated version sits unwired at the new path.
+5. Log all removals and path fixes so the migration report (Phase 4.6) includes them.
+
+**Why this matters:** Without cleanup, downstream projects accumulate orphan files. Worse, if a file was moved (e.g., `knowledge/architecture/foo.yaml` → `knowledge/coding/foo.yaml`), agents mapped to the old path load a stale copy while the updated version sits unwired at the new path. Agent memories are a second source of path references that §3.3 (context map) doesn't cover — they must be scanned separately.
 
 ### 2.2 Content-Merge: Skills
 

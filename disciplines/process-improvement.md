@@ -88,6 +88,8 @@ The discipline has documented, reusable knowledge. Methodology exists, patterns 
 
 - **Disciplines-as-skills orchestration.** [DEFERRED] When individual discipline skills exist, the SDLC becomes an orchestrator that invokes discipline skills at appropriate phases with appropriate intensity. *Reason: future vision, no discipline skills exist yet.*
 
+- **2026-03-23 [migration]**: Agent memory files contain hardcoded knowledge paths that bypass the context map. [NEEDS VALIDATION] During migration, §2.1a scans the context map and skill/discipline files for stale paths after file moves — but agent memories (`.claude/agent-memory/*.md`) are a second source of path references. Two stale paths were found during a real migration. Now addressed in sdlc-migrate §2.1a step 4.
+
 ### Process Maturity Tracker
 
 <!-- PROJECT-TRACKER-START: Do not overwrite during migration. These levels are project-assessed. -->

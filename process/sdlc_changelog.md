@@ -34,6 +34,22 @@ Each entry contains:
 
 ---
 
+## 2026-03-23: Scan Agent Memory Files for Stale Paths During Migration
+
+**Origin:** Real migration discovered two stale knowledge file paths hardcoded in agent memory files — a path source that §2.1a didn't scan.
+
+**What happened:** Agent memory files (`.claude/agent-memory/*.md`) can contain hardcoded paths to knowledge files (e.g., "read ops/sdlc/knowledge/architecture/foo.yaml for context"). These paths bypass the agent-context-map, so when §3.3 updates the map, the stale paths in memories remain. The migration completed successfully but left two broken references that agents would follow.
+
+**Changes made:**
+
+1. **`skills/sdlc-migrate/SKILL.md` §2.1a** — Added step 4: grep agent memory files for each deleted/moved path and fix matches. Agent memories are now scanned alongside the context map and skill files.
+
+2. **`disciplines/process-improvement.md`** — Added parking lot entry documenting the gap and fix.
+
+**Rationale:** Three places reference knowledge file paths: the context map (§3.3), skill files (§2.2), and agent memories. The migration scanned two of three. This completes the coverage.
+
+---
+
 ## 2026-03-23: Rename Skills for Consistent sdlc- Prefix
 
 **Origin:** CD requested skill name standardization. Three skills used inconsistent naming: `sdlc-reconciliation` (too long), `test-loop` (no prefix), `create-test-suite` (no prefix).
