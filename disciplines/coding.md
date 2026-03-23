@@ -1,7 +1,7 @@
 # Coding Discipline
 
 **Status**: Active — foundational testability architecture codified
-**Knowledge store**: `knowledge/testing/testing-paradigm.yaml` (code structure for testability)
+**Knowledge store**: `knowledge/coding/` (code quality principles, TypeScript patterns)
 
 ## Scope
 

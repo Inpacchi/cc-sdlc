@@ -49,6 +49,7 @@ spec → plan → implement
 | `payment-state-machine.yaml` | Payment flow states, gateway integration | [payment-engineer] |
 | `ml-system-design.yaml` | ML inference pipelines, model lifecycle | [ml-architect] |
 | `prompt-engineering-patterns.yaml` | LLM prompt design, evaluation patterns | [ml-architect] |
+| `domain-boundary-gotchas.yaml` | Cross-domain work patterns, orchestrator signals | [architect], [code-reviewer] |
 | `database-optimization-methodology.yaml` | Query optimization, index strategy | [data-engineer], [backend-developer] |
 
 ## Parking Lot

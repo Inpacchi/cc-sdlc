@@ -8,6 +8,8 @@ Project-specific knowledge lives in each project's `docs/testing/knowledge/`.
 ```
 knowledge/testing/
 ├── README.md                          ← This file
+├── testing-paradigm.yaml              ← Functional core/imperative shell, test type selection
+├── advanced-test-patterns.yaml        ← Chaos hypothesis, property-based testing, feature-flag isolation
 ├── tool-patterns.yaml                 ← How to use Playwright CLI, Playwright MCP, etc.
 ├── component-catalog.yaml             ← Test strategies for shared UI components
 ├── gotchas.yaml                       ← Cross-project failure patterns

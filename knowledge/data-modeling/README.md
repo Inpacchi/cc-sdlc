@@ -20,8 +20,10 @@ knowledge/data-modeling/
 │   └── (future: healthcare.yaml, financial-services.yaml, etc.)
 ├── anti-patterns/                  ← Common mistakes + why they fail
 │   └── common-modeling-mistakes.yaml
-└── assessment/                     ← Templates for evaluating existing models
-    └── (future: model-assessment-checklist.yaml)
+├── assessment/                     ← Templates for evaluating existing models
+│   └── model-health-check.yaml
+└── diagrams/                      ← Visual reference diagrams
+    └── party-role-erd.d2
 ```
 
 ## How This Gets Used

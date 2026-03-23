@@ -17,6 +17,7 @@ mappings:
     - ops/sdlc/knowledge/architecture/backend-capability-assessment.yaml
     - ops/sdlc/knowledge/architecture/technology-patterns.yaml
     - ops/sdlc/knowledge/architecture/pipeline-design-patterns.yaml
+    - ops/sdlc/knowledge/architecture/domain-boundary-gotchas.yaml
     - ops/sdlc/knowledge/coding/typescript-patterns.yaml
     - ops/sdlc/knowledge/architecture/agent-communication-protocol.yaml
     - ops/sdlc/knowledge/architecture/api-design-methodology.yaml
@@ -71,6 +72,7 @@ mappings:
   # ── Review / Quality ───────────────────────────────────────────────
   code-reviewer:
     - ops/sdlc/knowledge/coding/code-quality-principles.yaml
+    - ops/sdlc/knowledge/architecture/domain-boundary-gotchas.yaml
     - ops/sdlc/knowledge/architecture/technology-patterns.yaml
     - ops/sdlc/knowledge/testing/testing-paradigm.yaml
     - ops/sdlc/knowledge/testing/gotchas.yaml
@@ -187,6 +189,7 @@ mappings:
   sdlc-compliance-auditor:
     - ops/sdlc/knowledge/architecture/investigation-report-format.yaml
     - ops/sdlc/knowledge/architecture/knowledge-management-methodology.yaml
+    - ops/sdlc/knowledge/architecture/domain-boundary-gotchas.yaml
 
 # Unmapped agents (no relevant cross-project knowledge files yet):
 # - Add your project-specific agents here as they are defined
