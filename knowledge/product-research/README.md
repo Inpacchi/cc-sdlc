@@ -8,7 +8,10 @@ Knowledge for structured competitive analysis and feature scoping during SDLC wo
 knowledge/product-research/
 ├── README.md                                  ← This file
 ├── competitive-analysis-methodology.yaml      ← Process an agent follows end-to-end
-└── dimension-catalog.yaml                     ← Reusable comparison dimensions by feature archetype
+├── data-source-evaluation.yaml                ← 4-phase methodology for evaluating external data sources
+├── dimension-catalog.yaml                     ← Reusable comparison dimensions by feature archetype
+├── product-methodology.yaml                   ← RICE, Kano, Jobs-to-be-Done, North Star metric
+└── risk-assessment-framework.yaml             ← Legal/compliance risk assessment, compliance gap analysis
 ```
 
 ## How This Gets Used
