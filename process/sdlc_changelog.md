@@ -34,6 +34,23 @@ Each entry contains:
 
 ---
 
+## 2026-03-23: Add `sdlc-playbook-generate` Skill
+
+**Origin:** CD identified that completed sessions contain valuable process knowledge that isn't being captured. Specific example: a Slack bot integration session leveraged existing codebase patterns (90% of the way) but missed nuances in database setup, Railway service configuration, and env variable management that only surfaced during execution. A playbook would have caught those gaps.
+
+**What happened:** Created a new skill that analyzes previous session conversations (JSONL) and their correlated git commits to produce structured playbooks. The skill performs two-track analysis: Track A captures the process that worked (steps to formalize and repeat), Track B captures the gap (corrections, missed setup, environment surprises, configuration gotchas). The combined output fills the existing playbook template format.
+
+**Changes made:**
+
+1. **`skills/sdlc-playbook-generate/SKILL.md`** — New skill with LOCATE → CORRELATE → ANALYZE → DRAFT → PLACE → REPORT workflow. Reads session JSONL for conversation analysis, correlates with git log by timestamp range, extracts process steps and gap signals, produces playbook following project template.
+2. **`skills/sdlc-playbook-generate/references/analysis-methodology.md`** — Detailed extraction patterns for reading session JSONL message types, identifying correction signals in user messages, analyzing git commit patterns, and mapping analysis output to playbook template sections.
+3. **`skeleton/manifest.json`** — Added skill to source_files.skills list.
+4. **`CLAUDE-SDLC.md`** — Added "Make a playbook from that session" to SDLC Commands table.
+
+**Rationale:** Session conversations contain two categories of knowledge that git log alone cannot preserve: (1) the decision sequence and agent selection that produced the work, and (2) the corrections, missing steps, and environment gaps that only surfaced during execution. Formalizing both into playbooks prevents repeated friction on recurring task types. This complements `sdlc-ingest` (external knowledge import) by providing internal session knowledge import.
+
+---
+
 ## 2026-03-23: Add `spec_relevant` Tagging to Knowledge Stores
 
 **Origin:** D2 (User Accounts & Auth) spec audit for Neuroloom revealed that spec-writing agents lacked access to knowledge stores that would have improved the spec — specifically data modeling patterns, security taxonomy, and design system knowledge. All knowledge loaded identically at spec time and plan time with no differentiation.
