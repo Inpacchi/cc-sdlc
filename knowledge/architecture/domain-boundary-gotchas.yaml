@@ -10,6 +10,7 @@ description: >
   Recurring patterns where implementation work crosses from one agent's domain
   into another's. These gotchas help the orchestrator recognize boundary crossings
   before they happen and dispatch the correct agents.
+spec_relevant: false
 
 gotchas:
   - id: frontend-triggers-api-change

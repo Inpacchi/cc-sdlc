@@ -11,6 +11,7 @@ description: >
   Design principles that treat accessibility and testability as a single concern.
   Components that render meaningful accessibility trees are inherently more testable.
   Investing in one yields both.
+spec_relevant: false
 
 # ─────────────────────────────────────────────
 # Core Principle: A11y and Testability Are One Concern

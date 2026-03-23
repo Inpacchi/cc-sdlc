@@ -13,6 +13,7 @@ description: >
   correlation framework for surfacing hidden connections, forensic timeline
   reconstruction, and the peer relationship between Five Whys, Fishbone,
   and Fault Tree as complementary root cause methods.
+spec_relevant: false
 
 # ─────────────────────────────────────────────
 # Cascade Failure Taxonomy

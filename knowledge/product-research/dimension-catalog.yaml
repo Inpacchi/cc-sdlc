@@ -10,6 +10,7 @@ description: >
   archetype. When an agent begins a competitive analysis, it loads the relevant
   archetype to get a head start on what to compare. Dimensions are refined
   during each analysis — novel dimensions discovered are added back here.
+spec_relevant: false
 
 # ─────────────────────────────────────────────
 # UI Component Archetypes

@@ -13,6 +13,7 @@ description: >
   taxonomy, knowledge validation metrics (accuracy, relevance, retrieval latency),
   how knowledge flows back to agents, emergence detection methodology, and interaction
   mining as the primary knowledge extraction technique.
+spec_relevant: false
 
 # ─────────────────────────────────────────────
 # Pattern Classification Taxonomy

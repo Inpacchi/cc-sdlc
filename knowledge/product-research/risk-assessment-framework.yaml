@@ -12,6 +12,7 @@ description: >
   Covers risk categorization, a compliance gap analysis format, and a decision model
   for when to escalate to legal counsel vs. proceed with documented risk acceptance.
   Applies to SaaS products, marketplaces, payment platforms, and streaming/recording services.
+spec_relevant: false
 
 # ─────────────────────────────────────────────
 # Risk Severity Scale

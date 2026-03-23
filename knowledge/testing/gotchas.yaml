@@ -3,6 +3,8 @@
 # Each entry: symptom, cause, resolution, prevention.
 # Last updated: 2026-03-22
 
+spec_relevant: false
+
 - id: dom-not-visual
   severity: high
   symptom: "DOM check passes but element is invisible to user"

@@ -388,6 +388,42 @@ content:
 
 Present the list of knowledge files to CD. This is informational, not a gate — CD can adjust later.
 
+**6d. Tag spec-relevant knowledge stores.**
+
+Walk through all installed knowledge YAML files and identify which should inform spec writing for this project. Present the list grouped by discipline:
+
+```
+SPEC-RELEVANCE TAGGING
+Which knowledge stores should inform spec writing for this project?
+(Stores marked with * are commonly spec-relevant)
+
+Architecture:
+  [ ] api-design-methodology — API design patterns
+  [ ] backend-capability-assessment — Backend assessment rubric
+  [*] security-review-taxonomy — Security posture is a spec-level concern
+  ...
+Data Modeling:
+  [*] people-and-organizations — Party/role data model patterns
+  [*] meta-framework — Universal data modeling framework
+  ...
+Design:
+  [*] ux-modeling-methodology — UX interaction modeling
+  [*] accessibility-testability-principles — Accessibility rules
+  ...
+Product Research:
+  [*] product-methodology — Product methodology shapes feature scoping
+  ...
+Testing:
+  [*] testing-paradigm — Test type selection (always loaded at spec time by sdlc-plan)
+  ...
+```
+
+CD selects which stores to mark as `spec_relevant: true`. Update the selected files' `spec_relevant` field from `false` to `true`.
+
+**Guidance:** Tag at least 2-3 files, or leave all as `false` for full loading. Tagging only one file may produce under-informed specs. See `knowledge/README.md` § "spec_relevant Field" for semantics.
+
+**If CD skips this step:** All files stay `false` and `sdlc-plan` spec-time filtering remains dormant — all mapped files load at spec time (backward-compatible behavior). CD can tag stores later by asking the orchestrator to "review spec-relevance tags."
+
 ### Phase 7: Seed Discipline Parking Lots
 
 Read each of the 9 discipline files in `ops/sdlc/disciplines/`. For each, add a "## Project Context" section with 3–5 bullets specific to this project's stack and domain.

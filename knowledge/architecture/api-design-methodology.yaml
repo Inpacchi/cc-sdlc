@@ -12,6 +12,7 @@ description: >
   Covers REST maturity levels, versioning lifecycle, webhook reliability patterns,
   bulk operation contracts, SDK packaging strategy, and the mapping process from
   business capabilities to REST resources.
+spec_relevant: false
 
 # ─────────────────────────────────────────────
 # REST Maturity Model

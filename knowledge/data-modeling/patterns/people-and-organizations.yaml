@@ -4,6 +4,7 @@
 # Last updated: 2026-02-25
 
 id: people-and-organizations
+spec_relevant: false
 
 business_concept:
   name: "People and Organizations"

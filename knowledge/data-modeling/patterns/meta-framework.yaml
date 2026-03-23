@@ -10,6 +10,7 @@ description: >
   this file captures HOW the UDM system works — the types of reusability, the
   generalization spectrum, and the human dimensions of getting organizations to
   adopt common models.
+spec_relevant: false
 
 three_types_of_reusability:
   description: >

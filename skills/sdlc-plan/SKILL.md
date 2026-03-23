@@ -257,6 +257,14 @@ The primary domain agent writes the core spec. Other relevant agents contribute 
 
 **Library verification:** When the spec involves external libraries or frameworks, verify API capabilities and constraints via Context7 (`mcp__context7__resolve-library-id` → `mcp__context7__query-docs`) before finalizing requirements. Check the project's actual dependency versions (package.json, lock files) — version-specific behavior matters. Pass verified API details to the spec-writing agent so requirements are grounded in real library capabilities, not training-data assumptions.
 
+**Spec-time knowledge filtering (opt-in):** When dispatching agents for spec writing, filter their knowledge context to spec-relevant files only — if the project has configured spec-relevance tagging. For each agent being dispatched:
+1. Look up the agent's mapped files in `ops/sdlc/knowledge/agent-context-map.yaml`
+2. Check whether **any** knowledge file in the project has `spec_relevant: true`. If none do, load ALL mapped files (the project hasn't configured spec-relevance yet — preserve current behavior).
+3. If at least one file is tagged `true`: read each mapped YAML file's top-level `spec_relevant` field. Include only files where `spec_relevant: true` — skip files where `spec_relevant: false` or the field is absent.
+4. The testing paradigm (`ops/sdlc/knowledge/testing/testing-paradigm.yaml`) is ALWAYS included at spec time regardless of its `spec_relevant` tag — it is explicitly referenced for the Testing Strategy section below.
+
+This filtering reduces context load during spec writing by excluding implementation-detail knowledge (code patterns, debugging guides, deployment patterns) that does not inform **what** to build. At plan time (Step 4), ALL mapped files load for each dispatched agent — no `spec_relevant` filtering.
+
 Reference the template at `ops/sdlc/templates/spec_template.md`. Required fields:
 - Problem statement
 - Requirements (functional + non-functional)
@@ -265,7 +273,7 @@ Reference the template at `ops/sdlc/templates/spec_template.md`. Required fields
 - Data model changes
 - Interface/adapter changes required
 - Depends on (other deliverable IDs)
-- Testing strategy — informed by the testing paradigm (`ops/sdlc/knowledge/testing/testing-paradigm.yaml`): unit tests for pure logic, integration tests for I/O boundaries, E2E for critical user flows. Identify which code layers the feature introduces and match test types accordingly.
+- Testing strategy — informed by the testing paradigm (`ops/sdlc/knowledge/testing/testing-paradigm.yaml`, always loaded at spec time regardless of `spec_relevant` tag): unit tests for pure logic, integration tests for I/O boundaries, E2E for critical user flows. Identify which code layers the feature introduces and match test types accordingly.
 - Success criteria
 - Constraints
 - Open questions / unknowns — explicitly state what the spec does NOT know yet. Each unknown is a risk; the plan must address or accept each one.

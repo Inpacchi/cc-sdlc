@@ -15,6 +15,7 @@ description: >
   selection methodology, A/B testing for prompts, versioning as a deployable artifact,
   token optimization economics, and NLP production patterns (active learning,
   weak supervision, continual learning drift detection).
+spec_relevant: false
 
 # ─────────────────────────────────────────────
 # Performance Target Checklist

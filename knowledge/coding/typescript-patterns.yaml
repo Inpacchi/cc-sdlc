@@ -12,6 +12,7 @@ description: >
   and make code easier to verify statically. Covers branded types, Result types, the
   satisfies operator, type predicates, template literal types, and exhaustive union handling.
   These patterns apply across backend, frontend, and library code regardless of framework.
+spec_relevant: false
 
 # ─────────────────────────────────────────────
 # Branded Types

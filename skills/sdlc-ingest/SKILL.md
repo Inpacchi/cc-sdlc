@@ -168,7 +168,10 @@ rationale: |
 checklist:
   - "Question framed for code review"
 source: source-file-identifier
+spec_relevant: false
 ```
+
+**`spec_relevant` tagging:** All newly created knowledge files must include `spec_relevant: false` as a top-level field. This is the safe default — the project team can override to `true` for stores that inform spec writing (see `knowledge/README.md` § "spec_relevant Field"). When appending rules to existing files, preserve the file's existing `spec_relevant` value — do not change it.
 
 **Project-specific application notes (optional):**
 If the user provided project context in step 2, add application notes to rules where the generic rule maps to specific product surfaces, components, or patterns. These are informational — they help agents apply generic rules in context.
@@ -198,6 +201,7 @@ Route each output to its correct destination:
 - Write new YAML files or append to existing ones
 - Update the knowledge store's `README.md` to list new files
 - If new files are created, add them to the README's structure listing and "Knowledge Categories" table
+- If ingested knowledge is likely spec-relevant (domain models, design principles, product methodology), note it in the report (Step 6) so the project team can evaluate whether to set `spec_relevant: true`
 
 **Playbook updates:**
 - If a related playbook exists, check whether new rules should be added to its checklist
@@ -239,6 +243,10 @@ SOURCE COVERAGE
   [count]/[total] files produced extractable rules
   Top contributors: [files that yielded the most rules]
   No-yield files: [files that produced nothing useful, with brief reason]
+
+SPEC RELEVANCE
+  New files default to spec_relevant: false
+  Potentially spec-relevant: [list files that may warrant override to true, with rationale]
 ```
 
 ### 7. Changelog Update

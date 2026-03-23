@@ -12,6 +12,7 @@ description: >
   defines the threat category, the questions to ask, the patterns to enforce, and the
   common failure modes to look for. Designed to ensure no category is skipped during
   a review and to produce actionable, prioritized findings.
+spec_relevant: false
 
 # ─────────────────────────────────────────────
 # Severity Scale

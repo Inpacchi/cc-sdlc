@@ -12,6 +12,7 @@ description: >
   handoffs. All implementation and investigation agents emit JSON progress blocks during
   long-running tasks and conclude with a defined handoff. This ensures the orchestrating
   layer (CC) always has machine-readable status without having to parse prose.
+spec_relevant: false
 
 # ─────────────────────────────────────────────
 # Progress Update Protocol

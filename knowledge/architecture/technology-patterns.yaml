@@ -11,6 +11,7 @@ description: >
   backend capability assessment, the agent loads the relevant patterns to
   know what to look for in the codebase. Each pattern includes: what to
   look for, what it enables, and typical effort to add if missing.
+spec_relevant: false
 
 # ─────────────────────────────────────────────
 # Search & Retrieval

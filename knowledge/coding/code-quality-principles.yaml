@@ -12,6 +12,7 @@ description: >
   Covers: testability as a code quality concern (not just a testing concern),
   the mocking-is-a-code-smell stance, and structural patterns that make code
   inherently easier to test, review, and maintain.
+spec_relevant: false
 
 # ─────────────────────────────────────────────
 # Testability Is a Code Quality Concern

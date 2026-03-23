@@ -10,6 +10,7 @@ description: >
   producing an easy-to-consume comparison matrix, and generating scoping questions
   that help the product owner define what to build. Works for UI components
   (widget libraries), app features (SaaS capabilities), and platform capabilities.
+spec_relevant: false
 
 # ─────────────────────────────────────────────
 # Phase 1: Discovery — Identify what to compare against

@@ -2,6 +2,8 @@
 # Default wait profiles by component type. Override with project-specific measurements.
 # Last updated: 2026-03-13
 
+spec_relevant: false
+
 # Note: Playwright CLI waits for actionability automatically (element visible, enabled, stable).
 # These timings are for explicit waits when auto-wait is insufficient.
 

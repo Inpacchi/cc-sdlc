@@ -10,6 +10,7 @@ description: >
   an existing application's IA, navigation, and component patterns. Starts from
   the current state (not a blank slate), produces artifacts appropriate to what's
   being modeled, and ensures design continuity with the existing app.
+spec_relevant: false
 
 # ─────────────────────────────────────────────
 # Phase 1: Context Loading — Understand what exists

@@ -2,6 +2,8 @@
 # How to use each tool effectively. Learned from actual test sessions.
 # Last updated: 2026-03-15
 
+spec_relevant: false
+
 playwright_cli:
   version: "1.59.0-alpha"
   install: "npm install -g @playwright/cli@latest && playwright-cli install"

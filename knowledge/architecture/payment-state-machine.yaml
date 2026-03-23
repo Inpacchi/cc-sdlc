@@ -12,6 +12,7 @@ description: >
   for payment lifecycle, an immutable audit trail rule, and an idempotent webhook handler
   pattern. These apply regardless of payment gateway (Stripe, PayPal, Braintree, etc.)
   or application domain.
+spec_relevant: false
 
 # ─────────────────────────────────────────────
 # Finite State Machine — Payment Lifecycle

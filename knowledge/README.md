@@ -36,6 +36,43 @@ Cross-project knowledge accumulates here; project-specific knowledge stays local
 
 **Accelerating knowledge stores:** Beyond organic discipline capture, the `sdlc-ingest` skill enables bulk import of external content (transcripts, articles, documentation) directly into knowledge files and discipline parking lots.
 
+## Knowledge File Metadata Fields
+
+All knowledge YAML files share a common metadata header. While domain-specific content varies, these top-level fields are standardized:
+
+| Field | Required | Type | Purpose |
+|-------|----------|------|---------|
+| `id` | Recommended | string | Unique identifier matching the filename |
+| `name` | Recommended | string | Human-readable name |
+| `description` | Recommended | string | What this knowledge covers |
+| `spec_relevant` | Yes | boolean | Whether this knowledge is loaded during spec writing. Default: `false`. |
+| `last_updated` | No | date | When the content was last modified |
+| `category` | No | string | Discipline category |
+
+### `spec_relevant` Field
+
+Controls whether a knowledge file is injected into agent dispatch prompts during **spec writing** (`sdlc-plan` Step 2) vs only during **plan writing and execution** (Steps 4+).
+
+- `spec_relevant: true` — Knowledge that shapes **what** gets built: domain models, design methodologies, product research frameworks, security taxonomies, accessibility principles. Loaded at spec time AND plan/execution time.
+- `spec_relevant: false` — Knowledge that shapes **how** it gets built: code patterns, debugging methodologies, test tooling, deployment patterns. Loaded only at plan/execution time.
+
+**Default is `false`** in the cc-sdlc source repo because spec-relevance is project-specific. Projects override to `true` for stores that matter to their spec writing. The `sdlc-migrate` skill preserves project overrides when updating framework files.
+
+**Opt-in filtering:** If no knowledge file in the project has `spec_relevant: true`, `sdlc-plan` loads ALL mapped files at spec time (current behavior preserved). Filtering only activates once at least one file is tagged `true`. Tag at least 2-3 files as spec-relevant, or leave all as `false` for full loading — tagging only one file may produce under-informed specs.
+
+**Examples of typically spec-relevant stores:**
+- `data-modeling/patterns/people-and-organizations.yaml` — domain model patterns shape entity design
+- `design/ux-modeling-methodology.yaml` — UX methodology informs spec requirements
+- `product-research/product-methodology.yaml` — product methodology shapes feature scoping
+- `architecture/security-review-taxonomy.yaml` — security posture is a spec-level concern
+- `testing/testing-paradigm.yaml` — testing strategy is explicitly referenced in spec Step 2
+
+**Examples of typically NOT spec-relevant stores:**
+- `architecture/debugging-methodology.yaml` — debugging is an execution-time concern
+- `coding/typescript-patterns.yaml` — code patterns matter at implementation, not spec
+- `testing/tool-patterns.yaml` — test tooling is plan/execution detail
+- `architecture/deployment-patterns.yaml` — deployment is post-implementation
+
 ## Setup: Wiring Agents to Knowledge
 
 After installing cc-sdlc into a project, the agent-context-map references **generic role names** (e.g., `sdet`, `architect`, `backend-developer`). These must be updated to match your project's actual agent filenames.

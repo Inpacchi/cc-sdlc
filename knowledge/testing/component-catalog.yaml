@@ -2,6 +2,8 @@
 # How to test shared UI components regardless of which project uses them.
 # Last updated: 2026-03-15
 
+spec_relevant: false
+
 mui_datagrid:
   description: "MUI DataGrid v8 (@mui/x-data-grid) — core grid component"
   applies_to:

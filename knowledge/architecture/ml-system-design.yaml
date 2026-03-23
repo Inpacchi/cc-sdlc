@@ -11,6 +11,7 @@ description: >
   confidence gating, composable pipeline stages, active learning loop structure, the
   simplicity-first default, game/domain-agnostic model design, and training data strategy.
   These principles apply regardless of model type, domain, or application stack.
+spec_relevant: false
 
 # ─────────────────────────────────────────────
 # Confidence Gates

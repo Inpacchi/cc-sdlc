@@ -13,6 +13,7 @@ description: >
   to support a desired feature scope. Produces a capability matrix and cost
   estimates that feed back into scope decisions. Works across stacks (Rails,
   Phoenix, Django, Node) with stack-specific patterns in technology-patterns.yaml.
+spec_relevant: false
 
 # ─────────────────────────────────────────────
 # Phase 1: Inventory — What does the backend have?

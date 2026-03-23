@@ -12,6 +12,7 @@ description: >
   discovers missing acceptance criteria and feeds them back to BA, how test data
   design acts as lightweight domain modeling, and how architect-proposed values
   need domain validation.
+spec_relevant: false
 
 # ─────────────────────────────────────────────
 # Acceptance Criteria Flow Both Directions

@@ -13,6 +13,7 @@ description: >
   (each with evidence and a concrete fix) → verification steps → prevention or
   recommendations. Each agent instantiates this with domain-specific section names,
   severity vocabularies, and finding fields.
+spec_relevant: false
 
 # ─────────────────────────────────────────────
 # Abstract Structure

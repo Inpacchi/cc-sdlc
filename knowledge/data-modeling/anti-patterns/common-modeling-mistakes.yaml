@@ -3,6 +3,8 @@
 # Pattern-specific anti-patterns live in the pattern files.
 # Last updated: 2026-02-25
 
+spec_relevant: false
+
 - id: premature-concreteness
   name: "Modeling the specific before the general"
   description: >

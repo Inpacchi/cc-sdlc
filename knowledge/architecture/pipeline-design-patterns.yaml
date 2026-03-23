@@ -13,6 +13,7 @@ description: >
   duplicating writes, can resume from failures without full re-scrapes, and can be
   rolled back cleanly when a bug is introduced. Applies to ETL, scraping pipelines,
   ML enrichment, and any batch processing system.
+spec_relevant: false
 
 # ─────────────────────────────────────────────
 # Idempotency Patterns

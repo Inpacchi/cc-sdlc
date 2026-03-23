@@ -10,6 +10,7 @@ description: >
   A structured 6-phase root cause analysis process for diagnosing software defects.
   Designed to prevent premature fixes, enforce evidence-based reasoning, and produce
   postmortems that make the next investigation cheaper. Applies to any stack or domain.
+spec_relevant: false
 
 # ─────────────────────────────────────────────
 # Phase 1: Reproduce

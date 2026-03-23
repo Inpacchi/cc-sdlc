@@ -11,6 +11,7 @@ description: >
   architectural constraints — as real as memory limits or network bandwidth.
   Architecture decisions must account for what is feasible within token budgets,
   especially for knowledge retrieval, agent dispatch, and large-scale refactors.
+spec_relevant: false
 
 # ─────────────────────────────────────────────
 # Core Principle

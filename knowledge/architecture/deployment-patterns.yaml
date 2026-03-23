@@ -16,6 +16,7 @@ description: >
   Covers DORA elite benchmarks, deployment strategy selection, GitOps workflow,
   feature flag lifecycle, pipeline template taxonomy, ChatOps as a deployment surface,
   supply chain security gates, and Kubernetes-grade safety controls.
+spec_relevant: false
 
 # ─────────────────────────────────────────────
 # DORA Metrics Benchmarks

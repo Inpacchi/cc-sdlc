@@ -108,7 +108,7 @@ Group the changed cc-sdlc files by migration strategy:
 | **Agent template** | `agents/AGENT_TEMPLATE.md` | Direct copy (no project customizations) |
 | **Agent suggestions** | `agents/AGENT_SUGGESTIONS.md` | Direct copy (no project customizations) |
 | **Auditor agent** | `agents/sdlc-compliance-auditor.md` | Content-merge: update audit logic, preserve project-specific memory paths |
-| **Knowledge YAMLs** | `knowledge/**/*.yaml` | Direct copy (cross-project, no customizations). Check for moved/deleted files (§2.1a) |
+| **Knowledge YAMLs** | `knowledge/**/*.yaml` | Direct copy with `spec_relevant` preservation (§2.1b). Check for moved/deleted files (§2.1a) |
 | **Process docs** | `process/*.md` | Direct copy (framework-level) |
 | **Templates** | `templates/*.md` | Direct copy (framework-level) |
 | **Disciplines** | `disciplines/*.md` | Content-merge: update framework guidance, preserve project parking lot entries |
@@ -157,6 +157,28 @@ Check the cc-sdlc changelog for files that were **deleted, moved, or renamed** s
 5. Log all removals and path fixes so the migration report (Phase 4.6) includes them.
 
 **Why this matters:** Without cleanup, downstream projects accumulate orphan files. Worse, if a file was moved (e.g., `knowledge/architecture/foo.yaml` → `knowledge/coding/foo.yaml`), agents mapped to the old path load a stale copy while the updated version sits unwired at the new path. Agent memories are a second source of path references that §3.3 (context map) doesn't cover — they must be scanned separately.
+
+### 2.1b Preserve `spec_relevant` Overrides
+
+Knowledge YAML files are direct-copied from upstream (§2.1), but the project may have overridden `spec_relevant: false` → `spec_relevant: true` for project-specific reasons. This single-field merge preserves those overrides.
+
+**Process for each knowledge YAML being copied:**
+
+1. **Before overwriting**, read the project's current file and extract its `spec_relevant` value. If the file doesn't exist yet (new upstream file), skip — it will be copied with the upstream default.
+2. **Copy the upstream file** (overwriting the project's version — all other content is framework-owned).
+3. **Restore project override:** If the project's file had `spec_relevant: true` and the upstream file has `spec_relevant: false`, restore the project's `true` in the newly copied file.
+4. **Surface upstream upgrades:** If the upstream file has `spec_relevant: true` and the project's file had `spec_relevant: false`, do NOT auto-adopt. Instead, flag it in the migration report:
+   ```
+   Knowledge spec_relevant upstream upgrade: [file] — upstream now marks as spec-relevant. Review whether to adopt.
+   ```
+   This ensures the project team is aware of upstream's signal without silently overriding their explicit `false`.
+
+**First migration introducing `spec_relevant`:** If no knowledge file in the project has `spec_relevant` at all (the field didn't exist before this migration), all files will receive `spec_relevant: false` from upstream. After Phase 4 completes, prompt CD to review which stores should be tagged `true` for this project — same walkthrough as `sdlc-initialize` Phase 6d:
+
+1. List all knowledge YAMLs grouped by discipline with their `name` and `description`
+2. Mark commonly spec-relevant stores with `*` (see `knowledge/README.md` § "spec_relevant Field" for examples)
+3. CD selects which to tag `true`; update the files
+4. If CD skips, all files stay `false` and `sdlc-plan` filtering remains dormant (backward compatible)
 
 ### 2.2 Content-Merge: Skills
 
@@ -364,7 +386,9 @@ After migration, update `.sdlc-manifest.json` with the new source version:
 
 ### Changes Applied
 - Skills updated: N (framework sections merged, project customizations preserved)
-- Knowledge files added/updated: N (direct copy)
+- Knowledge files added/updated: N (direct copy with spec_relevant preservation)
+- Knowledge spec_relevant overrides preserved: N [list files where project `true` was restored]
+- Knowledge spec_relevant upstream upgrades: N [list files where upstream is now `true` — review recommended]
 - Knowledge files removed (moved/deleted in source): N [list old paths]
 - New agent roles added to context-map: N [list roles]
 - Process docs updated: N (direct copy)
@@ -380,6 +404,7 @@ After migration, update `.sdlc-manifest.json` with the new source version:
 - Process Maturity Tracker (project-assessed levels, not source repo levels)
 - Agent-context-map agent names and project-specific mappings
 - Project agent domain content (scope, principles, workflow, anti-rationalization)
+- Knowledge file `spec_relevant` project overrides (true values restored after upstream copy)
 
 ### Gates Passed
 - §1.2 Changelog review: user confirmed migration summary

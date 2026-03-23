@@ -12,6 +12,7 @@ description: >
   Covers the three-axis wait event taxonomy, plan regression detection and remediation,
   a complete index type decision matrix, bloat thresholds and maintenance guidance,
   and statistics drift as the most common invisible root cause category.
+spec_relevant: false
 
 # ─────────────────────────────────────────────
 # Performance Target Checklist

@@ -34,6 +34,25 @@ Each entry contains:
 
 ---
 
+## 2026-03-23: Add `spec_relevant` Tagging to Knowledge Stores
+
+**Origin:** D2 (User Accounts & Auth) spec audit for Neuroloom revealed that spec-writing agents lacked access to knowledge stores that would have improved the spec — specifically data modeling patterns, security taxonomy, and design system knowledge. All knowledge loaded identically at spec time and plan time with no differentiation.
+
+**What happened:** Analysis showed that some knowledge stores shape *what* gets built (domain models, design methodology, security posture) while others shape *how* it gets built (code patterns, debugging, deployment). Loading implementation-detail stores at spec time wastes context budget without improving spec quality. A `spec_relevant` boolean field was designed to let `sdlc-plan` selectively filter knowledge at Step 2.
+
+**Changes made:**
+
+1. **`knowledge/**/*.yaml` (38 files)** — Added `spec_relevant: false` to all framework knowledge YAML files as a top-level metadata field. Default is `false` because spec-relevance is project-specific.
+2. **`knowledge/README.md`** — Added "Knowledge File Metadata Fields" section documenting the `spec_relevant` field, its semantics (`true` = shapes what gets built, `false` = shapes how), opt-in filtering behavior, and examples of typically spec-relevant vs not-spec-relevant stores.
+3. **`skills/sdlc-plan/SKILL.md`** — Added "Spec-time knowledge filtering (opt-in)" block to Step 2. When at least one file has `spec_relevant: true`, only `true`-tagged files load at spec time. If no files are tagged, all files load (backward compat). `testing-paradigm.yaml` always loads regardless of tag.
+4. **`skills/sdlc-ingest/SKILL.md`** — Added `spec_relevant: false` to the YAML template in Step 4 (Structure). Added tagging guidance in Step 5 (Place). Added `SPEC RELEVANCE` section to the ingestion report template (Step 6).
+5. **`skills/sdlc-migrate/SKILL.md`** — Changed knowledge YAML strategy from "direct copy" to "direct copy with `spec_relevant` preservation" (§2.1b). Added preservation protocol: project `true` overrides are restored after upstream copy; upstream `true` upgrades are surfaced in the migration report. Added first-migration tagging walkthrough for projects encountering the field for the first time.
+6. **`skills/sdlc-initialize/SKILL.md`** — Added Phase 6d "Spec-Relevance Tagging" with CD walkthrough for tagging stores after knowledge seeding.
+
+**Rationale:** Spec-level decisions (data model shape, security posture, design language) should be informed by project knowledge, but implementation-detail stores (code patterns, debugging, deployment) add noise at spec time without improving what-to-build decisions. Per-project tagging with opt-in filtering gives projects control without breaking existing behavior.
+
+---
+
 ## 2026-03-23: Fix Migration Pre-Flight to Auto-Clone from `source_repo`
 
 **Origin:** Even after adding `source_repo` to the manifest, the migrate skill still asked the user for a local path instead of cloning automatically.

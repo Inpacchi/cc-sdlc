@@ -11,6 +11,7 @@ description: >
   chaos experimentation, property-based testing for contract verification, and
   explicit feature-flag path coverage. These patterns apply regardless of stack
   and are not tied to any specific project.
+spec_relevant: false
 
 # ─────────────────────────────────────────────
 # Chaos Hypothesis Methodology
