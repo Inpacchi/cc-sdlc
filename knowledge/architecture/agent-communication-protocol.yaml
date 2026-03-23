@@ -116,6 +116,51 @@ handoff_format:
     code-reviewer:
       - "Structured review output (see investigation-report-format.yaml): Summary, Critical Issues, Warnings, Suggestions, Checklist"
       - "Checklist is the merge gate signal — must be present"
+    # Add your project's domain agents here with their extra fields:
+    # domain-agent:
+    #   - "Field description"
+
+# ─────────────────────────────────────────────
+# Knowledge Feedback (Optional Handoff Extension)
+# ─────────────────────────────────────────────
+
+knowledge_feedback:
+  purpose: >
+    Optional section in any agent's handoff. Reports on knowledge files loaded
+    during the task and their utility. The orchestrator uses this data during
+    discipline capture (structured gap detection) and the compliance auditor
+    aggregates it across sessions to identify knowledge health patterns.
+
+  when_to_include: >
+    Include when you noticed knowledge gaps, loaded files that weren't relevant,
+    or found specific files particularly helpful. Omit entirely if nothing
+    noteworthy — not every handoff needs this section.
+
+  fields:
+    loaded:
+      type: "string[]"
+      description: "Knowledge file paths read at session start from agent-context-map"
+      example: ["ops/sdlc/knowledge/testing/gotchas.yaml", "ops/sdlc/knowledge/testing/tool-patterns.yaml"]
+    useful:
+      type: "string[]"
+      description: "Subset of loaded files that directly informed a decision or prevented an error"
+    not_relevant:
+      type: "string[]"
+      description: "Subset of loaded files that had no bearing on this task (not wrong, just not applicable)"
+    missing:
+      type: "string[]"
+      description: >
+        Knowledge the agent wished it had. Describe the gap, not a file path.
+        Example: "Pattern for handling optimistic UI updates with server validation"
+
+  consumers:
+    discipline_capture: >
+      The orchestrator reads `missing` entries during discipline capture and
+      writes GAP:MISSING_KNOWLEDGE parking lot entries. The `loaded` list
+      feeds comparison #1 (knowledge loaded vs. needed) in structured gap detection.
+    compliance_auditor: >
+      The auditor aggregates feedback from result docs during §6g (Discipline
+      Usage Audit) to identify consistently useful, irrelevant, or missing knowledge.
 
 # ─────────────────────────────────────────────
 # Protocol Rules

@@ -60,7 +60,7 @@ Your domain expertise covers [technologies, frameworks, and patterns this agent 
 
 ## Knowledge Context
 
-Before starting substantive work, consult `ops/sdlc/knowledge/agent-context-map.yaml` and find your entry. Read the mapped knowledge files — they contain reusable patterns, anti-patterns, and domain-specific guidance relevant to your work.
+Before starting substantive work, consult `ops/sdlc/knowledge/agent-context-map.yaml` and find your entry. Read the mapped knowledge files — they contain reusable patterns, anti-patterns, and domain-specific guidance relevant to your work. In your handoff, optionally include a `knowledge_feedback` section listing which loaded files were useful, which were not relevant to this task, and any knowledge you wished you had but didn't find (see `agent-communication-protocol.yaml` for the format).
 
 ## [Core Mission / Your Domain]
 
