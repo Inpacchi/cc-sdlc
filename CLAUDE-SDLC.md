@@ -165,6 +165,7 @@ Rules:
 | "Let's run an SDLC compliance audit" | Audit spec coverage, chronicle freshness, index completeness. See `ops/sdlc/process/compliance_audit.md` |
 | "Let's update the SDLC" | Propose process improvement. See `ops/sdlc/process/sdlc_changelog.md` |
 | "Migrate my SDLC framework" | Apply cc-sdlc upstream updates while preserving project customizations. Invokes `sdlc-migrate` skill |
+| "Ingest these transcripts/articles" | Bulk-import external knowledge into disciplines and knowledge stores. Invokes `sdlc-ingest` skill |
 
 ### Key References
 - `ops/sdlc/process/overview.md` — Full workflow

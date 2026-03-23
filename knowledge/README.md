@@ -34,6 +34,8 @@ Other disciplines (business-analysis, deployment, process-improvement) will add 
 
 Cross-project knowledge accumulates here; project-specific knowledge stays local.
 
+**Accelerating knowledge stores:** Beyond organic discipline capture, the `sdlc-ingest` skill enables bulk import of external content (transcripts, articles, documentation) directly into knowledge files and discipline parking lots.
+
 ## Setup: Wiring Agents to Knowledge
 
 After installing cc-sdlc into a project, the agent-context-map references **generic role names** (e.g., `sdet`, `architect`, `backend-developer`). These must be updated to match your project's actual agent filenames.

@@ -34,6 +34,21 @@ Each entry contains:
 
 ---
 
+## 2026-03-23: New Skill — sdlc-ingest (Bulk Knowledge Import)
+
+**Origin:** Analysis of a real ingestion session on paire-appetit that processed 27 UI/UX video transcripts into design knowledge files. The session produced 50+ structured rules across 5 YAML files, 8 parking lot entries, and a playbook — revealing a repeatable, high-value workflow with no formal process.
+
+**What happened:** Knowledge stores today grow organically from discipline capture during work sessions. Bulk import from curated external sources (transcripts, articles, documentation, architecture papers, postmortems) is a powerful accelerator but was done ad-hoc. The paire-appetit session demonstrated the full pattern: survey content → scope target discipline → extract testable rules → structure into YAML → place in knowledge files vs. parking lots → report coverage and gaps.
+
+**Changes made:**
+
+1. **`skills/sdlc-ingest/SKILL.md`** — New skill with 7-step workflow (Survey → Scope → Extract → Structure → Place → Report → Changelog). Enforces source attribution, deduplication against existing knowledge, aggressive filtering (rules must be testable), and the discipline lifecycle (validated → YAML, unvalidated → parking lot).
+2. **`skeleton/manifest.json`** — Added `skills/sdlc-ingest/SKILL.md` to source_files.skills.
+
+**Rationale:** The discipline lifecycle (parking lot → validate → promote → knowledge store) was designed for organic, per-session capture. Bulk external import is a distinct workflow that needs its own guardrails: deduplication, source attribution, filtering criteria, and structured output conventions. Formalizing it as a skill ensures consistent quality when teams accelerate knowledge store population from external sources.
+
+---
+
 ## 2026-03-23: Scan Agent Memory Files for Stale Paths During Migration
 
 **Origin:** Real migration discovered two stale knowledge file paths hardcoded in agent memory files — a path source that §2.1a didn't scan.

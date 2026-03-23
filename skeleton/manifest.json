@@ -165,7 +165,8 @@
       "skills/sdlc-tests-run/SKILL.md",
       "skills/sdlc-idea/SKILL.md",
       "skills/sdlc-initialize/SKILL.md",
-      "skills/sdlc-migrate/SKILL.md"
+      "skills/sdlc-migrate/SKILL.md",
+      "skills/sdlc-ingest/SKILL.md"
     ],
     "agents": [
       "agents/AGENT_TEMPLATE.md",

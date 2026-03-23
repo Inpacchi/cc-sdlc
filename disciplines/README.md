@@ -75,6 +75,7 @@ disciplines/
 - After planning completes (sdlc-plan, sdlc-lite-plan) — after agent review
 - During idea exploration (sdlc-idea) — insights from research
 - During design consultation (design-consult) — design insights
+- During bulk knowledge import (sdlc-ingest) — external content → knowledge files and parking lots
 
 **Triage markers** — when adding parking lot entries, optionally mark their readiness for promotion:
 

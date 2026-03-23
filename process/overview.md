@@ -286,3 +286,20 @@ CC will:
 - Wait for approval before making changes
 
 See `compliance_audit.md` for the full process.
+
+---
+
+## Knowledge Ingestion
+
+Accelerate knowledge store population by bulk-importing external content (transcripts, articles, design guides, architecture papers, postmortems).
+
+**Trigger:** Say **"Ingest these [transcripts/articles/docs]"** and provide a path.
+
+CC will:
+- Survey the content (inventory, sample, characterize)
+- Scope the target discipline and audit existing knowledge for deduplication
+- Extract testable rules with source attribution
+- Structure into YAML knowledge files or discipline parking lot entries
+- Report coverage, gaps, and filtering statistics
+
+See the `sdlc-ingest` skill for the full process.
