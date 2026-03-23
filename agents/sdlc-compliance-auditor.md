@@ -68,7 +68,7 @@ Disciplines are persistent capabilities (not phases) that cross the entire lifec
 | `data-modeling.md` | Data architecture, schema design | Modeling patterns, anti-patterns |
 | `deployment.md` | CI/CD, infrastructure, release management | Deployment patterns, environment configs |
 | `design.md` | UI/UX, visual design, interaction patterns | Design system insights, component strategies |
-| `process-improvement.md` | Meta-discipline: improving the SDLC itself | Foundational principles, CMMI maturity tracker |
+| `process-improvement.md` | Meta-discipline: improving the SDLC itself | Foundational principles, maturity level definitions, level assessment procedure, maturity tracker |
 | `product-research.md` | Market, users, competitive landscape | Research methodology, findings |
 | `testing.md` | Test strategy, automation, knowledge layers | Most mature — pioneer discipline |
 
@@ -76,9 +76,23 @@ Disciplines are persistent capabilities (not phases) that cross the entire lifec
 - Are parking lots being written to **between audits**? Check git blame / last-modified dates for each file against the date of the last audit. Parking lots that are only written to during audits are post-mortems, not real-time capture — flag this as a process gap.
 - Do insights reference recent deliverables or just the original seeding session?
 - Are entries being added by execution and planning skills? (Check git blame for commits from sdlc-execute, sdlc-plan, sdlc-lite-execute, sdlc-lite-plan sessions.) If disciplines are only written during audits, the capture integration is not working.
-- Is the CMMI maturity tracker in `process-improvement.md` current?
 - Are cross-discipline insights flowing? (e.g., testing discovers a coding pattern → does `coding.md` get updated?)
 - Do any entries have triage markers (`[READY TO PROMOTE]`, `[NEEDS VALIDATION]`, `[DEFERRED]`)? Surface all `[READY TO PROMOTE]` items for CD review.
+
+**Maturity level verification:**
+- Read the Process Maturity Tracker in `process-improvement.md` and the level definitions in the "Process Maturity Levels" section of the same file.
+- For each discipline's claimed level, verify the evidence criteria are met:
+  - **Level 1 claim**: parking lot file exists with at least one entry
+  - **Level 2 claim**: knowledge store directory with validated YAML files + agent-context-map wired + at least one triage pass on parking lot
+- Flag level claims that lack supporting evidence (e.g., claiming Level 2 without a knowledge store directory)
+- Flag potential regressions: Level 2 disciplines whose knowledge files have `last_updated` dates >90 days old in active code areas
+- **Note:** Levels indicate formalization status only. Actual discipline health is measured by the §6g Discipline Usage Audit.
+
+**Missing discipline detection:**
+- Scan parking lots for entries that don't fit their host discipline — insights that describe a recurring capability not covered by any of the 9 current disciplines.
+- Check whether any agent roles in `agent-context-map.yaml` represent capabilities that don't map to any discipline (e.g., if an "accessibility-auditor" agent exists but there's no accessibility discipline — is it covered by design, or does it warrant its own discipline?).
+- The creation criteria (from `disciplines/README.md`): recurring capability + no existing home + distinct agent role. If all three are met, surface to CD as a potential new discipline.
+- **Do not recommend new disciplines speculatively.** Only flag when evidence exists — insights that keep being filed in the wrong parking lot, or agent roles orphaned from the discipline structure.
 
 #### 6b. Knowledge Stores (`ops/sdlc/knowledge/`)
 
@@ -86,15 +100,16 @@ Structured YAML files containing distilled, reusable patterns. These are the "ho
 
 **Inventory:**
 
-| Directory | Files | Purpose |
-|-----------|-------|---------|
-| `architecture/` | Various methodology YAMLs | Stack-agnostic patterns, assessment methodology |
-| `data-modeling/anti-patterns/` | `common-modeling-mistakes.yaml` | Known data modeling pitfalls |
-| `data-modeling/assessment/` | `model-health-check.yaml` | Schema quality rubric |
-| `data-modeling/patterns/` | `meta-framework.yaml`, `people-and-organizations.yaml` | Reusable data patterns |
-| `design/` | `ascii-conventions.yaml`, `ux-modeling-methodology.yaml` | UX design methodology |
-| `product-research/` | `competitive-analysis-methodology.yaml`, `dimension-catalog.yaml` | Research frameworks |
-| `testing/` | `component-catalog.yaml`, `gotchas.yaml`, `timing-defaults.yaml`, `tool-patterns.yaml` | Test strategies, known failures, tooling |
+| Directory | File Count | Purpose |
+|-----------|------------|---------|
+| `architecture/` | 16 | System design, debugging, security, payments, ML, deployment, agent protocols |
+| `coding/` | 2 | Code quality principles, TypeScript patterns, testability, mocking stance |
+| `data-modeling/` | 4 (in subdirs) | UDM patterns, anti-patterns, assessment templates |
+| `design/` | 3 | UX modeling methodology, ASCII conventions, accessibility-testability principles |
+| `product-research/` | 5 | Competitive analysis, data sources, dimensions, product methodology, risk assessment |
+| `testing/` | 6 | Test paradigm, gotchas, tool patterns, timing, component catalog, advanced patterns |
+
+*Note: file counts change as knowledge is promoted from parking lots. Verify against actual directory contents, not this table.*
 
 **What to check:**
 - **Staleness**: Do YAML files have `last_updated` fields? Are they current?
@@ -168,6 +183,56 @@ Playbooks at `ops/sdlc/playbooks/` capture recurring task patterns. They go stal
 - For each playbook, check whether any of its `validation_triggers` have occurred since `last_validated`
 - Do all file paths referenced in playbooks (reference implementations, knowledge files) resolve to actual files?
 - Is the `ops/sdlc/playbooks/README.md` index consistent with the actual playbook files present?
+
+#### 6g. Discipline Usage Audit
+
+Levels tell you whether a discipline has formalized its knowledge. Usage tells you whether the discipline is *alive* — being exercised, capturing insights, and feeding agents. A Level 2 discipline with no usage is dead documentation. A Level 1 discipline with active parking lot capture is more valuable.
+
+**Four usage signals to check:**
+
+1. **Parking lot activity** — Is the discipline capturing insights during active work?
+   - Check git blame / last-modified dates on the discipline's parking lot file
+   - Compare last-modified against the date of the last audit
+   - Check whether entries were added by execution/planning skills (git blame for sdlc-execute, sdlc-plan commits) or only during audits
+   - **Active**: entries added between audits from skill sessions
+   - **Audit-only**: entries only added during audit sessions (capture integration not working)
+   - **Dormant**: no entries added since last audit or initial seeding
+
+2. **Knowledge consumption** — Are agents actually loading this discipline's knowledge files?
+   - Check `ops/sdlc/knowledge/agent-context-map.yaml` for agents mapped to this discipline's knowledge files
+   - Cross-reference those agent names against recent dispatches in git history (look for agent dispatch patterns in commit messages or skill sessions)
+   - **Consumed**: agents that load this knowledge have been dispatched recently
+   - **Wired but unused**: knowledge is mapped to agents, but those agents haven't been dispatched
+   - **Unwired**: knowledge files exist but no agents are mapped to them (also flagged in §6e)
+
+3. **Promotion flow** — Is the discipline maturing through the pipeline?
+   - Count entries by triage status: `[READY TO PROMOTE]`, `[NEEDS VALIDATION]`, `[DEFERRED]`, `Promoted →`, unmarked
+   - Check whether any entries were promoted since the last audit
+   - **Flowing**: entries being triaged and promoted to knowledge
+   - **Accumulating**: entries being added but not triaged (growing without curation)
+   - **Static**: no new entries and no promotions
+
+4. **Cross-discipline feed** — Is the discipline receiving insights from other disciplines' work?
+   - Check whether this discipline's parking lot has entries with context tags from other disciplines' skills (e.g., a coding insight captured during a testing session, tagged `[DNN — testing]`)
+   - **Connected**: receives cross-discipline insights
+   - **Isolated**: only receives insights from its own domain work
+
+**What to report:**
+
+```
+#### Discipline Usage Audit
+| Discipline | Level | Parking Lot | Knowledge | Promotion | Cross-Feed |
+|-----------|-------|-------------|-----------|-----------|------------|
+| testing | 2 | Active | Consumed | Flowing | Connected |
+| coding | 2 | Audit-only | Wired but unused | Static | Isolated |
+| deployment | 1 | Dormant | N/A | N/A | Isolated |
+```
+
+**Interpretation guidance:**
+- **Healthy discipline**: Active parking lot + Consumed knowledge + Flowing promotions. The full pipeline is working.
+- **Formalized but dead**: Level 2 + Dormant parking lot + Wired but unused knowledge. The knowledge was created but isn't being exercised. This is fine if the discipline isn't relevant to current work (toolbox, not recipe). Flag only if the discipline IS relevant — check recent deliverables for work in this domain.
+- **Alive but unformalized**: Level 1 + Active parking lot + no knowledge store. The discipline is being exercised but hasn't formalized yet. Check for `[READY TO PROMOTE]` entries — it may be time to create the knowledge store.
+- **Dead**: Dormant parking lot + no knowledge consumption + no promotions. The discipline exists on paper but isn't participating. This is acceptable for disciplines not relevant to the current project.
 
 ### 7. Migration Integrity
 
@@ -262,7 +327,7 @@ Each audit should check whether previous audit recommendations were acted on. Th
 3. **Orphan Detection**: List files in `docs/current_work/` and `docs/chronicle/` not accounted for in the catalog
 4. **Git Cross-Reference**: Check recent commits for untracked substantial work
 5. **Freshness Check**: Assess CLAUDE.md files and memory files for accuracy
-6. **Knowledge Layer Scan**: Audit discipline parking lots (including triage status markers), knowledge YAMLs, skill-to-knowledge wiring, agent context map integrity, and playbook freshness (see §6a–6f above)
+6. **Knowledge Layer Scan**: Audit discipline parking lots (including triage status markers), knowledge YAMLs, skill-to-knowledge wiring, agent context map integrity, playbook freshness, and discipline usage (see §6a–6g above)
 7. **Migration Integrity**: Verify manifest version, framework file completeness, content-merge correctness, and stale references from removed features (see §7a–7e above)
 8. **Agent Memory Mining**: Scan agent memories for recurring patterns that should be promoted to knowledge layer (see §8)
 9. **Recommendation Follow-Through**: Check whether previous audit recommendations were acted on (see §9)
@@ -299,6 +364,14 @@ Structure your findings as:
 #### Discipline Parking Lots
 - [per-file: last updated, insight count, staleness assessment]
 - [cross-discipline flow: are insights propagating between disciplines?]
+- [maturity level verification: claimed vs evidence-supported level per discipline]
+- [missing discipline signals: insights filed in wrong parking lots, orphaned agent roles]
+
+#### Discipline Usage Audit
+| Discipline | Level | Parking Lot | Knowledge | Promotion | Cross-Feed |
+|-----------|-------|-------------|-----------|-----------|------------|
+- [per-discipline row with usage signals]
+- [interpretation: healthy / formalized but dead / alive but unformalized / dead]
 
 #### Knowledge Stores
 - [per-directory: file count, last updated, relevance to current stack]
