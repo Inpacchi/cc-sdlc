@@ -97,6 +97,63 @@ disciplines/
 2. Design skill definitions from the validated patterns
 3. Parking lot entries remain as history — mark them `Promoted → [target file]`
 
+## Creating a New Discipline
+
+Disciplines are not created speculatively. They emerge from real work when a recurring capability doesn't fit any existing discipline.
+
+### When to create
+
+A new discipline is warranted when **all three** conditions are met:
+
+1. **Recurring capability.** You've done this type of work on 2+ deliverables and expect to do it again.
+2. **No existing home.** The insights don't naturally fit in any current discipline's parking lot. If they do fit (even loosely), add them to the existing discipline instead of creating a new one.
+3. **Distinct agent role.** The work would be dispatched to a different type of agent than any existing discipline's agents. If the same architect or developer handles it, it's probably a sub-concern of an existing discipline, not a new one.
+
+**Anti-pattern: premature discipline creation.** Creating a discipline for a one-time concern (e.g., "migration discipline" for a single database migration) adds overhead without value. If it turns out to be recurring, you can always create it later. The parking lot for the closest existing discipline is the right interim home.
+
+### Minimum viable discipline
+
+A new discipline starts at Level 1 (Initial) and requires exactly:
+
+1. **Discipline file** — `disciplines/<name>.md` with:
+   - Status line (`Parking lot — [brief description]`)
+   - Scope section (what capability this discipline covers)
+   - Parking lot section (empty, ready for entries)
+
+2. **Tracker entry** — add a row to the Process Maturity Tracker in `disciplines/process-improvement.md` at Level 1
+
+3. **Manifest entry** — add the file path to `skeleton/manifest.json` under `source_files.disciplines`
+
+4. **Hump chart row** — add the discipline to the intensity chart in this README (estimate where it peaks across phases)
+
+That's it. No knowledge store directory, no agent-context-map entry, no skill. Those come when the discipline reaches Level 2.
+
+### Lifecycle
+
+```
+Recurring capability observed
+  ↓
+Check: does it fit an existing discipline? → yes → add to that parking lot
+  ↓ no
+Create discipline file (Level 1)
+  ↓
+Capture insights during work (parking lot fills)
+  ↓
+Triage entries → some marked [READY TO PROMOTE]
+  ↓
+Promote to knowledge store → create knowledge/<name>/ (Level 2)
+  ↓
+Wire agents via agent-context-map
+  ↓
+Package as skill (optional, when patterns are stable enough)
+```
+
+### What NOT to do
+
+- Don't create a discipline and a knowledge store at the same time. The parking lot must accumulate and be triaged first. Jumping to structured YAML without validated insights produces speculative knowledge.
+- Don't create a discipline to "own" work that's currently handled fine by existing disciplines. The question is not "could this have its own discipline?" but "is the current home insufficient?"
+- Don't add a discipline to the hump chart at high intensity across all phases. New disciplines start narrow — they peak in 1-2 phases and are silent elsewhere. Intensity grows with maturity.
+
 ## Relationship to Existing SDLC
 
 | Existing | Discipline view |
