@@ -107,7 +107,7 @@ Group the changed cc-sdlc files by migration strategy:
 | **Skills** | `skills/*/SKILL.md` | Content-merge: update framework sections, preserve project customizations |
 | **Agent template** | `agents/AGENT_TEMPLATE.md` | Direct copy (no project customizations) |
 | **Agent suggestions** | `agents/AGENT_SUGGESTIONS.md` | Direct copy (no project customizations) |
-| **Auditor agent** | `agents/sdlc-compliance-auditor.md` | Content-merge: update audit logic, preserve project-specific memory paths |
+| **Audit skill** | `skills/sdlc-audit/SKILL.md` + `references/` | Content-merge: update audit methodology, preserve project-specific additions |
 | **Knowledge YAMLs** | `knowledge/**/*.yaml` | Direct copy with `spec_relevant` preservation (§2.1b). Check for moved/deleted files (§2.1a) |
 | **Process docs** | `process/*.md` | Direct copy (framework-level) |
 | **Templates** | `templates/*.md` | Direct copy (framework-level) |
@@ -217,15 +217,19 @@ Discipline files have:
 5. Add any new seeded insights from cc-sdlc that the project doesn't have — but do NOT overwrite triage markers on existing entries (the project may have triaged differently than the source repo)
 6. **Preserve the Process Maturity Tracker table as-is.** The tracker is delimited by `<!-- PROJECT-TRACKER-START -->` and `<!-- PROJECT-TRACKER-END -->` markers. Everything between these markers (including the table and last-updated note) reflects the project's assessed levels — never overwrite it. Update the framework sections *outside* the markers (level definitions, assessment procedure) to match cc-sdlc. If the downstream file lacks these markers, treat the entire `### Process Maturity Tracker` section through the next heading as project data and preserve it.
 
-### 2.4 Content-Merge: Auditor Agent
+### 2.4 Content-Merge: Audit Skill
 
-The `sdlc-compliance-auditor.md` has framework audit logic that must stay current:
+The `sdlc-audit` skill has framework audit methodology in `SKILL.md` and `references/` that must stay current:
 
-1. Read the cc-sdlc source version
-2. Read the project's version
-3. Update all numbered sections (Core Responsibilities 1-9, severity levels, guiding principles) — **verbatim from cc-sdlc source, not rephrased**
-4. Preserve the project's agent memory path
-5. Preserve any project-specific audit dimensions added by the project
+1. Read the cc-sdlc source versions of all audit skill files
+2. Read the project's versions
+3. Update SKILL.md workflow, modes, and reference pointers — **verbatim from cc-sdlc source, not rephrased**
+4. Update `references/compliance-methodology.md` audit dimensions and report format
+5. Update `references/improvement-methodology.md` extraction patterns and categorization
+6. Update `references/session-reading.md` JSONL format reference
+7. Preserve any project-specific audit dimensions or improvement categories added by the project
+
+**Migration note:** If the project still has `agents/sdlc-compliance-auditor.md`, remove it and install the `sdlc-audit` skill instead. All agent functionality is absorbed by the skill.
 
 ### 2.5 Content-Merge Verification Gate
 
@@ -247,7 +251,7 @@ The `sdlc-compliance-auditor.md` has framework audit logic that must stay curren
    - Project-specific build commands, agent names, and examples are intact
    - Framework sections were updated (compare against cc-sdlc source)
 
-4. **Auditor agent** — verify the project's memory path was preserved (not overwritten with cc-sdlc's path)
+4. **Audit skill** — verify all reference files were updated and any project-specific audit dimensions preserved
 
 **Gate rule:** If any check fails, fix the merge before continuing. Do not proceed to Phase 3 with corrupted content — agent wiring decisions depend on accurate discipline and knowledge state.
 
@@ -350,20 +354,17 @@ The project's `CLAUDE.md` contains CLAUDE-SDLC.md content — skill names, proce
 
 ### 4.4 Post-Migration Audit
 
-Dispatch the `sdlc-compliance-auditor` agent directly — do not ask the user to invoke it separately. The auditor's §7 (Migration Integrity) checks manifest version, framework file completeness, content-merge correctness, and stale references to removed features.
+Run the `sdlc-audit` skill in compliance mode directly — do not ask the user to invoke it separately. The compliance methodology's Dimension 7 (Migration Integrity) checks manifest version, framework file completeness, content-merge correctness, and stale references to removed features.
 
-**Dispatch prompt:**
+**Run:** `/sdlc-audit compliance` with focus on migration integrity:
+- All framework files match the cc-sdlc source at [new commit hash]
+- No orphaned files from previous versions remain
+- Agent-context-map paths all resolve
+- Content-merge preserved project data (tracker levels, parking lot entries, skill customizations)
+- CLAUDE-SDLC.md references in CLAUDE.md are valid
+- If project had `agents/sdlc-compliance-auditor.md`, verify it was removed and `sdlc-audit` skill installed
 
-> Run a post-migration compliance audit. Focus on §7 (Migration Integrity) — verify:
-> - All framework files match the cc-sdlc source at [new commit hash]
-> - No orphaned files from previous versions remain
-> - Agent-context-map paths all resolve
-> - Content-merge preserved project data (tracker levels, parking lot entries, skill customizations)
-> - CLAUDE-SDLC.md references in CLAUDE.md are valid
->
-> Report findings as WARNING/INFO. This is a migration from [old hash] to [new hash].
-
-If the auditor returns findings:
+If the audit returns findings:
 - **WARNING or higher:** Fix before continuing. Re-run the auditor after fixes.
 - **INFO only:** Log in the migration report, continue to §4.5.
 
@@ -439,7 +440,7 @@ After migration, update `.sdlc-manifest.json` with the new source version:
 
 ## Integration
 
-- **Feeds into:** `sdlc-compliance-auditor` (post-migration audit)
+- **Feeds into:** `sdlc-audit` skill (post-migration compliance audit)
 - **Depends on:** cc-sdlc source repo (reads via git), `.sdlc-manifest.json` (version tracking)
 - **Uses:** `AskUserQuestion` (changelog review gate, user confirmation)
 - **Related:** `sdlc-initialize` (first-time setup — use that, not this, for new projects)

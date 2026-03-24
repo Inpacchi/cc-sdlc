@@ -5,7 +5,7 @@ description: >
   "Let's catalog our ad hoc work", "Let's catch up the docs", "What have we done since D[last]?",
   "Let's rejoin the process", "Reconcile our recent work", or any similar phrase indicating
   they want to bring informal commits back into the tracked process. Do NOT trigger for
-  compliance audits — those use the sdlc-compliance-auditor agent.
+  compliance audits — those use the sdlc-audit skill.
 ---
 
 # SDLC Reconciliation

@@ -126,10 +126,10 @@ Step 4 is wrong. After step 3, the correct action is to surface the scope assess
 ### Process Changelog
 When you make changes to SDLC process files (skills, agents, process docs, CLAUDE-SDLC.md, disciplines, knowledge), update `ops/sdlc/process/sdlc_changelog.md` **immediately after the change, in the same step**. Do not defer changelog updates to a later step, a separate commit, or a future session. Every process decision change — new rules, classification changes, workflow adjustments, guard additions — must have a changelog entry written before moving on to other work. The changelog captures *why* process changes were made — context that git log alone doesn't preserve. Don't backdate entries for changes made in prior sessions.
 
-### Compliance Auditing
-Run `"Let's run an SDLC compliance audit"` periodically (~every 2-4 weeks or at each version bump). See `ops/sdlc/process/compliance_audit.md`.
+### SDLC Auditing
+Run `/sdlc-audit` periodically (~every 2-4 weeks or at each version bump) for compliance checks, or `/sdlc-audit improve <session>` to extract process improvements from completed sessions. See `ops/sdlc/process/compliance_audit.md`.
 
-**Presenting audit results:** When the auditor returns, present results to CD in this standardized format:
+**Presenting audit results:** Present results to CD in this standardized format:
 
 ```
 [Audit Type]: [Score]/10 — [Verdict]
@@ -162,7 +162,8 @@ Rules:
 | "Initialize SDLC in this project" | Invokes `sdlc-initialize` — detects greenfield vs retrofit, walks through full framework setup |
 | "Let's catalog our ad hoc work" | Invokes the `sdlc-reconcile` skill — reconciles untracked ad hoc commits back into the deliverable catalog |
 | "Let's organize the chronicles" | Archive completed deliverables from `current_work/` to `chronicle/`. See `ops/sdlc/process/chronicle_organization.md` |
-| "Let's run an SDLC compliance audit" | Audit spec coverage, chronicle freshness, index completeness. See `ops/sdlc/process/compliance_audit.md` |
+| `/sdlc-audit` | Compliance audit — deliverable integrity, knowledge layer health, migration correctness. Invokes `sdlc-audit` skill |
+| `/sdlc-audit improve` | Improvement audit — analyze current session or past session/commits for process gaps. Invokes `sdlc-audit` skill |
 | "Let's update the SDLC" | Propose process improvement. See `ops/sdlc/process/sdlc_changelog.md` |
 | "Migrate my SDLC framework" | Apply cc-sdlc upstream updates while preserving project customizations. Invokes `sdlc-migrate` skill |
 | "Ingest these transcripts/articles" | Bulk-import external knowledge into disciplines and knowledge stores. Invokes `sdlc-ingest` skill |

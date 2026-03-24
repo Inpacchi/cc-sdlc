@@ -167,12 +167,12 @@
       "skills/sdlc-initialize/SKILL.md",
       "skills/sdlc-migrate/SKILL.md",
       "skills/sdlc-ingest/SKILL.md",
-      "skills/sdlc-playbook-generate/SKILL.md"
+      "skills/sdlc-playbook-generate/SKILL.md",
+      "skills/sdlc-audit/SKILL.md"
     ],
     "agents": [
       "agents/AGENT_TEMPLATE.md",
-      "agents/AGENT_SUGGESTIONS.md",
-      "agents/sdlc-compliance-auditor.md"
+      "agents/AGENT_SUGGESTIONS.md"
     ],
     "plugins": [
       "plugins/README.md",

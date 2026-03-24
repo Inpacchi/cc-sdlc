@@ -231,7 +231,7 @@ Update `ops/sdlc/process/sdlc_changelog.md`:
 - **Feeds into:** Planning skills (`sdlc-plan`, `sdlc-lite-plan`) — playbooks pre-seed agent selection and knowledge context
 - **Uses:** Session JSONL files, git log, existing playbook template, knowledge stores (for cross-referencing)
 - **Complements:** `sdlc-ingest` imports external knowledge; this skill imports internal session knowledge
-- **Downstream:** The compliance auditor checks playbook freshness as part of knowledge layer health audits
+- **Downstream:** `/sdlc-audit` checks playbook freshness as part of knowledge layer health audits
 
 ## Additional Resources
 

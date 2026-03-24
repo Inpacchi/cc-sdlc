@@ -19,7 +19,7 @@ The framework is designed to be adopted incrementally — start with the core pr
 | `knowledge/` | Structured YAML knowledge stores — patterns, methodologies, test strategies |
 | `playbooks/` | Recipes for recurring task types (add your own as patterns emerge) |
 | `skills/` | Claude Code skills for SDLC workflow automation |
-| `agents/` | Agent definitions — `sdlc-compliance-auditor` + `AGENT_TEMPLATE.md` for adding your own |
+| `agents/` | Agent definitions — `AGENT_TEMPLATE.md` for adding your own project agents |
 | `skeleton/` | Directory structure manifest for project initialization |
 | `plugins/` | Plugin setup guides (context7 is required; oberskills, design-for-ai are optional) |
 
@@ -54,7 +54,9 @@ Idea → Spec (CD approves) → Plan (reviewed) → Execute → Review → Resul
 | "Execute the plan" | Invokes `sdlc-execute` — implement + review + result |
 | "Let's catalog our ad hoc work" | Invokes `sdlc-reconcile` — reconciles untracked commits |
 | "Let's organize the chronicles" | Invokes `sdlc-archive` — moves completed work to archive |
-| "Let's run an SDLC compliance audit" | Invokes `sdlc-compliance-auditor` agent |
+| `/sdlc-audit` | Compliance audit — deliverable integrity, knowledge health, migration correctness |
+| `/sdlc-audit improve <session>` | Improvement audit — analyze sessions/commits for process improvements |
+| "Make a playbook from that session" | Invokes `sdlc-playbook-generate` — session-to-playbook extraction |
 
 ## Core Concepts
 

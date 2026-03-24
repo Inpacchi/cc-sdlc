@@ -10,7 +10,7 @@ A compliance audit compares a project's current documentation structure and prac
 - When onboarding a new team member or agent who notices inconsistencies
 - After a large chronicle organization pass
 
-**Trigger:** Say **"Let's run an SDLC compliance audit"**
+**Trigger:** Run `/sdlc-audit` (or `/sdlc-audit compliance` explicitly)
 
 ---
 

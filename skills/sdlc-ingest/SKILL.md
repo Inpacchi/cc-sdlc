@@ -291,4 +291,4 @@ Update `ops/sdlc/process/sdlc_changelog.md` with the ingestion event:
 - **Uses:** file reading, existing knowledge stores (for deduplication), discipline files (for parking lot placement)
 - **Complements:** discipline capture protocol (organic, per-session) — this skill handles bulk external import
 - **Does NOT replace:** organic discipline capture. Work-session insights still flow through the capture protocol in skills like sdlc-execute and sdlc-idea. Ingestion accelerates knowledge store population from curated external sources.
-- **Downstream:** after ingestion, the compliance auditor can assess freshness and coverage of the new knowledge entries during its regular audit cycle
+- **Downstream:** after ingestion, `/sdlc-audit` can assess freshness and coverage of the new knowledge entries during its regular compliance audit cycle

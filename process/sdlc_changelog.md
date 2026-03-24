@@ -34,6 +34,27 @@ Each entry contains:
 
 ---
 
+## 2026-03-23: Replace `sdlc-compliance-auditor` Agent with Unified `sdlc-audit` Skill
+
+**Origin:** CD identified that auditing should be a skill (invoked with `/sdlc-audit`) rather than an agent, and that the SDLC needed an improvement audit capability alongside compliance — analyzing sessions and commits for process gaps that feed into the self-improving knowledge base.
+
+**What happened:** The compliance auditor agent was a capable but inconsistent interface — it was the only SDLC function that lived as an agent rather than a skill. The user's workflow of analyzing past sessions for SDLC improvements had no home. A unified `sdlc-audit` skill now handles both compliance auditing (migrated from the agent) and improvement auditing (new capability) with flexible input modes: current session, fed session, or fed commits.
+
+**Changes made:**
+
+1. **`skills/sdlc-audit/SKILL.md`** — New unified skill with two modes (compliance + improve) and flexible input resolution. Lean SKILL.md (~1,800 words) with references for detailed methodology.
+2. **`skills/sdlc-audit/references/compliance-methodology.md`** — Full 9-dimension compliance methodology migrated from `agents/sdlc-compliance-auditor.md`. All audit logic preserved: catalog integrity, artifact traceability, untracked work, knowledge freshness, process health, knowledge layer (6a-6g), migration integrity, agent memory mining, recommendation follow-through.
+3. **`skills/sdlc-audit/references/improvement-methodology.md`** — New improvement audit methodology: process friction signals, knowledge gap signals, skill deficiency signals, structural gap signals, commit pattern analysis, categorization framework, and change proposal format.
+4. **`skills/sdlc-audit/references/session-reading.md`** — JSONL message type reference and extraction patterns shared by both modes.
+5. **`skeleton/manifest.json`** — Added `sdlc-audit` to skills, removed `sdlc-compliance-auditor` from agents.
+6. **`CLAUDE-SDLC.md`** — Replaced compliance auditing section and commands table entries with `/sdlc-audit` and `/sdlc-audit improve`.
+
+**Retiring:** `agents/sdlc-compliance-auditor.md` — all functionality absorbed by the skill. The agent file remains in the source repo for reference but is no longer installed to target projects.
+
+**Rationale:** Skills are the consistent interface for all SDLC functions. The improvement audit creates a self-improving loop: sessions produce data → improvement audit extracts signals → process changes are applied → future sessions benefit. Compliance and improvement share infrastructure (session reading, git correlation) but serve different purposes — compliance checks structure, improvement analyzes behavior.
+
+---
+
 ## 2026-03-23: Add `sdlc-playbook-generate` Skill
 
 **Origin:** CD identified that completed sessions contain valuable process knowledge that isn't being captured. Specific example: a Slack bot integration session leveraged existing codebase patterns (90% of the way) but missed nuances in database setup, Railway service configuration, and env variable management that only surfaced during execution. A playbook would have caught those gaps.

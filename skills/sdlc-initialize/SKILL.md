@@ -236,7 +236,7 @@ Required files (commonly missed):
 [ ] .claude/skills/sdlc-migrate/SKILL.md
 [ ] .claude/agents/AGENT_TEMPLATE.md
 [ ] .claude/agents/AGENT_SUGGESTIONS.md
-[ ] .claude/agents/sdlc-compliance-auditor.md
+[ ] .claude/skills/sdlc-audit/SKILL.md
 [ ] ops/sdlc/plugins/README.md
 [ ] ops/sdlc/plugins/context7-setup.md
 [ ] ops/sdlc/plugins/lsp-setup.md
@@ -308,7 +308,7 @@ Present the proposed roster to CD via `AskUserQuestion`:
 2. Specialized roles (db-engineer, security, performance)
 3. Cross-cutting roles (architect, sdet)
 
-The `sdlc-compliance-auditor` is already installed by setup.sh — do not recreate it.
+The `sdlc-audit` skill is already installed by setup.sh — do not recreate it as an agent.
 
 **Pass stack context to the agent creation skill.** Each agent's system prompt must reference the project's actual technologies, not generic placeholders. Include in the creation prompt:
 - Which packages/directories the agent owns

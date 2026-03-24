@@ -108,4 +108,4 @@ Append each insight or GAP entry to the relevant `ops/sdlc/disciplines/*.md` par
 - **<3 minutes total.** Structured gap detection: ~30s. Freeform scan: ~2 minutes. If a structured comparison would exceed the time budget, skip it and note "deferred to auditor."
 - **One insight per bullet.** Keep entries atomic so they can be triaged independently.
 - **The orchestrator writes these directly.** This is process documentation, not domain content — the Manager Rule does not apply. Do not dispatch an agent to write a parking lot entry.
-- **Auditor triage carve-out.** The compliance auditor may apply low-risk triage markers (unmarked → `[NEEDS VALIDATION]`, `[NEEDS VALIDATION]` → `[DEFERRED]`) directly per its triage authority matrix in §6c. High-risk transitions (any → `[READY TO PROMOTE]`, any → `Promoted →`) remain CD-only.
+- **Audit triage carve-out.** The `sdlc-audit` skill (compliance mode) may apply low-risk triage markers (unmarked → `[NEEDS VALIDATION]`, `[NEEDS VALIDATION]` → `[DEFERRED]`) directly per its triage authority matrix in the compliance methodology §6c. High-risk transitions (any → `[READY TO PROMOTE]`, any → `Promoted →`) remain CD-only.

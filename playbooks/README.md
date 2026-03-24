@@ -23,7 +23,7 @@ Each playbook includes:
 
 ## Freshness
 
-Playbooks go stale. Each playbook declares its `validation_triggers` — when any of those conditions occur, the playbook should be re-validated. The SDLC compliance auditor checks playbook freshness as part of knowledge layer health audits.
+Playbooks go stale. Each playbook declares its `validation_triggers` — when any of those conditions occur, the playbook should be re-validated. The `sdlc-audit` skill checks playbook freshness as part of knowledge layer health audits.
 
 ## Available playbooks
 
