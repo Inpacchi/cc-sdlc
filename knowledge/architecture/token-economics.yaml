@@ -12,6 +12,9 @@ description: >
   Architecture decisions must account for what is feasible within token budgets,
   especially for knowledge retrieval, agent dispatch, and large-scale refactors.
 spec_relevant: false
+project_applicability:
+  relevant_when: "Always relevant — governs the cc-sdlc agent system itself"
+  action_if_irrelevant: keep
 
 # ─────────────────────────────────────────────
 # Core Principle

@@ -11,6 +11,9 @@ description: >
   archetype to get a head start on what to compare. Dimensions are refined
   during each analysis — novel dimensions discovered are added back here.
 spec_relevant: false
+project_applicability:
+  relevant_when: "Project is a product with competitors (SaaS, app, platform)"
+  action_if_irrelevant: remove
 
 # ─────────────────────────────────────────────
 # UI Component Archetypes

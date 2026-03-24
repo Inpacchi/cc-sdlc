@@ -11,6 +11,9 @@ description: >
   run collaboratively: the AI asks the questions, the human provides
   the context, and together they identify improvement opportunities.
 spec_relevant: false
+project_applicability:
+  relevant_when: "Project has a persistent data model (database, document store)"
+  action_if_irrelevant: remove
 
 sections:
   - id: people-and-orgs

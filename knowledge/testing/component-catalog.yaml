@@ -3,6 +3,9 @@
 # Last updated: 2026-03-15
 
 spec_relevant: false
+project_applicability:
+  relevant_when: "Project uses MUI DataGrid or similar complex UI components"
+  action_if_irrelevant: customize
 
 mui_datagrid:
   description: "MUI DataGrid v8 (@mui/x-data-grid) — core grid component"

@@ -13,6 +13,9 @@ description: >
   a complete index type decision matrix, bloat thresholds and maintenance guidance,
   and statistics drift as the most common invisible root cause category.
 spec_relevant: false
+project_applicability:
+  relevant_when: "Project uses a relational database (Postgres, MySQL, SQLite)"
+  action_if_irrelevant: remove
 
 # ─────────────────────────────────────────────
 # Performance Target Checklist

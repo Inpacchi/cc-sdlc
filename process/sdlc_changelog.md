@@ -34,6 +34,22 @@ Each entry contains:
 
 ---
 
+## 2026-03-23: Add `project_applicability` Metadata to Knowledge Stores
+
+**Origin:** CD review of whether knowledge stores shipped with cc-sdlc are universally applicable or project-specific. Some stores (payment-state-machine, ml-system-design, MUI-specific testing) are only relevant to certain project types.
+
+**What happened:** Knowledge stores were installed wholesale during initialization with no structured way to assess which ones applied to the target project. Phase 6a of `sdlc-initialize` had a static list of "stack-agnostic" files, but no mechanism for CD to review and prune irrelevant stores.
+
+**Changes made:**
+
+1. **All `knowledge/**/*.yaml` files** — Added `project_applicability` block with `relevant_when` (condition string) and `action_if_irrelevant` (keep/customize/remove). Each file now self-describes when it applies.
+2. **`skills/sdlc-initialize/SKILL.md` (Phase 6a)** — Replaced static file list with a structured relevance assessment that reads each file's `project_applicability`, compares against the D1 spec, and presents a keep/customize/remove table to CD for confirmation.
+3. **`knowledge/README.md`** — Documented the new `project_applicability` field in the metadata table and added a dedicated section explaining the field, its sub-fields, and the three `action_if_irrelevant` values.
+
+**Rationale:** Projects vary widely — a CLI tool doesn't need payment FSM patterns, and a Django project doesn't need MUI DataGrid test strategies. Embedding relevance conditions in the files themselves makes the assessment portable and auditable. The three-way action (keep/customize/remove) avoids the false binary of "keep everything" vs "delete aggressively" — some files have useful structures worth rewriting for a different stack.
+
+---
+
 ## 2026-03-23: Replace `sdlc-compliance-auditor` Agent with Unified `sdlc-audit` Skill
 
 **Origin:** CD identified that auditing should be a skill (invoked with `/sdlc-audit`) rather than an agent, and that the SDLC needed an improvement audit capability alongside compliance — analyzing sessions and commits for process gaps that feed into the self-improving knowledge base.

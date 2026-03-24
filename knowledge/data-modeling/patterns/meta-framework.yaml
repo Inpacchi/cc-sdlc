@@ -11,6 +11,9 @@ description: >
   generalization spectrum, and the human dimensions of getting organizations to
   adopt common models.
 spec_relevant: false
+project_applicability:
+  relevant_when: "Project has a persistent data model (database, document store)"
+  action_if_irrelevant: remove
 
 three_types_of_reusability:
   description: >

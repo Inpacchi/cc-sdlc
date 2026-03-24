@@ -3,6 +3,9 @@
 # Last updated: 2026-03-15
 
 spec_relevant: false
+project_applicability:
+  relevant_when: "Project uses Playwright CLI for browser testing"
+  action_if_irrelevant: customize
 
 playwright_cli:
   version: "1.59.0-alpha"

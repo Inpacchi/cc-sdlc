@@ -11,6 +11,9 @@ description: >
   that help the product owner define what to build. Works for UI components
   (widget libraries), app features (SaaS capabilities), and platform capabilities.
 spec_relevant: false
+project_applicability:
+  relevant_when: "Project is a product with competitors (SaaS, app, platform)"
+  action_if_irrelevant: remove
 
 # ─────────────────────────────────────────────
 # Phase 1: Discovery — Identify what to compare against

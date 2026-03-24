@@ -14,6 +14,9 @@ description: >
   estimates that feed back into scope decisions. Works across stacks (Rails,
   Phoenix, Django, Node) with stack-specific patterns in technology-patterns.yaml.
 spec_relevant: false
+project_applicability:
+  relevant_when: "Project has a backend service (API server, worker, microservice)"
+  action_if_irrelevant: remove
 
 # ─────────────────────────────────────────────
 # Phase 1: Inventory — What does the backend have?

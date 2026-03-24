@@ -12,6 +12,9 @@ description: >
   simplicity-first default, game/domain-agnostic model design, and training data strategy.
   These principles apply regardless of model type, domain, or application stack.
 spec_relevant: false
+project_applicability:
+  relevant_when: "Project trains, deploys, or integrates ML/AI models (not just calling LLM APIs)"
+  action_if_irrelevant: remove
 
 # ─────────────────────────────────────────────
 # Confidence Gates

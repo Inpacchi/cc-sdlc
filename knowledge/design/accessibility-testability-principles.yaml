@@ -12,6 +12,9 @@ description: >
   Components that render meaningful accessibility trees are inherently more testable.
   Investing in one yields both.
 spec_relevant: false
+project_applicability:
+  relevant_when: "Project has a user-facing UI (web, mobile, desktop)"
+  action_if_irrelevant: remove
 
 # ─────────────────────────────────────────────
 # Core Principle: A11y and Testability Are One Concern

@@ -10,6 +10,9 @@ description: >
   markdown display, git versioning, and fast iteration. These are low-fidelity
   by design — they show structure and arrangement, not styling or pixel detail.
 spec_relevant: false
+project_applicability:
+  relevant_when: "Always relevant — used for spec wireframes and architecture diagrams"
+  action_if_irrelevant: keep
 
 # ─────────────────────────────────────────────
 # Box Drawing Characters

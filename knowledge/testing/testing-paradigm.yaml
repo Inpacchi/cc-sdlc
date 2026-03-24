@@ -10,6 +10,9 @@ description: >
   the right test type. The core insight: if you need mocks, your code is poorly
   structured. Separate I/O from logic, and unit tests become trivial.
 spec_relevant: false
+project_applicability:
+  relevant_when: "Always relevant — all projects test"
+  action_if_irrelevant: keep
 
 # ─────────────────────────────────────────────
 # Functional Core, Imperative Shell

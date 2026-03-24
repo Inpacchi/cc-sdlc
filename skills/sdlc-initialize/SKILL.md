@@ -350,14 +350,54 @@ This is mechanical — the orchestrator does this directly. The agent filenames 
 
 **Now that agents exist, dispatch them for knowledge work.**
 
-**6a. Identify which upstream knowledge files to keep.**
+**6a. Assess knowledge store relevance.**
 
-Read `ops/sdlc/knowledge/` (installed by setup.sh). Stack-agnostic files apply to most projects:
-- `architecture/api-design-methodology.yaml`
-- `architecture/debugging-methodology.yaml`
-- `architecture/security-review-taxonomy.yaml`
-- All `data-modeling/` files
-- All `testing/` files (testing-paradigm, tool-patterns, etc.)
+Read every YAML file in `ops/sdlc/knowledge/` (installed by setup.sh). Each file has a `project_applicability` block:
+
+```yaml
+project_applicability:
+  relevant_when: "condition describing when this store applies"
+  action_if_irrelevant: keep | customize | remove
+```
+
+For each file, compare its `relevant_when` condition against the D1 spec (tech stack, domain, architecture). Classify each as:
+
+- **Keep** — condition matches the project, or `action_if_irrelevant: keep` (always relevant)
+- **Customize** — condition doesn't match but the file has a useful structure; replace content with project-appropriate equivalents (e.g., swap MUI DataGrid patterns for your component library)
+- **Remove** — condition doesn't match and the content isn't adaptable
+
+Present the assessment to CD:
+
+```
+KNOWLEDGE RELEVANCE ASSESSMENT
+Based on the D1 spec, here is how each knowledge store maps to this project:
+
+Keep (always relevant or matches spec):
+  [x] debugging-methodology — Always relevant
+  [x] security-review-taxonomy — Always relevant
+  [x] agent-communication-protocol — Governs cc-sdlc agents
+  [x] typescript-patterns — Project uses TypeScript
+  ...
+
+Customize (useful structure, replace content for your stack):
+  [~] testing/tool-patterns — Currently Playwright CLI; replace with [your test tool]
+  [~] testing/timing-defaults — Currently React/MUI; replace with [your components]
+  [~] testing/component-catalog — Currently MUI DataGrid; replace with [your components]
+  ...
+
+Remove (not applicable to this project):
+  [ ] payment-state-machine — No payment features in spec
+  [ ] ml-system-design — No ML/AI model training in spec
+  [ ] pipeline-design-patterns — No ETL/batch pipelines in spec
+  ...
+```
+
+Use `AskUserQuestion` to let CD confirm. CD may override any classification (e.g., "keep payments — we'll add Stripe in Q2").
+
+**Actions after CD confirms:**
+- **Keep** files: no changes needed
+- **Customize** files: note them for Phase 6c (agent will rewrite content for the project's stack)
+- **Remove** files: delete them from `ops/sdlc/knowledge/` and remove their entries from `agent-context-map.yaml`
 
 **6b. Identify stack-specific knowledge gaps.**
 

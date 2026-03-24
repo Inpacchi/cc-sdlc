@@ -11,6 +11,9 @@ description: >
   Designed to prevent premature fixes, enforce evidence-based reasoning, and produce
   postmortems that make the next investigation cheaper. Applies to any stack or domain.
 spec_relevant: false
+project_applicability:
+  relevant_when: "Always relevant — all projects debug"
+  action_if_irrelevant: keep
 
 # ─────────────────────────────────────────────
 # Phase 1: Reproduce

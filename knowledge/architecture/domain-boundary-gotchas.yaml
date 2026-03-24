@@ -11,6 +11,9 @@ description: >
   into another's. These gotchas help the orchestrator recognize boundary crossings
   before they happen and dispatch the correct agents.
 spec_relevant: false
+project_applicability:
+  relevant_when: "Always relevant — governs multi-agent orchestration"
+  action_if_irrelevant: keep
 
 gotchas:
   - id: frontend-triggers-api-change

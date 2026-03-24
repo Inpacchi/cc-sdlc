@@ -11,6 +11,9 @@ description: >
   the current state (not a blank slate), produces artifacts appropriate to what's
   being modeled, and ensures design continuity with the existing app.
 spec_relevant: false
+project_applicability:
+  relevant_when: "Project has a user-facing UI (web, mobile, desktop)"
+  action_if_irrelevant: remove
 
 # ─────────────────────────────────────────────
 # Phase 1: Context Loading — Understand what exists

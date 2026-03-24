@@ -17,6 +17,9 @@ description: >
   customer health score composite model, tiered playbook system, churn early-warning,
   and QBR cadence.
 spec_relevant: false
+project_applicability:
+  relevant_when: "Project is a product with users (SaaS, app, platform, tool)"
+  action_if_irrelevant: remove
 
 # ─────────────────────────────────────────────
 # Feature Prioritization Frameworks

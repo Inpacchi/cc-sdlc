@@ -13,6 +13,9 @@ description: >
   bulk operation contracts, SDK packaging strategy, and the mapping process from
   business capabilities to REST resources.
 spec_relevant: false
+project_applicability:
+  relevant_when: "Project exposes or consumes APIs (REST, GraphQL, gRPC)"
+  action_if_irrelevant: remove
 
 # ─────────────────────────────────────────────
 # REST Maturity Model

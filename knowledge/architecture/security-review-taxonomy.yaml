@@ -13,6 +13,9 @@ description: >
   common failure modes to look for. Designed to ensure no category is skipped during
   a review and to produce actionable, prioritized findings.
 spec_relevant: false
+project_applicability:
+  relevant_when: "Always relevant — all projects have security concerns"
+  action_if_irrelevant: keep
 
 # ─────────────────────────────────────────────
 # Severity Scale

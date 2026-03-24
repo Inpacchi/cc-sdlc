@@ -13,6 +13,9 @@ description: >
   the mocking-is-a-code-smell stance, and structural patterns that make code
   inherently easier to test, review, and maintain.
 spec_relevant: false
+project_applicability:
+  relevant_when: "Always relevant — applies to all codebases"
+  action_if_irrelevant: keep
 
 # ─────────────────────────────────────────────
 # Testability Is a Code Quality Concern

@@ -14,6 +14,9 @@ description: >
   reconstruction, and the peer relationship between Five Whys, Fishbone,
   and Fault Tree as complementary root cause methods.
 spec_relevant: false
+project_applicability:
+  relevant_when: "Project has multiple services, queues, or distributed components that can cascade-fail"
+  action_if_irrelevant: remove
 
 # ─────────────────────────────────────────────
 # Cascade Failure Taxonomy

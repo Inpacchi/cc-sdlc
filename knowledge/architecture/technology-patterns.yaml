@@ -12,6 +12,9 @@ description: >
   know what to look for in the codebase. Each pattern includes: what to
   look for, what it enables, and typical effort to add if missing.
 spec_relevant: false
+project_applicability:
+  relevant_when: "Project has a backend service (API server, worker, microservice)"
+  action_if_irrelevant: remove
 
 # ─────────────────────────────────────────────
 # Search & Retrieval

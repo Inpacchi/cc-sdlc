@@ -17,6 +17,9 @@ description: >
   feature flag lifecycle, pipeline template taxonomy, ChatOps as a deployment surface,
   supply chain security gates, and Kubernetes-grade safety controls.
 spec_relevant: false
+project_applicability:
+  relevant_when: "Always relevant — all projects deploy"
+  action_if_irrelevant: keep
 
 # ─────────────────────────────────────────────
 # DORA Metrics Benchmarks

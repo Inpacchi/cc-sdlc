@@ -46,6 +46,7 @@ All knowledge YAML files share a common metadata header. While domain-specific c
 | `name` | Recommended | string | Human-readable name |
 | `description` | Recommended | string | What this knowledge covers |
 | `spec_relevant` | Yes | boolean | Whether this knowledge is loaded during spec writing. Default: `false`. |
+| `project_applicability` | Yes | object | When this store is relevant and what to do if it isn't. See below. |
 | `last_updated` | No | date | When the content was last modified |
 | `category` | No | string | Discipline category |
 
@@ -72,6 +73,31 @@ Controls whether a knowledge file is injected into agent dispatch prompts during
 - `coding/typescript-patterns.yaml` — code patterns matter at implementation, not spec
 - `testing/tool-patterns.yaml` — test tooling is plan/execution detail
 - `architecture/deployment-patterns.yaml` — deployment is post-implementation
+
+### `project_applicability` Field
+
+Controls whether a knowledge store is relevant to a given project and what to do during initialization if it isn't. Used by `sdlc-initialize` Phase 6a to present a relevance assessment to CD.
+
+```yaml
+project_applicability:
+  relevant_when: "Project uses TypeScript"
+  action_if_irrelevant: remove
+```
+
+**Fields:**
+
+| Sub-field | Type | Purpose |
+|-----------|------|---------|
+| `relevant_when` | string | Human-readable condition describing when this store applies. Starts with "Always relevant" for core stores, or describes a specific tech/domain condition. |
+| `action_if_irrelevant` | enum | What to do if the condition doesn't match: `keep`, `customize`, or `remove`. |
+
+**`action_if_irrelevant` values:**
+
+- `keep` — Always retain this file regardless of project type. Used for cc-sdlc infrastructure files (agent protocols, debugging, testing paradigm) and universal methodologies.
+- `customize` — The file's structure is useful but its content is stack-specific. During initialization, the agent rewrites the content for the project's actual stack (e.g., swap Playwright CLI patterns for Cypress patterns).
+- `remove` — The file is not applicable. Delete it from the project's knowledge directory and remove its entry from `agent-context-map.yaml`.
+
+**During initialization:** `sdlc-initialize` Phase 6a reads every knowledge file's `project_applicability`, compares against the D1 spec, and presents a table to CD with keep/customize/remove recommendations. CD confirms or overrides before any files are deleted.
 
 ## Setup: Wiring Agents to Knowledge
 

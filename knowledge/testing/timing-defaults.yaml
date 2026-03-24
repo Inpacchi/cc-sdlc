@@ -3,6 +3,9 @@
 # Last updated: 2026-03-13
 
 spec_relevant: false
+project_applicability:
+  relevant_when: "Project uses Playwright CLI and has React/MUI components"
+  action_if_irrelevant: customize
 
 # Note: Playwright CLI waits for actionability automatically (element visible, enabled, stable).
 # These timings are for explicit waits when auto-wait is insufficient.

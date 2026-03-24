@@ -5,6 +5,9 @@
 
 id: people-and-organizations
 spec_relevant: false
+project_applicability:
+  relevant_when: "Project models users, customers, vendors, organizations, or multi-role actors"
+  action_if_irrelevant: remove
 
 business_concept:
   name: "People and Organizations"

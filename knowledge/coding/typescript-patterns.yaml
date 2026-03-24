@@ -13,6 +13,9 @@ description: >
   satisfies operator, type predicates, template literal types, and exhaustive union handling.
   These patterns apply across backend, frontend, and library code regardless of framework.
 spec_relevant: false
+project_applicability:
+  relevant_when: "Project uses TypeScript"
+  action_if_irrelevant: remove
 
 # ─────────────────────────────────────────────
 # Branded Types

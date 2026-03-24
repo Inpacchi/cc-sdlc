@@ -16,6 +16,9 @@ description: >
   token optimization economics, and NLP production patterns (active learning,
   weak supervision, continual learning drift detection).
 spec_relevant: false
+project_applicability:
+  relevant_when: "Project designs, tests, or deploys LLM prompts in production"
+  action_if_irrelevant: remove
 
 # ─────────────────────────────────────────────
 # Performance Target Checklist

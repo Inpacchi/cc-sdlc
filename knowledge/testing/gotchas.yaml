@@ -4,6 +4,9 @@
 # Last updated: 2026-03-22
 
 spec_relevant: false
+project_applicability:
+  relevant_when: "Always relevant — cross-project failure patterns"
+  action_if_irrelevant: keep
 
 - id: dom-not-visual
   severity: high
