@@ -133,6 +133,20 @@ For files with no project customizations, copy directly from cc-sdlc to the proj
 
 **All reads from the cc-sdlc source repo must use git commands** (e.g., `git -C [cc-sdlc-path] show HEAD:path/to/file`), not filesystem reads. This ensures you're reading committed state, not working tree.
 
+**Ensure `.claude/agent-memory/` is gitignored.** Agent memories are not source-controlled — check the project's `.gitignore` for the entry. If missing, append:
+
+```
+# Agent memory — private scratchpad, not source-controlled
+# Reusable learnings flow through knowledge_feedback → discipline capture → knowledge stores
+.claude/agent-memory/
+```
+
+If the project was previously committing agent memory files, note this in the migration report. The files can remain in the working tree but should not be committed going forward. If agent memory files are currently tracked by git, unstage them:
+
+```bash
+git rm -r --cached .claude/agent-memory/ 2>/dev/null
+```
+
 ### 2.1a Remove Deleted and Moved Files
 
 Check the cc-sdlc changelog for files that were **deleted, moved, or renamed** since the project's `source_version`. These require explicit cleanup in the downstream project — direct copy only adds files, it doesn't remove stale ones.
@@ -148,7 +162,7 @@ Check the cc-sdlc changelog for files that were **deleted, moved, or renamed** s
 
 3. For each moved/renamed file: the new location was already copied in §2.1. Remove the old location. Then check whether the project's `agent-context-map.yaml` references the old path — if so, update the path (see §3.3).
 
-4. **Scan agent memory files for stale paths.** Agent memory files (`.claude/agent-memory/*.md`) can contain hardcoded knowledge file paths that bypass the context map. For each deleted or moved file path, grep agent memories:
+4. **Scan agent memory files for stale paths (if they exist locally).** Agent memory files (`.claude/agent-memory/*.md`) are not git-tracked but may exist locally and contain hardcoded knowledge file paths that bypass the context map. For each deleted or moved file path, grep agent memories:
    ```bash
    grep -rl "old/path/to/file.yaml" .claude/agent-memory/ 2>/dev/null
    ```
@@ -269,7 +283,7 @@ These sections originate from the framework and should be updated across all pro
 |---------|--------|-------------|
 | `## Knowledge Context` | AGENT_TEMPLATE | Must exist in every agent. If missing, add it. If present, update to match template wording. |
 | `## Communication Protocol` | AGENT_TEMPLATE | Update the canonical protocol reference. Preserve domain-specific handoff fields. |
-| Memory section header/guidelines | AGENT_TEMPLATE | Update generic guidelines. Preserve domain-specific "what to save" content. |
+| Memory section header/guidelines | AGENT_TEMPLATE | Update generic guidelines and "Surfacing Learnings to the SDLC" section. Preserve domain-specific "what to save" content. |
 
 ### 3.2 Apply Template Updates
 
@@ -386,6 +400,8 @@ After migration, update `.sdlc-manifest.json` with the new source version:
 - Current: [new commit hash]
 
 ### Changes Applied
+- Agent memory gitignored: yes/already present
+- Previously tracked agent memories unstaged: yes/no/not applicable
 - Skills updated: N (framework sections merged, project customizations preserved)
 - Knowledge files added/updated: N (direct copy with spec_relevant preservation)
 - Knowledge spec_relevant overrides preserved: N [list files where project `true` was restored]

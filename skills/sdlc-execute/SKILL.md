@@ -210,7 +210,9 @@ Run the discipline capture protocol per `ops/sdlc/process/discipline_capture.md`
 
 After each phase's POST-GATE clears, commit the phase's work before starting the next phase:
 
-1. Stage all files created or modified by the phase's agent(s)
+1. Stage **all** files created or modified by the phase's agent(s) — this includes:
+   - Application code and test files
+   - Discipline parking lot entries (`ops/sdlc/disciplines/*.md`) if discipline capture added entries
 2. Commit with the format: `feat(DNN): phase N — [phase name]`
 3. Do NOT wait until all phases are complete to commit
 
@@ -225,7 +227,13 @@ Before claiming the work is done:
 1. Run the full build (`[build command]` — see project CLAUDE.md)
 2. Confirm build passes with zero errors
 3. Review the git diff for unintended changes (should be minimal — most work committed per-phase)
-4. Stage any remaining modified files (result doc, catalog updates, review fixes)
+4. Stage any remaining modified files — **all categories, not just application code:**
+   - Result doc (`docs/current_work/results/dNN_*_result.md`)
+   - Catalog updates (`docs/_index.md`)
+   - Discipline parking lot entries (`ops/sdlc/disciplines/*.md`)
+   - Knowledge store updates (`ops/sdlc/knowledge/*.md`)
+   - Process changelog (`ops/sdlc/process/sdlc_changelog.md`) if updated
+   - Review fixes from the review loop
 5. Commit with conventional commit format (see project CLAUDE.md)
 6. Present the full commit to the user:
 

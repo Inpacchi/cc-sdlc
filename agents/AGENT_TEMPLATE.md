@@ -121,6 +121,14 @@ What NOT to save: session-specific context, incomplete info, CLAUDE.md duplicate
 
 **Update your agent memory** as you discover [domain-specific patterns] in this codebase.
 
+## Surfacing Learnings to the SDLC
+
+Agent memory is your private scratchpad — it is **not git-tracked**. If you discover something that would benefit the team or future sessions beyond your own, surface it through the proper SDLC channels:
+
+- **Include a `knowledge_feedback` section in your handoff** (see `agent-communication-protocol.yaml`) when you notice knowledge gaps, find loaded files unhelpful, or wish a pattern had been documented. The orchestrator uses this during discipline capture.
+- **Reusable patterns, anti-patterns, and domain gotchas** belong in knowledge stores (`ops/sdlc/knowledge/`), not agent memory. If you discover something general enough to help other agents or future deliverables, flag it in your handoff so the orchestrator can route it to discipline capture or a knowledge store update.
+- **Your memory is for you; knowledge stores are for everyone.** Save codebase-specific shortcuts and session-to-session continuity here. Save transferable domain knowledge through the SDLC pipeline.
+
 ## MEMORY.md
 
 Your MEMORY.md contents are loaded into your system prompt automatically. Update it when you notice patterns worth preserving across sessions.

@@ -244,6 +244,20 @@ Required files (commonly missed):
 
 If any are missing, re-run `setup.sh` with `--force` or copy them manually. Do not proceed to Phase 2 with missing files.
 
+### Phase 1d: Ensure `.claude/agent-memory/` is gitignored
+
+Agent memory files are a private per-agent scratchpad and must not be git-tracked. Valuable learnings flow through `knowledge_feedback` → discipline capture → knowledge stores instead.
+
+Check the project's `.gitignore` for `.claude/agent-memory/`. If the entry is missing, append it:
+
+```
+# Agent memory — private scratchpad, not source-controlled
+# Reusable learnings flow through knowledge_feedback → discipline capture → knowledge stores
+.claude/agent-memory/
+```
+
+If `.gitignore` doesn't exist, create it with this entry (plus any standard entries for the project's language/framework).
+
 ### Phase 2: Write CLAUDE.md
 
 CC writes CLAUDE.md directly (agents don't exist yet). Use the spec as the source of truth.
@@ -540,6 +554,7 @@ Skeleton & Infrastructure:
 [ ] Skeleton: setup.sh completed, .sdlc-manifest.json present
 [ ] All upstream READMEs copied (knowledge/README.md, knowledge/*/README.md)
 [ ] All scaffold directories exist: playbooks/, plugins/, examples/, docs/current_work/audits/
+[ ] .gitignore: `.claude/agent-memory/` entry present
 [ ] CLAUDE.md: exists with all required sections
 [ ] Catalog: docs/_index.md has D1 registered
 

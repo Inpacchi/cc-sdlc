@@ -272,8 +272,22 @@ If you have spent 3 or more rounds of read/search/grep investigating a bug witho
 
 ## Agent Conventions
 
-- **Agent memories committed with code** — domain agent memory files (`.claude/agent-memory/`) are committed alongside the code changes they relate to. Update stale memories when fixes resolve documented issues.
+- **Agent memories are not git-tracked** — `.claude/agent-memory/` is a private scratchpad for per-agent session continuity. Reusable learnings should flow through `knowledge_feedback` in agent handoffs → discipline capture → knowledge stores. See the "Surfacing Learnings to the SDLC" section in the agent template.
 - **Agent frontmatter: single-line descriptions only** — The `description` field in `.claude/agents/*.md` must be a single-line YAML string using `\n` for newlines. Multi-line quoted strings silently break Claude Code's frontmatter parser.
+
+## Commit Completeness Rule
+
+Every commit must include **all** artifacts produced during the work — not just application code. Before staging, scan for modifications in all of these categories:
+
+| Category | Paths | When present |
+|----------|-------|--------------|
+| Application code & tests | Project-specific | Always |
+| Discipline parking lot entries | `ops/sdlc/disciplines/*.md` | When discipline capture adds entries |
+| Knowledge store updates | `ops/sdlc/knowledge/*.md` | When domain knowledge is added or corrected |
+| SDLC process changelog | `ops/sdlc/process/sdlc_changelog.md` | When process files change |
+| Result docs & catalog | `docs/current_work/results/`, `docs/_index.md` | During full SDLC execution |
+
+**Never split SDLC documentation into a separate follow-up commit.** The documentation is part of the work, not a chore after the work. If `git status` shows unstaged SDLC files after staging application code, something was missed.
 
 ---
 

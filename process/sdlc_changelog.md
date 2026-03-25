@@ -34,6 +34,43 @@ Each entry contains:
 
 ---
 
+## 2026-03-24: Agent Memories Not Git-Tracked; Knowledge Flows Through SDLC Pipeline
+
+**Origin:** CD question about whether agent memories belong in git at all, following the commit completeness work.
+
+**What happened:** Agent memories (`.claude/agent-memory/`) were being committed alongside code, but they're inherently a per-agent scratchpad — noisy, prone to merge conflicts, and redundant with the knowledge store pipeline. The valuable signal in agent memories should flow upward through `knowledge_feedback` → discipline capture → knowledge stores, not sideways into git.
+
+**Changes made:**
+
+1. **`agents/AGENT_TEMPLATE.md`** — Added "Surfacing Learnings to the SDLC" section to the Persistent Agent Memory block. Explains that memory is private/untracked, and teaches agents to use `knowledge_feedback` in handoffs and flag reusable patterns for discipline capture rather than hoarding them in memory.
+2. **`CLAUDE-SDLC.md` (Agent Conventions)** — Flipped "agent memories committed with code" to "agent memories are not git-tracked" with a pointer to the knowledge flow pipeline.
+3. **`CLAUDE-SDLC.md` (Commit Completeness Rule)** — Removed agent memory files from the commit category table.
+4. **`skills/sdlc-execute/SKILL.md` (§3b, §4)** — Removed agent memory files from per-phase and final commit staging lists.
+5. **`skills/sdlc-lite-execute/SKILL.md` (§4)** — Removed agent memory files from staging list.
+6. **`skills/sdlc-initialize/SKILL.md`** — Added Phase 1d: ensure `.claude/agent-memory/` is in `.gitignore`. Added gitignore check to Phase 10 verification checklist.
+7. **`skills/sdlc-migrate/SKILL.md`** — Added gitignore provisioning to §2.1 (with `git rm --cached` for previously tracked files). Updated §2.1a step 4 to note agent memories are local-only. Updated §3.1 table to include "Surfacing Learnings" section. Added gitignore status to migration report template.
+
+**Rationale:** Agent memory is a scratchpad; knowledge stores are the canonical record. The framework already has the pipeline (agent discovers pattern → `knowledge_feedback` in handoff → discipline capture → parking lot → promotion to knowledge store). Committing raw memories short-circuits this pipeline and creates noise in git history. Making agents aware of the SDLC knowledge flow ensures valuable learnings still get captured — just through the right channel.
+
+---
+
+## 2026-03-24: Commit Completeness Rule — SDLC Artifacts Must Ship with Code
+
+**Origin:** CD observation that commits consistently omit SDLC documentation, sometimes relegating them to separate follow-up commits.
+
+**What happened:** The staging instructions in `sdlc-execute` and `sdlc-lite-execute` used vague language ("stage all modified files", "application code + any new files") that didn't enumerate SDLC artifact categories. This allowed discipline parking lot entries, knowledge store updates, and process changelog edits to fall through the cracks.
+
+**Changes made:**
+
+1. **`skills/sdlc-execute/SKILL.md` (§3b)** — Per-phase commit staging now explicitly lists discipline entries alongside application code.
+2. **`skills/sdlc-execute/SKILL.md` (§4)** — Final commit staging expanded from a one-liner to an enumerated checklist covering result docs, catalog, discipline entries, knowledge stores, process changelog, and review fixes.
+3. **`skills/sdlc-lite-execute/SKILL.md` (§4)** — Staging step rewritten to enumerate all artifact categories with a "not just application code" callout.
+4. **`CLAUDE-SDLC.md`** — Added "Commit Completeness Rule" section with a category table and the explicit instruction: "Never split SDLC documentation into a separate follow-up commit."
+
+**Rationale:** Documentation is part of the work, not a chore after the work. Splitting it into follow-up commits means it often gets forgotten entirely, creating drift between code state and process artifacts. Explicit enumeration removes ambiguity about what "all modified files" means.
+
+---
+
 ## 2026-03-23: Add `project_applicability` Metadata to Knowledge Stores
 
 **Origin:** CD review of whether knowledge stores shipped with cc-sdlc are universally applicable or project-specific. Some stores (payment-state-machine, ml-system-design, MUI-specific testing) are only relevant to certain project types.

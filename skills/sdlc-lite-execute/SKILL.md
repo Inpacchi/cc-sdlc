@@ -171,7 +171,12 @@ Run the discipline capture protocol per `ops/sdlc/process/discipline_capture.md`
 
 1. Run `[build command]` — confirm zero errors (see project CLAUDE.md)
 2. Review the git diff for unintended changes
-3. Stage all modified files (application code + any new files created by agents)
+3. Stage **all** modified files — not just application code. Check every category:
+   - Application code and test files
+   - Discipline parking lot entries (`ops/sdlc/disciplines/*.md`)
+   - Knowledge store updates (`ops/sdlc/knowledge/*.md`)
+   - Plan file move (step 6 below)
+   - Any other SDLC artifacts modified during execution
 4. Commit with conventional commit format (see project CLAUDE.md):
    ```
    {type}[({scope})]: {description}
