@@ -366,21 +366,25 @@ The project's `CLAUDE.md` contains CLAUDE-SDLC.md content — skill names, proce
 
 **Gate rule:** If the project's CLAUDE.md references a renamed skill or removed path, fix it. Stale CLAUDE.md content causes silent process failures — Claude Code follows the instructions but they point nowhere.
 
-### 4.4 Post-Migration Audit
+### 4.4 Post-Migration Compliance Audit
 
-Run the `sdlc-audit` skill in compliance mode directly — do not ask the user to invoke it separately. The compliance methodology's Dimension 7 (Migration Integrity) checks manifest version, framework file completeness, content-merge correctness, and stale references to removed features.
+**MANDATORY — do not skip.** Dispatch the `sdlc-compliance-auditor` subagent directly to verify migration integrity. Do not ask the user to invoke `/sdlc-audit` separately — dispatch the subagent yourself as part of this skill's execution.
 
-**Run:** `/sdlc-audit compliance` with focus on migration integrity:
-- All framework files match the cc-sdlc source at [new commit hash]
-- No orphaned files from previous versions remain
-- Agent-context-map paths all resolve
-- Content-merge preserved project data (tracker levels, parking lot entries, skill customizations)
-- CLAUDE-SDLC.md references in CLAUDE.md are valid
-- `agents/sdlc-compliance-auditor.md` present and current (dispatched by sdlc-audit)
+**Dispatch prompt for the subagent:**
+
+> Run a compliance audit focused on migration integrity. Check all 9 dimensions, with special attention to:
+> - Dimension 7 (Migration Integrity): All framework files match the cc-sdlc source at [new commit hash]
+> - No orphaned files from previous versions remain
+> - Agent-context-map paths all resolve
+> - Content-merge preserved project data (tracker levels, parking lot entries, skill customizations)
+> - CLAUDE-SDLC.md references in CLAUDE.md are valid
+> - `agents/sdlc-compliance-auditor.md` is present and current
+
+Present the subagent's findings to the user before proceeding to §4.5.
 
 If the audit returns findings:
-- **WARNING or higher:** Fix before continuing. Re-run the auditor after fixes.
-- **INFO only:** Log in the migration report, continue to §4.5.
+- **Critical/Major:** Fix before continuing. Re-dispatch the auditor after fixes.
+- **Minor/Info:** Log in the migration report, continue to §4.5.
 
 ### 4.5 Update Manifest
 

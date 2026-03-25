@@ -589,7 +589,13 @@ Present the checklist to CD. If any items failed, note them and suggest remediat
 
 ### Phase 11: Post-Initialization Compliance Audit
 
-Run `/sdlc-audit compliance` directly — do not ask CD to invoke it separately. The audit's 9 dimensions verify everything initialization set up: catalog integrity, artifact traceability, knowledge layer health, agent-context-map wiring, and file completeness.
+**MANDATORY — do not skip.** Dispatch the `sdlc-compliance-auditor` subagent directly to verify initialization integrity. Do not ask CD to invoke `/sdlc-audit` separately — dispatch the subagent yourself as part of this skill's execution.
+
+**Dispatch prompt for the subagent:**
+
+> Run a compliance audit on this freshly initialized project. Check all 9 dimensions: catalog integrity, artifact traceability, knowledge layer health, agent-context-map wiring, and file completeness. Note: this is a new project — Dimensions 3 (untracked work), 8 (agent memory mining), and 9 (recommendation follow-through) will have no data, which is expected.
+
+Present the subagent's findings to CD before the final summary.
 
 If the audit returns findings:
 - **Critical/Major:** Fix before continuing. These indicate initialization gaps.
