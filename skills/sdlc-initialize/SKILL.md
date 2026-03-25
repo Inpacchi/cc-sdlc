@@ -587,13 +587,21 @@ Plugins:
 
 Present the checklist to CD. If any items failed, note them and suggest remediation.
 
-**Suggest next step:**
+### Phase 11: Post-Initialization Compliance Audit
 
-> SDLC initialization is complete. To start your first piece of implementation work:
+Run `/sdlc-audit compliance` directly — do not ask CD to invoke it separately. The audit's 9 dimensions verify everything initialization set up: catalog integrity, artifact traceability, knowledge layer health, agent-context-map wiring, and file completeness.
+
+If the audit returns findings:
+- **Critical/Major:** Fix before continuing. These indicate initialization gaps.
+- **Minor/Info:** Log and continue — expected for a fresh project (e.g., no chronicle entries yet, no prior audit to follow through on).
+
+After the audit passes (or only minor/info findings remain):
+
+> SDLC initialization complete. Compliance audit: {score}/10.
 >
+> To start your first piece of implementation work:
 > - **New feature or major work:** invoke `sdlc-plan`
 > - **Quick task with a plan:** invoke `sdlc-lite-plan`
-> - **Run a health check:** "Let's run an SDLC compliance audit"
 
 ---
 
@@ -641,7 +649,7 @@ For existing projects with code and documentation that need cc-sdlc integrated.
 
 ### Phase R4: Verification
 
-Same as Greenfield Phase 10, plus:
+Same as Greenfield Phases 10–11 (verification checklist + compliance audit), plus:
 
 ```
 [ ] Existing documents categorized and moved to SDLC locations
