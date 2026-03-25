@@ -9,7 +9,11 @@ knowledge/design/
 ├── README.md                                    ← This file
 ├── ux-modeling-methodology.yaml                 ← Process an agent follows end-to-end
 ├── ascii-conventions.yaml                       ← Reusable ASCII diagramming conventions
-└── accessibility-testability-principles.yaml    ← A11y and testability as a single concern
+├── accessibility-testability-principles.yaml    ← A11y and testability as a single concern
+├── component-patterns.yaml                      ← UI component rules (icons, buttons, nav, modals, inputs, cards)
+├── interaction-animation.yaml                   ← Interactive states, micro-interactions, animation easing
+├── visual-design-rules.yaml                     ← Color theory, palettes, dark mode, shadows, gradients
+└── layout-principles.yaml                       ← Spacing, grid, structural layout principles
 ```
 
 ## How This Gets Used

@@ -1,0 +1,281 @@
+# Interaction and Animation Patterns
+# Extracted from UI/UX design video transcripts (27 videos, single creator)
+# Source: paire-appetit/ingest/transcripts/ — YouTube UI design channel
+# Last updated: 2026-03-23
+
+last_updated: 2026-03-24
+id: interaction-animation
+name: "Interaction and Animation Patterns"
+description: >
+  Rules for interactive states, micro-interactions, animation easing,
+  motion design, loading states, progressive disclosure, and user feedback.
+  Covers when and how to animate, not specific animation implementations.
+spec_relevant: false
+
+rules:
+  - rule_id: A01
+    name: four-button-states
+    description: |
+      Every button needs at least 4 states: default, hover, active/pressed, and
+      disabled. Loading state (with spinner) is needed for async actions. Hover
+      states should use a slightly lighter/brighter variant of the base color.
+      Active/pressed states should use a slightly darker variant. Disabled states
+      should desaturate the color.
+    rationale: |
+      Buttons without state changes feel dead. Users need visual confirmation that
+      their interaction was received. Missing disabled states allow users to attempt
+      impossible actions. Missing loading states leave users wondering if anything happened.
+    checklist:
+      - "Does every button have default, hover, active, and disabled states?"
+      - "Do async action buttons show a loading state?"
+    source: "youtube_EcbgbKtOELY (UI/UX Basics), youtube_EOcY3hPMQkk (Color Mistakes)"
+
+  - rule_id: A02
+    name: input-states-are-critical
+    description: |
+      Every input needs: default, focus (highlighted border or background change),
+      error (red border + descriptive error message), and optionally warning state
+      for non-blocking issues. Focus states tell the user which field is active.
+      Error states tell them what went wrong and how to fix it.
+    rationale: |
+      Inputs without focus states are disorienting — users don't know which field
+      they're typing into. Missing error states force users to guess what went wrong.
+      These are the most critical interactive feedback patterns in any form.
+    checklist:
+      - "Does every input have a visible focus state?"
+      - "Do error states include a descriptive message (not just a red border)?"
+    source: "youtube_EcbgbKtOELY, youtube_gKM6b2EnW1k"
+
+  - rule_id: A03
+    name: every-action-gets-feedback
+    description: |
+      Every user action should produce a visible response: loading spinners when
+      fetching data, success messages when actions complete, error messages when
+      they fail. Micro-animations on scroll, swipe, and click. No action should
+      appear to do nothing.
+    rationale: |
+      Actions without feedback feel broken. Users will retry, causing duplicate
+      submissions or frustration. Even a subtle state change (button dim, icon fill)
+      communicates "I heard you."
+    checklist:
+      - "Does every clickable element provide visual feedback on interaction?"
+      - "Are data-loading states shown (spinner, skeleton, shimmer)?"
+      - "Do completed actions show confirmation (toast, state change, animation)?"
+    source: "youtube_EcbgbKtOELY (UI/UX Basics), youtube_AH_ugxmLeUM (Beginner Mistakes)"
+
+  - rule_id: A04
+    name: micro-interaction-confirmation
+    description: |
+      Micro-interactions confirm specific actions beyond generic feedback. Examples:
+      copy button → "Copied!" chip slides up; save icon fills in + tab badge appears;
+      form progress bar fills as fields complete. These go beyond state changes to
+      communicate exactly what happened.
+    rationale: |
+      Generic feedback (button dims) says "something happened." Micro-interactions
+      (copied chip) say "this specific thing happened." The specificity builds user
+      confidence and reduces the need to verify actions manually.
+    checklist:
+      - "Do high-frequency actions (copy, save, add) have specific micro-interaction confirmations?"
+    source: "youtube_EcbgbKtOELY, youtube_ld1zhQMXxXU (Micro Interactions)"
+
+  - rule_id: A05
+    name: never-linear-easing
+    description: |
+      Almost never use linear easing for animations. Use ease-in-out, spring, or
+      custom bezier curves. Real objects speed up and slow down — linear motion
+      feels robotic. Easing sets the tone: snappy + performant, fun + springy,
+      or slow + smooth. The easing curve is as important as the animation itself.
+    rationale: |
+      Linear motion is perceptually unnatural. Humans expect acceleration and
+      deceleration. Easing transforms mechanical transitions into lifelike motion
+      that users process more naturally.
+    checklist:
+      - "Do animations use non-linear easing (ease-in-out, spring, custom curve)?"
+      - "Is linear easing reserved only for continuous indicators (progress bars)?"
+    source: "youtube_14h1VnkQvIc (Mobile Swipe), youtube_ZsP20PN14O0 (Animation Techniques)"
+
+  - rule_id: A06
+    name: animation-supports-clarity
+    description: |
+      Animations must support clarity or functionality — not exist for visual spectacle.
+      Good: navigation consolidating into a hamburger (progressive disclosure).
+      Good: search bar expanding on click (reveals functionality).
+      Bad: scroll-jacking that fights user control.
+      Bad: complex entrance animations that delay content access.
+      If an animation doesn't introduce the product or guide the user, remove it.
+    rationale: |
+      Animations that don't serve a purpose slow down the experience and distract
+      from content. The test: does the animation help the user understand the UI
+      better, or does it just look cool? If just cool, it's probably in the way.
+    checklist:
+      - "Does each animation serve a clear purpose (reveal, confirm, guide, transition)?"
+      - "Are scroll-jacking effects avoided or used very sparingly?"
+    source: "youtube_tNMAFjzapOk (Structure Motion Surprise), youtube_HE4rLEQpiXY (Genius Designer)"
+
+  - rule_id: A07
+    name: skeleton-loading
+    description: |
+      Use skeleton loading (shimmer effects, placeholder shapes) while content loads.
+      Placeholders should match the layout of the actual content — images, text blocks,
+      and interactive elements all get placeholder shapes. Content slots into place
+      when ready. This makes the interface feel alive during loading.
+    rationale: |
+      Blank screens during loading feel broken. Spinners feel generic. Skeletons
+      communicate the structure of what's coming, reduce perceived wait time, and
+      prevent layout shift when content arrives.
+    checklist:
+      - "Do content-loading states use skeleton/shimmer placeholders (not blank screens)?"
+      - "Do skeleton layouts match the shape of the actual content?"
+    source: "youtube_If7iCPDy2vk (AI Tool Patterns), youtube_B7k5rOgmOGY"
+
+  - rule_id: A08
+    name: optimistic-ui
+    description: |
+      Update the UI immediately on user action, assuming server success (optimistic UI).
+      Like Gmail's instant email deletion — the email disappears before the server
+      confirms. This eliminates awkward pauses and makes the app feel snappy and fast.
+      Revert on failure with an error toast.
+    rationale: |
+      Network roundtrips of 100-500ms create perceptible delays that compound across
+      dozens of daily interactions. Optimistic updates make the app feel instant.
+      Server failures are rare enough to handle as exceptions (toast + revert).
+    checklist:
+      - "Do non-critical actions update the UI immediately (before server confirmation)?"
+      - "Is there a revert + error toast mechanism for failed optimistic updates?"
+    source: "youtube_B7k5rOgmOGY (Dashboard Design)"
+
+  - rule_id: A09
+    name: progressive-disclosure
+    description: |
+      Show users what they need now; reveal more as required. "Load more" buttons
+      are preferable to infinite scroll (users can reach the footer and have control).
+      Collapse advanced options by default. Consolidate navigation into expandable
+      menus as link count grows. Search bars can start as icons and expand on click.
+    rationale: |
+      Showing everything at once overwhelms users with choices. Progressive disclosure
+      reduces cognitive load by matching the information display to the user's current
+      intent. It also keeps the initial view clean and focused.
+    checklist:
+      - "Are advanced options collapsed/hidden by default?"
+      - "Can users reach the footer (no infinite scroll without alternative)?"
+      - "Do expandable sections start in their collapsed state?"
+    source: "youtube_HE4rLEQpiXY (Genius Designer), youtube_PDcQJOPby1k (Vibe Coded Apps)"
+
+  - rule_id: A10
+    name: tooltip-delay
+    description: |
+      Delayed tooltips (~1000ms hover) are essential for icon-only interfaces.
+      If an icon doesn't have a text label, a tooltip must explain its function
+      after a brief hover. This is especially useful when icon density is high
+      (toolbars, sidebars) and space prevents labels.
+    rationale: |
+      Icons without labels rely on user familiarity. New users need discovery
+      mechanisms. The 1-second delay prevents tooltips from firing during quick
+      mouse movements while ensuring they appear when the user intentionally pauses.
+    checklist:
+      - "Do icon-only buttons have hover tooltips?"
+      - "Is the tooltip delay ~1 second (not instant, not too slow)?"
+    source: "youtube_ld1zhQMXxXU (Micro Interactions)"
+
+  - rule_id: A11
+    name: motion-follows-gesture
+    description: |
+      Motion should follow the direction of the user's gesture. Swipe up → content
+      slides up. Swipe right → content slides right. Background elements should move
+      in the same direction to create cohesion. Contradictory motion (swipe up but
+      content slides sideways) creates dissonance.
+    rationale: |
+      Directional consistency reinforces the mental model of spatial navigation.
+      It makes transitions feel like natural physical movements rather than arbitrary
+      visual effects.
+    checklist:
+      - "Do transition animations follow the direction of the user's initiating gesture?"
+    source: "youtube_14h1VnkQvIc (Mobile Swipe)"
+
+  - rule_id: A12
+    name: looped-animations-minimal
+    description: |
+      Looped/continuous animations must be minimal and slow-moving. Fast or flashy
+      loops are distracting and can be annoying. Examples of good loops: slow marquee
+      text, gentle floating motion, subtle pulse. The loop should add to the experience,
+      not compete with content for attention.
+    rationale: |
+      Continuous motion draws the eye involuntarily. If the motion is fast or flashy,
+      it constantly pulls attention away from content the user is trying to read.
+      Slow, subtle loops become ambient texture rather than visual noise.
+    checklist:
+      - "Are looped animations slow and subtle (not fast or flashy)?"
+      - "Can users read nearby content without being distracted by the loop?"
+    source: "youtube_ZsP20PN14O0 (Animation Techniques)"
+
+  - rule_id: A13
+    name: entrance-animation-brevity
+    description: |
+      Entrance animations (preloaders, page transitions) must be short. Users are
+      impatient — don't make them wait for a complex animation before seeing content.
+      When using entrance animations, move background and text elements together
+      for a fluid feeling, not sequentially.
+    rationale: |
+      Entrance animations that delay content access frustrate users. The animation
+      should mask loading time that already exists, not add new delay. Fluid
+      multi-element motion (background + text moving together) feels cohesive;
+      sequential element animation feels slow.
+    checklist:
+      - "Are entrance animations under 1 second?"
+      - "Do multiple elements animate together (not one at a time)?"
+    source: "youtube_ZsP20PN14O0 (Animation Techniques)"
+
+  - rule_id: A14
+    name: mouse-effect-fallback
+    description: |
+      Mouse-tracking effects (cursor followers, magnetic elements) must always have
+      a tablet/mobile fallback since these devices have no mouse. Use them sparingly —
+      they can be annoying if applied broadly. Best for specific, high-impact elements
+      (hero CTAs, interactive cards).
+    rationale: |
+      Mouse effects are invisible to touch-device users. Without a fallback, the
+      feature is broken for a large portion of the audience. Over-application makes
+      the interface feel gimmicky rather than polished.
+    checklist:
+      - "Do mouse-tracking effects have a touch-device fallback?"
+      - "Are mouse effects limited to specific high-impact elements?"
+    source: "youtube_ZsP20PN14O0 (Animation Techniques)"
+
+  - rule_id: A15
+    name: hover-increases-visibility
+    description: |
+      Hover effects must make elements MORE visible, not less. Never fade out, dim,
+      or reduce opacity on hover. The browser cursor already changes to a hand to
+      indicate clickability — CSS hover should add to that signal: slightly lighter
+      or brighter color, a subtle glow, one shade more active. Elements that disappear
+      or recede on hover fight the user's intent to interact.
+    rationale: |
+      Hover communicates "I can interact with this." Fading out on hover sends the
+      opposite signal — "this is going away." This anti-pattern is common in
+      AI-generated designs where LLMs choose novel hover effects without understanding
+      the purpose of hover states. The default browser hand cursor is already doing
+      the work; CSS effects should reinforce, not contradict.
+    checklist:
+      - "Do hover effects increase element visibility (brighter, lighter, glow) rather than decrease it?"
+      - "Does no element fade out, dim, or shrink on hover?"
+    source: "youtube_DNSXlBmukck (Good Bad Ugly of AI Design)"
+
+  - rule_id: A16
+    name: no-essential-functionality-behind-hover
+    description: |
+      Hover is appropriate for making UI feel alive (subtle state changes, micro-
+      interactions). Hover is NOT appropriate for disclosing essential functionality
+      or critical information. If a feature or action exists, it should be visible
+      without hovering. Dot-dot-dot menus, disclosure arrows, and core actions
+      hidden behind hover force users to hunt for what the tool can do. Long press
+      (mobile hover equivalent) never caught on precisely because hidden interactions
+      are undiscoverable.
+    rationale: |
+      The trend toward ultra-clean interfaces that hide everything behind hover
+      prioritizes aesthetics over usability. Users cannot efficiently use software
+      when they must hover everywhere to discover functionality. This is especially
+      problematic on touch devices where hover has no equivalent.
+    checklist:
+      - "Are all essential actions and navigation visible without hovering?"
+      - "Is hover used only for enhancement (alive feel, tooltips) not for disclosing primary functionality?"
+    source: "youtube_DNSXlBmukck (Good Bad Ugly of AI Design)"

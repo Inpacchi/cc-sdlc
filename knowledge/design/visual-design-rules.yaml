@@ -1,0 +1,466 @@
+# Visual Design Rules — Cross-Project
+# Color theory, palettes, dark mode, shadows, gradients, textures.
+# Source: Bulk ingestion from UI/UX design YouTube transcripts (2026-03-23)
+
+spec_relevant: false
+
+name: Visual Design Rules
+description: Color theory, palette construction, dark mode patterns, shadows, and visual depth techniques
+category: design
+
+rules:
+  - rule_id: VD1
+    name: sixty-thirty-ten-color-ratio
+    description: |
+      Distribute color usage as 60% dominant neutral (backgrounds, large surfaces),
+      30% secondary color (cards, navigation, supporting UI), and 10% accent
+      (CTAs, active states, key highlights). Never allow more than 3 competing
+      accent colors in a single view.
+    rationale: |
+      The 60-30-10 rule creates visual hierarchy through proportion. When multiple
+      accents compete at equal weight, the eye has no entry point and the interface
+      feels chaotic. Limiting accent to 10% ensures it draws attention where intended.
+    checklist:
+      - "Does the design use at most 3 accent colors with a clear 60/30/10 distribution?"
+      - "Is the dominant 60% color a neutral or near-neutral?"
+      - "Do accent colors account for roughly 10% of visible surface area?"
+    anti_pattern: |
+      Using 4+ saturated accent colors at equal weight across the UI, creating a
+      "rainbow effect" where nothing stands out because everything is competing.
+    source: "Color Mistakes Designers Make and How to Fix Them"
+
+  - rule_id: VD2
+    name: neutral-backgrounds-only
+    description: |
+      Page and section backgrounds must be neutral or near-neutral. Saturated or
+      bright background colors overwhelm foreground content and reduce readability.
+      A subtle brand-hue tint (chroma < 0.02 in OKLCH) is acceptable to avoid
+      sterile gray.
+    rationale: |
+      Backgrounds occupy the largest surface area. If that surface is saturated, it
+      competes with content, fatigues the eye, and makes text harder to read. Neutral
+      backgrounds let foreground elements carry the visual message.
+    checklist:
+      - "Is every page/section background neutral or near-neutral (chroma < 0.02)?"
+      - "Does foreground content clearly separate from the background without effort?"
+    anti_pattern: |
+      Setting a hero section background to a fully saturated brand blue or green,
+      then struggling to make headings and CTAs visible on top of it.
+    source: "Color Mistakes Designers Make and How to Fix Them"
+
+  - rule_id: VD3
+    name: oklch-chart-palettes
+    description: |
+      When generating multi-color chart or data-visualization palettes, use OKLCH
+      color space with fixed lightness and chroma values, incrementing hue by 25-30
+      degrees per step. Do not use HSL for palette generation.
+    rationale: |
+      HSL lightness is not perceptually uniform — an HSL palette with constant L
+      produces colors that appear drastically different in brightness (yellow looks
+      bright, blue looks dark). OKLCH fixes lightness perceptually, so each color
+      in the palette appears equally prominent.
+    checklist:
+      - "Are chart/visualization palettes defined using OKLCH (or converted from OKLCH)?"
+      - "Do all colors in the palette appear at equal perceptual brightness?"
+      - "Is the hue step between 25-30 degrees to maximize distinguishability?"
+    anti_pattern: |
+      Generating a 6-color chart palette in HSL with hsl(0,70%,50%) through
+      hsl(300,70%,50%) — the yellow segment will appear washed out while the
+      blue segment looks dark, creating misleading visual weight in charts.
+    source: "Color Mistakes Designers Make and How to Fix Them"
+
+  - rule_id: VD4
+    name: oklch-themed-neutral-palettes
+    description: |
+      To theme a neutral palette with a brand hue, take the base neutral and apply:
+      -0.03 lightness, +0.02 chroma, set hue to the brand angle. This introduces
+      brand warmth while preserving all contrast relationships between layers.
+    rationale: |
+      Manually tinting grays is error-prone and breaks contrast ratios. The OKLCH
+      offset method shifts the entire neutral ramp uniformly, so light-on-dark and
+      dark-on-light pairings that passed WCAG before theming still pass after.
+    checklist:
+      - "Are themed neutrals generated via consistent OKLCH offsets from a base ramp?"
+      - "Do contrast ratios between themed neutral pairs match the un-themed originals?"
+    anti_pattern: |
+      Hand-picking "warm gray" hex values by eye, resulting in some layer pairs
+      losing WCAG contrast while others gain too much.
+    source: "Color Mistakes Designers Make and How to Fix Them"
+
+  - rule_id: VD5
+    name: no-unreviewed-ai-palettes
+    description: |
+      Never ship an AI-generated color palette without manual review and correction.
+      AI tools consistently produce oversaturated, clashing hue combinations that
+      fail accessibility checks and lack intentional hierarchy.
+    rationale: |
+      AI color generation optimizes for visual novelty, not usability. Generated
+      palettes frequently include colors that are too close in hue to distinguish,
+      too saturated for surface use, or that fail WCAG contrast requirements.
+    checklist:
+      - "Has every AI-suggested color been manually verified for contrast compliance?"
+      - "Have oversaturated values been desaturated to usable levels?"
+      - "Does the final palette pass a colorblind simulation check?"
+    anti_pattern: |
+      Pasting an AI-generated 5-color palette directly into design tokens without
+      testing contrast, colorblind accessibility, or visual weight balance.
+    source: "Color Mistakes Designers Make and How to Fix Them"
+
+  - rule_id: VD6
+    name: semantic-colors-override-brand
+    description: |
+      Semantic color meanings — red for danger/destructive, green for success,
+      yellow/amber for warning, blue for informational — override brand colors in
+      all interactive contexts. Destructive actions must use red even if red is not
+      in the brand palette.
+    rationale: |
+      Users have deeply ingrained associations with semantic colors from decades of
+      UI convention. A "Delete" button in brand-purple or brand-teal does not
+      communicate danger. Violating semantic conventions increases error rates on
+      critical actions.
+    checklist:
+      - "Do all destructive/danger actions use red (or red-derived) color?"
+      - "Do success confirmations use green (or green-derived) color?"
+      - "Do warnings use yellow/amber?"
+      - "Are semantic colors consistent and distinct from brand accent colors?"
+    anti_pattern: |
+      Making the "Delete Account" button brand-blue because "we don't use red in
+      our design system." Users miss the danger signal and click without caution.
+    source: "Color Mistakes Designers Make and How to Fix Them"
+
+  - rule_id: VD7
+    name: muted-desaturated-surface-colors
+    description: |
+      Default surface and background fills should use muted, desaturated colors —
+      pastels, tinted grays, off-whites. Reserve fully saturated colors for small
+      accent elements (badges, icons, focus rings). Pure primaries on large surfaces
+      cause visual fatigue.
+    rationale: |
+      Saturated color on large areas activates cone cells intensely, leading to
+      fatigue and afterimage effects. Muted colors (baby blue, lavender, beige,
+      soft sage) provide color identity without overwhelming the viewer during
+      extended use.
+    checklist:
+      - "Are large surface fills (cards, panels, backgrounds) desaturated or muted?"
+      - "Are fully saturated colors limited to elements smaller than ~10% of the view?"
+    anti_pattern: |
+      Using pure #0000FF as a sidebar background or pure #FF0000 as a card fill,
+      causing eye strain within minutes of use.
+    source: "Color Mistakes Designers Make and How to Fix Them"
+
+  - rule_id: VD8
+    name: tinted-white-and-black
+    description: |
+      Replace pure white (#FFFFFF) and pure black (#000000) with tinted variants.
+      Light mode: use warm off-whites (e.g., #FAFAF8, #F5F5F0). Dark mode: use
+      bluish or purple-blacks (e.g., #0a0a0f, #111118). The tint should be barely
+      perceptible.
+    rationale: |
+      Pure white and pure black create maximum contrast (21:1) which causes halation
+      and eye strain. Tinted extremes feel warmer, more intentional, and more
+      "designed" while maintaining excellent contrast ratios (typically 18-19:1).
+    checklist:
+      - "Is pure #FFFFFF absent from background/surface tokens?"
+      - "Is pure #000000 absent from text/border tokens?"
+      - "Do the tinted replacements maintain at least WCAG AA contrast?"
+    anti_pattern: |
+      Using #FFFFFF backgrounds with #000000 text throughout the app, producing a
+      harsh, clinical feel that causes eye strain on extended reading.
+    source: "Color Mistakes Designers Make and How to Fix Them"
+
+  - rule_id: VD9
+    name: dark-mode-double-value-distance
+    description: |
+      In dark mode, the lightness difference between adjacent surface layers must be
+      2-3x what it is in light mode. A 2% lightness step that distinguishes layers
+      in light mode needs 4-6% in dark mode. Simply inverting a light-mode palette
+      breaks layer distinction.
+    rationale: |
+      Human vision perceives lightness differences asymmetrically — we are more
+      sensitive to small differences at the light end of the spectrum than the dark
+      end (Weber's law). Dark mode surfaces cluster in a narrow low-lightness band,
+      so larger steps are needed to maintain the same perceptual separation.
+    checklist:
+      - "Is the lightness step between dark-mode surface layers at least 4%?"
+      - "Are at least 3 distinct surface levels visually distinguishable in dark mode?"
+      - "Was the dark palette built independently, not auto-inverted from light mode?"
+    anti_pattern: |
+      Inverting the light-mode gray ramp to produce a dark palette, resulting in
+      cards that are indistinguishable from their container backgrounds.
+    source: "Color Mistakes Designers Make and How to Fix Them"
+
+  - rule_id: VD10
+    name: dark-mode-layer-depth-formula
+    description: |
+      Build dark mode surface depth by increasing brightness +4-6% and decreasing
+      saturation -10-20% per elevation layer. Without cast shadows (which are
+      invisible on dark backgrounds), progressively lighter surfaces are the primary
+      signal for elevation.
+    rationale: |
+      Material Design established that dark surfaces rise toward the light source.
+      Each elevation layer should be perceptibly lighter than the one below it. The
+      saturation decrease prevents higher layers from becoming garish as they lighten.
+    checklist:
+      - "Does each elevation layer increase in lightness by 4-6% over the previous?"
+      - "Does saturation decrease as elevation increases?"
+      - "Can a user distinguish at least 3 elevation levels without relying on shadows?"
+    anti_pattern: |
+      Using the same dark surface color (#1a1a2e) for both the page background and
+      all card/modal surfaces, making the interface feel flat and cards invisible.
+    source: "Color Mistakes Designers Make and How to Fix Them"
+
+  - rule_id: VD11
+    name: desaturate-accents-for-dark-mode
+    description: |
+      Accent colors that work on white backgrounds must be adjusted for dark mode:
+      increase lightness and reduce saturation. The same hex value that is vibrant
+      on white becomes harsh, neon-like, and fatiguing on dark surfaces.
+    rationale: |
+      On a white background, a saturated accent is surrounded by high-lightness
+      context that softens its perceived intensity. On a dark background, the same
+      accent has maximum contrast and appears to glow, causing visual strain and
+      pulling focus away from content.
+    checklist:
+      - "Are dark-mode accent tokens different from light-mode accent tokens?"
+      - "Are dark-mode accents lighter and less saturated than their light-mode counterparts?"
+      - "Do dark-mode accents avoid a neon/glowing appearance on dark surfaces?"
+    anti_pattern: |
+      Using the same #2563EB (saturated blue) for buttons in both light and dark mode,
+      producing a harsh electric glow against dark backgrounds that dominates the view.
+    source: "Color Mistakes Designers Make and How to Fix Them"
+
+  - rule_id: VD12
+    name: light-gray-card-borders
+    description: |
+      In light mode, card and container borders should be approximately 85% white
+      (light gray, e.g., #D9D9D9 to #E5E5E5). Pure black or dark borders overpower
+      the card content and create a heavy, caged appearance.
+    rationale: |
+      Borders exist to define edges, not to attract attention. A subtle light-gray
+      border provides structural definition without competing with the content inside
+      the card. Dark borders create visual weight that outcompetes text and imagery.
+    checklist:
+      - "Are light-mode card borders lighter than #CCCCCC?"
+      - "Do borders define edges without drawing more attention than card content?"
+    anti_pattern: |
+      Using 1px solid #333333 borders on white cards, making every card look like a
+      wireframe and the borders more prominent than the content they contain.
+    source: "Color Mistakes Designers Make and How to Fix Them"
+
+  - rule_id: VD13
+    name: hsb-color-variant-generation
+    description: |
+      Generate darker color variants using HSB adjustments: increase saturation by
+      ~20, decrease brightness by ~10, and shift hue 5-10 degrees toward blue (higher
+      hue angle). This produces darker shades that feel naturally dark rather than
+      muddy.
+    rationale: |
+      Simply reducing brightness produces muddy, lifeless colors. In nature, darker
+      surfaces shift toward blue (atmospheric scattering, Rayleigh scattering). The
+      blue hue shift and saturation boost compensate for the brightness loss and
+      produce rich, deep variants.
+    checklist:
+      - "Do darker variants include a slight hue shift toward blue?"
+      - "Is saturation increased alongside the brightness decrease?"
+      - "Do the darker variants avoid looking muddy or gray?"
+    anti_pattern: |
+      Creating a dark variant of brand orange by only reducing brightness, producing
+      a dull brown instead of a rich burnt orange with depth.
+    source: "Color Mistakes Designers Make and How to Fix Them"
+
+  - rule_id: VD14
+    name: monochromatic-icons-default
+    description: |
+      Icons should be monochromatic (single neutral color) by default. Apply color
+      to icons only to communicate status: active/selected state, error, success, or
+      warning. Decorative colored icons compete with content for attention.
+    rationale: |
+      Icons are navigation and comprehension aids — they should support content, not
+      compete with it. When every icon is a different color, the icon bar becomes the
+      loudest element on screen. Reserving color for status makes status changes
+      immediately noticeable.
+    checklist:
+      - "Are default/inactive icons rendered in a single neutral color (gray/muted)?"
+      - "Is icon color used exclusively to indicate state (active, error, success)?"
+      - "Do colored status icons use semantic colors (VD6) consistently?"
+    anti_pattern: |
+      A sidebar with 8 navigation icons each in a different brand color, creating a
+      rainbow strip that draws more attention than the page content.
+    source: "Color Mistakes Designers Make and How to Fix Them"
+
+  - rule_id: VD15
+    name: gray-not-black-for-secondary-elements
+    description: |
+      Use medium gray (not pure black) for secondary text, borders, dividers, and
+      supporting UI elements. This creates typographic and visual hierarchy through
+      contrast reduction without requiring size or weight changes.
+    rationale: |
+      Pure black on every text element makes everything equally loud. Reducing
+      secondary elements to gray (e.g., #6B7280, #9CA3AF) creates a natural reading
+      hierarchy: primary text stands out, secondary text recedes. This is hierarchy
+      through contrast, the most subtle and effective form.
+    checklist:
+      - "Is secondary/helper text visually lighter than primary body text?"
+      - "Are borders and dividers lighter than body text?"
+      - "Is pure black reserved for primary headings and critical content only?"
+    anti_pattern: |
+      Setting all text — headings, body, captions, timestamps, helper text — to
+      #000000, producing a wall of equally-weighted text with no visual hierarchy.
+    source: "Color Mistakes Designers Make and How to Fix Them"
+
+  - rule_id: VD16
+    name: consistent-element-state-colors
+    description: |
+      Interactive element states must follow a consistent color modification pattern:
+      hover = lighter (higher lightness), active/pressed = darker (lower lightness),
+      disabled = desaturated + reduced opacity. Apply this pattern uniformly across
+      all interactive elements.
+    rationale: |
+      Physical objects lighten when a light source approaches (hover as "attention")
+      and darken under pressure (active as "pressing down"). This matches physical
+      affordance and becomes predictable. Inconsistent state treatments (hover darker
+      on buttons, lighter on links) confuse muscle memory.
+    checklist:
+      - "Do all hover states lighten the base color?"
+      - "Do all active/pressed states darken the base color?"
+      - "Do all disabled states desaturate and reduce opacity?"
+      - "Is this pattern consistent across buttons, links, cards, and list items?"
+    anti_pattern: |
+      Buttons darken on hover but links lighten on hover, and disabled states are
+      sometimes gray, sometimes the same color at 50% opacity, sometimes a different
+      color entirely.
+    source: "Color Mistakes Designers Make and How to Fix Them"
+
+  - rule_id: VD17
+    name: subtle-hero-gradient
+    description: |
+      Add a barely perceptible gradient to hero sections and large background areas,
+      even when a flat fill seems sufficient. A 2-5% lightness variation across the
+      surface adds atmospheric depth that flat fills lack.
+    rationale: |
+      The physical world contains no perfectly uniform surfaces — even a white wall
+      has lighting gradients. A subtle gradient (e.g., top slightly lighter fading to
+      slightly darker) activates depth perception subconsciously, making the design
+      feel more spatial and polished without the user being able to articulate why.
+    checklist:
+      - "Do hero/banner sections use a subtle gradient rather than a flat fill?"
+      - "Is the gradient variation 5% or less in lightness (barely perceptible)?"
+      - "Does the gradient direction suggest a consistent light source?"
+    anti_pattern: |
+      A large hero section with a perfectly flat #F5F5F5 fill that feels sterile and
+      "undesigned" compared to competitors' more atmospheric sections.
+    source: "Color Mistakes Designers Make and How to Fix Them"
+
+  - rule_id: VD18
+    name: background-texture-noise
+    description: |
+      Add texture to large background surfaces: noise overlay at 2-3% opacity, subtle
+      dot/crosshatch patterns, or faint linear gradients. Flat solid-color backgrounds
+      feel sterile and digitally artificial.
+    rationale: |
+      Physical surfaces have texture — paper grain, fabric weave, wall roughness.
+      Digital surfaces that lack texture feel uncanny and cold. Even imperceptible
+      noise (2-3% opacity) engages the eye and creates a sense of material, making
+      the interface feel crafted rather than generated.
+    checklist:
+      - "Do large background areas have a subtle texture or noise overlay?"
+      - "Is the texture opacity below 5% (present but not distracting)?"
+      - "Does the texture degrade gracefully (no visible banding or artifacts)?"
+    anti_pattern: |
+      An entire app with perfectly flat, solid-color backgrounds on every surface,
+      producing a sterile, template-like appearance.
+    source: "Color Mistakes Designers Make and How to Fix Them"
+
+  - rule_id: VD19
+    name: flat-beats-bad-gradient
+    description: |
+      Remove gradients that do not clearly improve the design. A flat fill is always
+      better than a poorly executed gradient. If using a gradient, constrain it to
+      single-hue lightness variations (e.g., light blue to slightly darker blue) —
+      multi-hue gradients are difficult to execute well.
+    rationale: |
+      Bad gradients — banding artifacts, clashing hue transitions, overly dramatic
+      shifts — are more damaging than no gradient at all. Single-hue gradients are
+      safe because they cannot produce hue clashes, only lightness variation, which
+      the eye handles gracefully.
+    checklist:
+      - "Does every gradient clearly improve the design vs. a flat alternative?"
+      - "Are gradients constrained to single-hue lightness ramps where possible?"
+      - "Are multi-hue gradients limited to adjacent hues (< 30 degree hue difference)?"
+    anti_pattern: |
+      A header gradient from saturated blue to saturated orange, producing a muddy
+      brown transition zone in the middle that looks like a rendering error.
+    source: "Color Mistakes Designers Make and How to Fix Them"
+
+  - rule_id: VD20
+    name: shadow-formula-overhead-lighting
+    description: |
+      Box shadow formula: x-offset <= y-offset, blur radius = 1.3-2x the y-offset,
+      opacity between 15-20%. This simulates natural overhead lighting. The default
+      25% opacity in most frameworks is too heavy and makes shadows look like borders.
+    rationale: |
+      Natural light comes from above, so shadows fall downward (y > x). The blur
+      radius should exceed the offset to prevent hard-edged shadows that look stamped
+      on. At 15-20% opacity, shadows provide depth cues without becoming visual
+      elements in their own right.
+    checklist:
+      - "Is the x-offset <= y-offset on all box shadows?"
+      - "Is the blur radius at least 1.3x the y-offset?"
+      - "Is shadow opacity between 15-20% (not the default 25%)?"
+      - "Do shadows look like natural light effects, not dark borders?"
+    anti_pattern: |
+      Using box-shadow: 5px 5px 5px rgba(0,0,0,0.3) — equal offsets produce an
+      unnatural diagonal shadow, blur equals offset creating hard edges, and 30%
+      opacity makes the shadow more prominent than the content.
+    source: "Color Mistakes Designers Make and How to Fix Them"
+
+  - rule_id: VD21
+    name: dark-mode-frosted-glass-cards
+    description: |
+      In dark mode, use frosted glass effects (backdrop-filter: blur + semi-transparent
+      background fill) on cards and overlays to create depth. Dark mode lacks usable
+      drop shadows, so frosted glass provides the layering cue that shadows provide
+      in light mode.
+    rationale: |
+      Dark-on-dark shadows are invisible. Without an alternative depth mechanism,
+      dark mode interfaces become flat stacks of slightly different dark rectangles.
+      Frosted glass (blur + transparency) creates visible layering by letting the
+      background show through, establishing which surface is "above" which.
+    checklist:
+      - "Do dark-mode cards/overlays use backdrop-filter: blur() with semi-transparent fill?"
+      - "Is the blur radius sufficient to obscure background detail (8-16px typical)?"
+      - "Does the frosted effect degrade gracefully in browsers without backdrop-filter support?"
+      - "Is the semi-transparent fill opacity between 40-70% (transparent enough to blur, opaque enough to read content)?"
+    anti_pattern: |
+      Dark mode cards using only a 2% lighter background color with no blur or
+      transparency, making cards indistinguishable from the page background until
+      the user hovers.
+    source: "Color Mistakes Designers Make and How to Fix Them"
+
+  - rule_id: VD22
+    name: nav-contrast-on-dynamic-backgrounds
+    description: |
+      Fixed or sticky navigation text must maintain WCAG AA contrast against all
+      possible background states — including video, animated gradients, image
+      carousels, and scroll-position-dependent content. Use a solid or semi-
+      transparent backdrop (backdrop-filter: blur + background-color with alpha)
+      behind nav text, or dynamically adapt text color based on the underlying
+      content luminance. A nav bar that is readable on the hero but disappears
+      against a bright video frame is a critical usability failure.
+    rationale: |
+      Sticky navigation follows the user through every section of the page. If the
+      background varies (video, images, gradient shifts), light nav text will
+      inevitably pass over a light region and become unreadable. Smart color
+      adaptation helps but is fragile — a semi-transparent backdrop is the reliable
+      solution. Observed in AI-built sites where nav text was invisible against
+      video backgrounds despite working fine against the static hero.
+    checklist:
+      - "Does the sticky nav have a backdrop (solid, blur, or gradient) ensuring text contrast?"
+      - "Is nav text readable against every background state the page can produce?"
+      - "Has the nav been tested against video frames, image carousels, and light sections?"
+      - "Does the nav maintain WCAG AA contrast ratio (4.5:1 for normal text) at all scroll positions?"
+    anti_pattern: |
+      A sticky nav with white text and no backdrop over a page that includes a hero
+      video — the nav is readable on the dark intro frame but invisible when the
+      video cycles to a bright scene, making navigation inaccessible.
+    source: "The Good, Bad, and Ugly of AI-Assisted Design (YC Design Review)"

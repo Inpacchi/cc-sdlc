@@ -1,0 +1,395 @@
+# Layout Principles — Cross-Project
+# Spacing, grid, and structural layout principles for consistent, readable interfaces.
+# Source: Bulk ingestion from UI/UX design YouTube transcripts (2026-03-23)
+
+spec_relevant: false
+
+name: Layout Principles
+description: Structural layout, spacing, and grid principles for UI design consistency
+category: design
+
+rules:
+  - rule_id: LO1
+    name: base-grid-spacing
+    description: |
+      Use a 4px or 8px base grid for all spacing values. Every margin,
+      padding, and gap must be a multiple of the chosen base unit. This
+      eliminates arbitrary spacing and ensures visual consistency across
+      all components and pages.
+    rationale: |
+      Arbitrary spacing values (13px, 17px, 22px) create subtle misalignment
+      that accumulates into visual disorder. A base grid constrains choices
+      to a harmonic scale, making layouts feel cohesive even across different
+      designers and components.
+    checklist:
+      - "Is every spacing value (margin, padding, gap) a multiple of 4px or 8px?"
+      - "Are spacing tokens defined in the design system (not ad hoc pixel values)?"
+      - "Do new components use existing spacing tokens rather than introducing new values?"
+    anti_pattern: |
+      Mixing spacing values like 5px, 13px, 18px, 22px throughout the
+      interface — each chosen "by eye" per component — resulting in
+      inconsistent alignment that feels off without being obviously broken.
+    source: "UI Layout and Spacing Fundamentals"
+
+  - rule_id: LO2
+    name: remove-unnecessary-containers
+    description: |
+      Remove containers and dividers when spacing alone creates sufficient
+      visual grouping. Cards and bordered sections have a large visual
+      footprint. Test with whitespace first — add containers only when
+      whitespace fails to communicate grouping.
+    rationale: |
+      Every container adds visual weight: borders, shadows, backgrounds,
+      padding, and margin. When spacing already communicates structure,
+      containers are redundant chrome. Removing them reduces visual noise
+      and lets content breathe.
+    checklist:
+      - "If you remove this card/container border, does the grouping remain clear from spacing alone?"
+      - "Are divider lines used only where spacing cannot communicate the boundary?"
+      - "Is the page free of nested containers (cards inside cards)?"
+    anti_pattern: |
+      Wrapping every content group in a bordered card with shadow, resulting
+      in a page that looks like a grid of boxes — each box adding visual
+      weight that competes with the content inside it.
+    source: "UI Layout and Spacing Fundamentals"
+
+  - rule_id: LO3
+    name: alternating-row-backgrounds
+    description: |
+      For dense lists and tables with tight row spacing, use alternating
+      row backgrounds (zebra striping) instead of horizontal divider lines.
+      Lines between tight rows create a cage-like visual effect that makes
+      the data feel imprisoned.
+    rationale: |
+      Horizontal rules in tight lists visually dominate the content,
+      especially when rows are short (20-32px height). Alternating subtle
+      background colors distinguish rows without adding visual elements
+      that compete with the data.
+    checklist:
+      - "Do dense lists/tables use alternating backgrounds instead of row dividers?"
+      - "Is the contrast between alternating backgrounds subtle (< 5% lightness difference)?"
+      - "Are row dividers reserved for tables with 40px+ row heights?"
+    anti_pattern: |
+      A data table with 24px-height rows separated by 1px solid borders,
+      creating a dense grid of horizontal lines that makes the table look
+      like a spreadsheet cage.
+    source: "UI Layout and Spacing Fundamentals"
+
+  - rule_id: LO4
+    name: grid-strictness-by-context
+    description: |
+      Use strict grid alignment for dashboards and data-dense views.
+      Use flexible, varied grids for landing pages and narrative content.
+      Dense data needs precise alignment for scannability; narrative pages
+      need variety for engagement.
+    rationale: |
+      Dashboards are scanned, not read — strict alignment helps users locate
+      and compare data points quickly. Landing pages are scrolled through
+      narratively — visual variety maintains interest and prevents template
+      fatigue. Applying the wrong grid strategy to either context hurts
+      usability.
+    checklist:
+      - "Do dashboard layouts use a strict column grid with aligned edges?"
+      - "Do landing/marketing pages vary their layout across sections?"
+      - "Is the grid strategy documented in the design system for each page type?"
+    anti_pattern: |
+      A dashboard with creatively offset cards at varying widths and angles
+      (making data comparison impossible), or a landing page with rigid
+      uniform 3-column grids repeated for every section (making it feel
+      like a template).
+    source: "UI Layout and Spacing Fundamentals"
+
+  - rule_id: LO5
+    name: eliminate-redundant-kpis
+    description: |
+      Display each metric or KPI in exactly one location. AI-generated
+      layouts frequently repeat the same metric in multiple widgets. Audit
+      dashboards for duplicate displays and consolidate to a single
+      canonical location per metric.
+    rationale: |
+      Redundant KPI displays waste screen space, create update inconsistency
+      risk, and force users to wonder which instance is authoritative. A
+      single canonical location per metric makes the dashboard scannable
+      and trustworthy.
+    checklist:
+      - "Does each metric appear in exactly one widget/location on the dashboard?"
+      - "If a metric appears in multiple views, is there a clear primary and derived relationship?"
+      - "Has the layout been audited for duplicate data displays?"
+    anti_pattern: |
+      A dashboard showing "Total Revenue" in a hero KPI card at the top,
+      again as a row in a summary table, and again as the title of a chart
+      — three representations of the same number consuming space that could
+      show three different insights.
+    source: "UI Layout and Spacing Fundamentals"
+
+  - rule_id: LO6
+    name: break-the-box
+    description: |
+      Use elements that overlap or extend past grid boundaries to create
+      visual dynamism. Images bleeding past card edges, text overlapping
+      sections, or decorative elements crossing grid lines break the
+      template-like rigidity that strict containment creates.
+    rationale: |
+      Strict containment (everything inside its box) signals "template" and
+      "auto-generated." Controlled boundary-breaking creates visual tension
+      and craftsmanship. The key is intentionality — one or two elements
+      break the grid while the rest respect it, creating contrast.
+    checklist:
+      - "Does at least one element per major section break or overlap its container boundary?"
+      - "Are boundary-breaking elements intentional and consistent (not accidental overflow)?"
+      - "Does the break create visual interest without harming readability?"
+    anti_pattern: |
+      Every element perfectly contained within its grid cell with no
+      overlap, offset, or bleed — creating a rigid, tile-like layout that
+      feels mechanically generated rather than designed.
+    source: "UI Layout and Spacing Fundamentals"
+
+  - rule_id: LO7
+    name: decorative-density-gradient
+    description: |
+      Decorative elements (dots, lines, particles, shapes) should decrease
+      in density toward the edges and concentrate toward the content center.
+      This "trail off" pattern creates a natural fade that serves the
+      content hierarchy rather than competing with it.
+    rationale: |
+      Uniform decorative density across the viewport treats decoration as
+      equal to content. A density gradient naturally draws the eye inward
+      toward content and gives the page edges breathing room. It also
+      handles viewport width variation gracefully.
+    checklist:
+      - "Do decorative elements decrease in density from center toward page edges?"
+      - "Are decorative elements absent from areas where they would overlap with body text?"
+      - "Does the decorative pattern degrade gracefully at different viewport widths?"
+    anti_pattern: |
+      A uniform grid of decorative dots covering the entire background at
+      constant density, creating visual noise that competes with content
+      rather than framing it.
+    source: "UI Layout and Spacing Fundamentals"
+
+  - rule_id: LO8
+    name: decoration-text-spacing
+    description: |
+      Maintain generous spacing between decorative elements and text. If
+      removing the decoration makes the text easier to read, the decoration
+      was too close. Decoration should enhance the reading experience, not
+      degrade it.
+    rationale: |
+      Decorative elements near text create visual interference — the eye
+      is drawn to the decoration instead of the words. Generous spacing
+      ensures decoration serves as ambient context rather than competing
+      with content for attention.
+    checklist:
+      - "Is there at least 24px of clear space between decorative elements and body text?"
+      - "Does removing the decoration make any text noticeably easier to read? (If yes, increase spacing.)"
+      - "Are decorative elements behind text sufficiently faded (< 10% opacity) or removed?"
+    anti_pattern: |
+      Decorative geometric shapes or gradient blobs positioned directly
+      adjacent to or behind paragraph text, making the text harder to
+      read against the non-uniform background.
+    source: "UI Layout and Spacing Fundamentals"
+
+  - rule_id: LO9
+    name: five-second-scroll-test
+    description: |
+      Apply the 5-second scroll test to wireframes: scroll through the
+      page in 5 seconds. If the structure, hierarchy, and purpose of each
+      section are not immediately clear, no amount of visual polish will
+      fix the layout. Restructure before styling.
+    rationale: |
+      Users scroll fast. If the wireframe-level structure doesn't communicate
+      at scroll speed, adding colors, images, and typography will only mask
+      the structural problem. This test catches layout issues before visual
+      design effort is invested.
+    checklist:
+      - "Can someone unfamiliar with the page identify each section's purpose in a 5-second scroll?"
+      - "Are section boundaries clear from layout alone (not dependent on color or imagery)?"
+      - "Does the page pass this test at wireframe fidelity (before visual design)?"
+    anti_pattern: |
+      A wireframe where all sections look the same — equal-height blocks
+      with similar column counts — making it impossible to distinguish
+      hero from features from pricing without reading the placeholder text.
+    source: "UI Layout and Spacing Fundamentals"
+
+  - rule_id: LO10
+    name: stacked-single-column-showcase
+    description: |
+      For focused feature showcases, use a stacked 1-column vertical layout.
+      This trades information density for attention quality — each feature
+      gets the full viewport width and the user's undivided attention.
+      Apple-style single-feature-per-scroll sections.
+    rationale: |
+      Multi-column feature layouts split attention and reduce each feature
+      to a thumbnail + blurb. Single-column stacking gives each feature
+      room for a full-width image, detailed description, and interaction
+      — treating features as stories rather than bullet points.
+    checklist:
+      - "Do showcase features each get full viewport width?"
+      - "Is each feature section tall enough to occupy most of the viewport when scrolled to?"
+      - "Are features presented sequentially (not competing for attention side-by-side)?"
+    anti_pattern: |
+      Cramming six features into a 2x3 grid of small cards with tiny icons
+      and single-sentence descriptions, giving each feature so little space
+      that none of them can make a compelling case.
+    source: "UI Layout and Spacing Fundamentals"
+
+  - rule_id: LO11
+    name: footer-matches-link-count
+    description: |
+      Footer layout must match the actual number of links. 3-5 links use
+      a single centered row. Multi-column footers are only justified for
+      6+ links organized into meaningful categories. Over-structured footers
+      for few links waste space and look sparse.
+    rationale: |
+      A 4-column footer with 2 links per column looks empty and
+      over-engineered. A single-row footer with 20 links is unusable.
+      Matching structure to content volume ensures the footer looks
+      intentional and helps users find what they need.
+    checklist:
+      - "Does the footer use a single row if there are fewer than 6 links?"
+      - "If multi-column, does each column have a meaningful category heading?"
+      - "Does each column have at least 3 links (otherwise consolidate)?"
+    anti_pattern: |
+      A 4-column footer layout copied from a Fortune 500 template when the
+      site only has 4 total footer links — resulting in four columns with
+      one link each, surrounded by empty space.
+    source: "UI Layout and Spacing Fundamentals"
+
+  - rule_id: LO12
+    name: right-hand-interaction-zones
+    description: |
+      On mobile, place primary interaction targets within the right-hand
+      thumb arc. 70-80% of users are right-handed. Primary actions (CTAs,
+      navigation triggers, key inputs) should fall within natural right-thumb
+      reach zones.
+    rationale: |
+      Mobile users hold their phone in one hand. Right-thumb reach zones
+      are well-documented (bottom-right quadrant is easiest, top-left is
+      hardest). Placing primary actions in hard-to-reach zones increases
+      interaction cost and reduces engagement.
+    checklist:
+      - "Are primary mobile CTAs in the bottom-right quadrant of the screen?"
+      - "Are navigation triggers within thumb reach (not top-left on mobile)?"
+      - "Has the layout been tested with one-handed right-thumb interaction?"
+    anti_pattern: |
+      A mobile layout with the primary CTA centered at the top of the
+      screen and navigation in the top-left corner, requiring users to
+      stretch or use their other hand for the most frequent interactions.
+    source: "UI Layout and Spacing Fundamentals"
+
+  - rule_id: LO13
+    name: design-for-edge-cases
+    description: |
+      Design for edge-case content at design time, not as an afterthought.
+      Test layouts with long strings, missing data, empty states,
+      high-contrast images, and single-item lists. Define truncation rules
+      and fallback behaviors during the design phase.
+    rationale: |
+      Layouts that only work with ideal content break in production. Long
+      names overflow, missing avatars leave blank holes, single-item grids
+      look broken. Defining edge-case behavior during design prevents
+      engineering from making inconsistent ad hoc decisions.
+    checklist:
+      - "Has the layout been tested with maximum-length content in every text field?"
+      - "Are empty states designed (not just 'no results found' in default text)?"
+      - "Are truncation rules defined (max characters, ellipsis position, tooltip on hover)?"
+      - "Has the layout been tested with a single item (not just 3+ items)?"
+    anti_pattern: |
+      Designing a user card that looks perfect with "John Smith" and a
+      square avatar, then shipping it — only to discover it breaks with
+      "Dr. Mohammed Al-Rahman bin Khalid" and a landscape-ratio profile
+      photo.
+    source: "UI Layout and Spacing Fundamentals"
+
+  - rule_id: LO14
+    name: design-in-user-flows
+    description: |
+      Design screens as part of user flows, not as isolated compositions.
+      Every screen must answer "how did the user get here?" and "what do
+      they need next?" Context-free screen design creates beautiful pages
+      that don't connect into a usable product.
+    rationale: |
+      Screens exist in sequences. A settings page reached from an error
+      message needs different emphasis than the same page reached from a
+      nav menu. Designing in flows ensures transitions are smooth, context
+      is preserved, and users always have a clear next step.
+    checklist:
+      - "Can you describe the 2-3 most common paths that lead to this screen?"
+      - "Does the screen provide a clear primary next action?"
+      - "Does the screen preserve context from the previous screen (breadcrumbs, back navigation, state)?"
+      - "Are transitions between screens in the flow designed (not just individual screens)?"
+    anti_pattern: |
+      Designing each page as a standalone Dribbble shot — beautiful in
+      isolation but with no back navigation, no breadcrumbs, no state
+      preservation from the previous page, and no indication of what the
+      user should do next.
+    source: "UI Layout and Spacing Fundamentals"
+
+  - rule_id: LO15
+    name: sidebar-nav-relevance-ordering
+    description: |
+      In sidebar navigation, group items by usage relevance. Primary
+      navigation items (most-used features) get top position. Settings,
+      help, billing, and other rarely-used items are pushed to the bottom.
+    rationale: |
+      Sidebar vertical space is limited, especially on laptop screens.
+      Placing rarely-used items (settings, help) at the top pushes
+      frequently-used features below the fold. Relevance ordering minimizes
+      scrolling for the majority of interactions.
+    checklist:
+      - "Are the top 3 sidebar items the most frequently used features?"
+      - "Are settings, help, and billing at the bottom of the sidebar?"
+      - "Is there a visual separator between primary nav and utility nav?"
+    anti_pattern: |
+      A sidebar starting with Settings, Help Center, and Billing at the
+      top (alphabetical order), pushing the actual product features — the
+      reason users opened the app — below the fold on smaller screens.
+    source: "UI Layout and Spacing Fundamentals"
+
+  - rule_id: LO16
+    name: consistent-components
+    description: |
+      Use the same component styles, spacing, and type scales across all
+      contexts. Buttons, inputs, cards, and typography must look and behave
+      identically regardless of which page they appear on. No per-page
+      visual variations.
+    rationale: |
+      Per-page component variations force users to re-learn the interface
+      on each page. Consistency builds muscle memory — users know what a
+      button looks like, how an input behaves, and where to find actions
+      without thinking. It also reduces design and engineering maintenance.
+    checklist:
+      - "Are button styles (size, color, border-radius) identical across all pages?"
+      - "Are spacing tokens used consistently (not custom per-page values)?"
+      - "Are type scales (heading sizes, body sizes) the same on every page?"
+      - "Do form inputs look and behave identically across all forms?"
+    anti_pattern: |
+      A marketing page with 16px rounded buttons, a dashboard with 14px
+      square buttons, and a settings page with 12px pill buttons — three
+      different button styles in the same product, each chosen to "fit"
+      the page aesthetic.
+    source: "UI Layout and Spacing Fundamentals"
+
+  - rule_id: LO17
+    name: whitespace-as-primary-separator
+    description: |
+      Use whitespace (Gestalt proximity principle) as the primary visual
+      separator. Humans naturally group elements that are close together
+      and separate elements with space between them. Add explicit containers
+      (borders, cards, backgrounds) only when whitespace alone fails to
+      communicate the grouping.
+    rationale: |
+      Whitespace is a zero-weight separator — it communicates structure
+      without adding any visual element. Borders, backgrounds, and dividers
+      all add visual weight that accumulates into clutter. Starting with
+      whitespace and escalating to containers only when needed produces
+      the cleanest possible layouts.
+    checklist:
+      - "Is the space between groups at least 2x the space within groups?"
+      - "Can you identify content groups from spacing alone (without borders or backgrounds)?"
+      - "Are containers used only where spacing cannot communicate the boundary?"
+    anti_pattern: |
+      Every content group wrapped in a bordered container with internal
+      padding — producing a layout that communicates structure through
+      boxes rather than space, resulting in heavy visual weight and
+      nested-box complexity.
+    source: "UI Layout and Spacing Fundamentals"

@@ -1,0 +1,288 @@
+# UI Component Patterns
+# Extracted from UI/UX design video transcripts (27 videos, single creator)
+# Source: paire-appetit/ingest/transcripts/ — YouTube UI design channel
+# Last updated: 2026-03-23
+
+last_updated: 2026-03-24
+id: component-patterns
+name: "UI Component Patterns"
+description: >
+  Rules for designing common UI components: icons, buttons, navigation,
+  charts, modals, inputs, cards, chips, footers, and pricing cards.
+  Covers sizing, styling, states, and hierarchy patterns.
+spec_relevant: false
+
+rules:
+  - rule_id: U01
+    name: icon-matches-line-height
+    description: |
+      Icons should match the line-height of adjacent text. If text has a 24px
+      line-height, icons should be 24px. Then tighten the text spacing to align.
+      Use a consistent icon library (Phosphor, Lucide, Feather) — never mix
+      libraries within the same visual context.
+    rationale: |
+      Oversized icons dominate text and feel childish. Undersized icons feel like
+      afterthoughts. Matching line-height creates natural visual alignment.
+      Mixed icon styles (different stroke widths, filled vs outlined) look amateur.
+    checklist:
+      - "Are icons sized to match the line-height of their adjacent text?"
+      - "Do all icons in the same visual region come from a single icon library?"
+    source: "youtube_EcbgbKtOELY (UI/UX Basics), youtube_t7mpEDXzjCg (8 Actionable Tips)"
+
+  - rule_id: U02
+    name: icon-detail-scales-with-size
+    description: |
+      Smaller icons need simpler/less detailed designs. Larger icons can have more
+      detail. A piece of art as an icon is never needed — simpler is generally better.
+      Different icon styles (stroke vs filled, different detail levels) are acceptable
+      IF they are in visually separate regions of the interface.
+    rationale: |
+      Fine detail at small sizes becomes visual noise rather than meaningful information.
+      The icon's job is instant recognition, not artistic expression.
+    checklist:
+      - "Are small icons (<20px) using simple, low-detail designs?"
+      - "If different icon styles exist, are they in visually separate interface regions?"
+    source: "youtube_t7mpEDXzjCg, youtube_AH_ugxmLeUM (Beginner Mistakes)"
+
+  - rule_id: U03
+    name: one-primary-cta-per-section
+    description: |
+      Each section should have exactly one primary call-to-action (CTA). Secondary
+      actions get reduced visual weight: no background (ghost), border only, or
+      reduced opacity. For destructive action dialogs: destructive button gets
+      primary color (red), cancel gets ghost/border treatment.
+    rationale: |
+      Two equally prominent buttons split attention and create decision paralysis.
+      Clear visual hierarchy between primary and secondary actions guides the user
+      toward the intended path while keeping alternatives accessible.
+    checklist:
+      - "Is there exactly one visually dominant CTA per section?"
+      - "Do secondary/cancel actions use reduced visual treatment (ghost, border, lighter)?"
+      - "Do destructive confirmations use red for the destructive action?"
+    source: "youtube_t7mpEDXzjCg, youtube_EcbgbKtOELY, youtube_EOcY3hPMQkk"
+
+  - rule_id: U04
+    name: sidebar-navigation-structure
+    description: |
+      Sidebar navigation: group links by relevance. Rarely-used items (settings,
+      help) go to the bottom. Each link needs an icon and short title (supports
+      collapsed icon-only mode). Active state is mandatory — use a background
+      highlight, left indicator rectangle, or brand color. Nest expanding link
+      groups as the link count grows.
+    rationale: |
+      Sidebar is the persistent spine of any product. Grouping reduces cognitive
+      load. Active state prevents the "where am I?" disorientation. Collapsible
+      mode with icon-only preserves screen real estate for content.
+    checklist:
+      - "Are sidebar links grouped by relevance (not alphabetically or arbitrarily)?"
+      - "Is there a clear active state for the current page?"
+      - "Does each link have an icon that works in collapsed mode?"
+    source: "youtube_B7k5rOgmOGY (Dashboard Design), youtube_gKM6b2EnW1k (9 Critical UI Elements)"
+
+  - rule_id: U05
+    name: chart-readability
+    description: |
+      Charts must include: grid lines (horizontal at minimum), axis labels with
+      numbers, and markers. Never use curved/smoothed lines that obscure where
+      data points actually fall. Rounded bar tops make exact values hard to read.
+      Turn off line curving. Include a time/range selector and optional legend.
+      Show previous period as a gray line for comparison.
+    rationale: |
+      Beautiful charts that can't be read are worse than ugly charts that can.
+      The primary function of a chart is data communication. Grid lines, labels,
+      and straight line segments ensure users can actually extract information.
+    checklist:
+      - "Do charts include grid lines and axis labels with values?"
+      - "Are line charts using straight segments (not smoothed curves that obscure data)?"
+      - "Is there a time/range selector for charts showing temporal data?"
+    source: "youtube_B7k5rOgmOGY, youtube_gKM6b2EnW1k, youtube_AH_ugxmLeUM"
+
+  - rule_id: U06
+    name: modal-vs-popover-vs-page
+    description: |
+      Use the right container for the complexity:
+      - Popover: simple, non-blocking context (display settings, quick actions).
+        User can click away without consequence.
+      - Modal: complex but same-page context (create forms, confirmations). Blocking —
+        requires explicit dismiss. Follow with a toast confirming the action.
+      - New page: large or permanent context (detailed item view, settings pages).
+        Requires back button or breadcrumb.
+    rationale: |
+      Mismatching container complexity to content complexity creates friction.
+      A full modal for a simple toggle wastes user time. A popover for a complex
+      multi-field form loses data on accidental dismiss.
+    checklist:
+      - "Are simple, non-blocking actions using popovers (not modals)?"
+      - "Are complex, blocking actions using modals (not inline UI)?"
+      - "Do page navigations include a back button or breadcrumb?"
+    source: "youtube_B7k5rOgmOGY (Dashboard Design)"
+
+  - rule_id: U07
+    name: toast-notifications
+    description: |
+      Toast notifications are the notification system of the interface. Use for:
+      non-blocking success confirmations, warnings, and error states. They should
+      appear after modal actions (confirming changes), on state changes, and for
+      error/warning states that are frequently missed without explicit notification.
+    rationale: |
+      Many state changes (successful save, failed upload, warning condition) are
+      invisible without toasts. Users need feedback that doesn't block their workflow
+      but still communicates what happened.
+    checklist:
+      - "Do modal submissions result in a toast confirming the action?"
+      - "Are error and warning states communicated via toasts (not silently swallowed)?"
+    source: "youtube_B7k5rOgmOGY (Dashboard Design)"
+
+  - rule_id: U08
+    name: empty-states-required
+    description: |
+      Empty states are required for every list, table, and data view. The empty
+      state should include: a message explaining what belongs here, and a clear
+      call-to-action for the next step. Optionally include an illustration or
+      animation. Empty states are the user's first impression of a feature.
+    rationale: |
+      A blank screen with no guidance leaves users confused about what to do next.
+      Empty states double as onboarding — they teach the user what the feature does
+      and how to start using it.
+    checklist:
+      - "Does every list/table/data view have a designed empty state?"
+      - "Does the empty state include a message and a CTA?"
+    source: "youtube_B7k5rOgmOGY, youtube_ADaQuZS04Rc (Break Into UX)"
+
+  - rule_id: U09
+    name: chip-proportions
+    description: |
+      Chip vertical padding should be 1/2 or 1/4 of horizontal padding. This
+      creates the thin, elongated shape that distinguishes chips from buttons.
+      Chips should never use the primary CTA color as their background. Always
+      use auto-layout for chips to maintain consistent padding regardless of text length.
+    rationale: |
+      Chips that are too tall look like buttons. Chips that are too square look like
+      tags or badges. The distinct thin proportion signals "filter/label/category"
+      rather than "actionable button."
+    checklist:
+      - "Are chips visually thinner than buttons (vertical padding < horizontal)?"
+      - "Do chips avoid using the primary CTA color?"
+    source: "youtube_gKM6b2EnW1k (9 Critical UI Elements)"
+
+  - rule_id: U10
+    name: form-input-design
+    description: |
+      Form input rules: (1) Labels above inputs, always visible — never use
+      placeholder text as the only label. (2) Fill inputs with realistic placeholder
+      examples. (3) Off-white background with reduced-opacity border (~40%) for
+      a modern, clean look. (4) Required states: default, focus (highlighted border),
+      error (red border + message), optionally warning.
+    rationale: |
+      Placeholder-only labels disappear once typing begins, forcing users to clear
+      fields to remember what they're filling in. Visible labels eliminate this
+      friction. Realistic placeholders show expected format.
+    checklist:
+      - "Are form labels visible above inputs (not only as placeholders)?"
+      - "Do inputs have focus, error, and default states designed?"
+      - "Do placeholders show realistic examples of expected input?"
+    source: "youtube_gKM6b2EnW1k (9 Critical UI Elements), youtube_AH_ugxmLeUM"
+
+  - rule_id: U11
+    name: footer-proportional-to-content
+    description: |
+      Footer layout should be proportional to the number of links. If you have
+      3-5 links, center them in a single row — do not use a giant multi-column
+      footer layout. Multi-column footers are for sites with 20+ links. A simple
+      centered layout with links, social icons, copyright, and credits works for
+      most sites.
+    rationale: |
+      Giant footers with 3 links look like someone copied Apple's footer template
+      and forgot to fill in the content. The footer structure should match the
+      site's actual content volume.
+    checklist:
+      - "Is the footer layout proportional to the number of links it contains?"
+    source: "youtube_gKM6b2EnW1k (9 Critical UI Elements)"
+
+  - rule_id: U12
+    name: pricing-card-hierarchy
+    description: |
+      Pricing cards: price should be the largest element (users care about cost first).
+      Show the actual discount amount. Show what the NEXT tier includes that the
+      current tier doesn't. Plan name should be secondary to price. Separate
+      numbers from features visually (divider or background change).
+    rationale: |
+      Users scan pricing pages for cost first, then features. Burying the price
+      below the plan name inverts the hierarchy. Showing upgrade differentials
+      creates natural upsell paths.
+    checklist:
+      - "Is the price the most prominent element on pricing cards?"
+      - "Does each tier show what the next tier adds?"
+    source: "youtube_gKM6b2EnW1k (9 Critical UI Elements)"
+
+  - rule_id: U13
+    name: list-separation-methods
+    description: |
+      Three ways to separate list items: (1) space alone, (2) lines/dividers,
+      (3) background color alternation. Space is cleanest. For tables, functionality
+      matters more than decoration — provide search, filter, and sort capabilities.
+      Border-based cards work better on dark mode; background-based on light mode.
+    rationale: |
+      Lists are the most common dashboard component. The separation method sets
+      the overall visual tone. Over-decorating lists (borders + shadows + dividers)
+      creates clutter proportional to the number of items.
+    checklist:
+      - "Are list items separated by the simplest effective method (space > alternating bg > dividers)?"
+      - "Do data tables provide search, filter, and sort capabilities?"
+    source: "youtube_B7k5rOgmOGY (Dashboard Design)"
+
+  - rule_id: U14
+    name: redundant-element-removal
+    description: |
+      Remove elements that duplicate functionality or add no information:
+      navigation arrows that duplicate swipe gestures on mobile, borders that
+      duplicate spacing, labels that duplicate icon meaning, back arrows that
+      duplicate browser navigation. Every element should pass: "Does removing
+      this reduce clarity?"
+    rationale: |
+      Redundant elements add visual noise without adding information. The fewer
+      elements required to communicate structure and function, the cleaner and
+      faster the interface feels.
+    checklist:
+      - "Has each visual element been tested for redundancy (would removing it reduce clarity)?"
+    source: "youtube_AH_ugxmLeUM (Beginner Mistakes)"
+
+  - rule_id: U15
+    name: hero-value-prop-formula
+    description: |
+      The hero section (above the fold) must communicate three things plus a CTA:
+      (1) What is it? (2) Who is it for? (3) Why should that person care?
+      Plus a primary call-to-action. If these four elements are not above the fold,
+      conversion suffers. The H1 carries the heaviest burden — it should not be
+      a clever tagline that obscures the product's purpose.
+    rationale: |
+      Visitors decide within seconds whether a product is relevant to them. If the
+      hero doesn't answer what/who/why, users scroll looking for answers or leave.
+      AI-generated landing pages frequently produce impressive-looking heroes that
+      fail this basic communication test.
+    checklist:
+      - "Does the hero section clearly state what the product is?"
+      - "Does the hero identify who it's for?"
+      - "Is there a reason to care (value proposition) above the fold?"
+      - "Is there a visible CTA above the fold?"
+    source: "youtube_DNSXlBmukck (Good Bad Ugly of AI Design)"
+
+  - rule_id: U16
+    name: sticky-header-background-safety
+    description: |
+      Sticky/fixed headers that use transparent backgrounds must handle dynamic
+      content beneath them (videos, animations, color transitions). When the
+      background changes brightness, a transparent header becomes unreadable.
+      Solutions: use an opaque/blurred background on scroll, detect background
+      brightness and swap text color, or always use a semi-opaque backdrop.
+      The header must be readable at every scroll position.
+    rationale: |
+      Transparent sticky headers look modern on static backgrounds but break on
+      dynamic ones. A header that's readable at the top of the page but invisible
+      over a bright video midway down is a functional failure. This is a common
+      AI-generated design issue because the tool builds a header for one context
+      without testing scroll states.
+    checklist:
+      - "Is the sticky header readable at every scroll position on the page?"
+      - "If the header is transparent, does it handle bright/dynamic content beneath it?"
+    source: "youtube_DNSXlBmukck (Good Bad Ugly of AI Design)"

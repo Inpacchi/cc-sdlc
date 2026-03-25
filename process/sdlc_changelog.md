@@ -34,6 +34,25 @@ Each entry contains:
 
 ---
 
+## 2026-03-25: Add design knowledge stores validated across projects
+
+**Origin:** Cross-project analysis of paire-appetit, sleeved, and neuroloom SDLC implementations. All three projects ingested the same UI/UX design transcripts via sdlc-ingest, producing identical generic knowledge files.
+
+**What happened:** Analyzed knowledge stores across all three downstream projects to identify content validated in multiple projects that should be adopted into the base framework. Four design knowledge files were present in 2+ projects with identical generic content (no project-specific references).
+
+**Changes made:**
+
+1. **`knowledge/design/component-patterns.yaml`** (new) — UI component rules: icons, buttons, navigation, modals, inputs, cards, chips, footers, pricing. 27 rules covering sizing, styling, states, hierarchy. Source: UI/UX design video transcripts.
+2. **`knowledge/design/interaction-animation.yaml`** (new) — Interactive states, micro-interactions, animation easing, motion design, loading states, progressive disclosure. Source: UI/UX design video transcripts.
+3. **`knowledge/design/visual-design-rules.yaml`** (new) — Color theory (60-30-10 rule, OKLCH palettes), dark mode depth, shadows, gradients, semantic colors. 22 rules. Source: UI/UX design video transcripts.
+4. **`knowledge/design/layout-principles.yaml`** (new) — Spacing grids, container reduction, zebra striping, grid strictness by context, whitespace-first separation. 17 rules. Source: UI/UX design video transcripts.
+5. **`knowledge/design/README.md`** — Updated structure listing with all 4 new files
+6. **`skeleton/manifest.json`** — Added all 4 files to source_files.knowledge
+
+**Rationale:** These files are genuinely generic — they apply to any project with a UI. Validated across 3 independent projects (paire-appetit, sleeved, neuroloom) that all ingested them and found them useful. Shipping in base means new projects get them on initialization instead of needing to re-ingest.
+
+---
+
 ## 2026-03-25: Add native skill/agent creation, review, and compliance auditor
 
 **Origin:** CD decision to replace external plugin-dev:agent-development dependency with native SDLC skills and add review/analysis capabilities.
