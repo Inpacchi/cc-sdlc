@@ -322,6 +322,10 @@ Present the proposed roster to CD via `AskUserQuestion`:
 2. Specialized roles (db-engineer, security, performance)
 3. Cross-cutting roles (architect, sdet)
 
+**Framework agents (pre-installed by setup.sh — do NOT create as domain agents):**
+- `sdlc-reviewer` — reviews skill/agent files against cc-sdlc conventions (dispatched by `sdlc-create-skill`, `sdlc-create-agent`, `sdlc-review`)
+- `sdlc-compliance-auditor` — performs 9-dimension compliance scan (dispatched by `sdlc-audit`)
+
 The `sdlc-audit` skill is already installed by setup.sh — do not recreate it as an agent.
 
 **Pass stack context to the agent creation skill.** Each agent's system prompt must reference the project's actual technologies, not generic placeholders. Include in the creation prompt:
@@ -391,6 +395,10 @@ Keep (always relevant or matches spec):
   [x] security-review-taxonomy — Always relevant
   [x] agent-communication-protocol — Governs cc-sdlc agents
   [x] typescript-patterns — Project uses TypeScript
+  [x] design/component-patterns — UI component rules (any project with a UI)
+  [x] design/interaction-animation — Interactive states, micro-interactions
+  [x] design/visual-design-rules — Color theory, dark mode, shadows
+  [x] design/layout-principles — Spacing, grid, structural layout
   ...
 
 Customize (useful structure, replace content for your stack):

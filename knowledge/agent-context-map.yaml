@@ -49,12 +49,18 @@ mappings:
     - ops/sdlc/knowledge/design/ux-modeling-methodology.yaml
     - ops/sdlc/knowledge/design/ascii-conventions.yaml
     - ops/sdlc/knowledge/design/accessibility-testability-principles.yaml
+    - ops/sdlc/knowledge/design/component-patterns.yaml
+    - ops/sdlc/knowledge/design/interaction-animation.yaml
+    - ops/sdlc/knowledge/design/visual-design-rules.yaml
+    - ops/sdlc/knowledge/design/layout-principles.yaml
     - ops/sdlc/knowledge/architecture/agent-communication-protocol.yaml
 
   frontend-developer:
     - ops/sdlc/knowledge/coding/code-quality-principles.yaml
     - ops/sdlc/knowledge/design/ux-modeling-methodology.yaml
     - ops/sdlc/knowledge/design/accessibility-testability-principles.yaml
+    - ops/sdlc/knowledge/design/component-patterns.yaml
+    - ops/sdlc/knowledge/design/layout-principles.yaml
     - ops/sdlc/knowledge/coding/typescript-patterns.yaml
     - ops/sdlc/knowledge/architecture/agent-communication-protocol.yaml
 
@@ -99,6 +105,8 @@ mappings:
   accessibility-auditor:
     - ops/sdlc/knowledge/design/ux-modeling-methodology.yaml
     - ops/sdlc/knowledge/design/accessibility-testability-principles.yaml
+    - ops/sdlc/knowledge/design/component-patterns.yaml
+    - ops/sdlc/knowledge/design/interaction-animation.yaml
     - ops/sdlc/knowledge/architecture/agent-communication-protocol.yaml
     - ops/sdlc/knowledge/architecture/investigation-report-format.yaml
 
