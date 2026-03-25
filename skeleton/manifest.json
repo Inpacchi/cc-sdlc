@@ -168,7 +168,11 @@
       "skills/sdlc-migrate/SKILL.md",
       "skills/sdlc-ingest/SKILL.md",
       "skills/sdlc-playbook-generate/SKILL.md",
+      "skills/sdlc-playbook-generate/references/analysis-methodology.md",
       "skills/sdlc-audit/SKILL.md",
+      "skills/sdlc-audit/references/compliance-methodology.md",
+      "skills/sdlc-audit/references/improvement-methodology.md",
+      "skills/sdlc-audit/references/session-reading.md",
       "skills/sdlc-create-skill/SKILL.md",
       "skills/sdlc-create-agent/SKILL.md",
       "skills/sdlc-review/SKILL.md"
@@ -182,7 +186,7 @@
     "plugins": [
       "plugins/README.md",
       "plugins/context7-setup.md",
-      "plugins/lsp-setup.md",
+      "plugins/lsp-setup.md"
     ],
     "optional_plugins": []
   }

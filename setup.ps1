@@ -43,7 +43,6 @@ $requiredFiles = @(
     "process\overview.md",
     "process\deliverable_lifecycle.md",
     "templates\spec_template.md",
-    "BOOTSTRAP.md",
     "README.md"
 )
 
@@ -165,7 +164,7 @@ if (Test-Path $knowledgePath -PathType Container) {
     Install-SdlcTree $knowledgePath "$sdlcTarget\knowledge" $knowledgePath
 }
 
-$topLevelFiles = @("README.md", "BOOTSTRAP.md", "MIGRATE.md", "CLAUDE-SDLC.md")
+$topLevelFiles = @("README.md", "CLAUDE-SDLC.md")
 foreach ($f in $topLevelFiles) {
     $srcPath = Join-Path $ScriptDir $f
     if (Test-Path $srcPath) {
