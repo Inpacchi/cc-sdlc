@@ -21,7 +21,7 @@ The framework is designed to be adopted incrementally — start with the core pr
 | `skills/` | Claude Code skills for SDLC workflow automation |
 | `agents/` | Agent definitions — `AGENT_TEMPLATE.md` for adding your own project agents |
 | `skeleton/` | Directory structure manifest for project initialization |
-| `plugins/` | Plugin setup guides (context7 is required; oberskills, design-for-ai are optional) |
+| `plugins/` | Plugin setup guides (context7 is required; oberskills is optional) |
 
 ## Quick Start
 
@@ -95,7 +95,6 @@ This layer starts mostly empty and fills in as your project accumulates insights
 
 ### Optional
 - **oberskills** — Prompt engineering and web research utilities. See `plugins/oberskills-setup.md` for installation.
-- **design-for-ai** — Design theory integration (`[PLUGIN: design-for-ai]`). Enriches `design-consult` skill with Design for Hackers principles. See `plugins/design-for-ai-setup.md`.
 
 ## Upstream
 

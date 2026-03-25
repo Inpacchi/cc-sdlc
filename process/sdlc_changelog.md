@@ -34,6 +34,28 @@ Each entry contains:
 
 ---
 
+## 2026-03-25: Remove design-for-ai plugin dependency
+
+**Origin:** CD decision to remove the design-for-ai plugin from the framework.
+
+**What happened:** The design-for-ai plugin was an optional dependency that enriched design-consult with Design for Hackers references. Removing it simplifies the plugin surface — design-consult now uses general design theory principles from agent knowledge instead of plugin-specific reference files.
+
+**Changes made:**
+
+1. **`plugins/design-for-ai-setup.md`** — Deleted
+2. **`skills/design-consult/SKILL.md`** — Removed all `[PLUGIN: design-for-ai]` markers, plugin reference table, and plugin-specific dispatch instructions. Replaced with general design theory research approach.
+3. **`plugins/README.md`** — Removed design-for-ai from optional plugins table and description
+4. **`CLAUDE.md`** — Removed design-for-ai from plugin dependencies table
+5. **`README.md`** — Removed design-for-ai from plugins section and directory description
+6. **`skeleton/manifest.json`** — Emptied optional_plugins array
+7. **`skills/sdlc-initialize/SKILL.md`** — Removed design-for-ai mention from optional plugins note
+8. **`setup.sh`** — Removed `--with-optional` flag and design-for-ai install block
+9. **`setup.ps1`** — Removed `-WithOptional` parameter and design-for-ai install block
+
+**Rationale:** Reduces plugin surface area. Design theory grounding is maintained through agent knowledge rather than a separate plugin with reference files.
+
+---
+
 ## 2026-03-25: Review skill renames — verb-first naming convention
 
 **Origin:** CD naming convention change — review-related skills now use `review-` prefix for consistent verb-first naming.
@@ -835,7 +857,7 @@ agents report feedback → cycle continues
 
 1. **`plugins/context7-setup.md`** (new) — Setup guide for Context7 MCP with installation options
 2. **`plugins/lsp-setup.md`** (new) — Setup guide for all 12 language-specific LSP plugins
-3. **`plugins/README.md`** — Three-tier plugin hierarchy: Required (context7), Highly Recommended (LSP), Optional (oberskills, design-for-ai)
+3. **`plugins/README.md`** — Three-tier plugin hierarchy: Required (context7), Highly Recommended (LSP), Optional (oberskills)
 4. **`knowledge/testing/testing-paradigm.yaml`** (new) — Functional core/imperative shell, test type selection, mocking stance, regression-first rule
 5. **`CLAUDE-SDLC.md`** — Three-tier model, Direct Dispatch rules, Verification Policy (zero-assumption rule), LSP in Code Verification Rule, updated recommended settings
 6. **`skills/sdlc-plan/SKILL.md`** — WHAT/WHY relaxation, Context7 verification, testing strategy references paradigm

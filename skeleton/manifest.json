@@ -180,8 +180,6 @@
       "plugins/lsp-setup.md",
       "plugins/oberskills-setup.md"
     ],
-    "optional_plugins": [
-      "plugins/design-for-ai-setup.md"
-    ]
+    "optional_plugins": []
   }
 }

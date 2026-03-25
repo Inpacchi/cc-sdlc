@@ -2,7 +2,7 @@
 name: design-consult
 description: >
   Design consultation that synthesizes screenshots, references, and codebase context into 2-3 distinct
-  design options backed by design theory. Uses the ui-ux-designer agent with design-for-ai principles
+  design options backed by design theory. Uses the ui-ux-designer agent with design principles
   mandatory. Supports iterative refinement until a final direction is chosen.
   Triggers on "design consult", "consult on the design", "design options", "give me design ideas",
   "help me design", "design this", "I need design help", "design consultation", "layout ideas",
@@ -67,24 +67,22 @@ Before dispatching the designer, YOU gather all relevant context from multiple s
 
 #### 2b. Design Theory Research
 
-[PLUGIN: design-for-ai] If the design-for-ai plugin is installed, read the relevant reference material based on the design surface. Reference files live at `~/.claude/plugins/cache/rtd/design-for-ai/*/skills/design-for-ai/references/`.
+Include general design principles in the context brief from your knowledge. Pick the 2-3 most relevant design theory areas based on the user's request:
 
-| Design concern | Reference to read |
+| Design concern | Theory to include |
 |---------------|-------------------|
-| General audit / "what's wrong?" | `references/checklists.md` |
-| Layout feels off | `references/chapter-07-visual-hierarchy.md` |
-| Color questions | `references/chapter-08-color-science.md`, `references/chapter-09-color-theory.md` |
-| Typography questions | `references/chapter-03-typography.md`, `references/appendix-fonts-and-typography.md` |
-| Composition / eye flow | `references/chapter-06-composition.md` |
-| Proportions | `references/chapter-05-proportions.md` |
-| Motion / interaction | `references/motion.md`, `references/interaction.md` |
-| Responsive behavior | `references/responsive.md` |
-| Design feels generic | `references/ai-tells.md` |
-| Foundational direction | `references/chapter-01-why-design-matters.md`, `references/chapter-02-purpose-of-design.md` |
+| General audit / "what's wrong?" | Visual hierarchy checklist, gestalt principles |
+| Layout feels off | Visual hierarchy, proximity, alignment |
+| Color questions | Color theory, contrast ratios, color harmony |
+| Typography questions | Type scale, font pairing, readability |
+| Composition / eye flow | Composition rules, visual weight, focal points |
+| Proportions | Golden ratio, modular scale, spacing systems |
+| Motion / interaction | Easing curves, feedback patterns, transition timing |
+| Responsive behavior | Breakpoint strategy, fluid typography, layout shifts |
+| Design feels generic | Intentional character, brand voice in UI |
+| Foundational direction | Design purpose, audience analysis, aesthetic direction |
 
-Pick the 2-3 most relevant based on the user's request. **Pre-extract key principles, checklists, and decision trees** and include them in the context brief. Do not just reference file names — the designer needs the actual content.
-
-If design-for-ai is not installed, include general design principles in the context brief from your knowledge.
+**Pre-extract key principles, checklists, and decision trees** and include them in the context brief. The designer needs the actual content.
 
 #### 2c. Web Research
 
@@ -127,15 +125,12 @@ DESIGN CONSULTATION REQUEST
 [Full compiled brief from step 2e]
 
 ## Design Theory Requirement (MANDATORY)
-You MUST use the design-for-ai skill during this consultation if it is installed:
-- For EXISTING UI: Run `/exam` first. Cite specific principles.
-- For NEW UI: Run `/design` to establish foundations, then apply APPLIER sequence.
+- For EXISTING UI: Audit current design first. Cite specific principles.
+- For NEW UI: Establish design foundations, then apply design theory systematically.
 - For ALL options: Ground every major decision in a named principle.
 - Design theory context is provided below — use it.
 
 [Paste pre-extracted theory content from step 2b]
-
-If design-for-ai is not installed, apply design principles from your knowledge and cite them explicitly.
 
 ## Output: 2-3 DISTINCT Options
 
@@ -156,7 +151,7 @@ Options must differ in PHILOSOPHY, not minor details:
 Do NOT converge on a single recommendation. Present all options as viable with honest tradeoffs.
 ```
 
-**Enforcement — theory:** If the agent's output reads like generic UI feedback without design theory references (named principles, chapter citations if design-for-ai is available), re-dispatch: "Your output must include specific design theory references. Run the design-for-ai /exam or /design skill command if available, or cite specific design principles explicitly."
+**Enforcement — theory:** If the agent's output reads like generic UI feedback without design theory references (named principles, cited rationale), re-dispatch: "Your output must include specific design theory references. Cite specific design principles explicitly."
 
 **Enforcement — count:** If fewer than 2 concepts, re-dispatch: "You returned N concept(s). Produce 2-3 distinct concepts with different design philosophies."
 
@@ -220,7 +215,7 @@ The user may:
 - **Combine** → re-dispatch with "Take [element] from A and [element] from B, synthesize"
 - **Adjust** → re-dispatch with specific feedback
 - **Reject all** → return to step 3 with new direction
-- **Deep dive** → run specific design-for-ai commands (`/color`, `/fonts`, `/flow`) on selected concept if plugin is available
+- **Deep dive** → re-dispatch designer with focused brief on specific aspect (color, typography, motion)
 - **Approve** → move to step 6
 
 For each iteration, dispatch the designer again with the user's feedback AND all prior options as context.
@@ -275,7 +270,7 @@ Do NOT start implementing. The design consultation ends with a direction and a h
 
 | Thought | Reality |
 |---------|---------|
-| "The agent produced good output without using design-for-ai" | Check for theory references. Good-sounding output without theory backing is the failure mode this skill exists to prevent. |
+| "The agent produced good output without citing theory" | Check for theory references. Good-sounding output without theory backing is the failure mode this skill exists to prevent. |
 | "One concept is obviously right, skip the others" | The user decides. Present 2-3 options even when one seems dominant. |
 | "Skip the audit, we're designing from scratch" | If existing implementation exists, audit it. Understanding what's wrong informs what to build. |
 | "Skip web research, I know what looks good" | Research grounds concepts in real-world patterns. Without it, designs are invented from training data. |
@@ -285,14 +280,14 @@ Do NOT start implementing. The design consultation ends with a direction and a h
 | "I'll skip SDLC context" | Prior deliverables may have established constraints or patterns. A 30-second scan prevents contradicting past decisions. |
 | "I'll present the designer's raw output" | Restructure into the comparison format. The user needs side-by-side evaluation, not an agent dump. |
 | "The user provided a screenshot that makes the problem obvious — skip research" | Screenshots show what IS, not what COULD BE. Research surfaces patterns the screenshot can't. |
-| "The agent used design-for-ai on the first dispatch, no need to verify" | Trust but verify. Check for theory references. Agents skip skill invocations more often than expected. |
+| "The agent cited theory on the first dispatch, no need to verify" | Trust but verify. Check for theory references. Agents skip theory grounding more often than expected. |
 | "The user picked one, let me start coding" | This skill produces direction, not code. Hand off to planning. |
 | "The mockup needs to be interactive/animated" | Mockups are static visual proofs — layout, color, typography only. |
 
 ## Integration
 
 - **Feeds into:** `sdlc-lite-plan` or `sdlc-plan` (for implementation)
-- **Uses:** `ui-ux-designer` agent, `design-for-ai` skill ([PLUGIN: design-for-ai] — optional), `oberweb` skill (optional), Playwright MCP (for visual mockups)
+- **Uses:** `ui-ux-designer` agent, `oberweb` skill (optional), Playwright MCP (for visual mockups)
 - **SDLC knowledge:** `ops/sdlc/knowledge/design/`, `ops/sdlc/disciplines/design.md`
 - **Complements:** `sdlc-idea` (conceptual exploration) — `design-consult` explores visual direction, `sdlc-idea` explores conceptual direction. An idea brief from `sdlc-idea` can feed into `design-consult` when the concept needs visual exploration.
 - **Does NOT replace:** `review-commit` (code review), `accessibility-auditor` (WCAG compliance on implemented code)

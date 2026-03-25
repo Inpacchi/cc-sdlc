@@ -5,7 +5,6 @@
     "installed_at": "YYYY-MM-DD",
     "source": "https://github.com/Inpacchi/cc-sdlc",
     "install_mode": "default",
-    "with_optional": false,
     "project": {
       "name": "[Your Project Name]",
       "description": "[Brief description of this project]",

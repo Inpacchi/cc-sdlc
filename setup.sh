@@ -4,7 +4,6 @@
 # Usage:
 #   ./setup.sh [TARGET_DIR]                # Install, skip existing files
 #   ./setup.sh [TARGET_DIR] --force        # Overwrite all existing files
-#   ./setup.sh [TARGET_DIR] --with-optional  # Also install design-for-ai plugin guide
 #
 # For content-aware updates to existing projects, use the sdlc-migrate skill instead.
 
@@ -17,15 +16,13 @@ set -uo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 TARGET_DIR=""
 FORCE=false
-WITH_OPTIONAL=false
 
 for arg in "$@"; do
   case "$arg" in
     --force)         FORCE=true ;;
-    --with-optional) WITH_OPTIONAL=true ;;
     --*)
       echo "Unknown flag: $arg" >&2
-      echo "Usage: $0 [TARGET_DIR] [--force] [--with-optional]" >&2
+      echo "Usage: $0 [TARGET_DIR] [--force]" >&2
       exit 1
       ;;
     *)
@@ -111,11 +108,9 @@ install_tree() {
 # Create directory structure
 # ─────────────────────────────────────────────
 
-OPTIONAL_LABEL=""
-[ "$WITH_OPTIONAL" = "true" ] && OPTIONAL_LABEL=" +optional"
 FORCE_LABEL=""
 [ "$FORCE" = "true" ] && FORCE_LABEL=" (force)"
-echo "cc-sdlc setup → $TARGET_DIR${FORCE_LABEL}${OPTIONAL_LABEL}"
+echo "cc-sdlc setup → $TARGET_DIR${FORCE_LABEL}"
 echo ""
 
 while IFS= read -r dir; do
@@ -163,10 +158,6 @@ done
 [ -f "$SCRIPT_DIR/plugins/oberskills-setup.md" ] && install_file "$SCRIPT_DIR/plugins/oberskills-setup.md" "$SDLC_TARGET/plugins/oberskills-setup.md"
 [ -f "$SCRIPT_DIR/plugins/README.md" ] && install_file "$SCRIPT_DIR/plugins/README.md" "$SDLC_TARGET/plugins/README.md"
 
-# design-for-ai setup guide is optional
-if [ "$WITH_OPTIONAL" = "true" ] && [ -f "$SCRIPT_DIR/plugins/design-for-ai-setup.md" ]; then
-  install_file "$SCRIPT_DIR/plugins/design-for-ai-setup.md" "$SDLC_TARGET/plugins/design-for-ai-setup.md"
-fi
 
 # ─────────────────────────────────────────────
 # Seed deliverable catalog
@@ -259,10 +250,6 @@ else
 fi
 echo "  See ops/sdlc/CLAUDE-SDLC.md for commands and quick reference"
 
-if [ "$WITH_OPTIONAL" = "false" ]; then
-  echo ""
-  echo "Optional: run with --with-optional to install design-for-ai plugin guide."
-fi
 echo ""
 echo "IMPORTANT: Install the context7 plugin — it is required for library doc verification."
 echo "  See ops/sdlc/plugins/context7-setup.md for instructions."
@@ -270,7 +257,7 @@ echo ""
 echo "HIGHLY RECOMMENDED: Install the LSP plugin for your project's language(s)."
 echo "  See ops/sdlc/plugins/lsp-setup.md for the full list."
 echo ""
-echo "Optional plugins: oberskills (prompt engineering + web research), design-for-ai (design theory)."
+echo "Optional plugins: oberskills (prompt engineering + web research)."
 echo "  See ops/sdlc/plugins/README.md for details."
 
 [ "$FAILED" -gt 0 ] && exit 1

@@ -524,7 +524,7 @@ If not found, tell CD:
 **LSP (highly recommended):**
 Check for language-appropriate LSP plugin based on the spec's technology stack.
 
-**Optional plugins:** Mention oberskills and design-for-ai if relevant to the project type. Do not block on these.
+**Optional plugins:** Mention oberskills if relevant to the project type. Do not block on it.
 
 ### Phase 9a: Assess Initial Maturity Levels
 

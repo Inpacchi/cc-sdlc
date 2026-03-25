@@ -3,14 +3,12 @@
 # Usage:
 #   .\setup.ps1 [TARGET_DIR]                # Install, skip existing files
 #   .\setup.ps1 [TARGET_DIR] -Force         # Overwrite all existing files
-#   .\setup.ps1 [TARGET_DIR] -WithOptional  # Also install design-for-ai plugin guide
 #
 # For content-aware updates to existing projects, use MIGRATE.md instead.
 
 param(
     [string]$TargetDir,
-    [switch]$Force,
-    [switch]$WithOptional
+    [switch]$Force
 )
 
 $ErrorActionPreference = "Stop"
@@ -120,9 +118,8 @@ function Install-SdlcTree {
 # Create directory structure
 # ─────────────────────────────────────────────
 
-$optionalLabel = if ($WithOptional) { " +optional" } else { "" }
 $forceLabel = if ($Force) { " (force)" } else { "" }
-Write-Host "cc-sdlc setup -> $TargetDir$forceLabel$optionalLabel"
+Write-Host "cc-sdlc setup -> $TargetDir$forceLabel"
 Write-Host ""
 
 try {
@@ -201,11 +198,6 @@ if (Test-Path $ober) { Install-SdlcFile $ober "$sdlcTarget\plugins\oberskills-se
 $pluginsReadme = Join-Path $ScriptDir "plugins\README.md"
 if (Test-Path $pluginsReadme) { Install-SdlcFile $pluginsReadme "$sdlcTarget\plugins\README.md" }
 
-# design-for-ai setup guide is optional
-if ($WithOptional) {
-    $dfa = Join-Path $ScriptDir "plugins\design-for-ai-setup.md"
-    if (Test-Path $dfa) { Install-SdlcFile $dfa "$sdlcTarget\plugins\design-for-ai-setup.md" }
-}
 
 # ─────────────────────────────────────────────
 # Seed deliverable catalog
@@ -298,10 +290,6 @@ if ($script:Skipped -gt 50 -and $script:Installed -lt 5) {
 }
 Write-Host "  See CLAUDE-SDLC.md for commands and quick reference"
 
-if (-not $WithOptional) {
-    Write-Host ""
-    Write-Host "Optional: run with -WithOptional to install design-for-ai plugin guide."
-}
 Write-Host ""
 Write-Host "IMPORTANT: Install the context7 plugin -- it is required for library doc verification."
 Write-Host "  See ops/sdlc/plugins/context7-setup.md for instructions."
@@ -309,7 +297,7 @@ Write-Host ""
 Write-Host "HIGHLY RECOMMENDED: Install the LSP plugin for your project's language(s)."
 Write-Host "  See ops/sdlc/plugins/lsp-setup.md for the full list."
 Write-Host ""
-Write-Host "Optional plugins: oberskills (prompt engineering + web research), design-for-ai (design theory)."
+Write-Host "Optional plugins: oberskills (prompt engineering + web research)."
 Write-Host "  See ops/sdlc/plugins/README.md for details."
 
 if ($script:Failed -gt 0) { exit 1 }

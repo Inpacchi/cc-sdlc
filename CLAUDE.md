@@ -25,7 +25,6 @@ This is the **source repository** for the cc-sdlc framework. It contains SDLC sk
 | **context7** | Required | Live library/framework documentation lookups — prevents stale API knowledge |
 | **LSP** (language-specific) | Highly recommended | Type-aware code intelligence — go-to-definition, find-references, hover, diagnostics |
 | **oberskills** | Optional | Prompt engineering, writing quality, and multi-dimensional web research |
-| **design-for-ai** | Optional | Design theory enrichment for design consultations |
 
 See `plugins/README.md` for details and `plugins/*-setup.md` for installation instructions.
 
