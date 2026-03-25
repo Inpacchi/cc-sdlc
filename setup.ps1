@@ -191,10 +191,6 @@ if (Test-Path $ctx7) { Install-SdlcFile $ctx7 "$sdlcTarget\plugins\context7-setu
 $lsp = Join-Path $ScriptDir "plugins\lsp-setup.md"
 if (Test-Path $lsp) { Install-SdlcFile $lsp "$sdlcTarget\plugins\lsp-setup.md" }
 
-# oberskills setup guide is always installed (optional but recommended)
-$ober = Join-Path $ScriptDir "plugins\oberskills-setup.md"
-if (Test-Path $ober) { Install-SdlcFile $ober "$sdlcTarget\plugins\oberskills-setup.md" }
-
 $pluginsReadme = Join-Path $ScriptDir "plugins\README.md"
 if (Test-Path $pluginsReadme) { Install-SdlcFile $pluginsReadme "$sdlcTarget\plugins\README.md" }
 
@@ -297,8 +293,5 @@ Write-Host ""
 Write-Host "HIGHLY RECOMMENDED: Install the LSP plugin for your project's language(s)."
 Write-Host "  See ops/sdlc/plugins/lsp-setup.md for the full list."
 Write-Host ""
-Write-Host "Optional plugins: oberskills (prompt engineering + web research)."
-Write-Host "  See ops/sdlc/plugins/README.md for details."
-
 if ($script:Failed -gt 0) { exit 1 }
 exit 0

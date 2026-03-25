@@ -312,7 +312,7 @@ Present the proposed roster to CD via `AskUserQuestion`:
 
 **4b. Create each agent.**
 
-**MANDATORY: Invoke `/plugin-dev:agent-development` for each agent.** Do NOT write agent files directly. The skill handles:
+**MANDATORY: Invoke `/sdlc-create-agent` for each agent.** Do NOT write agent files directly. The skill handles:
 - Frontmatter validation (name format, description with `<example>` blocks)
 - System prompt scaffolding (Knowledge Context, Communication Protocol, Anti-Rationalization Table)
 - Template compliance (AGENT_TEMPLATE.md structure)
@@ -524,7 +524,6 @@ If not found, tell CD:
 **LSP (highly recommended):**
 Check for language-appropriate LSP plugin based on the spec's technology stack.
 
-**Optional plugins:** Mention oberskills if relevant to the project type. Do not block on it.
 
 ### Phase 9a: Assess Initial Maturity Levels
 
@@ -559,7 +558,7 @@ Skeleton & Infrastructure:
 [ ] Catalog: docs/_index.md has D1 registered
 
 Agents:
-[ ] All agents created via /plugin-dev:agent-development — confirmed
+[ ] All agents created via /sdlc-create-agent — confirmed
     Created: [list all agents]
 [ ] Spec-vs-roster reconciliation complete — all spec-listed roles created or deviation logged
 [ ] AGENT_TEMPLATE.md and AGENT_SUGGESTIONS.md present in .claude/agents/
@@ -627,7 +626,7 @@ For existing projects with code and documentation that need cc-sdlc integrated.
 3. Create concept directories in `docs/chronicle/` based on approved proposal
 4. Move/copy existing docs to appropriate locations
 5. Backfill `docs/_index.md` with entries for substantial completed work
-6. Create domain agents (same as Greenfield Phase 4 — via `/plugin-dev:agent-development`)
+6. Create domain agents (same as Greenfield Phase 4 — via `/sdlc-create-agent`)
 7. Wire agent-context map (same as Greenfield Phase 5)
 8. Seed knowledge and disciplines (same as Greenfield Phases 6–8, informed by existing codebase patterns)
 9. Assess initial maturity levels (same as Greenfield Phase 9a)
@@ -652,7 +651,7 @@ Same as Greenfield Phase 10, plus:
 | "I'll skip ideation and go straight to scaffolding" | Agents and knowledge seeded without stack context are generic and unhelpful. Define the project first. |
 | "I should dispatch an agent for the spec" | No agents exist yet in greenfield. CC writes the spec directly. This is the one exception to the Manager Rule. |
 | "The user described the project, I have enough to create agents" | You have enough to create agents when you have an approved spec with tech stack and repo structure. Not before. |
-| "I'll write the agent files directly — the skill is slow" | `/plugin-dev:agent-development` validates frontmatter, descriptions, and template compliance. Hand-written agents skip these gates. |
+| "I'll write the agent files directly — the skill is slow" | `/sdlc-create-agent` validates frontmatter, descriptions, and template compliance. Hand-written agents skip these gates. |
 | "The context map ships with reasonable defaults" | The defaults use generic role names. If they don't match your agent filenames, self-discovery is broken. |
 | "Disciplines can be seeded later" | A few bullets now costs 2 minutes; discovering the gap mid-execution costs a review round. |
 | "Context7 is optional for now" | Without it, agents will hallucinate library APIs from training data. Install it before any agent work begins. |
@@ -666,6 +665,6 @@ Same as Greenfield Phase 10, plus:
 ## Integration
 
 - **Feeds into:** `sdlc-plan` (first deliverable), `sdlc-lite-plan` (first lightweight task), `sdlc-status` (health check)
-- **Uses:** `/plugin-dev:agent-development` (agent creation), Context7 (knowledge verification), `AskUserQuestion` (CD gates)
+- **Uses:** `/sdlc-create-agent` (agent creation), Context7 (knowledge verification), `AskUserQuestion` (CD gates)
 - **Produces:** Fully initialized SDLC framework with project-specific agents, knowledge, and disciplines
 - **Borrows from:** `sdlc-idea` (ideation principles for Phase 0), spec template (Phase 0c structure)

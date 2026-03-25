@@ -9,7 +9,7 @@ description: >
   Triggers on "ingest these", "analyze these transcripts", "import knowledge from", "extract
   patterns from", "bulk import", "learn from these", "what can we adopt from", "process these
   for the SDLC", "add to our knowledge from", "distill these into knowledge".
-  Do NOT use for single-file reads or ad-hoc research — use direct reads or oberweb.
+  Do NOT use for single-file reads or ad-hoc research — use direct reads or WebSearch.
   Do NOT use for exploring ideas — use sdlc-idea.
   Do NOT use for creating specs or plans — use sdlc-plan or sdlc-lite-plan.
 ---

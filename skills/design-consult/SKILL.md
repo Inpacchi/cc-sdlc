@@ -86,7 +86,7 @@ Include general design principles in the context brief from your knowledge. Pick
 
 #### 2c. Web Research
 
-Invoke the `oberweb` skill if available to research UI/UX patterns relevant to the design task. Frame the search around:
+Use WebSearch to research UI/UX patterns relevant to the design task. Frame the search around:
 
 - How comparable products solve this design problem
 - Current UI/UX best practices for this type of component/layout
@@ -287,7 +287,7 @@ Do NOT start implementing. The design consultation ends with a direction and a h
 ## Integration
 
 - **Feeds into:** `sdlc-lite-plan` or `sdlc-plan` (for implementation)
-- **Uses:** `ui-ux-designer` agent, `oberweb` skill (optional), Playwright MCP (for visual mockups)
+- **Uses:** `ui-ux-designer` agent, WebSearch (for design research), Playwright MCP (for visual mockups)
 - **SDLC knowledge:** `ops/sdlc/knowledge/design/`, `ops/sdlc/disciplines/design.md`
 - **Complements:** `sdlc-idea` (conceptual exploration) — `design-consult` explores visual direction, `sdlc-idea` explores conceptual direction. An idea brief from `sdlc-idea` can feed into `design-consult` when the concept needs visual exploration.
 - **Does NOT replace:** `review-commit` (code review), `accessibility-auditor` (WCAG compliance on implemented code)

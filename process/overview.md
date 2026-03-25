@@ -208,17 +208,6 @@ See `process/sdlc_changelog.md` for the change history.
 
 ## Tooling Integration
 
-### oberskills Plugin (Optional)
-
-Prompt engineering, writing, and research utilities. These skills are available but not mandatory for agent dispatch.
-
-| Skill | Integrated Into | Purpose |
-|-------|----------------|---------|
-| oberprompt | Ad hoc prompt improvement | Constraint budget and prompt quality |
-| oberweb | Planning (research phase) | Multi-dimensional web research |
-
-See `ops/sdlc/plugins/oberskills-setup.md` for installation instructions.
-
 ### CHECKER/APPLIER Pattern
 
 Both planning and execution skills support dual modes:
@@ -244,7 +233,7 @@ To adopt cc-sdlc in a new or existing project, invoke the `sdlc-initialize` skil
 
 **Trigger:** Say **"Initialize SDLC in this project"** or **"Bootstrap SDLC"**
 
-The skill walks through: skeleton installation (`setup.sh`), CLAUDE.md authoring, deliverable catalog setup, domain agent creation (via `/plugin-dev:agent-development`), agent-context map wiring, knowledge seeding, discipline initialization, testing gotcha seeding, plugin verification, and a final checklist. Retrofit mode handles existing projects with code and documentation.
+The skill walks through: skeleton installation (`setup.sh`), CLAUDE.md authoring, deliverable catalog setup, domain agent creation (via `/sdlc-create-agent`), agent-context map wiring, knowledge seeding, discipline initialization, testing gotcha seeding, plugin verification, and a final checklist. Retrofit mode handles existing projects with code and documentation.
 
 ---
 

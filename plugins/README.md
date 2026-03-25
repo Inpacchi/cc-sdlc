@@ -18,12 +18,3 @@ See `context7-setup.md` for installation instructions.
 
 **Install the LSP plugin for your project's primary language(s).** Without it, agents fall back to Grep for code navigation, missing type relationships, interface implementations, and call hierarchies. See `lsp-setup.md` for the full plugin list and installation instructions.
 
-## Optional
-
-| Plugin | What It Does | Skills That Use It |
-|--------|-------------|-------------------|
-| **oberskills** | Prompt engineering, writing quality, and multi-dimensional web research utilities. | `sdlc-plan` (research phase), ad hoc prompt improvement |
-
-oberskills provides quality enhancements for prompt engineering (`oberprompt`) and web research (`oberweb`) but is not mandatory for agent dispatch.
-
-See `oberskills-setup.md` for installation instructions.

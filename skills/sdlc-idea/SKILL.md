@@ -124,7 +124,7 @@ During or after questioning, specific unknowns may emerge that require research:
 
 **Codebase deep-dives** — Trace specific code paths, read specific modules, verify what the architecture actually supports vs. what seems possible.
 
-**Web research** — If available, invoke `oberweb` for multi-dimensional research on approaches, technologies, or patterns relevant to the idea. Frame searches around the specific unknowns that emerged from questioning.
+**Web research** — Use WebSearch for research on approaches, technologies, or patterns relevant to the idea. Frame searches around the specific unknowns that emerged from questioning.
 
 **Library/API verification** — If the idea involves external libraries or services, verify capabilities via Context7 (`mcp__context7__resolve-library-id` → `mcp__context7__query-docs`). Do NOT assume library capabilities from training data.
 
@@ -234,6 +234,6 @@ Do NOT start planning or implementing. The idea exploration ends with a directio
 ## Integration
 
 - **Feeds into:** `sdlc-plan` (full planning), `sdlc-lite-plan` (lightweight planning), `design-consult` (visual design exploration)
-- **Uses:** LSP, Grep, Context7, `oberweb` (optional), chronicle and knowledge layer
+- **Uses:** LSP, Grep, Context7, WebSearch, chronicle and knowledge layer
 - **Complements:** `design-consult` explores visual direction; `idea` explores conceptual direction. They can feed into each other.
 - **Does NOT replace:** DISCOVERY-GATE in `sdlc-plan` (that gate validates minimum discovery before spec writing; this skill is unbounded exploration before any commitment)

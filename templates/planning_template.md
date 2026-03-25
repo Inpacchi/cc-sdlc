@@ -79,7 +79,7 @@
 
 | Agent | Load These Skills |
 |-------|------------------|
-| [agent-name] | [skills to load, e.g., oberweb if researching] |
+| [agent-name] | [skills to load, e.g., WebSearch if researching external patterns] |
 
 ---
 

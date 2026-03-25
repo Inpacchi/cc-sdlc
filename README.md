@@ -21,7 +21,7 @@ The framework is designed to be adopted incrementally — start with the core pr
 | `skills/` | Claude Code skills for SDLC workflow automation |
 | `agents/` | Agent definitions — `AGENT_TEMPLATE.md` for adding your own project agents |
 | `skeleton/` | Directory structure manifest for project initialization |
-| `plugins/` | Plugin setup guides (context7 is required; oberskills is optional) |
+| `plugins/` | Plugin setup guides (context7 required, LSP recommended) |
 
 ## Quick Start
 
@@ -92,9 +92,6 @@ This layer starts mostly empty and fills in as your project accumulates insights
 
 ### Required
 - **context7** — Live library/framework documentation lookups. Prevents stale API knowledge from training data. See `plugins/context7-setup.md`.
-
-### Optional
-- **oberskills** — Prompt engineering and web research utilities. See `plugins/oberskills-setup.md` for installation.
 
 ## Upstream
 

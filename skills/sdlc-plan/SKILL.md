@@ -156,7 +156,7 @@ Located at: `.claude/agents/` (project root)
 | `build-engineer` | Build infra, bundler config, CI pipeline, package boundaries |
 | `refactor-engineer` | Code restructuring, abstraction boundaries, safe incremental refactoring |
 
-*Remove agents not relevant to your project. Add project-specific agents (e.g., `game-integration-engineer`, `payment-engineer`) with their specific domain. Use `/plugin-dev:agent-development` to create new agents.*
+*Remove agents not relevant to your project. Add project-specific agents (e.g., `game-integration-engineer`, `payment-engineer`) with their specific domain. Use `/sdlc-create-agent` to create new agents.*
 
 ### Personal-Level Agents (Fallback)
 
@@ -253,7 +253,7 @@ The spec is the contract between CD (human) and CC (agent system). It defines **
 
 The primary domain agent writes the core spec. Other relevant agents contribute domain-specific constraints (e.g., `database-architect` adds schema requirements, `security-engineer` adds security constraints).
 
-**Research integration:** If the spec requires research into external services, APIs, competitors, or technologies — invoke oberweb for multi-dimensional web research grounded in project context (CLAUDE.md). Incorporate findings into the spec's Design section.
+**Research integration:** If the spec requires research into external services, APIs, competitors, or technologies — use WebSearch for web research grounded in project context (CLAUDE.md). Incorporate findings into the spec's Design section.
 
 **Library verification:** When the spec involves external libraries or frameworks, verify API capabilities and constraints via Context7 (`mcp__context7__resolve-library-id` → `mcp__context7__query-docs`) before finalizing requirements. Check the project's actual dependency versions (package.json, lock files) — version-specific behavior matters. Pass verified API details to the spec-writing agent so requirements are grounded in real library capabilities, not training-data assumptions.
 

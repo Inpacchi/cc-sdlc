@@ -55,8 +55,10 @@ Verify the project's SDLC health across 9 audit dimensions. Full methodology in 
 ### Workflow
 
 ```
-INVENTORY → VERIFY → SCAN → ASSESS → REPORT → FIX
+DISPATCH AUDITOR → REPORT → TRIAGE → FIX
 ```
+
+**Dispatch the `sdlc-compliance-auditor` subagent** to perform the 9-dimension scan. The subagent reads the methodology, scans all dimensions, and returns structured findings with a score and promotion candidates. This skill then handles the interactive triage and fix phases.
 
 ### Audit Dimensions (summary)
 
@@ -79,6 +81,12 @@ When fed a session or commits (not just current state):
 ### Output
 
 Produce audit artifact at `docs/current_work/audits/sdlc_audit_YYYY-MM-DD.md` using the report format in `references/compliance-methodology.md`. Present findings to user in the standardized format from CLAUDE-SDLC.md (score/10, verdict, findings table).
+
+### Interactive Triage Phase
+
+After presenting the audit report, if any parking lot entries are promotion candidates (from Dimensions 6c and 8), run an interactive triage session. See `references/compliance-methodology.md` step 11 for the full workflow.
+
+The triage phase presents candidates grouped by discipline and asks CD to decide on each: promote to knowledge store, defer (with reason), or leave as-is. Promotions are applied immediately — the audit creates or updates the target knowledge store file and marks the parking lot entry as `Promoted → [target file]`.
 
 ## Improvement Mode
 
@@ -178,7 +186,7 @@ Update `ops/sdlc/process/sdlc_changelog.md` for every process change applied.
 
 ## Integration
 
-- **Replaces:** `sdlc-compliance-auditor` agent (compliance mode absorbs all agent functionality)
+- **Dispatches:** `sdlc-compliance-auditor` subagent (compliance mode 9-dimension scan)
 - **Complements:** `sdlc-playbook-generate` (playbooks capture "how to repeat"; this captures "how to improve")
 - **Feeds into:** skill modifications, knowledge store updates, discipline parking lots, process doc changes
 - **Uses:** session JSONL, git history, all SDLC project artifacts, existing knowledge layer

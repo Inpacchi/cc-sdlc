@@ -168,6 +168,9 @@ Rules:
 | "Migrate my SDLC framework" | Apply cc-sdlc upstream updates while preserving project customizations. Invokes `sdlc-migrate` skill |
 | "Ingest these transcripts/articles" | Bulk-import external knowledge into disciplines and knowledge stores. Invokes `sdlc-ingest` skill |
 | "Make a playbook from that session" | Analyze a previous session's conversation and git commits to generate a structured playbook. Invokes `sdlc-playbook-generate` skill |
+| `/sdlc-create-skill` | Create a new SDLC skill with convention enforcement and quality gate. Invokes `sdlc-create-skill` skill |
+| `/sdlc-create-agent` | Create a new domain agent with frontmatter validation and knowledge wiring. Invokes `sdlc-create-agent` skill |
+| `/sdlc-review` | Review a skill/agent for convention compliance, or analyze external sources for improvements. Invokes `sdlc-review` skill |
 
 ### Key References
 - `ops/sdlc/process/overview.md` — Full workflow

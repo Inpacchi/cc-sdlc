@@ -34,6 +34,58 @@ Each entry contains:
 
 ---
 
+## 2026-03-25: Add native skill/agent creation, review, and compliance auditor
+
+**Origin:** CD decision to replace external plugin-dev:agent-development dependency with native SDLC skills and add review/analysis capabilities.
+
+**What happened:** Agent creation previously depended on an external plugin (`plugin-dev:agent-development`). Skill creation had no formal scaffolding. Review of skill/agent quality was not standardized. The compliance auditor subagent (removed in a318519) is restored to be dispatched by sdlc-audit.
+
+**Changes made:**
+
+1. **`skills/sdlc-create-skill/SKILL.md`** (new) — Interactive skill for creating SDLC skills with convention enforcement. Covers purpose definition, skill typing, frontmatter, body scaffolding, red flags, integration, registration. Dispatches sdlc-reviewer as quality gate.
+2. **`skills/sdlc-create-agent/SKILL.md`** (new) — Interactive skill for creating domain agents. Replaces plugin-dev:agent-development. Covers domain definition, frontmatter with example blocks, body scaffolding, context map wiring, registration. Dispatches sdlc-reviewer as quality gate.
+3. **`skills/sdlc-review/SKILL.md`** (new) — Two modes: review (dispatches sdlc-reviewer on a file) and analyze (compares external sources against existing agents/skills, routes knowledge to sdlc-ingest).
+4. **`agents/sdlc-reviewer.md`** (new) — Subagent that reviews skill or agent files against cc-sdlc conventions. Detects file type, applies type-appropriate checklist, returns structured findings.
+5. **`agents/sdlc-compliance-auditor.md`** (restored) — Subagent that performs 9-dimension compliance scan. Returns structured findings — does not do triage or fixes. Dispatched by sdlc-audit.
+6. **`skills/sdlc-audit/SKILL.md`** — Updated compliance mode to dispatch sdlc-compliance-auditor subagent instead of scanning inline. Updated Integration section.
+7. **`agents/AGENT_SUGGESTIONS.md`** — Replaced plugin-dev:agent-development references with /sdlc-create-agent
+8. **`skills/sdlc-initialize/SKILL.md`** — Replaced 5 plugin-dev:agent-development references with /sdlc-create-agent
+9. **`skills/sdlc-plan/SKILL.md`** — Replaced plugin-dev:agent-development reference with /sdlc-create-agent
+10. **`process/overview.md`** — Replaced plugin-dev:agent-development reference with /sdlc-create-agent
+11. **`skeleton/manifest.json`** — Added 3 new skills and 2 new agents to source_files
+12. **`CLAUDE-SDLC.md`** — Added commands for sdlc-create-skill, sdlc-create-agent, sdlc-review
+
+**Rationale:** Removes external plugin dependency for agent creation. Adds skill creation scaffolding and quality review that didn't previously exist. Both creation skills enforce cc-sdlc conventions and dispatch sdlc-reviewer as a quality gate. Restoring the compliance auditor as a subagent allows sdlc-audit to dispatch it while keeping interactive triage in the skill.
+
+---
+
+## 2026-03-25: Remove oberskills plugin dependency
+
+**Origin:** CD decision to remove the last external plugin providing skill logic. Context7 and LSP remain as MCP tool providers.
+
+**What happened:** oberskills provided optional prompt engineering (oberprompt) and web research (oberweb) utilities. Skills that referenced oberweb all used soft "if available" patterns. Removing it simplifies the plugin surface — skills now use WebSearch directly when research is needed.
+
+**Changes made:**
+
+1. **`plugins/oberskills-setup.md`** — Deleted
+2. **`plugins/README.md`** — Removed Optional section (oberskills was the only optional plugin)
+3. **`CLAUDE.md`** — Removed oberskills from plugin dependencies table
+4. **`README.md`** — Removed from directory description and Optional subsection
+5. **`process/overview.md`** — Removed oberskills Plugin section from Tooling Integration
+6. **`setup.sh`** — Removed oberskills install lines and optional plugins echo
+7. **`setup.ps1`** — Removed oberskills install lines and optional plugins echo
+8. **`skeleton/manifest.json`** — Removed plugins/oberskills-setup.md from source files
+9. **`skills/design-consult/SKILL.md`** — Replaced oberweb with WebSearch
+10. **`skills/sdlc-idea/SKILL.md`** — Replaced oberweb with WebSearch
+11. **`skills/sdlc-plan/SKILL.md`** — Replaced oberweb with WebSearch
+12. **`skills/sdlc-ingest/SKILL.md`** — Removed oberweb from anti-trigger
+13. **`skills/sdlc-initialize/SKILL.md`** — Removed oberskills mention
+14. **`templates/planning_template.md`** — Replaced oberweb example with WebSearch
+
+**Rationale:** WebSearch is a native tool available to all agents. Routing through an external plugin skill added indirection without benefit. After this change, context7 and LSP are the only plugins — both provide tool capabilities (MCP), not skill logic.
+
+---
+
 ## 2026-03-25: Remove design-for-ai plugin dependency
 
 **Origin:** CD decision to remove the design-for-ai plugin from the framework.

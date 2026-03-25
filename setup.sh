@@ -154,8 +154,6 @@ done
 [ -f "$SCRIPT_DIR/plugins/context7-setup.md" ] && install_file "$SCRIPT_DIR/plugins/context7-setup.md" "$SDLC_TARGET/plugins/context7-setup.md"
 # LSP setup guide is always installed (highly recommended)
 [ -f "$SCRIPT_DIR/plugins/lsp-setup.md" ] && install_file "$SCRIPT_DIR/plugins/lsp-setup.md" "$SDLC_TARGET/plugins/lsp-setup.md"
-# oberskills setup guide is always installed (optional but recommended)
-[ -f "$SCRIPT_DIR/plugins/oberskills-setup.md" ] && install_file "$SCRIPT_DIR/plugins/oberskills-setup.md" "$SDLC_TARGET/plugins/oberskills-setup.md"
 [ -f "$SCRIPT_DIR/plugins/README.md" ] && install_file "$SCRIPT_DIR/plugins/README.md" "$SDLC_TARGET/plugins/README.md"
 
 
@@ -257,8 +255,5 @@ echo ""
 echo "HIGHLY RECOMMENDED: Install the LSP plugin for your project's language(s)."
 echo "  See ops/sdlc/plugins/lsp-setup.md for the full list."
 echo ""
-echo "Optional plugins: oberskills (prompt engineering + web research)."
-echo "  See ops/sdlc/plugins/README.md for details."
-
 [ "$FAILED" -gt 0 ] && exit 1
 exit 0
