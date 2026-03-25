@@ -34,3 +34,31 @@ See `plugins/README.md` for details and `plugins/*-setup.md` for installation in
 - The `skeleton/manifest.json` is the source of truth for what gets installed — keep it in sync
 - CLAUDE-SDLC.md is the drop-in that target projects add to their CLAUDE.md — it must be self-contained
 - **Changelog rule:** When you change any process file (skills, agents, process docs, CLAUDE-SDLC.md, disciplines, knowledge), update `process/sdlc_changelog.md` **immediately in the same step** — not as a follow-up. If the user has to ask for the changelog update, it was already too late.
+- **Consistency check rule:** After completing any batch of changes to this repo, run the following checks **before presenting the final summary to the user**. Do not wait to be asked.
+
+### Consistency Checks (mandatory after process changes)
+
+**1. Manifest completeness** — Every file on disk must be in `skeleton/manifest.json` and vice versa:
+```bash
+# Validate JSON
+python3 -c "import json; json.load(open('skeleton/manifest.json'))"
+```
+- Glob `skills/*/SKILL.md`, `skills/*/references/*.md`, `agents/*.md`, `knowledge/**/*.yaml`, `knowledge/**/*.d2`, `process/*.md`, `templates/*.md`, `disciplines/*.md`, `plugins/*.md`, `playbooks/*.md`
+- Compare against manifest `source_files` entries. Report any file on disk not in manifest, or manifest entry without a file.
+
+**2. Stale reference scan** — Grep for old/removed names across the codebase:
+- Any recently renamed/removed skills, agents, plugins, or concepts
+- `plugin-dev:agent-development` (replaced by `sdlc-create-agent`)
+- Only changelog entries should reference old names
+
+**3. Cross-reference consistency:**
+- New skills listed in `skeleton/manifest.json` → `source_files.skills`
+- New skills have commands in `CLAUDE-SDLC.md` (if user-invokable)
+- New agents listed in `skeleton/manifest.json` → `source_files.agents`
+- New knowledge files wired in `knowledge/agent-context-map.yaml` to relevant roles
+- `sdlc-initialize` references new skills/agents/knowledge where relevant
+- `sdlc-migrate` handles new files in its migration strategy (§2.1 for direct copy, §3.3 for context-map wiring)
+
+**4. Agent installation paths** — Framework subagents in `agents/` install to `.claude/agents/` (not `ops/sdlc/agents/`). Verify `setup.sh` copies them correctly.
+
+If any check fails, fix it before committing. Do not present the summary until all checks pass.
