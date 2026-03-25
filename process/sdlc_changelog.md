@@ -34,6 +34,38 @@ Each entry contains:
 
 ---
 
+## 2026-03-25: Review skill renames — verb-first naming convention
+
+**Origin:** CD naming convention change — review-related skills now use `review-` prefix for consistent verb-first naming.
+
+**What happened:** The three review skills (`diff-review`, `commit-review`, `commit-fix`) used inconsistent naming: two were noun-verb and one was noun-noun. Renaming to `review-diff`, `review-commit`, `review-fix` aligns them under a common `review-` prefix.
+
+**Changes made:**
+
+1. **`skills/diff-review/` → `skills/review-diff/`** — Directory and skill name renamed
+2. **`skills/commit-review/` → `skills/review-commit/`** — Directory and skill name renamed
+3. **`skills/commit-fix/` → `skills/review-fix/`** — Directory and skill name renamed
+4. **All cross-references updated** — skeleton/manifest.json, process/discipline_capture.md, process/review-fix-loop.md, process/finding-classification.md, skills/sdlc-tests-run, skills/design-consult, skills/sdlc-idea, knowledge/README.md, and historical changelog entries
+
+**Rationale:** Verb-first naming (`review-*`) groups related skills visually in listings and makes the action clear from the prefix. All three skills are part of the review workflow and now share the `review-` namespace.
+
+---
+
+## 2026-03-24: Interactive Triage Phase in sdlc-audit
+
+**Origin:** CD question about how to triage promotion candidates — the audit identified them but left triage as a separate manual step.
+
+**What happened:** The audit surfaced parking lot entries and agent memory patterns as INFO findings with "promote at next triage," but there was no triage mechanism built into the audit workflow. CD had to remember to come back and triage separately, which meant it often didn't happen.
+
+**Changes made:**
+
+1. **`skills/sdlc-audit/SKILL.md`** — Added TRIAGE to the compliance workflow diagram. Added "Interactive Triage Phase" section explaining the post-report triage flow.
+2. **`skills/sdlc-audit/references/compliance-methodology.md`** — Added step 11 (Interactive Triage) to the audit sequence. Full workflow: collect candidates from §6c and Dimension 8, present grouped by discipline via AskUserQuestion, apply CD decisions (promote/defer/skip), append triage results to audit artifact. Updated §6c triage authority matrix to reference step 11 for CD-only transitions. Added Triage Results section to report format template. Updated severity levels — promotion candidates handled in triage, no longer INFO findings.
+
+**Rationale:** The audit already has the context and candidates loaded — making triage a separate step creates friction and drop-off. Inline triage during the audit keeps the pipeline flowing: audit identifies → CD decides → promotions applied → knowledge stores updated, all in one session.
+
+---
+
 ## 2026-03-24: Agent Memories Not Git-Tracked; Knowledge Flows Through SDLC Pipeline
 
 **Origin:** CD question about whether agent memories belong in git at all, following the commit completeness work.
@@ -591,13 +623,13 @@ agents report feedback → cycle continues
 
 1. **`process/manager-rule.md`** (new) — Single source of truth for the Manager Rule. Covers: the rule itself, no-size exception, no-complexity exception, failed agent dispatch, scope exceptions, what the manager CAN edit, session scope, and the pre-agent exception for sdlc-initialize. Referenced by 8 skills.
 
-2. **`process/review-fix-loop.md`** (new) — Canonical definition of the review-fix loop (Steps A-D). Covers: dispatch all agents, collect findings, triage + fix, re-review, 3-strike rule, and skill-specific variations table. Referenced by sdlc-execute, sdlc-lite-execute, and commit-fix.
+2. **`process/review-fix-loop.md`** (new) — Canonical definition of the review-fix loop (Steps A-D). Covers: dispatch all agents, collect findings, triage + fix, re-review, 3-strike rule, and skill-specific variations table. Referenced by sdlc-execute, sdlc-lite-execute, and review-fix.
 
 3. **`process/finding-classification.md`** (new) — Unified finding classification taxonomy. Defines all 5 categories (FIX, PLAN, INVESTIGATE, DECIDE, PRE-EXISTING) with a table showing which subset each skill context uses. Resolves the consistency bug where different skills had different category counts. Also covers: misclassification guard, PRE-EXISTING qualification rules, severity levels, and FIX failure escalation.
 
 4. **Skills updated to reference process docs:**
-   - Manager Rule: sdlc-execute, sdlc-lite-execute, sdlc-plan, sdlc-lite-plan, commit-fix (replaced ~100 lines each with 1-line reference)
-   - Review-Fix Loop: sdlc-execute, sdlc-lite-execute, commit-fix (replaced ~200 lines each with 3-line reference)
+   - Manager Rule: sdlc-execute, sdlc-lite-execute, sdlc-plan, sdlc-lite-plan, review-fix (replaced ~100 lines each with 1-line reference)
+   - Review-Fix Loop: sdlc-execute, sdlc-lite-execute, review-fix (replaced ~200 lines each with 3-line reference)
    - Finding Classification: sdlc-plan, sdlc-lite-plan (replaced ~30 lines each with 3-line reference)
    - Session Handoff: sdlc-execute, sdlc-lite-execute, sdlc-plan, sdlc-lite-plan (replaced ~8 lines each with 1-line reference to manager-rule.md Session Scope)
 
@@ -816,7 +848,7 @@ agents report feedback → cycle continues
 13. **`disciplines/coding.md`** — Promoted to active, testability architecture section
 14. **`disciplines/testing.md`** — Testing paradigm summary with test type selection table
 15. **`knowledge/agent-context-map.yaml`** — Testing paradigm mapped to sdet and code-reviewer
-16. **Skill renames** — ad-hoc-planning → sdlc-lite-plan, ad-hoc-execution → sdlc-lite-execute, sdlc-planning → sdlc-plan, sdlc-execution → sdlc-execute, sdlc-new merged into sdlc-plan Step 0, ad-hoc-review → diff-review
+16. **Skill renames** — ad-hoc-planning → sdlc-lite-plan, ad-hoc-execution → sdlc-lite-execute, sdlc-planning → sdlc-plan, sdlc-execution → sdlc-execute, sdlc-new merged into sdlc-plan Step 0, ad-hoc-review → review-diff
 
 **Rationale:** The old binary (SDLC vs ad hoc) didn't match how work actually happens. Most real sessions are CD-driven iteration with agents — not plan-driven execution. The three-tier model gives that pattern a name and rules. The WHAT/WHY relaxation stops throwing away useful planning context. Context7 and the testing paradigm address the two biggest quality gaps: stale API knowledge and untestable code structure.
 

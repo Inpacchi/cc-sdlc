@@ -1,21 +1,21 @@
 ---
-name: commit-fix
+name: review-fix
 description: >
-  Fix all findings from the most recent /commit-review — dispatches worker domain agents to fix,
+  Fix all findings from the most recent /review-commit — dispatches worker domain agents to fix,
   then runs the review-fix loop until all agents report clean. Triggers on "fix review findings",
-  "fix the review", "/commit-fix", "address the findings", "fix all findings".
-  Do NOT use without a prior /commit-review or /diff-review in this conversation.
+  "fix the review", "/review-fix", "address the findings", "fix all findings".
+  Do NOT use without a prior /review-commit or /review-diff in this conversation.
 ---
 
 # Fix Review Findings
 
-Fix ALL findings from the most recent `/commit-review` — every critical, major, and minor issue. No filtering, no skipping by severity. Then run the review-fix loop (same as `sdlc-execute` step 2) until every agent reports clean.
+Fix ALL findings from the most recent `/review-commit` — every critical, major, and minor issue. No filtering, no skipping by severity. Then run the review-fix loop (same as `sdlc-execute` step 2) until every agent reports clean.
 
 ## Precondition
 
-A `/commit-review` must have been run in this conversation. If no review findings exist in the conversation context, stop:
+A `/review-commit` must have been run in this conversation. If no review findings exist in the conversation context, stop:
 
-> No review findings in this conversation. Run `/commit-review` first.
+> No review findings in this conversation. Run `/review-commit` first.
 
 ## Steps
 
@@ -65,7 +65,7 @@ After all agents complete, verify the project builds successfully (`[build comma
 
 ### 3. Review-Fix Loop
 
-Fixes can introduce new issues. Run the **Review-Fix Loop** per `ops/sdlc/process/review-fix-loop.md`. Agent source: the original `/commit-review` agent list. Classifications: FIX, INVESTIGATE, DECIDE, PRE-EXISTING per `ops/sdlc/process/finding-classification.md` (no PLAN — commit fixes are scoped to the current diff).
+Fixes can introduce new issues. Run the **Review-Fix Loop** per `ops/sdlc/process/review-fix-loop.md`. Agent source: the original `/review-commit` agent list. Classifications: FIX, INVESTIGATE, DECIDE, PRE-EXISTING per `ops/sdlc/process/finding-classification.md` (no PLAN — commit fixes are scoped to the current diff).
 
 When the loop exits cleanly, go to step 4.
 
@@ -101,5 +101,5 @@ Key feedback incorporated:
 Do NOT commit automatically — wait for the user to confirm.
 
 ## Integration
-- **Depends on:** `commit-review` or `diff-review` (must run first to produce findings)
+- **Depends on:** `review-commit` or `review-diff` (must run first to produce findings)
 - **Sibling:** `sdlc-lite-execute` (similar review-fix loop pattern)

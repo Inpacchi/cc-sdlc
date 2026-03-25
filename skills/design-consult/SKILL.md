@@ -8,7 +8,7 @@ description: >
   "help me design", "design this", "I need design help", "design consultation", "layout ideas",
   "UI concepts for".
   Do NOT use for implementation — this produces design direction only. Hand off to planning/execution skills.
-  Do NOT use for code review — use commit-review or diff-review.
+  Do NOT use for code review — use review-commit or review-diff.
 ---
 
 # Design Consultation
@@ -295,4 +295,4 @@ Do NOT start implementing. The design consultation ends with a direction and a h
 - **Uses:** `ui-ux-designer` agent, `design-for-ai` skill ([PLUGIN: design-for-ai] — optional), `oberweb` skill (optional), Playwright MCP (for visual mockups)
 - **SDLC knowledge:** `ops/sdlc/knowledge/design/`, `ops/sdlc/disciplines/design.md`
 - **Complements:** `sdlc-idea` (conceptual exploration) — `design-consult` explores visual direction, `sdlc-idea` explores conceptual direction. An idea brief from `sdlc-idea` can feed into `design-consult` when the concept needs visual exploration.
-- **Does NOT replace:** `commit-review` (code review), `accessibility-auditor` (WCAG compliance on implemented code)
+- **Does NOT replace:** `review-commit` (code review), `accessibility-auditor` (WCAG compliance on implemented code)

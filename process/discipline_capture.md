@@ -52,7 +52,7 @@ If yes → write a `RESURFACING_PATTERN` GAP entry.
 | sdlc-plan, sdlc-lite-plan | Yes (planning findings) | Yes | Yes (if >2 rounds) |
 | sdlc-idea | Conditional (no triage table) | Yes (judgment-based) | No |
 | design-consult | Conditional (no triage table) | Yes (judgment-based) | No |
-| commit-fix | Not applicable — commit-scoped findings are too narrow for discipline-level gap detection |
+| review-fix | Not applicable — commit-scoped findings are too narrow for discipline-level gap detection |
 | sdlc-resume | Inherits from sdlc-execute's capture step |
 
 ### GAP entry format

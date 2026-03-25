@@ -35,7 +35,7 @@ Not every skill uses all five. The superset is defined here; each skill uses the
 | Skill Context | Available Classifications | Notes |
 |--------------|-------------------------|-------|
 | Execution (sdlc-execute, sdlc-lite-execute) | FIX, PLAN, INVESTIGATE, DECIDE, PRE-EXISTING | Full set — execution can surface systemic issues |
-| Post-commit fix (commit-fix) | FIX, INVESTIGATE, DECIDE, PRE-EXISTING | No PLAN — commit fixes are scoped to the current diff |
+| Post-commit fix (review-fix) | FIX, INVESTIGATE, DECIDE, PRE-EXISTING | No PLAN — commit fixes are scoped to the current diff |
 | Planning review (sdlc-plan, sdlc-lite-plan) | FIX, DECIDE, PRE-EXISTING | No PLAN or INVESTIGATE — planning triage is simpler |
 
 ## Rules

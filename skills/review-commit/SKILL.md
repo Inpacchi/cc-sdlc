@@ -1,33 +1,31 @@
 ---
-name: diff-review
+name: review-commit
 description: >
-  Review all uncommitted changes in the working tree with domain agents — same lenses as commit-review
-  but targets the working tree before committing. Triggers on "review uncommitted changes", "check my diff",
-  "review before committing", "diff review", "review working tree", "look at my changes".
-  Do NOT use for committed code — use commit-review for that.
+  Review a commit with domain agents — checks for overengineering, unnecessary code, DRY violations,
+  and architecture adherence. Triggers on "review this commit", "check commit", "review HEAD",
+  "/review-commit", "review the last commit", "code review".
+  Do NOT use for uncommitted changes — use review-diff for that.
 ---
 
-# Review Uncommitted Changes
+# Review Commit
 
-Review all uncommitted changes (staged + unstaged) with relevant domain agents. Same review lenses as `/commit-review` but targets the working tree diff instead of a commit.
+Review a commit (or range) with relevant domain agents. The review prioritizes catching overengineered solutions and unnecessary code alongside standard quality checks.
+
+**Argument:** `$ARGUMENTS` (commit ref, default: HEAD)
 
 ## Steps
 
-### 1. Gather the Diff
+### 1. Resolve the Commit
 
-Run `git diff HEAD --stat` to get the list of changed files and a summary. Then run `git diff HEAD` to get the full diff.
+Use the argument as the commit ref. If no argument is provided, default to `HEAD`.
 
-If there are no changes, tell the user and stop:
+Run `git show --stat {ref}` to get the list of changed files and a summary. Then run `git show {ref}` to get the full diff.
 
-> No uncommitted changes to review.
-
-Also run `git status -s` to check for untracked files. If untracked files exist that look like new source files (not build artifacts, .env, or node_modules), warn:
-
-> Note: {N} untracked files not included in the diff — `git add` them first if they should be reviewed.
+If the ref is invalid, tell the user and stop.
 
 ### 2. Identify Relevant Domain Agents
 
-Agent selection has two tiers. Tier 1 agents review for overengineering, unnecessary code, DRY, and correctness — the core purpose of this skill. Tier 2 agents cover structural and architectural concerns and are only dispatched when the diff warrants it.
+Agent selection has two tiers. Tier 1 agents review for overengineering, unnecessary code, DRY, and correctness — the core purpose of this command. Tier 2 agents cover structural and architectural concerns and are only dispatched when the diff warrants it.
 
 #### Tier 1: Implementation Reviewers (always dispatch if files match)
 
@@ -50,7 +48,7 @@ These agents catch concrete code-level issues. Select based on files changed:
 
 #### Tier 2: Structural Reviewers (dispatch only when warranted)
 
-These agents review higher-level design decisions. They add value when the changes make structural choices, but duplicate Tier 1 coverage when they don't.
+These agents review higher-level design decisions. They add value when the commit makes structural choices, but duplicate Tier 1 coverage when it doesn't.
 
 - `software-architect` — dispatch ONLY when the diff does one or more of:
   - Introduces new directory boundaries or moves files between directories
@@ -59,7 +57,7 @@ These agents review higher-level design decisions. They add value when the chang
   - Introduces a pattern that doesn't exist elsewhere in the codebase
   - Modifies a domain adapter interface or registry
 
-  Do NOT dispatch for: routine additions that follow existing patterns, store selectors, style changes, bug fixes, or changes where `code-reviewer` and `frontend-developer`/`backend-developer` already cover architecture adherence.
+  Do NOT dispatch for: routine additions that follow existing patterns, store selectors, style changes, bug fixes, or commits where `code-reviewer` and `frontend-developer`/`backend-developer` already cover architecture adherence.
 
 - `refactor-engineer` — dispatch ONLY when the diff does one or more of:
   - Moves files between directories or renames exports with consumer updates
@@ -68,7 +66,7 @@ These agents review higher-level design decisions. They add value when the chang
   - Restructures domain adapter abstraction boundaries
   - Performs significant code reorganization beyond renaming
 
-  Do NOT dispatch for: new feature additions, bug fixes, style changes, or changes that add code without restructuring existing code.
+  Do NOT dispatch for: new feature additions, bug fixes, style changes, or commits that add code without restructuring existing code.
 
 #### Selection Process
 
@@ -84,7 +82,7 @@ After reading the diff:
 Output a checklist before dispatching:
 
 ```
-Reviewing uncommitted changes
+Reviewing commit {short-sha}: {commit subject}
 Files changed: N
 
 Dispatching reviewers:
@@ -141,8 +139,9 @@ Each agent reviews through their domain expertise but applies all applicable len
 Collect all findings. Present them in a single structured report:
 
 ```markdown
-## Diff Review: uncommitted changes
+## Commit Review: {short-sha}
 
+**{commit subject}**
 {N} files changed | Reviewed by {N} domain agents
 
 ### Findings
@@ -170,22 +169,22 @@ After presenting the report:
 
 > **{N} findings** ({critical} critical, {major} major, {minor} minor)
 >
-> Run `/commit-fix` to fix all findings, or commit first and run `/commit-review` for a post-commit review.
+> Run `/review-fix` to fix all findings.
 
-Do NOT fix anything in this skill. Do NOT offer partial fix options. The review skill only reviews — `/commit-fix` handles all fixes.
+Do NOT fix anything in this command. Do NOT offer partial fix options. The review command only reviews — `/review-fix` handles all fixes.
 
 ## Red Flags
 
 | Thought | Reality |
 |---------|---------|
 | "The diff is small, skip some lenses" | Small diffs produce the subtlest bugs |
-| "Just do a quick glance, we're about to commit" | Quick glances miss type safety and contract issues. Run the full workflow. |
-| "Agent fixed the issue during review" | Report only — fixes go through `commit-fix` |
+| "Agent fixed the issue during review" | Report only — fixes go through `review-fix` |
 | "This is just a refactor, no review needed" | Refactors need architecture and DRY lens review |
-| "Skip Tier 2, it's obviously not architectural" | Read the diff content first. Routine-looking changes introduce new patterns more often than expected. |
+| "Skip Tier 2, it's a small commit" | Read the diff content. Small commits introduce new patterns more often than expected. |
+| "This agent overlaps with another, skip it" | Agents review different concerns. `performance-engineer` and `frontend-developer` both review component code but catch different issues. |
+| "No security concerns in this diff" | Check the boundaries lens anyway. User input flows through surprising paths. |
 
 ## Integration
-- **Depends on:** None (operates on uncommitted working tree changes)
-- **Feeds into:** `commit-fix` (if findings need fixing)
-- **Sibling:** `commit-review` (same review lenses, targets commits instead of working tree)
-- **DRY note:** Agent selection criteria and review lenses are duplicated with `commit-review`. If you update one, update the other.
+- **Feeds into:** `review-fix` (if findings need fixing)
+- **Sibling:** `review-diff` (same review lenses, targets working tree instead of commits)
+- **DRY note:** Agent selection criteria and review lenses are duplicated with `review-diff`. If you update one, update the other.

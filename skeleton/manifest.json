@@ -151,9 +151,9 @@
     "skills": [
       "skills/sdlc-lite-execute/SKILL.md",
       "skills/sdlc-lite-plan/SKILL.md",
-      "skills/diff-review/SKILL.md",
-      "skills/commit-fix/SKILL.md",
-      "skills/commit-review/SKILL.md",
+      "skills/review-diff/SKILL.md",
+      "skills/review-fix/SKILL.md",
+      "skills/review-commit/SKILL.md",
       "skills/sdlc-tests-create/SKILL.md",
       "skills/design-consult/SKILL.md",
       "skills/sdlc-archive/SKILL.md",
