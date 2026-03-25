@@ -127,7 +127,8 @@ For files with no project customizations, copy directly from cc-sdlc to the proj
 - `templates/*.md`
 - `knowledge/**/*.yaml` (but NOT `agent-context-map.yaml`)
 - `README.md`, `CLAUDE-SDLC.md`
-- `agents/AGENT_TEMPLATE.md`, `agents/AGENT_SUGGESTIONS.md`
+- `agents/AGENT_TEMPLATE.md`, `agents/AGENT_SUGGESTIONS.md` → `.claude/agents/`
+- `agents/sdlc-reviewer.md`, `agents/sdlc-compliance-auditor.md` → `.claude/agents/` (framework subagents — must be in `.claude/agents/` for Claude Code to dispatch them, not just `ops/sdlc/agents/`)
 - `playbooks/*.md` (unless the project has written its own playbooks — check git blame)
 - `examples/*.md`
 

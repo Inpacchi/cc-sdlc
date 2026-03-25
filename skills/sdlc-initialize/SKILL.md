@@ -570,6 +570,7 @@ Agents:
     Created: [list all agents]
 [ ] Spec-vs-roster reconciliation complete — all spec-listed roles created or deviation logged
 [ ] AGENT_TEMPLATE.md and AGENT_SUGGESTIONS.md present in .claude/agents/
+[ ] Framework subagents present in .claude/agents/: sdlc-reviewer.md, sdlc-compliance-auditor.md
 [ ] Context map: agent-context-map.yaml wired to actual agent filenames
 [ ] All knowledge files mapped in agent-context-map.yaml (no unmapped YAMLs)
 
