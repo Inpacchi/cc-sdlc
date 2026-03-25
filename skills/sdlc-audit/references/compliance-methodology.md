@@ -14,6 +14,7 @@ Full methodology for SDLC compliance auditing. Covers all 9 audit dimensions, re
 8. **Agent Memory Mining**: Scan agent memories for recurring patterns worth promoting
 9. **Recommendation Follow-Through**: Check whether previous audit recommendations were acted on
 10. **Report Generation**: Produce structured audit report at `docs/current_work/audits/sdlc_audit_YYYY-MM-DD.md`
+11. **Interactive Triage**: Present promotion candidates to CD for triage decisions and apply approved promotions
 
 ## Dimension 1: Deliverable Catalog Integrity
 
@@ -104,14 +105,16 @@ Check each discipline file:
 
 **Triage authority matrix:**
 
-| Transition | Authority | Condition |
-|-----------|-----------|-----------|
-| unmarked → `[NEEDS VALIDATION]` | Auto-apply | Unmarked for ≥2 audit cycles |
-| `[NEEDS VALIDATION]` → `[DEFERRED]` | Auto-apply | Unvalidated ≥3 cycles AND no agent feedback references it AND discipline dormant |
-| Any → `[READY TO PROMOTE]` | CD only | Propose with evidence, CD confirms |
-| `[READY TO PROMOTE]` → Promoted | CD only | Actual knowledge file creation |
+| Transition | Authority | When |
+|-----------|-----------|------|
+| unmarked → `[NEEDS VALIDATION]` | Auto-apply (step 6) | Unmarked for ≥2 audit cycles |
+| `[NEEDS VALIDATION]` → `[DEFERRED]` | Auto-apply (step 6) | Unvalidated ≥3 cycles AND no agent feedback references it AND discipline dormant |
+| Any → `[READY TO PROMOTE]` | CD decision (step 11) | Proposed with evidence during interactive triage |
+| `[READY TO PROMOTE]` → Promoted | CD decision (step 11) | Actual knowledge file creation during interactive triage |
 
-Auto-triage: scan entries, apply qualifying transitions, log actions in report.
+**Step 6 auto-triage:** Scan entries, apply qualifying low-risk transitions, log actions in report. Collect promotion candidates for step 11.
+
+**Step 11 interactive triage:** Present all promotion candidates (from §6c and Dimension 8) to CD for decision. See step 11 below for the full workflow.
 
 ### 6d. Knowledge-to-Skill Wiring
 
@@ -195,6 +198,63 @@ When auditing specific commits:
 4. Check whether new components/modules/routes have corresponding specs
 5. Verify commit message conventions
 
+## Step 11: Interactive Triage
+
+After presenting the audit report, run an interactive triage session for all promotion candidates identified during the audit. This surfaces candidates from two sources:
+
+- **§6c parking lot entries** marked `[NEEDS VALIDATION]` or `[READY TO PROMOTE]` that have supporting evidence
+- **Dimension 8 agent memory patterns** flagged as promotion-worthy (recurring across agents, reusable)
+
+### Triage Workflow
+
+**11a. Collect candidates.** During steps 6 and 8, build a candidate list. Each candidate needs:
+- The entry text (verbatim from parking lot or agent memory)
+- Source location (discipline file + line, or agent memory file)
+- Evidence (why it's promotion-worthy: recurrence count, agent feedback, deliverable references)
+- Suggested target (which knowledge store file it would go into — existing or new)
+
+**11b. Present candidates grouped by discipline.** Use `AskUserQuestion` to present candidates in batches (one discipline at a time):
+
+```
+TRIAGE: [Discipline Name] — N candidates
+
+1. "[entry text]"
+   Source: disciplines/coding.md
+   Evidence: Referenced in D3, D5, D7 execution. 2 agents flagged independently.
+   Suggested target: knowledge/coding/typescript-patterns.yaml → new item under "Error Handling"
+
+2. "[entry text]"
+   Source: .claude/agent-memory/backend-developer/patterns.md
+   Evidence: Appears in 3 agent memories. Consistent pattern across all API routes.
+   Suggested target: knowledge/architecture/api-design-methodology.yaml → new item
+
+For each: (P)romote, (D)efer, (S)kip
+```
+
+**11c. Apply CD decisions.**
+
+- **Promote:** Create or update the target knowledge store YAML file with the new entry. Mark the parking lot entry as `Promoted → [target file path] ([date])`. If the source was an agent memory, add the entry to the relevant discipline parking lot as `Promoted → [target file path] ([date])` for traceability.
+- **Defer:** Update the parking lot entry marker to `[DEFERRED]` with CD's reason appended.
+- **Skip:** Leave the entry unchanged — it stays at its current marker for next audit cycle.
+
+**11d. Report triage results.** Append triage outcomes to the audit artifact:
+
+```markdown
+### Triage Results
+| # | Entry | Decision | Target |
+|---|-------|----------|--------|
+| 1 | [summary] | Promoted | knowledge/coding/typescript-patterns.yaml |
+| 2 | [summary] | Deferred — not validated yet | — |
+| 3 | [summary] | Skipped | — |
+
+Promoted: N | Deferred: N | Skipped: N
+```
+
+### When to Skip Triage
+
+- **No candidates:** If steps 6 and 8 found no promotion candidates, skip step 11 entirely. Do not force a triage session.
+- **User declines:** If CD says "skip triage" or "not now," respect that. Note "Triage deferred by CD" in the audit artifact.
+
 ## Report Format
 
 ```markdown
@@ -258,6 +318,13 @@ When auditing specific commits:
 [previous recommendations status]
 - Follow-through rate: X%
 
+### Triage Results
+| # | Entry | Decision | Target |
+|---|-------|----------|--------|
+[triage outcomes — omit section if no candidates or triage skipped]
+
+Promoted: N | Deferred: N | Skipped: N
+
 ### Recommendations
 [prioritized action items]
 ```
@@ -266,7 +333,7 @@ When auditing specific commits:
 
 - **Critical**: Missing specs for completed features, deliverable ID conflicts, catalog entries pointing to nonexistent files
 - **Warning**: Incomplete artifact chains, stale docs, unarchived completed work, disconnected knowledge stores, dormant disciplines
-- **Info**: Minor naming inconsistencies, optional improvements, unmarked parking lot entries, pending `[READY TO PROMOTE]` items
+- **Info**: Minor naming inconsistencies, optional improvements, unmarked parking lot entries. Note: promotion candidates are no longer reported as INFO findings — they are handled interactively in step 11 (triage)
 
 ## Guiding Principles
 

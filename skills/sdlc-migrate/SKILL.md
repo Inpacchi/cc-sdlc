@@ -243,7 +243,7 @@ The `sdlc-audit` skill has framework audit methodology in `SKILL.md` and `refere
 6. Update `references/session-reading.md` JSONL format reference
 7. Preserve any project-specific audit dimensions or improvement categories added by the project
 
-**Migration note:** If the project still has `agents/sdlc-compliance-auditor.md`, remove it and install the `sdlc-audit` skill instead. All agent functionality is absorbed by the skill.
+**Migration note:** The `sdlc-compliance-auditor` agent has been restored as a subagent dispatched by `sdlc-audit`. If the project has an old version, update it to the current version. If the project removed it during a prior migration, re-install it.
 
 ### 2.5 Content-Merge Verification Gate
 
@@ -356,7 +356,7 @@ The project's `CLAUDE.md` contains CLAUDE-SDLC.md content — skill names, proce
 
 **Check for:**
 
-1. **Skill name references** — verify all skill names mentioned in CLAUDE.md (`sdlc-plan`, `sdlc-execute`, `sdlc-lite-plan`, `sdlc-lite-execute`, `sdlc-idea`, `sdlc-initialize`, `sdlc-reconcile`) still match the actual skill directory names in `ops/sdlc/skills/`
+1. **Skill name references** — verify all skill names mentioned in CLAUDE.md (`sdlc-plan`, `sdlc-execute`, `sdlc-lite-plan`, `sdlc-lite-execute`, `sdlc-idea`, `sdlc-initialize`, `sdlc-reconcile`, `review-diff`, `review-commit`, `review-fix`, `sdlc-create-skill`, `sdlc-create-agent`, `sdlc-review`) still match the actual skill directory names in `ops/sdlc/skills/`. Check for renamed skills: `diff-review` → `review-diff`, `commit-review` → `review-commit`, `commit-fix` → `review-fix`
 
 2. **Process file paths** — verify paths like `ops/sdlc/process/overview.md`, `ops/sdlc/process/sdlc_changelog.md`, `ops/sdlc/process/compliance_audit.md` still exist
 
@@ -376,7 +376,7 @@ Run the `sdlc-audit` skill in compliance mode directly — do not ask the user t
 - Agent-context-map paths all resolve
 - Content-merge preserved project data (tracker levels, parking lot entries, skill customizations)
 - CLAUDE-SDLC.md references in CLAUDE.md are valid
-- If project had `agents/sdlc-compliance-auditor.md`, verify it was removed and `sdlc-audit` skill installed
+- `agents/sdlc-compliance-auditor.md` present and current (dispatched by sdlc-audit)
 
 If the audit returns findings:
 - **WARNING or higher:** Fix before continuing. Re-run the auditor after fixes.
