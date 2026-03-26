@@ -62,6 +62,14 @@ digraph sdlc_lite_execution {
 }
 ```
 
+## Collaboration Model
+
+Read `ops/sdlc/process/collaboration_model.md` for the CD/CC role definitions, communication patterns (AskUserQuestion rule), decision authority table, and anti-patterns. All questions to the user must use `AskUserQuestion`. All anti-patterns in that doc apply during execution.
+
+## Deliverable Lifecycle
+
+Follow the state machine in `ops/sdlc/process/deliverable_lifecycle.md`. Update the `**Status:**` marker as the deliverable transitions: In Progress (at phase start), Complete (after final commit). Lite deliverables use the same canonical states — do not invent custom states.
+
 ## Step Details
 
 ### Manager Rule

@@ -10,7 +10,7 @@ description: >
 
 # SDLC Reconciliation
 
-Read `ops/sdlc/process/ad_hoc_reconciliation.md` and follow it exactly.
+Read `ops/sdlc/process/ad_hoc_reconciliation.md` and follow it exactly. When assigning deliverable states during reconciliation, use the canonical states from `ops/sdlc/process/deliverable_lifecycle.md` — do not invent custom states.
 
 The process has 5 phases:
 1. **Discovery** — identify the boundary (last formal commit), list ad hoc commits, categorize each

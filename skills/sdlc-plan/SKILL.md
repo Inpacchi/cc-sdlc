@@ -13,6 +13,14 @@ Domain agents own the planning lifecycle: they write the spec, they write the pl
 
 **Core principle:** The agent with domain expertise writes and reviews. Never do domain work yourself when an agent exists for it.
 
+## Collaboration Model
+
+Read `ops/sdlc/process/collaboration_model.md` for the CD/CC role definitions, communication patterns (proposal-first, AskUserQuestion rule), decision authority table, and anti-patterns. Planning is where proposal-first and decision authority matter most — CC proposes approaches, CD approves.
+
+## Deliverable Lifecycle
+
+Follow the state machine in `ops/sdlc/process/deliverable_lifecycle.md`. When registering a deliverable (step 0), it enters Draft state. After spec approval (step 3), it transitions to Ready. Use the defined `**Status:**` markers in the spec file.
+
 ## Manager Rule
 
 Read and follow `ops/sdlc/process/manager-rule.md` — the canonical definition of this rule. It applies unconditionally for the entire session.

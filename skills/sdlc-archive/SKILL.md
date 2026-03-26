@@ -5,7 +5,7 @@ description: Archive completed deliverables from current_work/ to chronicle/. Us
 
 # Archive Completed Deliverables
 
-Move completed work from `docs/current_work/` to `docs/chronicle/`. Follows the process defined in `ops/sdlc/process/chronicle_organization.md`.
+Move completed work from `docs/current_work/` to `docs/chronicle/`. Follows the process defined in `ops/sdlc/process/chronicle_organization.md`. Only deliverables in the **Complete** state (per `ops/sdlc/process/deliverable_lifecycle.md`) are eligible for archival — verify the `**Status:**` marker before proceeding.
 
 ## Steps
 

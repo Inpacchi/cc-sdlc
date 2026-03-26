@@ -66,6 +66,14 @@ Select from project-level worker agents (`.claude/agents/`). If a worker agent's
 
 Refer to the full agent table in the `sdlc-plan` skill if you need the complete list. The same worker agents are available here.
 
+## Collaboration Model
+
+Read `ops/sdlc/process/collaboration_model.md` for the CD/CC role definitions, communication patterns (proposal-first, AskUserQuestion rule), decision authority table, and anti-patterns. All questions to the user must use `AskUserQuestion`. Planning is where proposal-first matters most — CC proposes approaches, CD approves.
+
+## Deliverable Lifecycle
+
+Follow the state machine in `ops/sdlc/process/deliverable_lifecycle.md`. When registering a deliverable (step 0), use the canonical states — do not invent custom states like "In Progress (lite)". Lite deliverables follow the same state definitions as full deliverables.
+
 ## Manager Rule
 
 Read and follow `ops/sdlc/process/manager-rule.md` — the canonical definition of this rule. It applies unconditionally for the entire session.

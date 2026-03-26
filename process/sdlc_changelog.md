@@ -34,6 +34,26 @@ Each entry contains:
 
 ---
 
+## 2026-03-26: Wire collaboration_model.md and deliverable_lifecycle.md into consuming skills/agents
+
+**Origin:** Process doc audit — `collaboration_model.md` and `deliverable_lifecycle.md` existed as documentation but had no active consumers in the skill/agent execution paths.
+
+**What happened:** A reference analysis of all process docs showed that `collaboration_model.md` was only referenced by `disciplines/coding.md` and `deliverable_lifecycle.md` only by `setup.sh` and `disciplines/testing.md`. Neither was read by any skill or agent during execution, meaning the AskUserQuestion rule, decision authority table, anti-patterns, and deliverable state machine were defined but never enforced.
+
+**Changes made:**
+
+1. **`skills/sdlc-execute/SKILL.md`** — Added Collaboration Model section (references communication patterns and anti-patterns) and Deliverable Lifecycle section (enforces status marker updates through In Progress → Validated → Deployed → Complete)
+2. **`skills/sdlc-lite-execute/SKILL.md`** — Added Collaboration Model section (AskUserQuestion rule and anti-patterns) and Deliverable Lifecycle section (In Progress → Complete, canonical states only) as top-level sections
+3. **`skills/sdlc-lite-plan/SKILL.md`** — Added Collaboration Model section (proposal-first, AskUserQuestion rule) and Deliverable Lifecycle section (canonical states, no custom states like "In Progress (lite)")
+4. **`skills/sdlc-plan/SKILL.md`** — Added Collaboration Model section (proposal-first, decision authority) and Deliverable Lifecycle section (Draft on registration, Ready after spec approval)
+5. **`skills/sdlc-archive/SKILL.md`** — Added lifecycle gate: only deliverables in Complete state are eligible for archival, verified via status marker
+6. **`skills/sdlc-reconcile/SKILL.md`** — Added reference to canonical lifecycle states for reconciliation
+7. **`agents/sdlc-reviewer.md`** — Added Collaboration Model and Deliverable Lifecycle checks to the shared review checklist (scoped to orchestration skills only)
+
+**Rationale:** Process docs that exist but aren't consumed are dead weight — they define rules that nothing enforces. Wiring them into the skills that execute the workflow means the collaboration model and lifecycle states are actively referenced during planning, execution, archival, and review.
+
+---
+
 ## 2026-03-26: Add dispatching skill wiring to agent creation workflow
 
 **Origin:** Neuroloom D12 planning session — dx-engineer was missed during agent selection because it wasn't in the AGENT-RECONFIRM infrastructure trigger table or review skill Tier 1 lists. Root cause: creating an agent didn't automatically wire it into the skills that dispatch agents.

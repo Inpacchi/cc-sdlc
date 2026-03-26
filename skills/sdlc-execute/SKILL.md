@@ -99,6 +99,14 @@ digraph execution {
 }
 ```
 
+## Collaboration Model
+
+Read `ops/sdlc/process/collaboration_model.md` for the CD/CC role definitions, communication patterns (AskUserQuestion rule), decision authority table, and anti-patterns. All questions to the user must use `AskUserQuestion`. All anti-patterns in that doc apply during execution.
+
+## Deliverable Lifecycle
+
+Follow the state machine in `ops/sdlc/process/deliverable_lifecycle.md`. Update the `**Status:**` marker in the spec file as the deliverable transitions through states: In Progress (at phase start), Validated (after review loop passes), Deployed (after deployment verification, if applicable), Complete (after final commit). Use the defined status markers — do not invent custom states.
+
 ## Manager Rule
 
 Read and follow `ops/sdlc/process/manager-rule.md` — the canonical definition of this rule. It applies unconditionally for the entire session.
