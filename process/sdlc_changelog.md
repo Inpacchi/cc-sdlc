@@ -34,6 +34,20 @@ Each entry contains:
 
 ---
 
+## 2026-03-26: Add dispatching skill wiring to agent creation workflow
+
+**Origin:** Neuroloom D12 planning session — dx-engineer was missed during agent selection because it wasn't in the AGENT-RECONFIRM infrastructure trigger table or review skill Tier 1 lists. Root cause: creating an agent didn't automatically wire it into the skills that dispatch agents.
+
+**What happened:** The sdlc-create-agent skill created agents and registered them in agent-context-map, but never added them to the skills that actually select agents for dispatch (sdlc-plan, sdlc-lite-plan, review-commit, review-diff). This meant newly created agents were invisible to the planning and review workflows until someone manually noticed and added them.
+
+**Changes made:**
+
+1. **`skills/sdlc-create-agent/SKILL.md`** — Added Step 6 "Wire Into Dispatching Skills" between registration and quality gate. Classifies agents by role type (reviewer, builder, infrastructure specialist) and updates the corresponding skills. Added anti-rationalization entry for skipping wiring. Updated Integration section to list modified skills.
+
+**Rationale:** An agent that exists but isn't referenced by dispatching skills is functionally invisible. The wiring step closes the gap between "agent exists" and "agent gets selected when relevant." This prevents the class of bug where a domain specialist is available but never dispatched because no skill knows to look for it.
+
+---
+
 ## 2026-03-25: Add design knowledge stores validated across projects
 
 **Origin:** Cross-project analysis of paire-appetit, sleeved, and neuroloom SDLC implementations. All three projects ingested the same UI/UX design transcripts via sdlc-ingest, producing identical generic knowledge files.
