@@ -42,13 +42,112 @@ All knowledge YAML files share a common metadata header. While domain-specific c
 
 | Field | Required | Type | Purpose |
 |-------|----------|------|---------|
-| `id` | Recommended | string | Unique identifier matching the filename |
-| `name` | Recommended | string | Human-readable name |
-| `description` | Recommended | string | What this knowledge covers |
+| `id` | Yes | string | Unique identifier matching the filename (e.g., `api-design-methodology`) |
+| `name` | Yes | string | Human-readable name |
+| `description` | Yes | string | One-line summary of what this knowledge covers |
+| `pattern` | Yes | enum | Content structure: `entries`, `gotchas`, `rules`, or `methodology`. See [Content Patterns](#content-patterns). |
+| `category` | Yes | string | Parent discipline directory (e.g., `architecture`, `testing`, `design`) |
 | `spec_relevant` | Yes | boolean | Whether this knowledge is loaded during spec writing. Default: `false`. |
 | `project_applicability` | Yes | object | When this store is relevant and what to do if it isn't. See below. |
-| `last_updated` | No | date | When the content was last modified |
-| `category` | No | string | Discipline category |
+| `last_updated` | Yes | date | When the content was last modified |
+
+### Content Patterns
+
+All knowledge files use one of four canonical content patterns. These are closed — new files MUST use one. If none fits, propose a new pattern explicitly rather than inventing one ad hoc.
+
+Optional extra fields are allowed in all patterns. Required fields must always be present.
+
+#### `entries` — Guidance on practices
+
+Use when: teaching how to do something well (principles, patterns, conventions).
+
+Structure: Freeform. Named subsections as top-level keys, organized by domain. No wrapper key required — content structure follows the subject matter.
+
+```yaml
+# ... metadata header ...
+
+testability_as_code_quality:
+  principle: "Testability is a design signal"
+  detail: |
+    Code that is hard to test is usually hard to maintain...
+  examples:
+    - pattern: "Dependency injection over global state"
+      code: |
+        # inject dependencies explicitly
+```
+
+No required content fields — subsection structure is domain-specific.
+
+Example file: `coding/code-quality-principles.yaml`
+
+#### `gotchas` — Failure pattern catalogs
+
+Use when: documenting things that go wrong (symptoms, causes, resolutions).
+
+Structure: Items wrapped under a `gotchas:` key. Each item has 6 required fields.
+
+**Required fields:** `id`, `severity`, `symptom`, `cause`, `resolution`, `prevention`
+
+```yaml
+# ... metadata header ...
+
+gotchas:                              # wrapper key MUST be "gotchas:"
+  - id: G01
+    severity: high                    # critical | high | medium | low
+    symptom: "Tests pass locally but fail in CI"
+    cause: "Hardcoded paths or timezone assumptions"
+    resolution: "Use relative paths and UTC timestamps"
+    prevention: "Run tests in CI-like container locally"
+    # optional extras: discovered, applies_to, name, source-specific attribution, etc.
+```
+
+Example file: `testing/gotchas.yaml`
+
+#### `rules` — Checklists and validation criteria
+
+Use when: defining criteria to check against (design rules, assessment rubrics).
+
+Structure: Items wrapped under a `rules:` key. Each item has 5 required fields.
+
+**Required fields:** `rule_id`, `name`, `description`, `rationale`, `checklist`
+
+```yaml
+# ... metadata header ...
+
+rules:                                # wrapper key MUST be "rules:"
+  - rule_id: V01
+    name: "Visual hierarchy"
+    description: "Every screen needs a clear focal point"
+    rationale: "Users scan in predictable patterns..."
+    checklist:
+      - "Is there one dominant element per section?"
+      - "Do size/weight/color create clear reading order?"
+    # optional extras: anti_pattern, source, etc.
+```
+
+Example file: `design/visual-design-rules.yaml`
+
+#### `methodology` — Domain frameworks and processes
+
+Use when: describing a multi-phase process or framework with domain-specific structure.
+
+Structure: Freeform. Multiple named sections following the methodology's natural breakdown. No wrapper key required — structure follows the domain, not a rigid template.
+
+```yaml
+# ... metadata header ...
+
+rest_maturity_levels:
+  level_0:
+    description: "Single URI, single verb"
+    when_acceptable: "Internal tools, prototypes"
+  level_1:
+    description: "Resources with URIs"
+    # ...
+```
+
+No required content fields — section structure is domain-specific.
+
+Example file: `architecture/api-design-methodology.yaml`
 
 ### `spec_relevant` Field
 

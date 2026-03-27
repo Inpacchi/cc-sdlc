@@ -9,10 +9,13 @@ description: >
   Reusable conventions for drawing UX diagrams in ASCII. Designed for inline
   markdown display, git versioning, and fast iteration. These are low-fidelity
   by design — they show structure and arrangement, not styling or pixel detail.
+pattern: entries
+category: design
 spec_relevant: false
 project_applicability:
   relevant_when: "Always relevant — used for spec wireframes and architecture diagrams"
   action_if_irrelevant: keep
+last_updated: 2026-03-04
 
 # ─────────────────────────────────────────────
 # Box Drawing Characters

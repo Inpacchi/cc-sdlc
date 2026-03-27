@@ -3,7 +3,6 @@
 # Promoted from disciplines/business-analysis.md parking lot.
 # Last updated: 2026-03-22
 
-last_updated: 2026-03-22
 id: requirements-feedback-loops
 name: "Requirements Feedback Loops"
 description: >
@@ -12,10 +11,13 @@ description: >
   discovers missing acceptance criteria and feeds them back to BA, how test data
   design acts as lightweight domain modeling, and how architect-proposed values
   need domain validation.
+pattern: entries
+category: business-analysis
 spec_relevant: false
 project_applicability:
   relevant_when: "Always relevant — applies to any project with requirements"
   action_if_irrelevant: keep
+last_updated: 2026-03-22
 
 # ─────────────────────────────────────────────
 # Acceptance Criteria Flow Both Directions

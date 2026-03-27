@@ -4,18 +4,16 @@
 # implementation and investigation agents in the SDLC.
 # Last updated: 2026-03-13
 
-last_updated: 2026-03-13
 id: agent-communication-protocol
 name: "Agent Communication Protocol"
-description: >
-  The canonical pattern for structured mid-task progress updates and task completion
-  handoffs. All implementation and investigation agents emit JSON progress blocks during
-  long-running tasks and conclude with a defined handoff. This ensures the orchestrating
-  layer (CC) always has machine-readable status without having to parse prose.
+description: "Canonical protocol for structured progress updates, task handoffs, and knowledge feedback across all SDLC agents"
+pattern: methodology
+category: architecture
 spec_relevant: false
 project_applicability:
   relevant_when: "Always relevant — governs the cc-sdlc agent system itself"
   action_if_irrelevant: keep
+last_updated: 2026-03-13
 
 # ─────────────────────────────────────────────
 # Progress Update Protocol

@@ -4,19 +4,16 @@
 # forensic timeline reconstruction, and root cause analysis methods.
 # Last updated: 2026-03-14
 
-last_updated: 2026-03-14
 id: error-cascade-methodology
 name: "Error Cascade Methodology"
-description: >
-  Cross-project methodology for diagnosing distributed system failures.
-  Covers cascade failure taxonomy (the five propagation patterns), multi-axis
-  correlation framework for surfacing hidden connections, forensic timeline
-  reconstruction, and the peer relationship between Five Whys, Fishbone,
-  and Fault Tree as complementary root cause methods.
+description: "Distributed failure diagnosis covering five cascade patterns, multi-axis error correlation, forensic timeline reconstruction, and three RCA methods"
+pattern: methodology
+category: architecture
 spec_relevant: false
 project_applicability:
   relevant_when: "Project has multiple services, queues, or distributed components that can cascade-fail"
   action_if_irrelevant: remove
+last_updated: 2026-03-14
 
 # ─────────────────────────────────────────────
 # Cascade Failure Taxonomy

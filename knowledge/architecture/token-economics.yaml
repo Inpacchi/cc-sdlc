@@ -3,18 +3,16 @@
 # Promoted from disciplines/architecture.md parking lot.
 # Last updated: 2026-03-22
 
-last_updated: 2026-03-22
 id: token-economics
 name: "Token Economics as Architectural Constraint"
-description: >
-  In AI-assisted workflows, context window size and token budgets are real
-  architectural constraints — as real as memory limits or network bandwidth.
-  Architecture decisions must account for what is feasible within token budgets,
-  especially for knowledge retrieval, agent dispatch, and large-scale refactors.
+description: "How context window size and token budgets constrain knowledge retrieval, agent dispatch, and codebase refactoring in AI-assisted workflows"
+pattern: entries
+category: architecture
 spec_relevant: false
 project_applicability:
   relevant_when: "Always relevant — governs the cc-sdlc agent system itself"
   action_if_irrelevant: keep
+last_updated: 2026-03-22
 
 # ─────────────────────────────────────────────
 # Core Principle

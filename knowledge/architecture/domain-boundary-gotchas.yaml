@@ -3,56 +3,65 @@
 # Include in agent dispatch prompts when cross-domain risk is identified.
 # Last updated: 2026-03-20
 
-last_updated: 2026-03-22
 id: domain-boundary-gotchas
 name: "Domain Boundary Crossing Patterns"
-description: >
-  Recurring patterns where implementation work crosses from one agent's domain
-  into another's. These gotchas help the orchestrator recognize boundary crossings
-  before they happen and dispatch the correct agents.
+description: "Recurring patterns where work crosses agent domain boundaries, with recognition signals and correct multi-agent dispatch approaches"
+pattern: gotchas
+category: architecture
 spec_relevant: false
 project_applicability:
   relevant_when: "Always relevant — governs multi-agent orchestration"
   action_if_irrelevant: keep
+last_updated: 2026-03-22
 
 gotchas:
   - id: frontend-triggers-api-change
-    pattern: "UI component needs a new API endpoint or modified response shape"
-    example: "Dashboard widget needs aggregated data → requires new route handler"
-    risk: "Frontend developer agent modifies API route handler outside its domain"
-    correct_approach: >
+    severity: high
+    symptom: "Frontend developer agent editing API route handlers or backend files outside its domain"
+    cause: "UI component needs a new API endpoint or modified response shape (e.g., dashboard widget needs aggregated data → requires new route handler)"
+    resolution: >
       Frontend agent documents the data contract it needs. Backend agent implements
       the endpoint. Frontend agent consumes it. Two dispatches, shared contract.
+    prevention: "During planning, identify data dependencies that cross frontend/backend boundary and pre-allocate separate agent dispatches"
+    pattern: "UI component needs a new API endpoint or modified response shape"
+    example: "Dashboard widget needs aggregated data → requires new route handler"
 
   - id: feature-triggers-schema-change
-    pattern: "New feature requires database schema migration"
-    example: "Adding tags to items → requires new table/column + migration"
-    risk: "Implementation agent writes migration SQL alongside feature code"
-    correct_approach: >
+    severity: high
+    symptom: "Implementation agent writing migration SQL alongside feature code in a single dispatch"
+    cause: "New feature requires database schema migration (e.g., adding tags to items → requires new table/column + migration)"
+    resolution: >
       Data architect or backend-developer handles schema. Feature agent handles
       application code. Schema change commits before feature code.
+    prevention: "During planning, flag any feature that touches the data model and schedule schema work as a separate preceding task"
+    pattern: "New feature requires database schema migration"
+    example: "Adding tags to items → requires new table/column + migration"
 
   - id: conversational-drift-after-skill
-    pattern: "User asks about code behavior after structured skill completes"
-    example: "After sdlc-lite-execute commits, user asks 'how does status work?'"
-    risk: >
-      Orchestrator answers from context without reading code, then implements
-      a fix directly when the answer reveals a gap. No agent dispatch, no tracking.
-    correct_approach: >
+    severity: critical
+    symptom: "Orchestrator opens an Edit tool after a skill has completed, implementing fixes without agent dispatch or tracking"
+    cause: "User asks about code behavior after structured skill completes, orchestrator answers from context without reading code, then implements a fix directly when the answer reveals a gap"
+    resolution: >
       Read code before answering factual questions (Code Verification Rule).
       If the answer reveals work to do, re-enter a skill or dispatch an agent.
       The Manager Rule does not end when the skill completes.
+    prevention: "Treat post-skill questions as potential new work items — verify via code reads before answering, and route any resulting work through proper dispatch"
+    pattern: "User asks about code behavior after structured skill completes"
+    example: "After sdlc-lite-execute commits, user asks 'how does status work?'"
 
   - id: architect-feeds-testing-risk-areas
-    pattern: "Architect sees code patterns that imply testing risk but testing agent doesn't know about them"
-    example: "Architect reads code during plan review, spots a race condition in state management — testing agent wouldn't probe for it without being told"
-    risk: "Testing agent writes tests that cover happy paths but misses architecture-visible risks (race conditions, state bugs, fragile patterns)"
-    correct_approach: >
+    severity: high
+    symptom: "Testing agent writes tests that cover happy paths but misses architecture-visible risks (race conditions, state bugs, fragile patterns)"
+    cause: "Architect sees code patterns that imply testing risk during plan review, but testing agent is dispatched without that context"
+    resolution: >
       Architect captures risk observations during plan review and feeds them to the
       testing discipline. The mechanism: risk areas noted in the plan (or as dispatch
       context for the SDET agent) become targeted test probes. This is the Layer 0
       (upstream SDLC context) function — the architect sees code being written and
       flags concerns that are invisible from the UI testing perspective.
+    prevention: "Include a 'risk areas for testing' section in plan review output that gets injected into SDET agent dispatch context"
+    pattern: "Architect sees code patterns that imply testing risk but testing agent doesn't know about them"
+    example: "Architect reads code during plan review, spots a race condition in state management — testing agent wouldn't probe for it without being told"
 
 recognition_signals:
   - "Editing files outside the dispatched agent's 'owns' path"

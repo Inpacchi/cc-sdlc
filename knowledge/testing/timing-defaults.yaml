@@ -2,10 +2,16 @@
 # Default wait profiles by component type. Override with project-specific measurements.
 # Last updated: 2026-03-13
 
+id: timing-defaults
+name: "Timing Defaults"
+description: "Default wait-time profiles by UI component type for Playwright-based test sessions"
+pattern: entries
+category: testing
 spec_relevant: false
 project_applicability:
   relevant_when: "Project uses Playwright CLI and has React/MUI components"
   action_if_irrelevant: customize
+last_updated: 2026-03-13
 
 # Note: Playwright CLI waits for actionability automatically (element visible, enabled, stable).
 # These timings are for explicit waits when auto-wait is insufficient.

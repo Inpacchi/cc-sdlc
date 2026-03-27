@@ -1,72 +1,88 @@
 # Common Data Modeling Mistakes
 # Cross-cutting anti-patterns that appear across subject areas.
 # Pattern-specific anti-patterns live in the pattern files.
-# Last updated: 2026-02-25
 
+id: common-modeling-mistakes
+name: "Common Data Modeling Mistakes"
+description: "Cross-cutting anti-patterns (premature concreteness, temporal blindness, implicit relationships) that recur across all data model subject areas."
+pattern: gotchas
+category: data-modeling
 spec_relevant: false
 project_applicability:
   relevant_when: "Project has a persistent data model (database, document store)"
   action_if_irrelevant: remove
+last_updated: 2026-02-25
 
-- id: premature-concreteness
-  name: "Modeling the specific before the general"
-  description: >
-    Creating concrete tables (Customer, Vendor, Flight, Hotel) before identifying
-    the abstract pattern (Party, Product) that unifies them.
-  symptom: "Multiple tables with near-identical structures but different names"
-  silverston_insight: >
-    "If you find yourself creating the third table that looks like the first two,
-    stop. There's a pattern you haven't recognized yet."
-  remediation: "Identify the common abstraction. Introduce the universal entity. Specialize via types and roles."
-  applies_to: "all subject areas"
+gotchas:
+  - id: premature-concreteness
+    severity: high
+    symptom: "Multiple tables with near-identical structures but different names"
+    cause: >
+      Creating concrete tables (Customer, Vendor, Flight, Hotel) before identifying
+      the abstract pattern (Party, Product) that unifies them.
+    resolution: "Identify the common abstraction. Introduce the universal entity. Specialize via types and roles."
+    prevention: "Before creating a new entity table, check if an existing abstract entity (Party, Product, Event) already covers the concept via type codes"
+    name: "Modeling the specific before the general"
+    silverston_insight: >
+      "If you find yourself creating the third table that looks like the first two,
+      stop. There's a pattern you haven't recognized yet."
+    applies_to: "all subject areas"
 
-- id: type-as-table
-  name: "Representing types as separate tables instead of type codes"
-  description: >
-    Creating new tables for each subtype rather than using a type column or
-    type catalog table. Leads to table proliferation and rigid schemas.
-  symptom: "Schema changes required every time the business adds a new category"
-  silverston_insight: >
-    "A new type of product, a new type of party, a new type of transaction —
-    these should be data changes, not schema changes. If adding a category
-    requires a DBA, your model is fighting the business."
-  remediation: "Use type catalog tables (RoleType, ProductType, EventType). New types = new rows."
-  applies_to: "all subject areas"
+  - id: type-as-table
+    severity: high
+    symptom: "Schema changes required every time the business adds a new category"
+    cause: >
+      Creating new tables for each subtype rather than using a type column or
+      type catalog table. Leads to table proliferation and rigid schemas.
+    resolution: "Use type catalog tables (RoleType, ProductType, EventType). New types = new rows."
+    prevention: "When modeling a new category, ask: 'Will more categories appear later?' If yes, use a type table, not a new entity table"
+    name: "Representing types as separate tables instead of type codes"
+    silverston_insight: >
+      "A new type of product, a new type of party, a new type of transaction —
+      these should be data changes, not schema changes. If adding a category
+      requires a DBA, your model is fighting the business."
+    applies_to: "all subject areas"
 
-- id: temporal-blindness
-  name: "Ignoring the time dimension"
-  description: >
-    Modeling only current state without from_date/thru_date on relationships,
-    roles, and status changes. Loses history and makes auditing impossible.
-  symptom: "Cannot answer 'who was the account manager last quarter?'"
-  silverston_insight: >
-    "Almost everything in business has a time dimension. Roles start and end.
-    Relationships evolve. Prices change. Modeling only the present is modeling
-    half the truth."
-  remediation: "Add from_date/thru_date to roles, relationships, and status assignments. Null thru_date = current."
-  applies_to: "all subject areas"
+  - id: temporal-blindness
+    severity: critical
+    symptom: "Cannot answer 'who was the account manager last quarter?'"
+    cause: >
+      Modeling only current state without from_date/thru_date on relationships,
+      roles, and status changes. Loses history and makes auditing impossible.
+    resolution: "Add from_date/thru_date to roles, relationships, and status assignments. Null thru_date = current."
+    prevention: "For every relationship and role, ask: 'Will this ever change over time?' If yes, add temporal columns from the start"
+    name: "Ignoring the time dimension"
+    silverston_insight: >
+      "Almost everything in business has a time dimension. Roles start and end.
+      Relationships evolve. Prices change. Modeling only the present is modeling
+      half the truth."
+    applies_to: "all subject areas"
 
-- id: implicit-relationships
-  name: "Foreign keys without relationship semantics"
-  description: >
-    Using bare FK columns (manager_id, owner_id, assigned_to) instead of
-    explicit relationship entities with type, role, and temporal context.
-  symptom: "The column name IS the only documentation of why two entities are linked"
-  silverston_insight: >
-    "A foreign key tells you THAT two things are connected. A relationship entity
-    tells you WHY, WHEN, and IN WHAT CAPACITY. The difference is the difference
-    between a phone book and a social network."
-  remediation: "Extract into relationship entities (PartyRelationship, EntityRelationship) with typed roles."
-  applies_to: "all subject areas"
+  - id: implicit-relationships
+    severity: medium
+    symptom: "The column name IS the only documentation of why two entities are linked"
+    cause: >
+      Using bare FK columns (manager_id, owner_id, assigned_to) instead of
+      explicit relationship entities with type, role, and temporal context.
+    resolution: "Extract into relationship entities (PartyRelationship, EntityRelationship) with typed roles."
+    prevention: "When adding a FK column, ask: 'Could this relationship have a type, a time range, or metadata?' If yes, use a relationship entity"
+    name: "Foreign keys without relationship semantics"
+    silverston_insight: >
+      "A foreign key tells you THAT two things are connected. A relationship entity
+      tells you WHY, WHEN, and IN WHAT CAPACITY. The difference is the difference
+      between a phone book and a social network."
+    applies_to: "all subject areas"
 
-- id: status-as-column
-  name: "Status as a single mutable column"
-  description: >
-    Using a status column (status VARCHAR) that gets overwritten on each change.
-    Loses status history, transition timestamps, and who made the change.
-  symptom: "Cannot answer 'when did this order move to shipped?' or 'how long was it pending?'"
-  silverston_insight: >
-    "Status isn't a property — it's a history. Every status change is an event
-    worth recording."
-  remediation: "StatusApplication pattern: separate table with status_type, from_date, applied_by. Current status = most recent."
-  applies_to: "all subject areas"
+  - id: status-as-column
+    severity: high
+    symptom: "Cannot answer 'when did this order move to shipped?' or 'how long was it pending?'"
+    cause: >
+      Using a status column (status VARCHAR) that gets overwritten on each change.
+      Loses status history, transition timestamps, and who made the change.
+    resolution: "StatusApplication pattern: separate table with status_type, from_date, applied_by. Current status = most recent."
+    prevention: "When modeling status, default to a status history table. Only use a single column if you can prove history will never matter"
+    name: "Status as a single mutable column"
+    silverston_insight: >
+      "Status isn't a property — it's a history. Every status change is an event
+      worth recording."
+    applies_to: "all subject areas"

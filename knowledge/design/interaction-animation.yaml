@@ -3,14 +3,19 @@
 # Source: paire-appetit/ingest/transcripts/ — YouTube UI design channel
 # Last updated: 2026-03-23
 
-last_updated: 2026-03-24
 id: interaction-animation
 name: "Interaction and Animation Patterns"
 description: >
   Rules for interactive states, micro-interactions, animation easing,
   motion design, loading states, progressive disclosure, and user feedback.
   Covers when and how to animate, not specific animation implementations.
+pattern: rules
+category: design
 spec_relevant: false
+project_applicability:
+  relevant_when: "Project has a user-facing UI with interactive elements or animations"
+  action_if_irrelevant: remove
+last_updated: 2026-03-24
 
 rules:
   - rule_id: A01

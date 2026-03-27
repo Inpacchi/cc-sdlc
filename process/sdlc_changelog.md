@@ -34,6 +34,44 @@ Each entry contains:
 
 ---
 
+## 2026-03-27: Normalize content schemas within knowledge patterns
+
+**Origin:** Phase 2 of knowledge standardization. After metadata headers were standardized, a content audit revealed: 6 of 10 files labeled `pattern: rules` used freeform sections instead of the `rules:` list structure; gotchas files used different field names for the same concept (remediation vs resolution vs correct_approach); and wrapper keys were inconsistent (mistakes vs gotchas).
+
+**What happened:** Content field schemas diverged within each pattern type. The gotchas pattern had 3 different field naming conventions across 3 files. The rules pattern had two completely different structural approaches — only 4 of 10 files actually used `rules:` lists.
+
+**Changes made:**
+
+1. **6 misclassified rules files** — Reclassified `pattern:` metadata to correct type:
+   - `architecture/agent-communication-protocol.yaml` → `methodology`
+   - `architecture/investigation-report-format.yaml` → `methodology`
+   - `architecture/security-review-taxonomy.yaml` → `methodology`
+   - `coding/code-quality-principles.yaml` → `entries`
+   - `business-analysis/requirements-feedback-loops.yaml` → `entries`
+   - `product-research/risk-assessment-framework.yaml` → `methodology`
+2. **`architecture/domain-boundary-gotchas.yaml`** — Added required gotchas fields (severity, cause, prevention), renamed `correct_approach` → `resolution`. Kept original `pattern`, `example`, `risk` as optional extras.
+3. **`data-modeling/anti-patterns/common-modeling-mistakes.yaml`** — Renamed wrapper `mistakes:` → `gotchas:`, renamed `remediation` → `resolution`, moved `description` content to `cause`, added `severity` and `prevention` to each item. Kept `silverston_insight`, `name`, `applies_to` as optional extras.
+4. **`knowledge/README.md`** — Updated Content Patterns section: documented required fields per pattern (gotchas: 6 required, rules: 5 required), clarified entries/methodology are freeform with no required content fields, added "optional extras allowed" note.
+
+**Rationale:** Content schemas within a pattern should be consistent so agents can reliably parse and reason about any file of a given type. Reclassifying mismatched files prevents false expectations — a `pattern: rules` file should actually contain a `rules:` list. Standardizing gotchas field names (resolution, not remediation/correct_approach) eliminates semantic duplicates.
+
+---
+
+## 2026-03-27: Standardize knowledge YAML metadata and document content patterns
+
+**Origin:** Audit of 42 knowledge YAML files revealed 4 organically-emerged content patterns (entries, gotchas, rules, methodology), inconsistent metadata headers (many files missing id, name, description, category, last_updated), and no authoring guide for contributors.
+
+**What happened:** Files ranged from fully-headed (architecture/) to bare lists with only spec_relevant (testing/gotchas.yaml, timing-defaults.yaml). No `pattern` field existed to self-document structure. Contributors had no guidance on which pattern to use, risking further fragmentation.
+
+**Changes made:**
+
+1. **`knowledge/README.md`** — Upgraded `id`, `name`, `description` from "Recommended" to Required. Added `pattern` (enum: entries/gotchas/rules/methodology) and `category` as new Required fields. Upgraded `last_updated` to Required. Added "Content Patterns" section documenting all 4 patterns with when-to-use guidance, inline structure templates, and example file references. Explicitly locked the pattern set — new patterns must be proposed, not invented ad hoc.
+2. **All 42 `knowledge/**/*.yaml` files** — Backfilled missing metadata fields. Added `pattern` and `category` to every file. Reordered headers to canonical order (id, name, description, pattern, category, spec_relevant, project_applicability, last_updated). Fixed bare lists in `testing/gotchas.yaml` (wrapped under `gotchas:` key) and `data-modeling/anti-patterns/common-modeling-mistakes.yaml` (wrapped under `mistakes:` key). Renamed `pattern:` content key in `data-modeling/patterns/people-and-organizations.yaml` to `udm_pattern:` to avoid collision with metadata field.
+
+**Rationale:** Consistent metadata enables tooling (validation, search, migration) to work reliably across all knowledge files. The `pattern` field makes each file self-documenting and the closed pattern set prevents further organic drift. Backfilling ensures every file meets the standard immediately rather than accumulating tech debt.
+
+---
+
 ## 2026-03-26: Add idea brief archival and knowledge hygiene to sdlc-archive
 
 **Origin:** Observation that idea briefs in `docs/current_work/ideas/` had no archival path — they accumulated indefinitely after graduation or abandonment. Additionally, archival was a natural triage checkpoint for parking lot entries but had no knowledge process.

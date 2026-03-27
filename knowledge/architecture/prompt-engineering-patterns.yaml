@@ -6,19 +6,16 @@
 # prompt versioning, token optimization economics, and NLP production patterns.
 # Last updated: 2026-03-14
 
-last_updated: 2026-03-14
 id: prompt-engineering-patterns
 name: "Prompt Engineering Patterns"
-description: >
-  Cross-project methodology for designing, testing, deploying, and evolving prompts
-  in production LLM systems. Covers the eight core prompt patterns, few-shot example
-  selection methodology, A/B testing for prompts, versioning as a deployable artifact,
-  token optimization economics, and NLP production patterns (active learning,
-  weak supervision, continual learning drift detection).
+description: "Prompt design methodology covering eight core patterns, few-shot selection, A/B testing, versioning, token optimization, and NLP production patterns"
+pattern: entries
+category: architecture
 spec_relevant: false
 project_applicability:
   relevant_when: "Project designs, tests, or deploys LLM prompts in production"
   action_if_irrelevant: remove
+last_updated: 2026-03-14
 
 # ─────────────────────────────────────────────
 # Performance Target Checklist

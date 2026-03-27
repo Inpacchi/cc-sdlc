@@ -10,10 +10,13 @@ description: >
   archetype. When an agent begins a competitive analysis, it loads the relevant
   archetype to get a head start on what to compare. Dimensions are refined
   during each analysis — novel dimensions discovered are added back here.
+pattern: entries
+category: product-research
 spec_relevant: false
 project_applicability:
   relevant_when: "Project is a product with competitors (SaaS, app, platform)"
   action_if_irrelevant: remove
+last_updated: 2026-03-04
 
 # ─────────────────────────────────────────────
 # UI Component Archetypes

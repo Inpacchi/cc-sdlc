@@ -3,14 +3,19 @@
 # Source: paire-appetit/ingest/transcripts/ — YouTube UI design channel
 # Last updated: 2026-03-23
 
-last_updated: 2026-03-24
 id: component-patterns
 name: "UI Component Patterns"
 description: >
   Rules for designing common UI components: icons, buttons, navigation,
   charts, modals, inputs, cards, chips, footers, and pricing cards.
   Covers sizing, styling, states, and hierarchy patterns.
+pattern: rules
+category: design
 spec_relevant: false
+project_applicability:
+  relevant_when: "Project has a user-facing UI with interactive components"
+  action_if_irrelevant: remove
+last_updated: 2026-03-24
 
 rules:
   - rule_id: U01

@@ -4,18 +4,16 @@
 # belong in the agent body (security-engineer/MEMORY.md).
 # Last updated: 2026-03-13
 
-last_updated: 2026-03-14
 id: security-review-taxonomy
 name: "Security Review Taxonomy — 7 Domain Framework"
-description: >
-  A structured taxonomy for conducting security reviews across 7 domains. Each domain
-  defines the threat category, the questions to ask, the patterns to enforce, and the
-  common failure modes to look for. Designed to ensure no category is skipped during
-  a review and to produce actionable, prioritized findings.
+description: "Seven-domain security review framework with severity scale, checklists, reconnaissance, supply chain security, compliance, and privacy engineering"
+pattern: methodology
+category: architecture
 spec_relevant: false
 project_applicability:
   relevant_when: "Always relevant — all projects have security concerns"
   action_if_irrelevant: keep
+last_updated: 2026-03-14
 
 # ─────────────────────────────────────────────
 # Severity Scale

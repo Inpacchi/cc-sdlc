@@ -4,19 +4,16 @@
 # learning distribution architecture, emergence detection, and interaction mining.
 # Last updated: 2026-03-14
 
-last_updated: 2026-03-22
 id: knowledge-management-methodology
 name: "Knowledge Management Methodology"
-description: >
-  Cross-project methodology for extracting, organizing, validating, and distributing
-  knowledge across multi-agent systems. Covers the seven-category pattern classification
-  taxonomy, knowledge validation metrics (accuracy, relevance, retrieval latency),
-  how knowledge flows back to agents, emergence detection methodology, and interaction
-  mining as the primary knowledge extraction technique.
+description: "Knowledge extraction, validation, and distribution across multi-agent systems including pattern taxonomy, emergence detection, and interaction mining"
+pattern: methodology
+category: architecture
 spec_relevant: false
 project_applicability:
   relevant_when: "Always relevant — governs the cc-sdlc knowledge system itself"
   action_if_irrelevant: keep
+last_updated: 2026-03-22
 
 # ─────────────────────────────────────────────
 # Pattern Classification Taxonomy

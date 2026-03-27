@@ -7,7 +7,6 @@
 # churn early-warning, and QBR cadence.
 # Last updated: 2026-03-14
 
-last_updated: 2026-03-14
 id: product-methodology
 name: "Product Methodology"
 description: >
@@ -16,10 +15,13 @@ description: >
   Jobs-to-be-Done framing, North Star metric concept, product-led growth strategies,
   customer health score composite model, tiered playbook system, churn early-warning,
   and QBR cadence.
+pattern: methodology
+category: product-research
 spec_relevant: false
 project_applicability:
   relevant_when: "Project is a product with users (SaaS, app, platform, tool)"
   action_if_irrelevant: remove
+last_updated: 2026-03-14
 
 # ─────────────────────────────────────────────
 # Feature Prioritization Frameworks

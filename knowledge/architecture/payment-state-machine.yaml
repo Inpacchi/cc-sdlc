@@ -4,18 +4,16 @@
 # belong in the agent body (payment-engineer/MEMORY.md).
 # Last updated: 2026-03-13
 
-last_updated: 2026-03-13
 id: payment-state-machine
 name: "Payment State Machine — Reliability & Idempotency Patterns"
-description: >
-  General patterns for designing reliable payment flows: an explicit finite state machine
-  for payment lifecycle, an immutable audit trail rule, and an idempotent webhook handler
-  pattern. These apply regardless of payment gateway (Stripe, PayPal, Braintree, etc.)
-  or application domain.
+description: "General patterns for reliable payment flows: FSM lifecycle, immutable audit trails, and idempotent webhook handlers"
+pattern: entries
+category: architecture
 spec_relevant: false
 project_applicability:
   relevant_when: "Project processes payments or has a billing/subscription system"
   action_if_irrelevant: remove
+last_updated: 2026-03-13
 
 # ─────────────────────────────────────────────
 # Finite State Machine — Payment Lifecycle

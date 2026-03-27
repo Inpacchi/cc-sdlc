@@ -4,19 +4,16 @@
 # summary header → tiered findings → verification → prevention/recommendations.
 # Last updated: 2026-03-13
 
-last_updated: 2026-03-13
 id: investigation-report-format
 name: "Investigation Report Format"
-description: >
-  The canonical output structure shared by all investigation and review agents.
-  The abstract pattern is: summary of scope and posture → findings bucketed by severity
-  (each with evidence and a concrete fix) → verification steps → prevention or
-  recommendations. Each agent instantiates this with domain-specific section names,
-  severity vocabularies, and finding fields.
+description: "Canonical output structure for investigation and review agents: summary, tiered findings with evidence, verification steps, and prevention"
+pattern: methodology
+category: architecture
 spec_relevant: false
 project_applicability:
   relevant_when: "Always relevant — governs the cc-sdlc agent system itself"
   action_if_irrelevant: keep
+last_updated: 2026-03-13
 
 # ─────────────────────────────────────────────
 # Abstract Structure

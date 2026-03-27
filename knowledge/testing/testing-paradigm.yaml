@@ -9,10 +9,13 @@ description: >
   Foundational guidance on how to structure code for testability and how to choose
   the right test type. The core insight: if you need mocks, your code is poorly
   structured. Separate I/O from logic, and unit tests become trivial.
+pattern: entries
+category: testing
 spec_relevant: false
 project_applicability:
   relevant_when: "Always relevant — all projects test"
   action_if_irrelevant: keep
+last_updated: 2026-03-17
 
 # ─────────────────────────────────────────────
 # Functional Core, Imperative Shell

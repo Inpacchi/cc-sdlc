@@ -1,7 +1,6 @@
 # Data Model Health Check
 # A quick assessment template for evaluating an existing data model
 # against UDM patterns. Not exhaustive — designed as a starting conversation.
-# Last updated: 2026-02-25
 
 id: model-health-check
 name: "Data Model Health Check"
@@ -10,10 +9,13 @@ description: >
   universal patterns or has common structural issues. Designed to be
   run collaboratively: the AI asks the questions, the human provides
   the context, and together they identify improvement opportunities.
+pattern: methodology
+category: data-modeling
 spec_relevant: false
 project_applicability:
   relevant_when: "Project has a persistent data model (database, document store)"
   action_if_irrelevant: remove
+last_updated: 2026-02-25
 
 sections:
   - id: people-and-orgs

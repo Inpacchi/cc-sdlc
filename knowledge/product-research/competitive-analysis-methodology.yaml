@@ -10,10 +10,13 @@ description: >
   producing an easy-to-consume comparison matrix, and generating scoping questions
   that help the product owner define what to build. Works for UI components
   (widget libraries), app features (SaaS capabilities), and platform capabilities.
+pattern: methodology
+category: product-research
 spec_relevant: false
 project_applicability:
   relevant_when: "Project is a product with competitors (SaaS, app, platform)"
   action_if_irrelevant: remove
+last_updated: 2026-03-04
 
 # ─────────────────────────────────────────────
 # Phase 1: Discovery — Identify what to compare against

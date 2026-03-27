@@ -4,17 +4,19 @@
 # Promoted from disciplines/design.md parking lot.
 # Last updated: 2026-03-22
 
-last_updated: 2026-03-22
 id: accessibility-testability-principles
 name: "Accessibility-Testability Principles"
 description: >
   Design principles that treat accessibility and testability as a single concern.
   Components that render meaningful accessibility trees are inherently more testable.
   Investing in one yields both.
+pattern: entries
+category: design
 spec_relevant: false
 project_applicability:
   relevant_when: "Project has a user-facing UI (web, mobile, desktop)"
   action_if_irrelevant: remove
+last_updated: 2026-03-22
 
 # ─────────────────────────────────────────────
 # Core Principle: A11y and Testability Are One Concern

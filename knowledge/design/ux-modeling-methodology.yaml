@@ -10,10 +10,13 @@ description: >
   an existing application's IA, navigation, and component patterns. Starts from
   the current state (not a blank slate), produces artifacts appropriate to what's
   being modeled, and ensures design continuity with the existing app.
+pattern: methodology
+category: design
 spec_relevant: false
 project_applicability:
   relevant_when: "Project has a user-facing UI (web, mobile, desktop)"
   action_if_irrelevant: remove
+last_updated: 2026-03-04
 
 # ─────────────────────────────────────────────
 # Phase 1: Context Loading — Understand what exists

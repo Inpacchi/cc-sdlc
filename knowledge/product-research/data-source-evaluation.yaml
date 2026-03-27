@@ -4,7 +4,6 @@
 # belong in the agent body (data-researcher/MEMORY.md).
 # Last updated: 2026-03-13
 
-last_updated: 2026-03-13
 id: data-source-evaluation
 name: "Data Source Evaluation — Research Methodology"
 description: >
@@ -12,10 +11,13 @@ description: >
   integrating them into a product. Covers source discovery, data quality assessment,
   access assessment, and legal/ToS review. Includes a feasibility scale for ranking
   candidate sources. Applies to any domain requiring third-party data integration.
+pattern: methodology
+category: product-research
 spec_relevant: false
 project_applicability:
   relevant_when: "Project integrates third-party data sources (APIs, scrapers, feeds)"
   action_if_irrelevant: remove
+last_updated: 2026-03-13
 
 # ─────────────────────────────────────────────
 # Phase 1: Source Discovery

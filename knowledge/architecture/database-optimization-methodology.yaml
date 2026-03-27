@@ -4,18 +4,16 @@
 # bloat thresholds, and statistics drift as root cause category.
 # Last updated: 2026-03-14
 
-last_updated: 2026-03-14
 id: database-optimization-methodology
 name: "Database Optimization Methodology"
-description: >
-  Cross-project methodology for diagnosing and resolving database performance problems.
-  Covers the three-axis wait event taxonomy, plan regression detection and remediation,
-  a complete index type decision matrix, bloat thresholds and maintenance guidance,
-  and statistics drift as the most common invisible root cause category.
+description: "Database performance diagnosis via wait event taxonomy, plan regression detection, index type decision matrix, bloat management, and statistics drift analysis"
+pattern: methodology
+category: architecture
 spec_relevant: false
 project_applicability:
   relevant_when: "Project uses a relational database (Postgres, MySQL, SQLite)"
   action_if_irrelevant: remove
+last_updated: 2026-03-14
 
 # ─────────────────────────────────────────────
 # Performance Target Checklist

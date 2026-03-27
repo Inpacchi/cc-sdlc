@@ -3,18 +3,16 @@
 # Project-specific ML use cases belong in the agent body.
 # Last updated: 2026-03-13
 
-last_updated: 2026-03-14
 id: ml-system-design
 name: "ML System Design Principles"
-description: >
-  General principles for designing ML systems that work reliably in production. Covers
-  confidence gating, composable pipeline stages, active learning loop structure, the
-  simplicity-first default, game/domain-agnostic model design, and training data strategy.
-  These principles apply regardless of model type, domain, or application stack.
+description: "Production ML system design covering confidence gating, composable pipelines, active learning, simplicity-first, and ethical AI operations"
+pattern: entries
+category: architecture
 spec_relevant: false
 project_applicability:
   relevant_when: "Project trains, deploys, or integrates ML/AI models (not just calling LLM APIs)"
   action_if_irrelevant: remove
+last_updated: 2026-03-14
 
 # ─────────────────────────────────────────────
 # Confidence Gates

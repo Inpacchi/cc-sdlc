@@ -6,15 +6,14 @@
 
 id: technology-patterns
 name: "Technology Patterns Catalog"
-description: >
-  Stack-specific patterns for common backend capabilities. When performing a
-  backend capability assessment, the agent loads the relevant patterns to
-  know what to look for in the codebase. Each pattern includes: what to
-  look for, what it enables, and typical effort to add if missing.
+description: "Stack-specific patterns catalog for search, real-time, access control, and background processing in backend systems"
+pattern: entries
+category: architecture
 spec_relevant: false
 project_applicability:
   relevant_when: "Project has a backend service (API server, worker, microservice)"
   action_if_irrelevant: remove
+last_updated: 2026-03-04
 
 # ─────────────────────────────────────────────
 # Search & Retrieval

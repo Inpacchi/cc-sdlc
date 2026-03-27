@@ -4,7 +4,6 @@
 # Promoted from disciplines/coding.md parking lot entries validated through real use.
 # Last updated: 2026-03-22
 
-last_updated: 2026-03-22
 id: code-quality-principles
 name: "Code Quality Principles"
 description: >
@@ -12,10 +11,13 @@ description: >
   Covers: testability as a code quality concern (not just a testing concern),
   the mocking-is-a-code-smell stance, and structural patterns that make code
   inherently easier to test, review, and maintain.
+pattern: entries
+category: coding
 spec_relevant: false
 project_applicability:
   relevant_when: "Always relevant — applies to all codebases"
   action_if_irrelevant: keep
+last_updated: 2026-03-22
 
 # ─────────────────────────────────────────────
 # Testability Is a Code Quality Concern

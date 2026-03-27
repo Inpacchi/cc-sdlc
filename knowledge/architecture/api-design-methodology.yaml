@@ -4,18 +4,16 @@
 # SDK delivery, and business capability to resource mapping.
 # Last updated: 2026-03-14
 
-last_updated: 2026-03-14
 id: api-design-methodology
 name: "API Design Methodology"
-description: >
-  Cross-project methodology for designing scalable, developer-friendly APIs.
-  Covers REST maturity levels, versioning lifecycle, webhook reliability patterns,
-  bulk operation contracts, SDK packaging strategy, and the mapping process from
-  business capabilities to REST resources.
+description: "REST maturity model, versioning strategy, webhook reliability, bulk operations, SDK delivery, and business-capability-to-resource mapping"
+pattern: methodology
+category: architecture
 spec_relevant: false
 project_applicability:
   relevant_when: "Project exposes or consumes APIs (REST, GraphQL, gRPC)"
   action_if_irrelevant: remove
+last_updated: 2026-03-14
 
 # ─────────────────────────────────────────────
 # REST Maturity Model

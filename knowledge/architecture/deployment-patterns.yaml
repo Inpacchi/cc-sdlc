@@ -8,18 +8,16 @@
 # ChatOps, supply chain security, and deployment safety controls.
 # Last updated: 2026-03-14
 
-last_updated: 2026-03-14
 id: deployment-patterns
 name: "Deployment Patterns"
-description: >
-  Cross-project methodology for safe, fast, and observable deployments.
-  Covers DORA elite benchmarks, deployment strategy selection, GitOps workflow,
-  feature flag lifecycle, pipeline template taxonomy, ChatOps as a deployment surface,
-  supply chain security gates, and Kubernetes-grade safety controls.
+description: "Safe deployment methodology covering DORA metrics, blue-green/canary strategies, GitOps, feature flags, ChatOps, supply chain security, and K8s safety controls"
+pattern: entries
+category: architecture
 spec_relevant: false
 project_applicability:
   relevant_when: "Always relevant — all projects deploy"
   action_if_irrelevant: keep
+last_updated: 2026-03-14
 
 # ─────────────────────────────────────────────
 # DORA Metrics Benchmarks

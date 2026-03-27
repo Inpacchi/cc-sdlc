@@ -4,7 +4,6 @@
 # open compliance items) belong in the agent body (legal-advisor/MEMORY.md).
 # Last updated: 2026-03-13
 
-last_updated: 2026-03-13
 id: risk-assessment-framework
 name: "Risk Assessment Framework — Legal & Compliance"
 description: >
@@ -12,10 +11,13 @@ description: >
   Covers risk categorization, a compliance gap analysis format, and a decision model
   for when to escalate to legal counsel vs. proceed with documented risk acceptance.
   Applies to SaaS products, marketplaces, payment platforms, and streaming/recording services.
+pattern: methodology
+category: product-research
 spec_relevant: false
 project_applicability:
   relevant_when: "Project handles user data, payments, or has regulatory exposure"
   action_if_irrelevant: remove
+last_updated: 2026-03-13
 
 # ─────────────────────────────────────────────
 # Risk Severity Scale

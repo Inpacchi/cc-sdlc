@@ -5,18 +5,16 @@
 # belong in the agent body (data-engineer/MEMORY.md).
 # Last updated: 2026-03-13
 
-last_updated: 2026-03-13
 id: pipeline-design-patterns
 name: "Idempotent Pipeline Design Patterns"
-description: >
-  General patterns for designing data pipelines that are safe to re-run without
-  duplicating writes, can resume from failures without full re-scrapes, and can be
-  rolled back cleanly when a bug is introduced. Applies to ETL, scraping pipelines,
-  ML enrichment, and any batch processing system.
+description: "Patterns for idempotent, resumable data pipelines with content-hash diffing, incremental processing, and rollback strategies"
+pattern: entries
+category: architecture
 spec_relevant: false
 project_applicability:
   relevant_when: "Project has ETL, scraping, batch processing, or data sync pipelines"
   action_if_irrelevant: remove
+last_updated: 2026-03-13
 
 # ─────────────────────────────────────────────
 # Idempotency Patterns

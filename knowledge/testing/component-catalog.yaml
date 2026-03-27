@@ -2,10 +2,16 @@
 # How to test shared UI components regardless of which project uses them.
 # Last updated: 2026-03-15
 
+id: component-catalog
+name: "Component Catalog"
+description: "Test strategies for shared UI components including MUI DataGrid, form dialogs, status chips, and page headers"
+pattern: entries
+category: testing
 spec_relevant: false
 project_applicability:
   relevant_when: "Project uses MUI DataGrid or similar complex UI components"
   action_if_irrelevant: customize
+last_updated: 2026-03-15
 
 mui_datagrid:
   description: "MUI DataGrid v8 (@mui/x-data-grid) — core grid component"

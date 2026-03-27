@@ -2,11 +2,16 @@
 # Spacing, grid, and structural layout principles for consistent, readable interfaces.
 # Source: Bulk ingestion from UI/UX design YouTube transcripts (2026-03-23)
 
-spec_relevant: false
-
-name: Layout Principles
-description: Structural layout, spacing, and grid principles for UI design consistency
+id: layout-principles
+name: "Layout Principles"
+description: "Structural layout, spacing, and grid principles for UI design consistency"
+pattern: rules
 category: design
+spec_relevant: false
+project_applicability:
+  relevant_when: "Project has a user-facing UI requiring layout and spacing decisions"
+  action_if_irrelevant: remove
+last_updated: 2026-03-27
 
 rules:
   - rule_id: LO1

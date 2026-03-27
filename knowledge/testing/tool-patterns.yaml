@@ -2,10 +2,16 @@
 # How to use each tool effectively. Learned from actual test sessions.
 # Last updated: 2026-03-15
 
+id: tool-patterns
+name: "Tool Patterns"
+description: "Cross-project patterns for Playwright CLI, AI browser tools, and Playwright MCP usage during test sessions"
+pattern: entries
+category: testing
 spec_relevant: false
 project_applicability:
   relevant_when: "Project uses Playwright CLI for browser testing"
   action_if_irrelevant: customize
+last_updated: 2026-03-15
 
 playwright_cli:
   version: "1.59.0-alpha"

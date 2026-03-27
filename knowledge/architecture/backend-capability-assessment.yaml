@@ -7,16 +7,14 @@
 
 id: backend-capability-assessment
 name: "Backend Capability Assessment"
-description: >
-  A structured methodology for examining a backend codebase to determine what
-  capabilities exist, what's partially built, and what would need to be added
-  to support a desired feature scope. Produces a capability matrix and cost
-  estimates that feed back into scope decisions. Works across stacks (Rails,
-  Phoenix, Django, Node) with stack-specific patterns in technology-patterns.yaml.
+description: "Four-phase methodology for inventorying backend capabilities, mapping support levels, estimating costs, and recommending scope"
+pattern: methodology
+category: architecture
 spec_relevant: false
 project_applicability:
   relevant_when: "Project has a backend service (API server, worker, microservice)"
   action_if_irrelevant: remove
+last_updated: 2026-03-04
 
 # ─────────────────────────────────────────────
 # Phase 1: Inventory — What does the backend have?
