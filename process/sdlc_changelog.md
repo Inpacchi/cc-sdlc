@@ -34,6 +34,22 @@ Each entry contains:
 
 ---
 
+## 2026-03-26: Add idea brief archival and knowledge hygiene to sdlc-archive
+
+**Origin:** Observation that idea briefs in `docs/current_work/ideas/` had no archival path — they accumulated indefinitely after graduation or abandonment. Additionally, archival was a natural triage checkpoint for parking lot entries but had no knowledge process.
+
+**What happened:** The `sdlc-archive` skill only handled formal deliverables (spec + plan + result). Idea briefs produced by `sdlc-idea` were invisible to it. Parking lot entries captured during the original work sessions were never revisited at archival time.
+
+**Changes made:**
+
+1. **`skills/sdlc-archive/SKILL.md`** — Added Step 2 (Inventory Idea Briefs) with graduated/abandoned/active classification; Step 5 (Archive Idea Briefs) with `ideas/` subdirectory creation and Exploration History section in `_index.md`; Step 6 (Knowledge Hygiene) scanning parking lots for `[NEEDS VALIDATION]` entries related to archived work and checking idea brief insight coverage. Renumbered subsequent steps.
+2. **`process/chronicle_organization.md`** — Added `ideas/` subdirectory to the chronicle structure diagram; added idea briefs to the "Do chronicle" list.
+3. **`templates/concept_index_template.md`** — Added "Exploration History" section between Deliverables and Common Tasks for archived idea briefs.
+
+**Rationale:** Idea briefs capture valuable exploration context — problem framing, approaches considered, and why a direction was chosen. Discarding or ignoring them loses institutional memory. Archiving them alongside their concept chronicle makes them discoverable when revisiting a feature area. The knowledge hygiene step uses archival as a forcing function to triage stale parking lot entries, closing the loop on insights captured during original work sessions without adding the overhead of full discipline capture.
+
+---
+
 ## 2026-03-26: Wire collaboration_model.md and deliverable_lifecycle.md into consuming skills/agents
 
 **Origin:** Process doc audit — `collaboration_model.md` and `deliverable_lifecycle.md` existed as documentation but had no active consumers in the skill/agent execution paths.

@@ -23,7 +23,8 @@ chronicle/
 │   ├── _index.md        ← Navigation hub
 │   ├── specs/
 │   ├── planning/
-│   └── results/
+│   ├── results/
+│   └── ideas/           ← Archived idea briefs (optional)
 └── data_model/
     └── ...
 ```
@@ -90,6 +91,7 @@ If asked to "work on X," all relevant docs should be in one concept.
 - Completed specs with COMPLETE results
 - Planning documents
 - Architectural decisions
+- Idea briefs that graduated to deliverables or were abandoned (archived to `ideas/` subdirectory)
 
 ---
 

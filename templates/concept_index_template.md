@@ -20,6 +20,16 @@
 
 ---
 
+## Exploration History
+
+_Idea briefs archived from `docs/current_work/ideas/`. These capture early thinking — problem framing, conceptual approaches considered, and why the chosen direction was picked. Useful when revisiting a feature area to understand what was explored before committing._
+
+| Brief | Seed | Outcome | Date |
+|-------|------|---------|------|
+| [filename.md] | [Original seed idea] | Graduated → DNN / Abandoned | [Explored date] |
+
+---
+
 ## Common Tasks
 
 - "How do I [task 1]?" → See `file_a.md`
