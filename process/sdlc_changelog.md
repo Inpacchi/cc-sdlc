@@ -34,6 +34,38 @@ Each entry contains:
 
 ---
 
+## 2026-03-29: Add enrich-agent skill for systematic agent enrichment
+
+**Origin:** Imported from neuroloom project (commit 1b6dc18). Born from a search-engineer enrichment session where 3 rounds of pushback were needed to extract all 15 applicable patterns from 16 external subagent definitions.
+
+**What happened:** Agent enrichment — extracting relevant patterns from external sources into existing agent definitions — was a manual, inconsistent process. Surface-level domain matching missed non-obvious patterns from adjacent fields. A structured 6-dimension analytical framework with mandatory dismissal defense was developed and proven effective.
+
+**Changes made:**
+
+1. **`skills/enrich-agent/SKILL.md`** — New skill. Uses a 6-dimension analytical framework (core operations, failure modes, adjacent domain knowledge, operational lifecycle, diagnostic toolkit, input/output quality) to extract direct, adjacent, and reframed patterns from external sources into existing agent definitions. Includes mandatory dismissal defense step.
+2. **`skeleton/manifest.json`** — Added `skills/enrich-agent/SKILL.md` to `source_files.skills`
+3. **`CLAUDE-SDLC.md`** — Added `/enrich-agent` to the utility skills table
+
+**Rationale:** Systematic enrichment catches patterns that ad-hoc reading misses. The dismissal defense specifically targets the five most common failure modes: surface-level domain mismatch, adjacent domain blindness, premature satisfaction, metric tunnel vision, and implementation-vs-understanding confusion.
+
+---
+
+## 2026-03-28: Add YAML frontmatter to idea briefs and research docs
+
+**Origin:** User request — idea and research docs lacked structured metadata at creation time.
+
+**What happened:** Idea briefs created by `sdlc-idea` used inline bold metadata (`**Explored:**`, `**Seed:**`) instead of YAML frontmatter. Research docs from competitive analysis had no frontmatter or defined save location.
+
+**Changes made:**
+
+1. **`skills/sdlc-idea/SKILL.md`** — Replaced inline bold metadata with YAML frontmatter block (`type`, `title`, `status`, `explored`, `seed`, `tags`). Changed heading from `##` to `#` to match document-level convention.
+2. **`knowledge/product-research/competitive-analysis-methodology.yaml`** — Added `frontmatter` template (with `type: research`, `title`, `status`, `created`, `feature`, `competitors`, `tags`) and `save_to` path (`docs/current_work/research/{slug}_competitive-analysis.md`) to the output format section.
+3. **`skills/sdlc-archive/SKILL.md`** — Updated idea brief state detection to check frontmatter `status` field first (`active`, `graduated`, `abandoned`), falling back to content-based detection for legacy briefs.
+
+**Rationale:** Frontmatter enables machine-readable metadata for filtering, status tracking, and archival automation. Consistent with how skills and agents already use frontmatter. Research docs now have a defined save location so they don't get lost.
+
+---
+
 ## 2026-03-27: Normalize content schemas within knowledge patterns
 
 **Origin:** Phase 2 of knowledge standardization. After metadata headers were standardized, a content audit revealed: 6 of 10 files labeled `pattern: rules` used freeform sections instead of the `rules:` list structure; gotchas files used different field names for the same concept (remediation vs resolution vs correct_approach); and wrapper keys were inconsistent (mistakes vs gotchas).

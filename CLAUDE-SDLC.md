@@ -171,6 +171,7 @@ Rules:
 | `/sdlc-create-skill` | Create a new SDLC skill with convention enforcement and quality gate. Invokes `sdlc-create-skill` skill |
 | `/sdlc-create-agent` | Create a new domain agent with frontmatter validation and knowledge wiring. Invokes `sdlc-create-agent` skill |
 | `/sdlc-review` | Review a skill/agent for convention compliance, or analyze external sources for improvements. Invokes `sdlc-review` skill |
+| `/enrich-agent` | Extract patterns from external sources and integrate them into an existing agent definition. Invokes `enrich-agent` skill |
 
 ### Key References
 - `ops/sdlc/process/overview.md` — Full workflow
