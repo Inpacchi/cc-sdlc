@@ -171,10 +171,16 @@ There is no iteration limit. After 3-4 rounds of refinement on the same approach
 When the user signals readiness (or when the conversation has naturally converged), produce an **idea brief** — a lightweight document that captures the exploration:
 
 ```markdown
-## Idea Brief: [Title]
+---
+type: idea-brief
+title: "[Title]"
+status: active
+explored: YYYY-MM-DD
+seed: "[original idea — use the user's actual words, not a cleaned-up restatement]"
+tags: []
+---
 
-**Explored:** [date]
-**Seed:** [original idea — use the user's actual words, not a cleaned-up restatement]
+# Idea Brief: [Title]
 
 ### Problem Understanding
 [2-3 sentences: the problem as understood after exploration]

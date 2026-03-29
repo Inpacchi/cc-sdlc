@@ -21,11 +21,13 @@ Skip any deliverable that:
 
 Scan `docs/current_work/ideas/` for idea brief files. For each brief, classify its state:
 
+Idea briefs have YAML frontmatter with a `status` field. Check frontmatter first, then fall back to content-based detection:
+
 | State | How to detect | Action |
 |-------|--------------|--------|
-| **Graduated** | A deliverable exists whose spec traces to this idea (shared concept, matching problem description, or the brief's "Recommended Next Step" was followed) | Archive alongside the deliverable's concept chronicle |
-| **Abandoned/Stale** | No deliverable emerged and the brief is old (check git log for creation date — >30 days with no follow-up activity) OR the user confirms it's dead | Archive into the best-fit concept chronicle |
-| **Still active** | User is actively exploring, or the brief is recent with no deliverable yet | Skip — leave in `current_work/ideas/` |
+| **Graduated** | Frontmatter `status: graduated`, OR a deliverable exists whose spec traces to this idea (shared concept, matching problem description, or the brief's "Recommended Next Step" was followed) | Archive alongside the deliverable's concept chronicle |
+| **Abandoned/Stale** | Frontmatter `status: abandoned`, OR no deliverable emerged and the brief is old (check git log for creation date — >30 days with no follow-up activity) OR the user confirms it's dead | Archive into the best-fit concept chronicle |
+| **Still active** | Frontmatter `status: active`, OR user is actively exploring, or the brief is recent with no deliverable yet | Skip — leave in `current_work/ideas/` |
 
 If classification is ambiguous, include the brief in the categorization table (Step 3) and let the user decide.
 

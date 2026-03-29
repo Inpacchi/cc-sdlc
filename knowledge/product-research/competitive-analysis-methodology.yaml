@@ -191,6 +191,20 @@ output_format:
     Designed to be scannable by a product owner in under 5 minutes,
     with depth available for those who want it.
 
+  frontmatter: |
+    ---
+    type: research
+    title: "[Feature Name] — Competitive Analysis"
+    status: draft
+    created: YYYY-MM-DD
+    feature: "[feature being researched]"
+    competitors: []
+    tags: [competitive-analysis]
+    ---
+
+  save_to: "docs/current_work/research/{slug}_competitive-analysis.md"
+  note: "Create the docs/current_work/research/ directory if it doesn't exist."
+
   sections:
     - name: "Feature Comparison Matrix"
       description: >
