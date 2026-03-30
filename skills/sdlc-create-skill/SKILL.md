@@ -26,9 +26,9 @@ Create a new SDLC skill that follows cc-sdlc conventions. Scaffold the complete 
 Clarify with the user:
 - **What does this skill do?** (one sentence)
 - **What skill type?**
-  - **Orchestration** — dispatches domain agents, has agent selection criteria, review loops (e.g., sdlc-plan, sdlc-execute, review-commit)
+  - **Orchestration** — dispatches domain agents, has agent selection criteria, review loops (e.g., sdlc-plan, sdlc-execute, sdlc-review-commit)
   - **Utility** — step-by-step procedure, may or may not dispatch agents (e.g., sdlc-archive, sdlc-reconcile, sdlc-ingest)
-  - **Exploration** — open-ended flow, no hard gates, user-directed iteration (e.g., sdlc-idea, design-consult)
+  - **Exploration** — open-ended flow, no hard gates, user-directed iteration (e.g., sdlc-idea, sdlc-design-consult)
   - **Domain-specific** — focused on a specific technical domain (e.g., sdlc-tests-create, sdlc-tests-run)
 - **What triggers this skill?** (natural language phrases users would say)
 - **What should NOT trigger this skill?** (anti-triggers — which existing skills handle adjacent concerns)
@@ -37,7 +37,7 @@ Clarify with the user:
 
 Generate a name following conventions:
 - Format: `lowercase-with-hyphens`, 2-4 words
-- Verb-first preferred (e.g., `review-commit`, not `commit-review`)
+- Verb-first preferred (e.g., `sdlc-review-commit`, not `commit-review`)
 - Must not conflict with existing skills
 
 Read `skeleton/manifest.json` → `source_files.skills` to list existing skill names. Present the proposed name and confirm.
@@ -156,7 +156,7 @@ Dispatch the `sdlc-reviewer` subagent on the created skill file. Present its fin
 | "This skill doesn't need anti-triggers" | Every skill needs anti-triggers to prevent overlap with siblings. |
 | "Red flags are optional for utility skills" | Every skill type needs a Red Flags table. No exceptions. |
 | "I'll skip the Integration section — this skill is standalone" | No skill is standalone. Every skill feeds into or complements others. |
-| "The name should describe the noun first" | Verb-first naming: `review-commit`, not `commit-review`. |
+| "The name should describe the noun first" | Verb-first naming: `sdlc-review-commit`, not `commit-review`. |
 | "I'll register it later" | Registration (manifest, CLAUDE-SDLC.md, changelog) happens in the same step as creation. |
 | "This orchestration skill doesn't need the Manager Rule" | If it dispatches agents, it MUST reference manager-rule.md. |
 | "I'll write the skill directly without this scaffolding" | Hand-written skills skip convention validation. Use this skill. |

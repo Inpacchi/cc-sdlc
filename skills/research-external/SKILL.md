@@ -1,12 +1,12 @@
 ---
-name: research-external
+name: sdlc-research-external
 description: >
   Research external knowledge sources (engineering blogs, conference talks, papers, documentation)
   to find content relevant to the project's technology domains. Dispatches research-analyst agents to
   discover, fetch, classify, and curate articles into tiered reference docs.
   Produces company profiles, article catalogs with URLs, and cross-cutting insight summaries.
   Triggers on "research [company] blog", "find articles from [source]", "what has [company] published",
-  "look into [company] engineering", "curate [source] for us", "/research-external".
+  "look into [company] engineering", "curate [source] for us", "/sdlc-research-external".
   Do NOT use for ingesting content into SDLC knowledge stores — use sdlc-ingest.
   Do NOT use for exploring project-internal ideas — use sdlc-idea.
   Do NOT use for web searches about specific bugs or library APIs — use direct WebSearch or Context7.

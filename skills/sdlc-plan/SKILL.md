@@ -389,7 +389,7 @@ The plan MUST include:
   - Architecture context: "This crosses the API boundary — both client and server adapters need changes"
 
   **Avoid even when including HOW:**
-  - Verbatim code blocks to copy-paste (they go stale across context clears)
+  - Verbatim code blocks to copy-paste (full deliverable plans may sit days before execution — code shifts underneath them. sdlc-lite-plan relaxes this for same-session work where snippets are still fresh.)
   - Exact line numbers (they shift with any edit)
   - Exhaustive step-by-step sequences that turn the executing agent into a typist
 

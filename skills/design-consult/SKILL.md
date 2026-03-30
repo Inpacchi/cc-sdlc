@@ -1,5 +1,5 @@
 ---
-name: design-consult
+name: sdlc-design-consult
 description: >
   Design consultation that synthesizes screenshots, references, and codebase context into 2-3 distinct
   design options backed by design theory. Uses the ui-ux-designer agent with design principles
@@ -8,7 +8,7 @@ description: >
   "help me design", "design this", "I need design help", "design consultation", "layout ideas",
   "UI concepts for".
   Do NOT use for implementation — this produces design direction only. Hand off to planning/execution skills.
-  Do NOT use for code review — use review-commit or review-diff.
+  Do NOT use for code review — use sdlc-review-commit or sdlc-review-diff.
 ---
 
 # Design Consultation
@@ -231,7 +231,7 @@ When the user confirms a final direction:
 ```markdown
 ## Design Spec: [Title]
 
-**Produced by:** design-consult skill
+**Produced by:** sdlc-design-consult skill
 **Date:** [date]
 **Target:** [component/page/feature]
 
@@ -262,7 +262,7 @@ When the user confirms a final direction:
    - 2-3 files → suggest `sdlc-lite-plan`
    - 4+ files or new abstractions → suggest `sdlc-plan`
 
-**Discipline capture:** Run the protocol per `ops/sdlc/process/discipline_capture.md`. Context format: `[design-consult: {slug}]`. Structured gap detection: comparison #2 (cross-domain friction) only — comparisons #1 and #3 are not applicable without a review-fix loop.
+**Discipline capture:** Run the protocol per `ops/sdlc/process/discipline_capture.md`. Context format: `[sdlc-design-consult: {slug}]`. Structured gap detection: comparison #2 (cross-domain friction) only — comparisons #1 and #3 are not applicable without a review-fix loop.
 
 Do NOT start implementing. The design consultation ends with a direction and a handoff.
 
@@ -289,5 +289,5 @@ Do NOT start implementing. The design consultation ends with a direction and a h
 - **Feeds into:** `sdlc-lite-plan` or `sdlc-plan` (for implementation)
 - **Uses:** `ui-ux-designer` agent, WebSearch (for design research), Playwright MCP (for visual mockups)
 - **SDLC knowledge:** `ops/sdlc/knowledge/design/`, `ops/sdlc/disciplines/design.md`
-- **Complements:** `sdlc-idea` (conceptual exploration) — `design-consult` explores visual direction, `sdlc-idea` explores conceptual direction. An idea brief from `sdlc-idea` can feed into `design-consult` when the concept needs visual exploration.
-- **Does NOT replace:** `review-commit` (code review), `accessibility-auditor` (WCAG compliance on implemented code)
+- **Complements:** `sdlc-idea` (conceptual exploration) — `sdlc-design-consult` explores visual direction, `sdlc-idea` explores conceptual direction. An idea brief from `sdlc-idea` can feed into `sdlc-design-consult` when the concept needs visual exploration.
+- **Does NOT replace:** `sdlc-review-commit` (code review), `accessibility-auditor` (WCAG compliance on implemented code)

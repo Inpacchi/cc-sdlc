@@ -6,7 +6,7 @@ description: >
   tools list, color, memory setting), body scaffolding (scope, knowledge context,
   communication protocol, core principles, workflow, anti-rationalization table,
   self-verification checklist, persistent memory section), agent-context-map update,
-  registration, and wiring into dispatching skills (review-commit, review-diff, sdlc-plan,
+  registration, and wiring into dispatching skills (sdlc-review-commit, sdlc-review-diff, sdlc-plan,
   sdlc-lite-plan). Dispatches sdlc-reviewer for quality gate.
   Triggers on "create a new agent", "new agent", "add an agent", "scaffold an agent",
   "I need an agent for", "make an agent", "/sdlc-create-agent".
@@ -146,7 +146,7 @@ New agents are useless if the skills that select agents don't know about them. D
 
 | Role type | Description | Skills to update |
 |-----------|-------------|-----------------|
-| **Reviewer** | Reviews code for domain-specific issues | `review-commit` Tier 1, `review-diff` Tier 1 |
+| **Reviewer** | Reviews code for domain-specific issues | `sdlc-review-commit` Tier 1, `sdlc-review-diff` Tier 1 |
 | **Builder/Planner** | Implements or plans work in a domain | `sdlc-plan` agent table |
 | **Infrastructure specialist** | Owns a specific infrastructure domain | `sdlc-plan` infra trigger table, `sdlc-lite-plan` infra trigger table |
 
@@ -154,7 +154,7 @@ Most agents are multiple types. A `db-engineer` is a reviewer (catches schema is
 
 **For each applicable skill:**
 
-1. **`review-commit` / `review-diff` Tier 1 entry** — Add a bullet with:
+1. **`sdlc-review-commit` / `sdlc-review-diff` Tier 1 entry** — Add a bullet with:
    - Agent name (backtick-quoted)
    - File-match triggers ("if the diff touches...")
    - What it covers (domain-specific review concerns)
@@ -196,7 +196,7 @@ Dispatch the `sdlc-reviewer` subagent on the created agent file. Present its fin
 ## Integration
 
 - **Feeds into:** The created agent becomes available for dispatch by orchestration skills
-- **Modifies:** `review-commit` (Tier 1 reviewers), `review-diff` (Tier 1 reviewers), `sdlc-plan` (agent table + infra triggers), `sdlc-lite-plan` (infra triggers) — see Step 6
+- **Modifies:** `sdlc-review-commit` (Tier 1 reviewers), `sdlc-review-diff` (Tier 1 reviewers), `sdlc-plan` (agent table + infra triggers), `sdlc-lite-plan` (infra triggers) — see Step 6
 - **Uses:** `AGENT_TEMPLATE.md` (structural reference), `agent-context-map.yaml` (knowledge wiring), `AGENT_SUGGESTIONS.md` (reusable patterns), `sdlc-reviewer` (quality gate), existing agents (conflict checking)
 - **Complements:** `sdlc-create-skill` (skills vs agents), `sdlc-review` (review existing agents)
 - **Does NOT replace:** Direct editing of existing agents (this creates new ones only)

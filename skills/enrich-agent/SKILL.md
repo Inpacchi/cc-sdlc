@@ -1,12 +1,12 @@
 ---
-name: enrich-agent
+name: sdlc-enrich-agent
 description: >
   Systematically extract relevant patterns from external sources (subagent
   definitions, articles, docs, frameworks) and integrate them into an existing
   agent. Uses a 6-dimension analytical framework to catch direct, adjacent,
   and reframed patterns that surface-level scanning misses.
   Triggers on "enrich this agent", "extract patterns from these sources for
-  [agent]", "what can we learn from these for [agent]", "/enrich-agent".
+  [agent]", "what can we learn from these for [agent]", "/sdlc-enrich-agent".
   Do NOT use for creating new agents from scratch — use sdlc-create-agent.
   Do NOT use for reviewing agent convention compliance — use sdlc-review.
   Do NOT use for extracting SDLC process improvements or convention suggestions from sources — use sdlc-review analyze mode.

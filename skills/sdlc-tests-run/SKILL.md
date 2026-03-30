@@ -7,7 +7,7 @@ description: >
   Trigger when someone says "run the test loop", "test and fix loop", "run tests until green",
   "sdlc-tests-run", "test-loop", or after test infrastructure is set up and the user wants automated red-green cycling.
   Do NOT use for writing new tests from scratch — use sdlc-tests-create for that.
-  Do NOT use for reviewing code — use review-commit or review-diff.
+  Do NOT use for reviewing code — use sdlc-review-commit or sdlc-review-diff.
 ---
 
 # Automated Test-Fix Loop
@@ -354,4 +354,4 @@ Fixes applied:
 
 - **SDET agent** — fixes test-code issues (selectors, fixtures, helpers, assertions)
 - **Domain agents** (frontend-developer, backend-developer, realtime-systems-engineer, debug-specialist, build-engineer, performance-engineer) — fix app-code issues
-- **review-commit** — can be run after the auto-commit to verify code quality of the fixes
+- **sdlc-review-commit** — can be run after the auto-commit to verify code quality of the fixes

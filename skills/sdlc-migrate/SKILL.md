@@ -357,7 +357,7 @@ The project's `CLAUDE.md` contains CLAUDE-SDLC.md content — skill names, proce
 
 **Check for:**
 
-1. **Skill name references** — verify all skill names mentioned in CLAUDE.md (`sdlc-plan`, `sdlc-execute`, `sdlc-lite-plan`, `sdlc-lite-execute`, `sdlc-idea`, `sdlc-initialize`, `sdlc-reconcile`, `review-diff`, `review-commit`, `review-fix`, `sdlc-create-skill`, `sdlc-create-agent`, `sdlc-review`) still match the actual skill directory names in `ops/sdlc/skills/`. Check for renamed skills: `diff-review` → `review-diff`, `commit-review` → `review-commit`, `commit-fix` → `review-fix`
+1. **Skill name references** — verify all skill names mentioned in CLAUDE.md (`sdlc-plan`, `sdlc-execute`, `sdlc-lite-plan`, `sdlc-lite-execute`, `sdlc-idea`, `sdlc-initialize`, `sdlc-reconcile`, `sdlc-review-diff`, `sdlc-review-commit`, `sdlc-review-fix`, `sdlc-create-skill`, `sdlc-create-agent`, `sdlc-review`) still match the actual skill directory names in `ops/sdlc/skills/`. Check for renamed skills: `diff-review` → `sdlc-review-diff`, `commit-review` → `sdlc-review-commit`, `commit-fix` → `sdlc-review-fix`
 
 2. **Process file paths** — verify paths like `ops/sdlc/process/overview.md`, `ops/sdlc/process/sdlc_changelog.md`, `ops/sdlc/process/compliance_audit.md` still exist
 

@@ -34,6 +34,25 @@ Each entry contains:
 
 ---
 
+## 2026-03-30: Complete sdlc- prefix rename for all remaining skills
+
+**Origin:** Follow-up to commit 0dcd3d5 which renamed two frontmatter `name` fields but missed slash commands, trigger phrases, and four additional unprefixed skills.
+
+**What happened:** Six skills lacked the `sdlc-` prefix: `enrich-agent`, `research-external`, `review-commit`, `review-diff`, `review-fix`, and `design-consult`. Cross-references across ~15 files still used the old unprefixed names.
+
+**Changes made:**
+
+1. **Frontmatter `name` fields** — Added `sdlc-` prefix to `design-consult`, `review-commit`, `review-diff`, `review-fix` (enrich-agent and research-external were already done in 0dcd3d5)
+2. **`CLAUDE-SDLC.md`** — Updated skill table: `/enrich-agent` → `/sdlc-enrich-agent`, `/research-external` → `/sdlc-research-external`
+3. **Trigger phrases** — Updated `/enrich-agent` → `/sdlc-enrich-agent` and `/research-external` → `/sdlc-research-external` in SKILL.md description blocks
+4. **Cross-references in 15 files** — Updated all backtick-quoted and slash-prefixed skill name references across: `review-commit/SKILL.md`, `review-diff/SKILL.md`, `review-fix/SKILL.md`, `design-consult/SKILL.md`, `sdlc-create-agent/SKILL.md`, `sdlc-create-skill/SKILL.md`, `sdlc-idea/SKILL.md`, `sdlc-tests-run/SKILL.md`, `sdlc-migrate/SKILL.md`, `process/review-fix-loop.md`, `process/discipline_capture.md`, `process/finding-classification.md`, `agents/sdlc-reviewer.md`, `knowledge/README.md`, `disciplines/README.md`
+5. **Preserved as-is** — Changelog historical entries, `skeleton/manifest.json` directory paths, `review-fix-loop.md` file name references, and "Review-Fix Loop" concept name in prose
+
+**Rationale:** All skill names and slash commands should use the `sdlc-` prefix for consistency and to avoid collisions with project-specific skills in target repos.
+
+
+---
+
 ## 2026-03-29: Add research-external skill for curating external knowledge sources
 
 **Origin:** Imported from paire-appetit/paire-llm-config (commit 245a89d), generalized for framework use. Codified from a session researching 10 engineering blogs (274 articles).

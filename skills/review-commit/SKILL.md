@@ -1,10 +1,10 @@
 ---
-name: review-commit
+name: sdlc-review-commit
 description: >
   Review a commit with domain agents — checks for overengineering, unnecessary code, DRY violations,
   and architecture adherence. Triggers on "review this commit", "check commit", "review HEAD",
-  "/review-commit", "review the last commit", "code review".
-  Do NOT use for uncommitted changes — use review-diff for that.
+  "/sdlc-review-commit", "review the last commit", "code review".
+  Do NOT use for uncommitted changes — use sdlc-review-diff for that.
 ---
 
 # Review Commit
@@ -169,22 +169,22 @@ After presenting the report:
 
 > **{N} findings** ({critical} critical, {major} major, {minor} minor)
 >
-> Run `/review-fix` to fix all findings.
+> Run `/sdlc-review-fix` to fix all findings.
 
-Do NOT fix anything in this command. Do NOT offer partial fix options. The review command only reviews — `/review-fix` handles all fixes.
+Do NOT fix anything in this command. Do NOT offer partial fix options. The review command only reviews — `/sdlc-review-fix` handles all fixes.
 
 ## Red Flags
 
 | Thought | Reality |
 |---------|---------|
 | "The diff is small, skip some lenses" | Small diffs produce the subtlest bugs |
-| "Agent fixed the issue during review" | Report only — fixes go through `review-fix` |
+| "Agent fixed the issue during review" | Report only — fixes go through `sdlc-review-fix` |
 | "This is just a refactor, no review needed" | Refactors need architecture and DRY lens review |
 | "Skip Tier 2, it's a small commit" | Read the diff content. Small commits introduce new patterns more often than expected. |
 | "This agent overlaps with another, skip it" | Agents review different concerns. `performance-engineer` and `frontend-developer` both review component code but catch different issues. |
 | "No security concerns in this diff" | Check the boundaries lens anyway. User input flows through surprising paths. |
 
 ## Integration
-- **Feeds into:** `review-fix` (if findings need fixing)
-- **Sibling:** `review-diff` (same review lenses, targets working tree instead of commits)
-- **DRY note:** Agent selection criteria and review lenses are duplicated with `review-diff`. If you update one, update the other.
+- **Feeds into:** `sdlc-review-fix` (if findings need fixing)
+- **Sibling:** `sdlc-review-diff` (same review lenses, targets working tree instead of commits)
+- **DRY note:** Agent selection criteria and review lenses are duplicated with `sdlc-review-diff`. If you update one, update the other.

@@ -48,7 +48,6 @@ python3 -c "import json; json.load(open('skeleton/manifest.json'))"
 
 **2. Stale reference scan** — Grep for old/removed names across the codebase:
 - Any recently renamed/removed skills, agents, plugins, or concepts
-- `plugin-dev:agent-development` (replaced by `sdlc-create-agent`)
 - Only changelog entries should reference old names
 
 **3. Cross-reference consistency:**

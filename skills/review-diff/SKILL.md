@@ -1,15 +1,15 @@
 ---
-name: review-diff
+name: sdlc-review-diff
 description: >
-  Review all uncommitted changes in the working tree with domain agents — same lenses as review-commit
+  Review all uncommitted changes in the working tree with domain agents — same lenses as sdlc-review-commit
   but targets the working tree before committing. Triggers on "review uncommitted changes", "check my diff",
   "review before committing", "diff review", "review working tree", "look at my changes".
-  Do NOT use for committed code — use review-commit for that.
+  Do NOT use for committed code — use sdlc-review-commit for that.
 ---
 
 # Review Uncommitted Changes
 
-Review all uncommitted changes (staged + unstaged) with relevant domain agents. Same review lenses as `/review-commit` but targets the working tree diff instead of a commit.
+Review all uncommitted changes (staged + unstaged) with relevant domain agents. Same review lenses as `/sdlc-review-commit` but targets the working tree diff instead of a commit.
 
 ## Steps
 
@@ -170,9 +170,9 @@ After presenting the report:
 
 > **{N} findings** ({critical} critical, {major} major, {minor} minor)
 >
-> Run `/review-fix` to fix all findings, or commit first and run `/review-commit` for a post-commit review.
+> Run `/sdlc-review-fix` to fix all findings, or commit first and run `/sdlc-review-commit` for a post-commit review.
 
-Do NOT fix anything in this skill. Do NOT offer partial fix options. The review skill only reviews — `/review-fix` handles all fixes.
+Do NOT fix anything in this skill. Do NOT offer partial fix options. The review skill only reviews — `/sdlc-review-fix` handles all fixes.
 
 ## Red Flags
 
@@ -180,12 +180,12 @@ Do NOT fix anything in this skill. Do NOT offer partial fix options. The review 
 |---------|---------|
 | "The diff is small, skip some lenses" | Small diffs produce the subtlest bugs |
 | "Just do a quick glance, we're about to commit" | Quick glances miss type safety and contract issues. Run the full workflow. |
-| "Agent fixed the issue during review" | Report only — fixes go through `review-fix` |
+| "Agent fixed the issue during review" | Report only — fixes go through `sdlc-review-fix` |
 | "This is just a refactor, no review needed" | Refactors need architecture and DRY lens review |
 | "Skip Tier 2, it's obviously not architectural" | Read the diff content first. Routine-looking changes introduce new patterns more often than expected. |
 
 ## Integration
 - **Depends on:** None (operates on uncommitted working tree changes)
-- **Feeds into:** `review-fix` (if findings need fixing)
-- **Sibling:** `review-commit` (same review lenses, targets commits instead of working tree)
-- **DRY note:** Agent selection criteria and review lenses are duplicated with `review-commit`. If you update one, update the other.
+- **Feeds into:** `sdlc-review-fix` (if findings need fixing)
+- **Sibling:** `sdlc-review-commit` (same review lenses, targets commits instead of working tree)
+- **DRY note:** Agent selection criteria and review lenses are duplicated with `sdlc-review-commit`. If you update one, update the other.
