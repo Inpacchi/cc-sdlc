@@ -34,6 +34,22 @@ Each entry contains:
 
 ---
 
+## 2026-03-29: Add research-external skill for curating external knowledge sources
+
+**Origin:** Imported from paire-appetit/paire-llm-config (commit 245a89d), generalized for framework use. Codified from a session researching 10 engineering blogs (274 articles).
+
+**What happened:** External knowledge research — surveying what companies have published that's relevant to a project — was ad-hoc. The process of discovering, classifying, and curating articles into structured reference docs was developed and proven effective but existed only as a project-specific skill.
+
+**Changes made:**
+
+1. **`skills/research-external/SKILL.md`** — New skill. Dispatches research-analyst agents to discover, fetch, classify, and curate articles from external sources into tiered reference docs. Generalized from the Paire-specific version: replaced hardcoded domain list with dynamic domain discovery from agent definitions, knowledge stores, and disciplines; replaced `paire-wiki/Research/` save location with convention-based discovery.
+2. **`skeleton/manifest.json`** — Added `skills/research-external/SKILL.md` to `source_files.skills`
+3. **`CLAUDE-SDLC.md`** — Added `/research-external` to the utility skills table
+
+**Rationale:** Systematic external research produces structured, reusable reference docs instead of scattered bookmarks. The tiered classification (directly applicable / adjacent / good to know) helps teams prioritize reading. Generalizing from the downstream project makes this available to all cc-sdlc consumers.
+
+---
+
 ## 2026-03-29: Add enrich-agent skill for systematic agent enrichment
 
 **Origin:** Imported from neuroloom project (commit 1b6dc18). Born from a search-engineer enrichment session where 3 rounds of pushback were needed to extract all 15 applicable patterns from 16 external subagent definitions.

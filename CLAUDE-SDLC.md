@@ -172,6 +172,7 @@ Rules:
 | `/sdlc-create-agent` | Create a new domain agent with frontmatter validation and knowledge wiring. Invokes `sdlc-create-agent` skill |
 | `/sdlc-review` | Review a skill/agent for convention compliance, or analyze external sources for improvements. Invokes `sdlc-review` skill |
 | `/enrich-agent` | Extract patterns from external sources and integrate them into an existing agent definition. Invokes `enrich-agent` skill |
+| `/research-external` | Research external knowledge sources (blogs, talks, papers) and curate tiered reference docs. Invokes `research-external` skill |
 
 ### Key References
 - `ops/sdlc/process/overview.md` — Full workflow
