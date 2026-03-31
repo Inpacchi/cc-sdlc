@@ -150,7 +150,9 @@
       "knowledge/testing/gotchas.yaml",
       "knowledge/testing/timing-defaults.yaml",
       "knowledge/testing/testing-paradigm.yaml",
-      "knowledge/testing/tool-patterns.yaml"
+      "knowledge/testing/tool-patterns.yaml",
+      "knowledge/testing/ai-generated-code-verification.yaml",
+      "knowledge/coding/context-engineering-patterns.yaml"
     ],
     "skills": [
       "skills/sdlc-lite-execute/SKILL.md",

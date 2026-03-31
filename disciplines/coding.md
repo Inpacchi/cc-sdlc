@@ -39,3 +39,9 @@ This applies during plan review (architects check for I/O-logic entanglement) an
 ### Code Assertion Without Verification (Anti-Pattern)
 
 Promoted → `process/collaboration_model.md` (CC Anti-Patterns section, "Code assertion without verification" bullet)
+
+### External Ingestion — 2026-03-30 (Tessl Engineering Blog)
+
+*Bulk import from Tessl Engineering Blog. See `docs/research/Tessl-Engineering-Blog-Reference.md` for full catalog.*
+
+- **Prompt engineering is dead; context engineering is the replacement.** [NEEDS VALIDATION] Controlled experiment across 3 models (Codex, Claude Code, Gemini), 2 task types, and 4 prompt framing conditions showed zero measurable difference from prompt phrasing variations (adding reviewer mentions, motivational framing, etc.) on any metric. The replacement: durable context systems — skills, structured docs, rules, plugins, evaluators. "Context is the product surface now." Caveat: this applies to "strong current models" as of early 2026 — prompt phrasing may still matter for weaker models. Promoted to knowledge: `knowledge/coding/context-engineering-patterns.yaml` (durable_systems section). (Source: Tessl "Stop Prompt Hacking" — Macey Baker, March 2026)

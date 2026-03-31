@@ -34,6 +34,79 @@ Each entry contains:
 
 ---
 
+## 2026-03-30: Migration downstream impact analysis (§3.4)
+
+**Origin:** Framework ingestion revealed that new knowledge files land in child projects but existing skills and agents continue operating with stale assumptions. The gap between "framework updated" and "project benefits" needed a systematic bridge.
+
+**What happened:** Added §3.4 Downstream Impact Analysis to the sdlc-migrate skill. After framework updates are applied (Phase 2) and agent wiring is updated (Phase 3.1–3.3), the new phase scans child-project skills, agents, discipline parking lots, and project knowledge for conflicts with or improvements from newly-landed content.
+
+**Changes made:**
+
+1. **`skills/sdlc-migrate/SKILL.md`** — Added §3.4 Downstream Impact Analysis: scans child skills for activation framing, AVOID example safety, deterministic-first candidates; scans agents for missing knowledge wiring; checks parking lot entries for new evidence; checks project knowledge for contradictions. Presents findings for user approval before applying. Added report section and 2 red flags.
+
+**Rationale:** New knowledge without application is shelf-ware. This step ensures migrations deliver value beyond file updates — the project's existing artifacts get checked against new learning and the team decides what to modernize.
+
+---
+
+## 2026-03-30: Skill authoring guidance — activation framing and AVOID example warnings
+
+**Origin:** Tessl ingestion findings applied to skill creation workflow.
+
+**What happened:** Two empirically-backed findings from the Tessl ingestion warranted immediate incorporation into `sdlc-create-skill`: (1) skill description framing directly affects activation rates (advisory ~10%, mandatory 57-83%), and (2) AVOID examples in skills can cause regressions when agents follow the anti-pattern instead of the instruction.
+
+**Changes made:**
+
+1. **`skills/sdlc-create-skill/SKILL.md`** — Added "Activation framing rule" to §3 (Frontmatter Generation): use imperative/mandatory language in descriptions, not advisory. Added "AVOID example warning" to §6 (Red Flags): always pair anti-patterns with correct patterns.
+
+**Rationale:** These two findings are validated by controlled experiments and directly affect every future skill authored through this tool. Incorporating them at the creation point prevents the patterns from being discovered ad-hoc later.
+
+---
+
+## 2026-03-30: Framework Ingestion — Tessl Engineering Blog (AI-native development patterns)
+
+**Origin:** Bulk ingestion from 11 Tessl Engineering Blog articles covering spec-driven development, skill lifecycle management, behavioral compliance, context engineering, and evaluation methodology. See `docs/research/Tessl-Engineering-Blog-Reference.md` for full article catalog.
+
+**What happened:** Research-external skill surveyed 61 Tessl blog articles (34 Tier 1). Deep extraction from 11 highest-value articles produced 2 new knowledge YAML files and 7 parking lot entries across 3 disciplines. Existing parking lot entry "Skill testing, evaluation, and versioning" reinforced with empirical data from Tessl's evaluation methodology.
+
+**Changes made:**
+
+1. **`knowledge/testing/ai-generated-code-verification.yaml`** — Created with 4 sections: system invariants (3-level taxonomy: universal/system/feature), behavioral compliance architecture (Scripture/Commandments/Rituals), deterministic-first principle, eval hygiene (contamination detection, diagnostic categories)
+2. **`knowledge/coding/context-engineering-patterns.yaml`** — Created with 5 sections: curated context vs raw docs, three-layer context composition (MCP + steering + specs), skill activation engineering, durable systems vs prompt phrasing, context validation evidence
+3. **`disciplines/process-improvement.md`** — Added empirical reinforcement to existing "Skill testing/evaluation/versioning" entry. Added 4 new parking lot entries: Scripture/Commandments/Rituals layering model, skill activation design, AVOID examples regression risk, context volume vs quality
+4. **`disciplines/testing.md`** — Added 2 parking lot entries: eval contamination discovery (93%→15% score collapse), behavioral compliance as distinct from functional correctness
+5. **`disciplines/coding.md`** — Added 1 parking lot entry: prompt engineering obsolescence with evidence from controlled experiment
+6. **`knowledge/agent-context-map.yaml`** — Wired `ai-generated-code-verification.yaml` to sdet role, `context-engineering-patterns.yaml` to code-reviewer role
+7. **`skeleton/manifest.json`** — Added 2 new knowledge files to source_files.knowledge
+
+**Skill candidates proposed:** 2 (pending user approval)
+- `/skill-eval` — Four-dimension scoring rubric (completeness, actionability, conciseness, robustness) applied to framework skills
+- Activation-test pattern — Verify skill triggers fire using LLM judge on session logs
+
+**Downstream:** Child projects will receive both new knowledge files and updated discipline parking lots on next migration.
+
+**Rationale:** Tessl's blog is the richest external source for AI-native development methodology. Their empirical findings (28%→99% behavioral compliance, 96%/0% activation split, 67%→94% skill optimization) provide quantitative grounding for patterns the framework already uses intuitively but hadn't documented with evidence.
+
+---
+
+## 2026-03-30: Framework Ingestion — AI-assisted workflow design rationale
+
+**Origin:** Bulk ingestion from two AI Engineer conference transcripts: "No Vibes Allowed: Solving Hard Problems in Complex Codebases" (Dex) and "Don't Build Agents, Build Skills Instead" (Barry Zhang & Mahesh Murag, Anthropic).
+
+**What happened:** 2 transcript files analyzed for framework enrichment. Most content validated existing cc-sdlc patterns (research-plan-implement, progressive disclosure, domain agent dispatch, context clearing between phases) but the *rationale* for these patterns was not documented anywhere in process docs — only implicitly embedded in skill behavior.
+
+**Changes made:**
+
+1. **`process/collaboration_model.md`** — Added "Workflow Design Rationale" section documenting five principles: context clearing between phases, domain agents as context isolation, on-demand research over static documentation, rigor gradient, and plan review as mental alignment. Added "Trajectory poisoning" CC anti-pattern (repeated corrections in a single context window create a failure trajectory).
+2. **`disciplines/process-improvement.md`** — Added 2 parking lot entries under "External Ingestion — 2026-03-30": scripts-as-tools within skills [NEEDS VALIDATION], skill testing/evaluation/versioning [NEEDS VALIDATION].
+
+**Skill candidates proposed:** 0 (no new workflows identified that aren't already covered by existing skills).
+
+**Downstream:** Child projects will receive the collaboration model rationale section and parking lot entries on next migration.
+
+**Rationale:** The framework implemented context engineering patterns correctly but never explained why. Without documented rationale, future modifications to skills could unknowingly break the patterns. The two external sources independently validated the same design principles our framework already uses, providing confidence and attribution for the rationale documentation.
+
+---
+
 ## 2026-03-30: Complete sdlc- prefix rename for all remaining skills
 
 **Origin:** Follow-up to commit 0dcd3d5 which renamed two frontmatter `name` fields but missed slash commands, trigger phrases, and four additional unprefixed skills.

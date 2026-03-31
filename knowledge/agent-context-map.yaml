@@ -79,6 +79,7 @@ mappings:
   # ── Review / Quality ───────────────────────────────────────────────
   code-reviewer:
     - ops/sdlc/knowledge/coding/code-quality-principles.yaml
+    - ops/sdlc/knowledge/coding/context-engineering-patterns.yaml
     - ops/sdlc/knowledge/architecture/domain-boundary-gotchas.yaml
     - ops/sdlc/knowledge/architecture/technology-patterns.yaml
     - ops/sdlc/knowledge/testing/testing-paradigm.yaml
@@ -100,6 +101,7 @@ mappings:
     - ops/sdlc/knowledge/testing/component-catalog.yaml
     - ops/sdlc/knowledge/testing/timing-defaults.yaml
     - ops/sdlc/knowledge/testing/advanced-test-patterns.yaml
+    - ops/sdlc/knowledge/testing/ai-generated-code-verification.yaml
     - ops/sdlc/knowledge/architecture/agent-communication-protocol.yaml
 
   accessibility-auditor:

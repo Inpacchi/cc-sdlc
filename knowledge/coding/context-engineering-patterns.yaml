@@ -1,0 +1,238 @@
+# Context Engineering Patterns
+# How to provide AI coding agents with the right context for reliable output.
+# Covers: curated tiles vs raw docs, three-layer context composition, skill
+# activation design, and the shift from prompt engineering to context engineering.
+# Source: Tessl Engineering Blog (multiple authors), controlled experiments
+# Last updated: 2026-03-30
+
+id: context-engineering-patterns
+name: "Context Engineering Patterns"
+description: >
+  Patterns for providing AI coding agents with effective context. Covers curated
+  documentation tiles, three-layer context composition (MCP + steering + specs),
+  skill activation engineering, and evidence that durable context systems
+  outperform prompt phrasing variations.
+pattern: entries
+category: coding
+spec_relevant: false
+project_applicability:
+  relevant_when: "Projects using AI coding agents (Claude Code, Cursor, Kiro, etc.)"
+  action_if_irrelevant: remove
+last_updated: 2026-03-30
+
+# ─────────────────────────────────────────────
+# Curated Context > Raw Documentation
+# ─────────────────────────────────────────────
+#
+# Source: Tessl "Making Claude Good at Go Using Context Engineering"
+# Evidence: A/B benchmark (Harbor framework, 25 trials per condition):
+#   With tiles: 100% success, 69s avg, $0.10/trial, 129K tokens
+#   Baseline: 92% success, 112s avg, $0.30/trial, 381K tokens
+# Caveat: Single bug type (Kong library), 25 trials — modest statistical power.
+# Advantage is largest for recently released features absent from training data.
+
+curated_context:
+  principle: >
+    Provide library-specific curated documentation tiles rather than relying
+    on model training data or live web search. Curated tiles eliminate the
+    variance and failures inherent in web search and fill gaps where training
+    data is stale.
+
+  what_curated_means: >
+    Pre-extracted, agent-optimized documentation covering specific domain
+    subsets. Organized by functional area and scoped to what agents need,
+    not what humans browse. Distinguished from raw docs by being selective,
+    structured, and task-relevant.
+
+  separation_rule: >
+    Separate documentation (what a library does) from steering rules (when
+    and how to use that documentation). These serve different agent needs
+    and must not be merged into a single file.
+
+  evidence:
+    success_rate: "100% vs 92% (tiles vs baseline)"
+    speed: "1.6x faster (69s vs 112s average)"
+    cost: "3x cheaper ($0.10 vs $0.30 per trial)"
+    tokens: "66% reduction (129K vs 381K average)"
+    advantage_scope: "Largest for recently released features absent from training data"
+
+# ─────────────────────────────────────────────
+# Three-Layer Context Composition
+# ─────────────────────────────────────────────
+#
+# Source: Tessl "Context-Aware Development in Kiro"
+# Evidence: Demo narrative (dad joke agent) — not a controlled experiment.
+# Caveat: The 15-minute claim covers a minimal generator, not a complex system.
+# The conditional inclusion mode (file-pattern-triggered) is Kiro-specific and
+# has no documented equivalent in Claude Code's native skill activation.
+
+three_layer_composition:
+  principle: >
+    Each context layer addresses a different hallucination source. Use all
+    three for production features; conversational prompting alone is only
+    appropriate for prototypes.
+
+  layers:
+    mcp_servers:
+      addresses: "External knowledge gaps — new SDKs, proprietary APIs, recently updated docs"
+      mechanism: "Connect authoritative documentation sources the model cannot access from training data"
+      example: >
+        Model hallucinated JavaScript for a Python-only SDK. After connecting
+        the SDK's MCP server, generated correct Python immediately.
+
+    steering_files:
+      addresses: "Project convention gaps — stack decisions, naming conventions, architectural patterns"
+      mechanism: "Persistent markdown files in the workspace, loaded by inclusion mode"
+      inclusion_modes:
+        always: "Core standards that influence all code generation (tech stack, conventions)"
+        conditional: "Auto-loaded for specific file patterns (e.g., component guidelines for .tsx files)"
+        manual: "Available on-demand by explicit reference"
+
+    specs:
+      addresses: "Feature intent gaps — what we're building, why, and acceptance criteria"
+      mechanism: "Structured requirements → design → implementation tasks with traceability"
+      when_required: "Production features with complex requirements"
+
+  composition_rule: >
+    The solution to hallucination isn't better prompting — it's better context.
+    MCP for what the model doesn't know, steering for how the project works,
+    specs for what we're trying to build.
+
+# ─────────────────────────────────────────────
+# Skill Activation Engineering
+# ─────────────────────────────────────────────
+#
+# Source: Tessl "Do Agent Skills Actually Help? A Controlled Experiment"
+# Evidence: Harbor framework, 30 trials per configuration (90 total):
+#   Vanilla: 53%, Official skill: 73%, Custom skill: 80%
+#   Custom skill when activated: 96%, when not activated: 0%
+#   Initial activation rate: ~10%, after trigger engineering: 83%
+# Caveat: Single task (Go/Atlas ORM migration). The 96%/0% split may reflect
+# task design (task constructed to require skill knowledge) as much as skill
+# quality. 30 trials — statistical significance not reported.
+
+activation_engineering:
+  principle: >
+    A skill that never activates cannot help. Activation rate is a distinct
+    metric from task pass rate — they diagnose different failure modes. Measure
+    both separately.
+
+  critical_finding: >
+    Custom skill achieved 96% success when activated and 0% when not activated.
+    Initial activation rate was ~10%. The skill wasn't broken — the trigger
+    description was.
+
+  interventions:
+    description_language:
+      before: "Best practices for Atlas schema management"
+      after: "Rules that MUST be followed when working on database schema related tasks"
+      effect: "Activation rate increased from ~10% to 57-83%"
+      rule: >
+        Use imperative/mandatory framing in skill descriptions. Advisory
+        framing ("best practices for X") causes agents to skip the skill.
+        Mandatory framing ("rules that MUST be followed when X") triggers
+        activation reliably.
+
+    task_instruction_nudge:
+      addition: "MUST use applicable skills if relevant"
+      scope: "Added to task-level instructions, not skill-level"
+      effect: "Complements description language change"
+
+  measurement:
+    method: >
+      Use an LLM judge on session logs to measure whether skills were
+      actually invoked, not just whether the task passed.
+    minimum_trials: >
+      Run 25-30 trials per configuration. A 53% baseline is a coin flip —
+      a single failure would not reveal the pattern.
+
+  verifier_design: >
+    Design task verifiers to block shortcuts. Example: check that original
+    migration hashes are unchanged — don't just check that tests pass.
+
+# ─────────────────────────────────────────────
+# Durable Systems > Prompt Phrasing
+# ─────────────────────────────────────────────
+#
+# Source: Tessl "Stop Prompt Hacking" (Macey Baker)
+# Evidence: Controlled experiment — 4 conditions (control, peer agent review,
+# senior engineer review, casual review) × 3 models (Codex, Claude Code, Gemini)
+# × 2 task types. Result: no measurable difference across any metric (outputs,
+# code quality, docs usage, token efficiency, LOC, correctness).
+# Caveat: Tested one specific manipulation (reviewer mention). The stronger
+# claim ("stop prompt hacking entirely") is not fully supported by a single
+# experiment. Author explicitly states: "a prompt tweak can still matter."
+# Results tied to "strong current models" as of early 2026.
+
+durable_systems:
+  principle: >
+    On current-generation models, prompt phrasing variations produce no
+    measurable difference in output quality. Replace prompt theater with
+    durable systems: skills (encoded protocols), docs (structured reference),
+    rules (canonical constraints), and evaluators (measurable outcomes).
+
+  evidence: >
+    Four experimental conditions (no reviewer, peer agent review, senior
+    engineer review, casual review) across three models and two task types
+    showed zero movement on any metric — not in outputs, code quality, docs
+    usage, token efficiency, LOC, or correctness.
+
+  distinction:
+    prompt: >
+      Sensitivity to exact model, task, tool environment, and moment in
+      model history. Not reusable. Not testable. Not improvable over time.
+    skill: >
+      Reusable across sessions. Canonically defined. Evaluable. Explicitly
+      testable. Improvable over time. Behavior is visible and repeatable.
+
+  core_principle: >
+    "Context is the product surface now." If you want a good code review,
+    define what good means, encode it as a shareable skill, and make it
+    part of the system. Don't hope the model responds to a phrasing trick.
+
+  caveat: >
+    This does not mean prompting doesn't matter at all. It means prompt
+    PHRASING VARIATIONS (adding "think step by step", mentioning a reviewer,
+    motivational framing) don't move the needle on strong current models.
+    The content and structure of what you provide still matters enormously.
+
+# ─────────────────────────────────────────────
+# Context Validation Evidence
+# ─────────────────────────────────────────────
+#
+# Source: Tessl "Your AGENTS.md File Isn't the Problem"
+# Evidence (SECONDARY — Tessl reinterpreting an external study via Theo/t3.gg):
+#   Developer-written context files: +4% task completion
+#   LLM-generated context files: -3% task completion
+#   Both types: >20% cost increase
+# Validated context (Tessl registry): Cisco skill 1.79x improvement
+# Caveat: Primary study not named. Sample size, methodology, and task types
+# unknown. The +4%/-3% figures are "suggested by limited secondary data."
+
+context_validation:
+  principle: >
+    Unvalidated context is useless or harmful. The quality gap between
+    validated and unvalidated context is a measurement discipline problem,
+    not an authoring quality problem.
+
+  evidence:
+    unvalidated_developer_written: "+4% task completion"
+    unvalidated_llm_generated: "-3% task completion (actively harmful)"
+    cost_increase: ">20% for both types"
+    validated_skills: "1.79x improvement (Cisco skill via Tessl registry)"
+
+  feedback_loop:
+    - "Add an instruction. Run evals."
+    - "Pass rate increases → instruction earns its place"
+    - "No change → instruction adds cost without benefit — remove it"
+    - "Pass rate decreases → bug caught before shipping — remove or fix it"
+
+  signal_rule: >
+    A 200-line context file the model ignores is worse than a 10-line file
+    with three reliable instructions. The goal is meaningful context, not
+    volume. Strip everything that doesn't move the needle.
+
+  source_caveat: >
+    The +4%/-3% statistics come from a study Tessl is interpreting, not
+    conducting. Primary study not identified (surfaced via Theo/t3.gg video).
+    Treat as directionally suggestive, not definitive.

@@ -100,6 +100,40 @@ For long-running work, CC should:
 
 ---
 
+## Workflow Design Rationale
+
+The plan→execute workflow is structured around context window management. These principles explain *why* the workflow works the way it does — not just what it does.
+
+### Context Clearing Between Phases
+
+Each phase (spec, plan, execute) should start with a fresh context window. LLM performance degrades as the context fills with tool outputs, file reads, and conversation history. Clearing between phases ensures execution happens with only the approved plan as input, not accumulated noise from the planning process. The plan file is the compaction artifact — it compresses all research and decisions into a document that a fresh context can act on immediately.
+
+### Domain Agents as Context Isolation
+
+Dispatching work to domain agents is a context management strategy. Each agent gets a clean context window loaded with only the domain knowledge and files relevant to its task. A backend-developer agent doesn't load design knowledge, accessibility rules, or frontend component patterns — its context stays focused on backend concerns. This keeps each agent operating in a focused, high-signal context rather than a broad, noisy one. The domain scoping (specific files, specific knowledge, specific concerns) is what makes the isolation effective.
+
+### On-Demand Research Over Static Documentation
+
+The spec phase investigates the codebase live rather than relying on pre-written architectural documentation. Code is the source of truth; documentation drifts. On-demand research compresses the actual current state of the code into a spec — a snapshot of truth derived from the code itself, not a cached understanding that may be stale.
+
+### Rigor Gradient
+
+Match process overhead to task complexity. The trigger is complexity of decisions, not file count.
+
+| Complexity | Approach |
+|---|---|
+| Trivial (config change, typo fix) | Direct implementation, no plan |
+| Moderate (multi-step, cross-domain, non-obvious approach) | `sdlc-lite-plan` → `sdlc-lite-execute` |
+| Significant (new feature, new integration, architectural change) | `sdlc-plan` → `sdlc-execute` |
+
+A 2-file change touching real-time + database warrants a lite plan. A 10-file rename refactor might not. Judge by the complexity of the decisions involved.
+
+### Plan Review as Mental Alignment
+
+As AI-generated code throughput increases, plan review becomes the primary mechanism for maintaining shared understanding of how the codebase is evolving. CD reads plans to stay aligned on approach and intent. This is more efficient than reviewing hundreds of lines of generated code after the fact. Plans compress intent — a reviewer can assess correctness at the approach level before any code is written, catching architectural missteps that would be expensive to fix post-implementation.
+
+---
+
 ## Anti-Patterns
 
 ### CD Anti-Patterns
@@ -114,6 +148,7 @@ For long-running work, CC should:
 - Ignoring existing patterns in the codebase
 - Over-engineering beyond requirements
 - **Code assertion without verification** — answering factual questions about how specific code behaves without reading the code first. Most common during conversational interludes after a structured skill completes, where PRE/POST-GATE enforcement is absent. The correct sequence is always: grep/read → reason → answer. If the question is "when does X happen" or "how does Y work", never assert specific code behavior from memory or context alone.
+- **Trajectory poisoning** — repeatedly correcting the agent in the same context window instead of starting fresh. After 2-3 corrections, the conversation trajectory becomes "CC does something wrong → CD corrects → CC does something wrong again." The LLM treats this trajectory as the expected pattern and continues producing errors. If the agent is off track after 2-3 corrections, clear the context and start a new session with better initial guidance rather than continuing to correct in a poisoned trajectory.
 
 > **Data visibility** includes decisions to exclude, transform, or omit fields from indexes, caches, or API responses — anything that changes what data reaches the frontend. These are product decisions, not implementation details, because they affect what users can see and do.
 

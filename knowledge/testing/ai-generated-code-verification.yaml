@@ -1,0 +1,225 @@
+# AI-Generated Code Verification
+# Verification frameworks specific to AI-generated code — addressing failure modes
+# that traditional testing misses: system invariants, behavioral compliance, and
+# evaluation hygiene.
+# Source: Tessl Engineering Blog (Jennifer Sand, Patrick Debois, unnamed authors)
+# Last updated: 2026-03-30
+
+id: ai-generated-code-verification
+name: "AI-Generated Code Verification"
+description: >
+  Verification patterns for AI-generated code: three-level system invariants,
+  behavioral compliance architecture (Scripture/Commandments/Rituals), eval
+  contamination detection, and deterministic-first design. Addresses failure
+  modes invisible to functional tests.
+pattern: entries
+category: testing
+spec_relevant: false
+project_applicability:
+  relevant_when: "Projects using AI coding agents for implementation"
+  action_if_irrelevant: remove
+last_updated: 2026-03-30
+
+# ─────────────────────────────────────────────
+# System Invariants — Three-Level Taxonomy
+# ─────────────────────────────────────────────
+#
+# Source: Tessl "Beyond Tests: What to Verify in AI-Generated Code" (Jennifer Sand)
+# Caveat: Taxonomy is a proposal with one example per level, not an exhaustive
+# validated classification. No quantitative evidence provided. Full implementation
+# methodology was deferred to a conference talk, not published in the article.
+
+system_invariants:
+  principle: >
+    Code can pass every test and still be incorrect. Traditional tests validate
+    behavior (does X do Y?). Invariants define what must ALWAYS be true regardless
+    of behavior. Define invariants BEFORE code generation — they are pre-conditions
+    given to the agent, not post-hoc checks.
+
+  distinction: >
+    Test failure = code does something wrong. Verification failure = the system's
+    deeper properties were never defined clearly enough to check against in the
+    first place. AI agents fail at the second kind because nobody told them the
+    invariant exists.
+
+  levels:
+    universal:
+      name: "Universal — Concurrency Safety"
+      definition: >
+        Shared mutable data cannot be updated by multiple threads or workers
+        without synchronization.
+      scope: "Any system, any language, any architecture"
+      example: >
+        Two checkout operations cannot both decrement the same inventory item
+        simultaneously; one must block or retry.
+      failure_mode: >
+        "Too hard to test" — concurrency bugs appear intermittently. The team
+        calls the test flaky, reruns CI, and moves on until the failure hits
+        production.
+
+    system:
+      name: "System-Level — Transaction Boundaries"
+      definition: >
+        Cross-service transactions must fully complete or fully revert.
+      scope: "Multi-service state consistency, service integrations"
+      example: >
+        When a payment is processed, both the ledger service and the order
+        service must reflect the same state — either both mark 'paid' or both
+        remain 'pending.'
+      failure_mode: >
+        "Too expensive to test" — code performs perfectly in small test
+        environments but collapses when real data arrives. Load testing catches
+        stress behavior, not logical oversights that emerge over time.
+
+    feature:
+      name: "Feature-Level — Workflow Integrity"
+      definition: >
+        Every path through a workflow must respect defined preconditions and
+        postconditions.
+      scope: "Complex state machines, user-defined workflow builders"
+      example: >
+        In a custom workflow builder, a 'Submit for Approval' action must
+        always follow 'Draft Saved'; it cannot execute directly after 'Create.'
+      failure_mode: >
+        "Too complex to test" — systems with many moving parts and overlapping
+        states where the combination count exceeds testability.
+
+  application: >
+    When dispatching an AI agent for implementation, include the relevant
+    invariant level as a pre-condition in the prompt. The agent should verify
+    its code respects the invariant before declaring the task complete.
+
+# ─────────────────────────────────────────────
+# Behavioral Compliance Architecture
+# ─────────────────────────────────────────────
+#
+# Source: Tessl "Our AI Is the Bright Kid with No Manners" Parts 1 & 2
+# Evidence: Controlled evaluation — 28% baseline → 99% with tile (7 scenarios,
+# 4 demo repos). Part 1 cited 15% baseline from a different scenario subset.
+# Caveat: Demo repos modeled after real projects, not real OSS projects.
+# Evaluation uses Tessl's own tooling. 15 iteration cycles were needed to find
+# the right balance — no formula for optimal layering exists.
+
+behavioral_compliance:
+  principle: >
+    AI agents fail not at code generation but at behavioral compliance —
+    following contribution guidelines, respecting policies, updating changelogs,
+    disclosing AI usage. The fix is architectural (three-layer context), not
+    prompting-based.
+
+  three_layer_architecture:
+    scripture:
+      name: "Scripture (Skills)"
+      definition: "Detailed workflow guidance the agent consults when it needs it"
+      behavior: "Verbose, on-demand, lazy-loaded based on what the agent is doing"
+      token_footprint: "~5.3k tokens (on-demand)"
+      mental_model: "The 'how to think about this' layer"
+      examples:
+        - "Read CONTRIBUTING.md"
+        - "Check the AI policy"
+        - "Look at closed PRs for rejection patterns"
+
+    commandments:
+      name: "Commandments (Rules)"
+      definition: "Always-on, non-skippable directives"
+      behavior: "Short, visible, loaded every time — cannot be bypassed by agent failing to check a file"
+      token_footprint: "~2.8k tokens always-on (0.28% of 1M context window)"
+      mental_model: "What's non-negotiable"
+      examples:
+        - "Never forge a DCO sign-off"
+        - "Never submit without human review"
+        - "Respect AI bans"
+        - "Never write code for a claimed issue"
+
+    rituals:
+      name: "Rituals (Scripts)"
+      definition: "Deterministic, interpretation-free executable steps"
+      behavior: "Execute identically each time — scripts fetch structured data, model interprets it"
+      count: "19 script commands"
+      mental_model: "The bridge between knowing what to do and reliably doing it"
+      examples:
+        - "repo-scan — full file inventory before reading any file"
+        - "ai-policy — fetches AI_POLICY.md, CODE_OF_CONDUCT.md, CONTRIBUTING.md"
+        - "issue-comments — fetches all issue comments"
+        - "commit-conventions — returns format, sign-off requirements"
+
+  decision_algorithm: >
+    For each agent behavior, ask:
+    1. Must it ALWAYS happen regardless of context? → Commandment (rules)
+    2. Does it require interpreting prose or making judgment calls? → Scripture (skills)
+    3. Can it be computed deterministically from API data? → Ritual (scripts)
+
+  key_rule: "Scripts fetch; agents interpret."
+
+# ─────────────────────────────────────────────
+# Deterministic-First Principle
+# ─────────────────────────────────────────────
+#
+# Source: Tessl "Bright Kid Part 2"
+# Evidence: Claimed-issue detection scored 0% across 7 skill versions when
+# implemented as LLM judgment. Moved to bash script calling GitHub API → 100%.
+
+deterministic_first:
+  principle: >
+    Every agent behavior that CAN be deterministic SHOULD be deterministic.
+    Non-deterministic LLM judgment should only be used where interpretation
+    of prose or ambiguous context is genuinely required.
+
+  case_study: >
+    Claimed-issue detection scored 0% across seven consecutive versions when
+    implemented as a skill instruction ("check issue comments"). Sometimes the
+    agent checked, sometimes it didn't, sometimes it checked the wrong issue.
+    Solution: bash script calling GitHub API to fetch ALL comments. Agent then
+    interprets whether a claim is present. Result: 100% accuracy.
+
+  implication_for_skills: >
+    Skills that contain procedural logic (file scanning, policy fetching,
+    pattern matching, API data retrieval) should package that logic as
+    executable scripts, not as LLM instructions that get re-derived each run.
+
+# ─────────────────────────────────────────────
+# Eval Hygiene — Contamination & Diagnostics
+# ─────────────────────────────────────────────
+#
+# Source: Tessl "Bright Kid Part 2"
+# Evidence: Auto-generated scenarios scored 93% baseline. Realistic scenarios
+# (single-sentence tasks, no breadcrumbs) scored 15%. The gap was caused by
+# inline file content in task descriptions acting as "open-book exam answers."
+
+eval_contamination:
+  principle: >
+    Evaluations that provide the agent with information it would need to
+    discover in real conditions produce inflated scores. The critical question
+    is "Does the agent search for signals nobody highlighted?" — not "Does the
+    agent follow rules when given explicitly?"
+
+  degradation_chain:
+    - condition: "Auto-generated scenarios with inline files"
+      score: "93%"
+    - condition: "Single-sentence task descriptions with GitHub URL"
+      score: "27%"
+    - condition: "Demo repos with residual breadcrumbs (code comments, links)"
+      score: "~20%"
+    - condition: "All breadcrumbs removed — matches real OSS repo conditions"
+      score: "15%"
+
+  diagnostic_categories:
+    tile_problem: "The skill confused the agent. Fix the tile and retest."
+    criteria_problem: >
+      The rubric checks the wrong thing. Example: scored zero for not naming
+      the file where an AI ban was found, even though the agent correctly
+      refused to code.
+    random_variation: >
+      LLM judge scored differently on different runs. Same scenarios, same
+      repos, same tile. A behavior scoring 0% then 100% isn't broken or
+      fixed — it's noisy.
+
+  minimum_iterations: >
+    Run multiple eval iterations before pivoting on a score change. Single-run
+    variance is high enough to produce false signals.
+
+  optimizer_conflict: >
+    Tessl's skill review optimizer and task evals can give contradictory
+    guidance. Example: "This is NOT optional" improved eval scores by 21
+    points but the optimizer removed it for style reasons. Resolution: trust
+    evals over style scores when they conflict.

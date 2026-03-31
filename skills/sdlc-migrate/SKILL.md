@@ -322,6 +322,100 @@ The agent-context-map is **never overwritten** because projects have their own a
 
 Never remove project-specific mappings that aren't in the cc-sdlc source — those were added during initialization or by the project team.
 
+### 3.4 Downstream Impact Analysis
+
+New or updated knowledge files and process docs may conflict with or improve the child project's existing artifacts — skills, agents, discipline entries, and knowledge overrides. This step identifies those impacts so the project team can decide what to act on.
+
+**When to run:** Only when the migration includes new or substantively changed knowledge files, discipline insights, or process docs (identified in §1.2/§1.3). Skip if the migration is purely structural (file moves, template updates, manifest changes).
+
+**What to scan in the child project:**
+
+| Child Artifact | Where | What to Check Against New Knowledge |
+|----------------|-------|-------------------------------------|
+| Skill descriptions | `.claude/skills/*/SKILL.md` frontmatter | Activation framing rules — flag advisory descriptions ("best practices", "guidance for") that should use mandatory framing |
+| Skill bodies | `.claude/skills/*/SKILL.md` content | AVOID example safety — flag unguarded anti-pattern examples missing the correct-pattern pairing |
+| Skill bodies | `.claude/skills/*/SKILL.md` content | Deterministic-first — flag procedural instructions (file scanning, API calls, pattern matching) that could be scripts |
+| Agent definitions | `.claude/agents/*.md` | New knowledge wiring — do any agents work in domains covered by newly added knowledge files but aren't wired to them? |
+| Discipline parking lots | `ops/sdlc/disciplines/*.md` | Stale entries — do any `[NEEDS VALIDATION]` entries now have evidence from newly landed knowledge? |
+| Project knowledge | `ops/sdlc/knowledge/**/*.yaml` | Contradictions — do any project-specific knowledge rules conflict with newly landed upstream rules? |
+
+**Process:**
+
+1. **Read the changelog entries being applied** (from §1.2) to identify which new knowledge files and process changes are landing. Extract the key principles, rules, and patterns from each.
+
+2. **Scan child skills:**
+   - Glob `.claude/skills/*/SKILL.md`
+   - For each skill, read the frontmatter `description` field and check activation framing
+   - For each skill, grep for AVOID/DON'T/NEVER patterns without an adjacent correct-pattern ("Instead do", "DO this")
+   - For each skill, grep for procedural instructions that describe step-by-step API calls, file reads, or pattern matching that could be a script
+   - **Do not modify skills.** Collect findings.
+
+3. **Scan child agents:**
+   - Glob `.claude/agents/*.md` (excluding framework agents: `sdlc-reviewer.md`, `sdlc-compliance-auditor.md`, `AGENT_TEMPLATE.md`, `AGENT_SUGGESTIONS.md`)
+   - For each agent, read its domain expertise description
+   - Cross-reference against newly added knowledge files — if a new knowledge file covers a domain the agent works in but isn't in the agent's `## Knowledge Context` section, flag it
+   - **Do not modify agents.** Collect findings.
+
+4. **Scan discipline parking lots:**
+   - Read each `ops/sdlc/disciplines/*.md` parking lot
+   - For each `[NEEDS VALIDATION]` entry, check if newly landed knowledge provides evidence that would change the triage marker (promote to knowledge, or mark as validated)
+   - **Do not modify entries.** Collect findings.
+
+5. **Scan project knowledge:**
+   - Read each `ops/sdlc/knowledge/**/*.yaml` that the project has customized (use `git diff HEAD -- ops/sdlc/knowledge/` to identify project-modified files)
+   - Compare project-added rules against newly landed upstream rules for contradictions
+   - **Do not modify files.** Collect findings.
+
+**Present findings via `AskUserQuestion`:**
+
+```
+DOWNSTREAM IMPACT ANALYSIS
+═══════════════════════════════════════════════════════════════
+
+New knowledge landing this migration:
+  [list of new/changed knowledge files and their key principles]
+
+SKILL FINDINGS ([count] skills scanned)
+  Activation framing:
+    [skill-name] — description uses advisory framing: "[current text]"
+      → Suggest: "[mandatory reframing]"
+  AVOID examples:
+    [skill-name] — line N has unguarded anti-pattern
+      → Suggest: pair with correct pattern
+  Deterministic candidates:
+    [skill-name] — §N describes procedural [API call/file scan] inline
+      → Suggest: extract to scripts/ for consistency
+
+AGENT FINDINGS ([count] agents scanned)
+  Missing knowledge wiring:
+    [agent-name] — works in [domain] but not wired to new [knowledge-file]
+      → Suggest: add to agent-context-map.yaml
+
+PARKING LOT FINDINGS
+  Evidence available:
+    [discipline] — "[entry title]" marked [NEEDS VALIDATION], new knowledge
+    in [file] provides supporting evidence
+      → Suggest: promote or update triage marker
+
+KNOWLEDGE CONFLICTS
+  [file] rule [id] conflicts with upstream [file] rule [id]: [description]
+    → Suggest: reconcile — project rule may need updating
+
+No findings in a category? Omit that category entirely.
+Apply any of these? (list numbers, "all", or "skip")
+```
+
+**Gate rule:** User chooses which findings to apply. For each approved finding:
+- Skill description reframing → edit the skill's frontmatter
+- AVOID example fixes → edit the skill body
+- Agent knowledge wiring → edit `agent-context-map.yaml`
+- Parking lot triage updates → edit the discipline file
+- Knowledge conflict resolution → edit the project knowledge file
+
+Log all applied changes in the migration report (§4.6). Log all skipped findings too — they serve as tech debt awareness.
+
+**Why this matters:** Without this step, new knowledge lands in `ops/sdlc/knowledge/` but the project's existing skills and agents continue operating with stale assumptions. The knowledge is available but not applied. This step closes the gap between "framework updated" and "project benefits from the update."
+
 ---
 
 ## Phase 4: Verification
@@ -428,9 +522,17 @@ After migration, update `.sdlc-manifest.json` with the new source version:
 - Project agent domain content (scope, principles, workflow, anti-rationalization)
 - Knowledge file `spec_relevant` project overrides (true values restored after upstream copy)
 
+### Downstream Impact Analysis (§3.4)
+- Skills scanned: N
+- Agents scanned: N
+- Findings: N (applied: N, skipped: N)
+- Applied: [list changes made]
+- Skipped: [list findings deferred — serves as tech debt awareness]
+
 ### Gates Passed
 - §1.2 Changelog review: user confirmed migration summary
 - §2.5 Content-merge verification: tracker intact, parking lots preserved, skills spot-checked
+- §3.4 Downstream impact: user reviewed findings
 - §4.3a CLAUDE-SDLC.md compatibility: no stale references / [list fixes]
 
 ### Verification
@@ -458,6 +560,8 @@ After migration, update `.sdlc-manifest.json` with the new source version:
 | "I'll remove this agent mapping that cc-sdlc doesn't have" | Project-specific mappings are intentional. Never remove them. |
 | "No files were deleted, so §2.1a doesn't apply" | Always check. Moved files appear as add+delete pairs, not renames. |
 | "I'll just read the file from the cc-sdlc directory" | Use `git -C [path] show HEAD:file` — never raw filesystem reads. The repo may have uncommitted WIP. |
+| "New knowledge files are installed, so the project benefits automatically" | Knowledge in ops/sdlc/ is available but not applied until skills and agents are updated to use it. §3.4 closes this gap. |
+| "I'll auto-fix all the downstream impact findings" | Present findings to the user. They choose what to apply — some findings may not suit the project's context. |
 
 ## Integration
 

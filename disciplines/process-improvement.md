@@ -90,14 +90,34 @@ The discipline has documented, reusable knowledge. Methodology exists, patterns 
 
 - **2026-03-23 [migration]**: Agent memory files contain hardcoded knowledge paths that bypass the context map. [NEEDS VALIDATION] During migration, §2.1a scans the context map and skill/discipline files for stale paths after file moves — but agent memories (`.claude/agent-memory/*.md`) are a second source of path references. Two stale paths were found during a real migration. Now addressed in sdlc-migrate §2.1a step 4.
 
+### External Ingestion — 2026-03-30
+
+*Bulk import from two AI Engineer conference transcripts: "No Vibes Allowed: Solving Hard Problems in Complex Codebases" (Dex) and "Don't Build Agents, Build Skills Instead" (Barry Zhang & Mahesh Murag, Anthropic).*
+
+- **Scripts-as-tools within skills.** [NEEDS VALIDATION] Skills currently contain only markdown instructions — all procedural logic is re-derived by the model each time. Skills could contain executable scripts that agents call via Bash for deterministic, repeatable operations. Examples: manifest validation in `sdlc-audit`, YAML linting for knowledge entries, changelog entry formatting. Benefits: consistency (identical output per run), token efficiency (running a script costs fewer tokens than re-deriving logic), debuggability (scripts are version-controlled and testable independently). (Source: Anthropic "Don't Build Agents, Build Skills" talk — they observed Claude repeatedly writing the same Python script, so they saved it as a reusable tool within the skill folder.)
+
+- **Skill testing, evaluation, and versioning.** [NEEDS VALIDATION] As skills grow more complex, treat them like software: add evaluation harnesses to measure output quality, track skill versions with behavioral changelogs, and declare explicit dependencies between skills, MCP servers, and runtime packages. This would make skill behavior more predictable across runtime environments and enable regression detection when skills change. (Source: Anthropic "Don't Build Agents, Build Skills" talk — identified as a focus area for their skills roadmap.) **Reinforced by Tessl empirical data (2026-03-30):** Tessl's four-dimension skill review rubric (completeness, actionability, conciseness, robustness — each scored 0–3, max 24) improved a Fastify skill from 67% to 94% task success. Their three-tier eval ladder (Skill Review → Task Evals → Repo Evals) provides a progressive quality ramp. Critically, a perfect static review score does NOT confirm agent behavior — the Fastify skill scored 100% on review but had regressions only evals caught. (Source: Tessl "Three Context Eval Methodologies", "Skill-Optimizer", "Bright Kid Part 2")
+
+### External Ingestion — 2026-03-30 (Tessl Engineering Blog)
+
+*Bulk import from 11 Tessl Engineering Blog articles. See `docs/research/Tessl-Engineering-Blog-Reference.md` for full catalog.*
+
+- **Scripture/Commandments/Rituals skill layering model.** [NEEDS VALIDATION] Skills should be layered into three types based on when and how they execute: Scripture (on-demand workflow guidance, ~5.3k tokens, lazy-loaded), Commandments (always-on non-negotiable rules, ~2.8k tokens, loaded every session), and Rituals (deterministic executable scripts, run identically each time). The decision algorithm: Must it ALWAYS happen? → Commandment. Requires interpreting prose? → Scripture. Can be computed deterministically? → Ritual. Tessl improved behavioral compliance from 28% to 99% using this architecture. This directly reinforces the "Scripts-as-tools within skills" entry above — Rituals ARE the script layer. (Source: Tessl "Our AI Is the Bright Kid with No Manners" Parts 1 & 2)
+
+- **Skill activation design is as important as skill content.** [NEEDS VALIDATION] A skill achieving 96% success when activated scored 0% when not activated — and initial activation rate was only ~10%. Fix: change description from advisory framing ("Best practices for X") to mandatory framing ("Rules that MUST be followed when working on X"). Also add task-level nudge: "MUST use applicable skills if relevant." Activation rate increased to 57–83%. Measure activation rate as a distinct metric from task pass rate. (Source: Tessl "Do Agent Skills Actually Help? A Controlled Experiment" — Harbor framework, 30 trials per configuration)
+
+- **AVOID examples in skills are a regression risk.** [NEEDS VALIDATION] Tessl's Fastify skill contained a callback-style AVOID example in hooks.md. The agent followed the anti-pattern example rather than the instruction, causing a regression (baseline outperformed the skill on that criterion). AVOID sections require special care — consider showing only the correct pattern, or explicitly framing the anti-pattern with "DO NOT do this: [example] — instead do: [correct pattern]." (Source: Tessl "Skill-Optimizer" — hooks.md finding in database-plugin-architecture scenario)
+
+- **Context volume is not quality — strip what doesn't move the needle.** [NEEDS VALIDATION] Unvalidated developer-written context files improved performance by only +4%; LLM-generated context files degraded performance by -3%. Both increased cost by >20%. Meanwhile, validated Tessl registry skills showed 1.79x improvement. A 200-line context file the model ignores is worse than a 10-line file with three reliable instructions. The feedback loop: add an instruction → run evals → keep only what moves pass rates up. (Source: Tessl "Your AGENTS.md File Isn't the Problem" — external study statistics via Theo/t3.gg, primary study not identified. Treat as directionally suggestive.)
+
 ### Process Maturity Tracker
 
 <!-- PROJECT-TRACKER-START: Do not overwrite during migration. These levels are project-assessed. -->
 | Discipline | Level | Evidence |
 |-----------|-------|----------|
-| Testing | 2 | 7-file knowledge store, testing paradigm, gotchas, tool patterns |
+| Testing | 2 | 8-file knowledge store, testing paradigm, gotchas, tool patterns, AI-generated code verification |
 | Design | 2 | 3-file knowledge store, UX modeling methodology, a11y-testability principles |
-| Coding | 2 | 3-file knowledge store, code quality principles, TypeScript patterns |
+| Coding | 2 | 4-file knowledge store, code quality principles, TypeScript patterns, context engineering patterns |
 | Architecture | 2 | 17-file knowledge store, comprehensive methodology coverage |
 | Data Modeling | 2 | 5-file knowledge store, UDM patterns, assessment templates |
 | Product Research | 2 | 5-file knowledge store, competitive analysis methodology, risk assessment |

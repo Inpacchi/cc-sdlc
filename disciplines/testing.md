@@ -76,3 +76,11 @@ This rule exists because of a real failure mode: a test agent declared a feature
 - **CLI auto-generates idiomatic locator code.** [NEEDS VALIDATION] When using Playwright's interactive CLI, every command outputs the equivalent Playwright JS. The catalog should capture these directly as the canonical access path.
 
 - **Mobile testing pipeline.** [NEEDS VALIDATION] Playwright's `devices` config (e.g., `devices['Pixel 7']`) enables mobile emulation. Auth fixtures must forward `contextOptions` through the context factory so device emulation (viewport, userAgent, hasTouch, isMobile) carries through. Use viewport-aware storageState cache keys (e.g., `_mobile` suffix for viewports < 768px) to prevent desktop/mobile auth state cross-contamination.
+
+### External Ingestion — 2026-03-30 (Tessl Engineering Blog)
+
+*Bulk import from Tessl Engineering Blog. See `docs/research/Tessl-Engineering-Blog-Reference.md` for full catalog.*
+
+- **Eval contamination masks real weaknesses.** [NEEDS VALIDATION] Tessl discovered that auto-generated evaluation scenarios that included inline file content (CONTRIBUTING.md, AI_POLICY.md) produced 93% baseline scores. Reducing task descriptions to single-sentence prompts with no breadcrumbs dropped the baseline to 15%. The critical test: "Does the agent search for signals nobody highlighted?" — not "Does the agent follow rules when given explicitly?" When designing evals for framework skills, ensure the eval simulates real-world discovery conditions, not open-book conditions. (Source: Tessl "Our AI Is the Bright Kid with No Manners Part 2" — controlled evaluation across 4 demo repos, 7 scenarios)
+
+- **Behavioral compliance is distinct from functional correctness.** [NEEDS VALIDATION] AI agents can produce correct code while failing 85% of behavioral requirements (contribution guidelines, changelog updates, AI disclosure, DCO sign-offs). Traditional test suites only check functional correctness. A separate behavioral compliance evaluation is needed for agent-assisted workflows — especially in OSS contribution, code review, and any context with process rules beyond "does the code work." Promoted to knowledge: `knowledge/testing/ai-generated-code-verification.yaml` (behavioral_compliance section). (Source: Tessl "Our AI Is the Bright Kid with No Manners Part 1" — 15% behavioral compliance despite correct code)
