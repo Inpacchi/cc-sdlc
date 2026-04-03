@@ -34,6 +34,22 @@ Each entry contains:
 
 ---
 
+## 2026-04-02: POST-GATE stub audit + plan contract review briefing
+
+**Origin:** Execution session where an agent (sdet) delivered a stub implementation (`run_llm_judge` returning hardcoded values) instead of the real Claude API integration the plan specified. The stub built clean, passed file deviation checks, and went undetected through the review-fix loop because reviewers assessed code quality without knowing what the plan required.
+
+**What happened:** Two process gaps were identified: (1) POST-GATE checks verify files exist and build passes but do not scan for stub implementations, and (2) review agents are dispatched without the plan's specification, so they check "is this code correct?" rather than "does this implement what the plan specified?"
+
+**Changes made:**
+
+1. **`skills/sdlc-execute/SKILL.md`** — Added mandatory stub audit to POST-GATE: greps plan-specified files for stub indicators (`TODO`, `FIXME`, `NotImplementedError`, `placeholder`, `pass` as lone body, hardcoded returns on plan-specified functions). Intermediate phases log and track stubs; final phase treats them as defects requiring re-dispatch. Added plan contract briefing to completion review: reviewers receive the plan's expected behavior, acceptance criteria, and implementation approach to enable plan compliance review alongside code quality review.
+2. **`skills/sdlc-lite-execute/SKILL.md`** — Same two additions: stub audit in POST-GATE and plan contract briefing in completion review.
+3. **`process/review-fix-loop.md`** — Added plan contract injection guidance to Step A: when the loop is invoked from an execution skill, each reviewer's dispatch prompt must include the plan's specification for the work under review.
+
+**Rationale:** A syntactically valid stub is invisible to build checks and code quality review. Catching stubs requires two things: a mechanical scan (the stub audit) and informed reviewers who know what was supposed to be implemented (the plan contract). Together, these close the gap between "code that builds" and "code that delivers what the plan specified."
+
+---
+
 ## 2026-03-30: Migration downstream impact analysis (§3.4)
 
 **Origin:** Framework ingestion revealed that new knowledge files land in child projects but existing skills and agents continue operating with stale assumptions. The gap between "framework updated" and "project benefits" needed a systematic bridge.

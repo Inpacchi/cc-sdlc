@@ -14,6 +14,8 @@ Use the plan's agent assignment table (or the original review's agent list) as t
 
 **Review agents report findings only. They do NOT fix anything.** Fixes are dispatched in Step C after the manager classifies each finding. An agent that fixes inline during review has bypassed the triage gate — that is a process failure, not a shortcut.
 
+**Plan contract injection (when available):** When the review-fix loop is invoked from an execution skill (`sdlc-execute`, `sdlc-lite-execute`), the plan document is available. Each reviewer's dispatch prompt must include the plan's specification for the work they are reviewing — expected behavior, acceptance criteria, and implementation approach. This enables **plan compliance review**: reviewers check "does the implementation match what was specified?" alongside standard code quality checks. Without the plan contract, a well-structured stub that builds clean will pass review — the reviewer has no way to know the plan required a real implementation.
+
 Before dispatching, output this checklist:
 
 ```
