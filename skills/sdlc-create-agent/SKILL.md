@@ -63,12 +63,14 @@ Generate each field:
 - Research: `Read, Glob, Grep, WebFetch, WebSearch`
 
 **color:** Must not conflict with existing agents. Semantic guidance:
-- blue/cyan: analysis, review, architecture
-- green: implementation, generation
-- yellow: validation, caution
-- red: security, critical
-- magenta: creative, design
-- orange: engineering, infrastructure
+- green: core product
+- cyan: architecture + domain
+- orange: infrastructure
+- red: quality + debugging
+- yellow: SDLC process
+- blue: business intelligence
+- purple: product + design
+- pink: creative / external
 
 **memory:** Set to `project` only if the agent needs session-to-session continuity. Omit if stateless.
 

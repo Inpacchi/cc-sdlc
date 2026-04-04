@@ -40,14 +40,16 @@ FRONTMATTER REFERENCE:
     - Research: Read, Glob, Grep, WebFetch, WebSearch
 
   color:
-    Options: blue | cyan | green | yellow | magenta | red | orange | pink
+    Options: green | cyan | orange | red | yellow | blue | purple | pink
     Semantic guidance:
-    - blue/cyan: analysis, review, architecture
-    - green: implementation, generation
-    - yellow: validation, caution
-    - red: security, critical
-    - magenta: creative, design
-    - orange: engineering, infrastructure
+    - green: core product
+    - cyan: architecture + domain
+    - orange: infrastructure
+    - red: quality + debugging
+    - yellow: SDLC process
+    - blue: business intelligence
+    - purple: product + design
+    - pink: creative / external
 
   memory:
     Set to "project" if the agent has a persistent memory directory.
