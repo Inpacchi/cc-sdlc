@@ -2,7 +2,7 @@
 name: sdlc-lite-execute
 description: >
   Execute a lightweight plan that was produced by sdlc-lite-plan. Worker domain agents implement the phases,
-  review the completed work, and fix findings. No spec or result doc — just the plan. Deliverable is tracked in the catalog with tier: lite.
+  review the completed work, and fix findings. Produces a result doc capturing what was built. Deliverable is tracked in the catalog with tier: lite.
   Trigger when someone says "execute the lite plan", "go ahead with the plan", "start the lite work",
   or after sdlc-lite-plan has produced a reviewed plan and the user confirms execution via the plan mode prompt.
   The plan file lives at docs/current_work/sdlc-lite/dNN_{slug}_plan.md — load it from there.
@@ -41,7 +41,7 @@ digraph sdlc_lite_execution {
     "Any findings?" [shape=diamond];
     "2c. Triage + Fix\n(finding agent fixes)" [shape=box];
     "2d. Return to 2a\n(re-review ALL agents)" [shape=box, style=bold];
-    "3. Output Worker Agent Reviews" [shape=box];
+    "3. Output Worker Agent Reviews\n+ Write result doc" [shape=box];
     "4. Verify + commit + clean up" [shape=doublecircle];
 
     "0. Load plan from\ndocs/current_work/sdlc-lite/" -> "Plan file exists?";
@@ -57,8 +57,8 @@ digraph sdlc_lite_execution {
     "Any findings?" -> "2c. Triage + Fix\n(finding agent fixes)" [label="yes"];
     "2c. Triage + Fix\n(finding agent fixes)" -> "2d. Return to 2a\n(re-review ALL agents)";
     "2d. Return to 2a\n(re-review ALL agents)" -> "2a. Dispatch ALL relevant agents\nfor review";
-    "Any findings?" -> "3. Output Worker Agent Reviews" [label="no — all clean"];
-    "3. Output Worker Agent Reviews" -> "4. Verify + commit + clean up";
+    "Any findings?" -> "3. Output Worker Agent Reviews\n+ Write result doc" [label="no — all clean"];
+    "3. Output Worker Agent Reviews\n+ Write result doc" -> "4. Verify + commit + clean up";
 }
 ```
 
@@ -158,9 +158,11 @@ After ALL phases are done, run the **Review-Fix Loop** per `ops/sdlc/process/rev
 
 When the loop exits cleanly, output "Review loop complete — all agents clean. Proceeding to Worker Agent Reviews." then go to step 3.
 
-### 3. Worker Agent Reviews
+### 3. Worker Agent Reviews + Result Doc
 
-Every SDLC-Lite execution ends with this section, presented in conversation. This step is only reached when 2b shows ALL agents reporting no issues.
+Every SDLC-Lite execution ends with a Worker Agent Reviews section and a result doc. This step is only reached when 2b shows ALL agents reporting no issues.
+
+**3a. Worker Agent Reviews**
 
 ```markdown
 ## Worker Agent Reviews
@@ -177,7 +179,20 @@ Key feedback incorporated:
 - Omit agents that found no issues
 - This section is mandatory — the work is not done without it
 
-### 3a. Discipline Capture
+**3b. Write Result Doc**
+
+Save a result doc to: `docs/current_work/sdlc-lite/dNN_{slug}_result.md`
+
+Reference the template at `ops/sdlc/templates/sdlc_lite_result_template.md`. The result doc captures:
+- What was built (summary + file lists)
+- Deviations from the plan (from POST-GATE logs)
+- Acceptance criteria verification (map each criterion from the plan to pass/partial/deferred)
+- Worker Agent Reviews (append the section from 3a)
+- Follow-up items
+
+The result doc lives alongside the plan file in `docs/current_work/sdlc-lite/`. When the plan is moved to `completed/`, the result doc moves with it.
+
+### 3c. Discipline Capture
 
 Run the discipline capture protocol per `ops/sdlc/process/discipline_capture.md`. Context format: `[DNN — phase N]`. This includes structured gap detection (using the review-fix triage table and agent dispatch data from this session) followed by the freeform insight scan.
 
@@ -187,6 +202,7 @@ Run the discipline capture protocol per `ops/sdlc/process/discipline_capture.md`
 2. Review the git diff for unintended changes
 3. Stage **all** modified files — not just application code. Check every category:
    - Application code and test files
+   - Result doc (`docs/current_work/sdlc-lite/dNN_*_result.md`)
    - Discipline parking lot entries (`ops/sdlc/disciplines/*.md`)
    - Knowledge store updates (`ops/sdlc/knowledge/*.md`)
    - Plan file move (step 6 below)
@@ -200,7 +216,7 @@ Run the discipline capture protocol per `ops/sdlc/process/discipline_capture.md`
    Co-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>
    ```
 5. **Deployment guide (if applicable):** If the work touches infrastructure that requires manual deployment steps beyond an automatic CI/CD deploy (e.g., Cloud Functions, search index config, database indexes/rules, environment variables), present a concise deployment guide to the user. Include: deploy commands in order, any backfill/migration steps, and post-deploy verification checks. Skip this step for changes that deploy automatically.
-6. Move the plan file to `docs/current_work/sdlc-lite/completed/` — preserves the "why this approach" context for reconciliation
+6. Move the plan file and result doc to `docs/current_work/sdlc-lite/completed/` — preserves the "why this approach" and "what was built" context for reconciliation
 7. Present the full commit to the user:
 
 ```
@@ -219,7 +235,7 @@ The Manager Rule remains in effect per `ops/sdlc/process/manager-rule.md` — se
 
 ## What This Skill Does NOT Do
 
-- **Lite artifacts only.** No spec or result doc. The deliverable is tracked in the catalog (tier: lite) and has a plan file, but no other SDLC artifacts.
+- **No spec.** Lite deliverables skip the spec. The deliverable is tracked in the catalog (tier: lite) and has a plan file and result doc, but no spec.
 
 ## Red Flags
 

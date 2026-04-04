@@ -3,7 +3,7 @@ name: sdlc-lite-plan
 description: >
   Create lightweight plans for work that doesn't warrant full SDLC tracking but is too complex to wing it.
   Use this skill when the work has moderate complexity — it benefits from domain agent review and a structured
-  plan but doesn't need a spec or result doc. Registers a deliverable ID (tier: lite). Complexity is the trigger, not file count.
+  plan but doesn't need a spec. Registers a deliverable ID (tier: lite). Complexity is the trigger, not file count.
   Trigger when someone says "make a quick plan", "lite plan", "plan this out", "let's plan before we code",
   "sdlc lite", or when you identify work during exploration that the user has confirmed should proceed
   without full SDLC tracking. Also use when the user explicitly declines SDLC tracking.
@@ -31,10 +31,12 @@ If the work introduces entirely new subsystems or architectural patterns — tha
 
 ## Output
 
-This skill produces two things:
+This skill produces:
 
 1. **Plan file** at `docs/current_work/sdlc-lite/dNN_{slug}_plan.md` — persists across context clears, uses a deliverable ID from the catalog
 2. **Plan mode prompt** via `EnterPlanMode` — gives the user the standard execution options (clear context, bypass permissions, etc.)
+
+The execution skill (`sdlc-lite-execute`) will additionally produce a **result doc** at `docs/current_work/sdlc-lite/dNN_{slug}_result.md` — capturing what was built, deviations, and acceptance criteria verification.
 
 ## The Process
 

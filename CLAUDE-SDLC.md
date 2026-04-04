@@ -48,7 +48,7 @@ CC produces SDLC artifacts across two skills:
 |------|------|-------------|
 | **Idea Exploration** (`sdlc-idea`) | The user has a thought or direction but isn't ready to commit to requirements | Idea brief (optional), saved to `docs/current_work/ideas/` |
 | **Full SDLC** (`sdlc-plan` → `sdlc-execute`) | New features, architectural changes, new integrations, new subsystems | Deliverable ID, spec, plan, result doc, chronicle |
-| **SDLC-Lite** (`sdlc-lite-plan` → `sdlc-lite-execute`) | Work complex enough to benefit from a reviewed plan up front, but doesn't need spec or result docs | Deliverable ID (tier: lite), plan file, agent review, catalog entry |
+| **SDLC-Lite** (`sdlc-lite-plan` → `sdlc-lite-execute`) | Work complex enough to benefit from a reviewed plan up front, but doesn't need a spec | Deliverable ID (tier: lite), plan file, result doc, agent review, catalog entry |
 | **Direct dispatch** (no skill) | CD is steering in real-time — describing goals, testing results, giving feedback | Agents do the work, CC orchestrates, CD drives iteration |
 
 **Choosing a tier:** If the user isn't sure what they want yet → `sdlc-idea`. If the work benefits from a **plan artifact that survives context clears** → SDLC or SDLC-Lite. If the user is actively steering and iterating in conversation → direct dispatch.

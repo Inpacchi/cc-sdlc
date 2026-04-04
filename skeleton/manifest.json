@@ -75,7 +75,8 @@
       "templates/compliance_audit_template.md",
       "templates/concept_index_template.md",
       "templates/test_spec_template.md",
-      "templates/sdlc_lite_plan_template.md"
+      "templates/sdlc_lite_plan_template.md",
+      "templates/sdlc_lite_result_template.md"
     ],
     "examples": [
       "examples/spec_example.md",

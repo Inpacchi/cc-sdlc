@@ -10,18 +10,18 @@ The framework is designed to be adopted incrementally — start with the core pr
 
 ## What's Included
 
-| Directory | Contents |
-|-----------|----------|
-| `process/` | Workflow documentation (overview, lifecycle, collaboration model, ad hoc reconciliation, compliance audit, chronicle organization) |
-| `templates/` | Document templates for specs, plans, results, prompts, and audits |
-| `examples/` | Filled-out examples of spec, plan, and result documents |
-| `disciplines/` | Persistent "parking lots" for capturing cross-project insights by discipline |
-| `knowledge/` | Structured YAML knowledge stores — patterns, methodologies, test strategies |
-| `playbooks/` | Recipes for recurring task types (add your own as patterns emerge) |
-| `skills/` | Claude Code skills for SDLC workflow automation |
-| `agents/` | Agent definitions — `AGENT_TEMPLATE.md` for adding your own project agents |
-| `skeleton/` | Directory structure manifest for project initialization |
-| `plugins/` | Plugin setup guides (context7 required, LSP recommended) |
+| Directory      | Contents                                                                                                                           |
+| -------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| `process/`     | Workflow documentation (overview, lifecycle, collaboration model, ad hoc reconciliation, compliance audit, chronicle organization) |
+| `templates/`   | Document templates for specs, plans, results, prompts, and audits                                                                  |
+| `examples/`    | Filled-out examples of spec, plan, and result documents                                                                            |
+| `disciplines/` | Persistent "parking lots" for capturing cross-project insights by discipline                                                       |
+| `knowledge/`   | Structured YAML knowledge stores — patterns, methodologies, test strategies                                                        |
+| `playbooks/`   | Recipes for recurring task types (add your own as patterns emerge)                                                                 |
+| `skills/`      | Claude Code skills for SDLC workflow automation                                                                                    |
+| `agents/`      | Agent definitions — `AGENT_TEMPLATE.md` for adding your own project agents                                                         |
+| `skeleton/`    | Directory structure manifest for project initialization                                                                            |
+| `plugins/`     | Plugin setup guides (context7 required, LSP recommended)                                                                           |
 
 ## Quick Start
 
@@ -48,15 +48,15 @@ Idea → Spec (CD approves) → Plan (reviewed) → Execute → Review → Resul
 
 **SDLC commands you'll use regularly:**
 
-| Trigger | What Happens |
-|---------|-------------|
-| "Let's build X" / "New feature" | Invokes `sdlc-plan` — spec + plan |
-| "Execute the plan" | Invokes `sdlc-execute` — implement + review + result |
-| "Let's catalog our ad hoc work" | Invokes `sdlc-reconcile` — reconciles untracked commits |
-| "Let's organize the chronicles" | Invokes `sdlc-archive` — moves completed work to archive |
-| `/sdlc-audit` | Compliance audit — deliverable integrity, knowledge health, migration correctness |
-| `/sdlc-audit improve <session>` | Improvement audit — analyze sessions/commits for process improvements |
-| "Make a playbook from that session" | Invokes `sdlc-playbook-generate` — session-to-playbook extraction |
+| Trigger                             | What Happens                                                                      |
+| ----------------------------------- | --------------------------------------------------------------------------------- |
+| "Let's build X" / "New feature"     | Invokes `sdlc-plan` — spec + plan                                                 |
+| "Execute the plan"                  | Invokes `sdlc-execute` — implement + review + result                              |
+| "Let's catalog our ad hoc work"     | Invokes `sdlc-reconcile` — reconciles untracked commits                           |
+| "Let's organize the chronicles"     | Invokes `sdlc-archive` — moves completed work to archive                          |
+| `/sdlc-audit`                       | Compliance audit — deliverable integrity, knowledge health, migration correctness |
+| `/sdlc-audit improve <session>`     | Improvement audit — analyze sessions/commits for process improvements             |
+| "Make a playbook from that session" | Invokes `sdlc-playbook-generate` — session-to-playbook extraction                 |
 
 ## Core Concepts
 
@@ -72,7 +72,7 @@ Sequential identifiers (D1, D2, ... Dnn) that track work across the project life
 - **CC (Claude Code):** The entire agent system — specs, plans, implements, reviews
 
 ### Three Tiers
-Not everything needs a full spec → plan → result cycle. **SDLC-Lite** registers a deliverable ID (tier: lite) and produces a plan — no spec or result doc. **Direct dispatch** skips the plan entirely — CD steers in real-time, agents do the work. Reconcile untracked work periodically with `sdlc-reconcile`.
+Not everything needs a full spec → plan → result cycle. **SDLC-Lite** registers a deliverable ID (tier: lite) and produces a plan and result doc — no spec. **Direct dispatch** skips the plan entirely — CD steers in real-time, agents do the work. Reconcile untracked work periodically with `sdlc-reconcile`.
 
 ## Knowledge Layer
 

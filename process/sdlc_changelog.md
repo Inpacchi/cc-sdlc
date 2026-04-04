@@ -34,6 +34,23 @@ Each entry contains:
 
 ---
 
+## 2026-04-03: SDLC-Lite result doc — every plan ends with a result
+
+**Origin:** User directive — all plans (full and lite) should produce a result doc capturing what was built.
+
+**What happened:** SDLC-Lite executions previously produced no result doc — the plan was the only artifact. This made it harder to trace what was actually implemented vs. what was planned, especially when reviewing completed lite work later.
+
+**Changes made:**
+
+1. **`skills/sdlc-lite-execute/SKILL.md`** — Added result doc generation at step 3b (after Worker Agent Reviews). Result doc saved to `docs/current_work/sdlc-lite/dNN_{slug}_result.md` alongside the plan. Moved with plan to `completed/` on finish. Updated description, process diagram, commit file list, and "What This Skill Does NOT Do" section.
+2. **`skills/sdlc-lite-plan/SKILL.md`** — Removed "doesn't need a result doc" from description.
+3. **`templates/sdlc_lite_result_template.md`** — New template for lite result docs. Lighter than the full result template (no spec reference, no testing section) but captures: summary, files created/modified, deviations, acceptance criteria verification, follow-ups.
+4. **`skeleton/manifest.json`** — Added `templates/sdlc_lite_result_template.md` to source_files.templates.
+
+**Rationale:** Result docs are the institutional memory of what was built and why deviations occurred. Without them, lite deliverables become invisible in the chronicle — you can see the plan but not the outcome. Every plan should end with a result, regardless of tier.
+
+---
+
 ## 2026-04-02: POST-GATE stub audit + plan contract review briefing
 
 **Origin:** Execution session where an agent (sdet) delivered a stub implementation (`run_llm_judge` returning hardcoded values) instead of the real Claude API integration the plan specified. The stub built clean, passed file deviation checks, and went undetected through the review-fix loop because reviewers assessed code quality without knowing what the plan required.
