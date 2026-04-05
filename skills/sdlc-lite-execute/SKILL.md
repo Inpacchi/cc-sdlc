@@ -220,14 +220,16 @@ Run the discipline capture protocol per `ops/sdlc/process/discipline_capture.md`
    - Knowledge store updates (`ops/sdlc/knowledge/*.md`)
    - Plan file move (step 6 below)
    - Any other SDLC artifacts modified during execution
-4. Commit with conventional commit format (see project CLAUDE.md):
+4. Commit using the cc-sdlc commit format:
    ```
-   {type}[({scope})]: {description}
+   {type}[{deliverable_id}]({scope}): {description}
 
    {optional body — brief summary of what was changed and why}
 
    Co-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>
    ```
+   **Types:** `feat` (new feature), `fix` (bug fix), `refactor` (restructure, no behavior change), `docs` (documentation only), `test` (adding/updating tests), `chore` (build, config, tooling, dependencies), `style` (formatting, no logic change), `perf` (performance improvement), `ci` (CI/CD changes), `sdlc` (SDLC process, skills, agents, or framework changes)
+   **Example:** `feat[D-042](auth): add session refresh endpoint`
 5. **Deployment guide (if applicable):** If the work touches infrastructure that requires manual deployment steps beyond an automatic CI/CD deploy (e.g., Cloud Functions, search index config, database indexes/rules, environment variables), present a concise deployment guide to the user. Include: deploy commands in order, any backfill/migration steps, and post-deploy verification checks. Skip this step for changes that deploy automatically.
 6. Move the plan file and result doc to `docs/current_work/sdlc-lite/completed/` — preserves the "why this approach" and "what was built" context for reconciliation
 7. Present the full commit to the user:

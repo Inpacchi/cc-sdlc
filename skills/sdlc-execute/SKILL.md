@@ -261,7 +261,16 @@ Before claiming the work is done:
    - Knowledge store updates (`ops/sdlc/knowledge/*.md`)
    - Process changelog (`ops/sdlc/process/sdlc_changelog.md`) if updated
    - Review fixes from the review loop
-5. Commit with conventional commit format (see project CLAUDE.md)
+5. Commit using the cc-sdlc commit format:
+   ```
+   {type}[{deliverable_id}]({scope}): {description}
+
+   {optional body — brief summary of what was changed and why}
+
+   Co-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>
+   ```
+   **Types:** `feat` (new feature), `fix` (bug fix), `refactor` (restructure, no behavior change), `docs` (documentation only), `test` (adding/updating tests), `chore` (build, config, tooling, dependencies), `style` (formatting, no logic change), `perf` (performance improvement), `ci` (CI/CD changes), `sdlc` (SDLC process, skills, agents, or framework changes)
+   **Example:** `feat[D-042](auth): add session refresh endpoint`
 6. Present the full commit to the user:
 
 ```

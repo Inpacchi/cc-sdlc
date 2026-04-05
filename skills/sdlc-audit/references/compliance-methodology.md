@@ -196,7 +196,7 @@ When auditing specific commits:
 2. Cross-reference against `docs/_index.md` — do commits map to tracked deliverables?
 3. Flag multi-file changes without deliverable tracking
 4. Check whether new components/modules/routes have corresponding specs
-5. Verify commit message conventions
+5. Verify commit message conventions — must follow `{type}[{deliverable_id}]({scope}): {description}` format with valid type (`feat`, `fix`, `refactor`, `docs`, `test`, `chore`, `style`, `perf`, `ci`, `sdlc`) and a deliverable ID that maps to `docs/_index.md`
 
 ## Step 11: Interactive Triage
 

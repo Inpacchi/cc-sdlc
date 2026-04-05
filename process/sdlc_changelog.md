@@ -34,6 +34,22 @@ Each entry contains:
 
 ---
 
+## 2026-04-05: Commit format — deliverable ID required, type set defined
+
+**Origin:** User request to improve commit traceability by embedding the deliverable ID directly in every commit message.
+
+**What happened:** The previous commit format used generic conventional commits (`{type}[({scope})]: {description}`) with no required link to a deliverable. Traceability depended on the audit system cross-referencing commit messages against `docs/_index.md` after the fact. Embedding the deliverable ID in the commit itself makes the link explicit and machine-parseable.
+
+**Changes made:**
+
+1. **`skills/sdlc-execute/SKILL.md`** — Replaced "conventional commit format (see project CLAUDE.md)" with the full cc-sdlc commit format: `{type}[{deliverable_id}]({scope}): {description}`. Added defined type set including new `sdlc` type.
+2. **`skills/sdlc-lite-execute/SKILL.md`** — Same update: new format template, type set, and example.
+3. **`skills/sdlc-audit/references/compliance-methodology.md`** — Updated convention check (step 5) to verify the new format and valid types.
+
+**Rationale:** Deliverable IDs in commit messages create a direct, grep-friendly link between code changes and tracked work. The defined type set (including `sdlc` for framework changes) removes ambiguity about which prefix to use. This strengthens audit dimension 3 (untracked work detection) by making the absence of a deliverable ID immediately visible.
+
+---
+
 ## 2026-04-05: REVIEW-GATE — mandatory no-pause transition from phases to review
 
 **Origin:** D69 execution session — model completed all 7 phases, then paused to present a summary and ask "next steps?" instead of automatically entering the review loop.
