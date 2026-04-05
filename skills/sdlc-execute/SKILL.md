@@ -87,7 +87,9 @@ digraph execution {
     "1b. DISPATCH worker domain agent(s)\nper plan assignment\n(you do NOT implement)" -> "1c. POST-GATE\n- [build command]\n- Files match plan?\n- Flag deviations to CD";
     "1c. POST-GATE\n- [build command]\n- Files match plan?\n- Flag deviations to CD" -> "All phases complete?";
     "All phases complete?" -> "1a. PRE-GATE\n- Pattern Reuse Gate\n- Phase triage: BUILD / SKIP / REVISE_PLAN\n- Verify dependencies complete" [label="no — next phase/wave"];
-    "All phases complete?" -> "2a. Output checklist of ALL agents\nDispatch ALL of them" [label="yes"];
+    "All phases complete?" -> "REVIEW-GATE\n(mandatory — no pause)" [label="yes"];
+    "REVIEW-GATE\n(mandatory — no pause)" [shape=box, style=bold, color=red];
+    "REVIEW-GATE\n(mandatory — no pause)" -> "2a. Output checklist of ALL agents\nDispatch ALL of them";
     "2a. Output checklist of ALL agents\nDispatch ALL of them" -> "2b. Collect findings table\nfrom ALL agents";
     "2b. Collect findings table\nfrom ALL agents" -> "Any findings?";
     "Any findings?" -> "2c. Triage + Fix all findings\n(finding agent fixes it)" [label="yes"];
@@ -188,6 +190,17 @@ Phase 3: UI components (depends on Phase 1, NOT Phase 2)
 ```
 
 ### 2. Completion Review
+
+**MANDATORY — NO PAUSE.** When the last phase's POST-GATE clears, proceed directly to the review loop. A brief phase summary is fine, but do not stop and wait for user input — no "what's next?", no "ready to review?", no waiting for confirmation. The plan already defines the review agents — emit the REVIEW-GATE block and dispatch them in the same response. Phase completion is a waypoint, not a stopping point.
+
+You must emit this block before dispatching review agents:
+
+```
+REVIEW-GATE — entering completion review
+Phases completed: [list phase numbers]
+Review agents (from plan): [list all agent names]
+Dispatching: [count] agents
+```
 
 After ALL phases are done, run the **Review-Fix Loop** per `ops/sdlc/process/review-fix-loop.md`. Agent source: the plan's agent assignment table. Classifications: use all five per `ops/sdlc/process/finding-classification.md` (FIX, PLAN, INVESTIGATE, DECIDE, PRE-EXISTING).
 
@@ -308,6 +321,7 @@ When the deliverable is complete, the "Let's organize the chronicles" command mo
 | "This finding is about code I didn't modify in that file" | If the file is in the plan's Files list, the finding is in scope. File presence is the test, not function-level diff. |
 | "The review loop finished cleanly" | Output the exit announcement before proceeding. Silent state transitions cause drift. |
 | "Build passes, fixes are done — moving on" | Build-pass is step 4, not the review loop exit. After ANY fix round, return to 2a and dispatch ALL agents. Only exit when 2b shows all agents clean. Two audits caught this same skip. |
+| "All phases complete — here's a summary" *(then waits for user input)* | Summaries are fine — stopping is not. Emit the summary, then REVIEW-GATE and dispatch review agents in the same response. The plan defines the review agents; no user input is needed to proceed. |
 | "I noted the file deviation but didn't log it" | Deviations don't require approval, but they MUST be logged in the POST-GATE output and included in the result doc's Deviations section. Silent absorption defeats traceability. |
 | "This is a fix dispatch, not a phase dispatch" | Fix dispatches follow the same protocol as phase dispatches. |
 | "Phase 2's agent did Phase 3's work — I'll skip Phase 3" | Note the overlap to CD. Dispatch Phase 3 to verify completeness and implement what remains. |

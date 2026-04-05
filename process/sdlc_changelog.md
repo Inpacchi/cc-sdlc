@@ -34,6 +34,21 @@ Each entry contains:
 
 ---
 
+## 2026-04-05: REVIEW-GATE — mandatory no-pause transition from phases to review
+
+**Origin:** D69 execution session — model completed all 7 phases, then paused to present a summary and ask "next steps?" instead of automatically entering the review loop.
+
+**What happened:** Both execution skills (sdlc-execute and sdlc-lite-execute) defined the review loop as mandatory after phase completion, but the transition had no structural enforcement. PRE-GATE and POST-GATE work because they require a mandatory output block — the model must emit the block before proceeding. The phases-to-review transition had no equivalent, so the model treated phase completion as a natural stopping point.
+
+**Changes made:**
+
+1. **`skills/sdlc-execute/SKILL.md`** — Added REVIEW-GATE mandatory output block at step 2 with "MANDATORY — NO PAUSE" callout. Added REVIEW-GATE node to process diagram (red, bold). Added red flag: "All phases complete — here's a summary" / "Next steps?"
+2. **`skills/sdlc-lite-execute/SKILL.md`** — Same three changes: REVIEW-GATE block, diagram node, red flag entry.
+
+**Rationale:** Mandatory output blocks (PRE-GATE, POST-GATE) are the most effective adherence mechanism in the framework — they force the model to emit structured content before it can proceed, which prevents silent skips. The review loop was the only critical transition without one. Adding REVIEW-GATE applies the same pattern: the model must emit the gate block (listing phases completed and review agents from the plan) before dispatching reviewers. Phase summaries are allowed — the problem is stopping to wait for user input when the plan already defines what comes next.
+
+---
+
 ## 2026-04-03: SDLC-Lite result doc — every plan ends with a result
 
 **Origin:** User directive — all plans (full and lite) should produce a result doc capturing what was built.
