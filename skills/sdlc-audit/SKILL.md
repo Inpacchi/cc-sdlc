@@ -67,7 +67,7 @@ DISPATCH AUDITOR → REPORT → TRIAGE → FIX
 3. **Untracked work detection** — git commits without deliverable tracking
 4. **Knowledge freshness** — CLAUDE.md, agent memories, docs current
 5. **Process health indicators** — tracked vs untracked ratio, archive freshness, changelog coverage
-6. **Knowledge layer health** — disciplines, knowledge stores, triage status, wiring, playbooks, usage
+6. **Knowledge layer health** — disciplines, knowledge stores, triage status, wiring, playbooks, usage, staleness by age, cross-file contradictions, coverage gaps
 7. **Migration integrity** — manifest version, file completeness, content-merge correctness
 8. **Agent memory pattern mining** — recurring findings worth promoting
 9. **Recommendation follow-through** — previous audit recommendations acted on?

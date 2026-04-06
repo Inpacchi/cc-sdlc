@@ -43,7 +43,7 @@ Read and follow `ops/sdlc/process/manager-rule.md`. The research-analyst agents 
 ## Workflow
 
 ```
-SCOPE ──> DISCOVER ──> RESEARCH ──> CURATE ──> SAVE ──> REPORT
+SCOPE ──> DISCOVER ──> RESEARCH ──> CURATE ──> SAVE ──> PROVENANCE ──> REPORT
   (you)     (you)      (agents)     (you)     (agent)    (you)
                           │
                     ┌─────┴─────┐
@@ -55,7 +55,7 @@ SCOPE ──> DISCOVER ──> RESEARCH ──> CURATE ──> SAVE ──> REPO
               (one per source, in parallel)
 ```
 
-- **You** handle steps 1, 2, 4, 6 (scoping, discovery, curation, reporting)
+- **You** handle steps 1, 2, 4, 6, 7 (scoping, discovery, curation, provenance, reporting)
 - **research-analyst agents** handle step 3 (fetching, reading, classifying articles)
 - **general-purpose agent** handles step 5 (writing large docs)
 - When multiple sources are researched, dispatch all research agents in a single parallel batch
@@ -145,7 +145,23 @@ When agent results return, curate into a reference doc:
    - Link to the new reference doc
    - Include article count
 
-### 6. Report
+### 6. Provenance
+
+Append entries to the provenance log to create a prepared handoff for `sdlc-ingest`:
+
+1. Read `knowledge/provenance_log.md` (or target project's `ops/sdlc/knowledge/provenance_log.md`) to determine the next `prov-YYYY-MM-DD-NNN` ID
+2. Append one entry per researched source with:
+   - `status: pending-review`
+   - `source-type: reference-doc`
+   - `source`: path to the saved reference doc from step 5
+   - `source-url`: the source blog/site URL
+   - `discipline`: primary discipline(s) the content maps to (from SCOPE domain classification)
+   - `tier-1-count`: number of Tier 1 articles found
+   - `tier-2-count`: number of Tier 2 articles found
+   - `notes`: company/source name + brief relevance summary
+3. Omit ingestion-specific fields (`files-created`, `files-updated`, `rule-count`, `ingested-by`) — those are populated when `sdlc-ingest` consumes the entry
+
+### 7. Report
 
 Present a summary to the user:
 - Source researched
@@ -153,6 +169,7 @@ Present a summary to the user:
 - Top 3-5 most relevant articles with URLs
 - Key gaps noted
 - Doc location
+- Provenance log entries created (IDs and status)
 
 ## Agent Selection
 
@@ -180,7 +197,7 @@ Present a summary to the user:
 ## Integration
 
 - **Depends on:** A research/reference directory in the project, project domain knowledge (from agent definitions, knowledge stores, or user input)
-- **Feeds into:** `sdlc-ingest` (when the team wants to extract rules from discovered articles into SDLC knowledge stores)
+- **Feeds into:** `sdlc-ingest` (when the team wants to extract rules from discovered articles into SDLC knowledge stores). The provenance log (`knowledge/provenance_log.md`) is the prepared handoff mechanism — research creates `pending-review` entries, the user approves them to `approved-for-ingest`, and `sdlc-ingest` can consume approved entries directly via "ingest from provenance"
 - **Uses:** `research-analyst` agent (primary), `general-purpose` agent (doc writing), WebFetch, WebSearch
 - **Complements:** `sdlc-ingest` (this discovers, ingest absorbs), `sdlc-idea` (research may spark ideas)
 - **Does NOT replace:** `sdlc-ingest` (that extracts rules into knowledge stores; this catalogs external articles), direct WebSearch (for specific one-off questions)

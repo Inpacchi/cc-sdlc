@@ -9,7 +9,7 @@ Full methodology for SDLC compliance auditing. Covers all 9 audit dimensions, re
 3. **Orphan Detection**: List files in `docs/current_work/` and `docs/chronicle/` not accounted for in catalog
 4. **Git Cross-Reference**: Check recent commits for untracked substantial work
 5. **Freshness Check**: Assess CLAUDE.md files and memory files for accuracy
-6. **Knowledge Layer Scan**: Audit disciplines, knowledge stores, triage status, wiring, context map, playbooks, usage
+6. **Knowledge Layer Scan**: Audit disciplines, knowledge stores, triage status, wiring, context map, playbooks, usage, staleness by age, cross-file contradictions, coverage gaps
 7. **Migration Integrity**: Verify manifest version, file completeness, content-merge, stale references
 8. **Agent Memory Mining**: Scan agent memories for recurring patterns worth promoting
 9. **Recommendation Follow-Through**: Check whether previous audit recommendations were acted on
@@ -153,6 +153,61 @@ Five usage signals per discipline:
 | Agent feedback | Agents reporting on knowledge quality | Silent (gradual adoption ok) | N/A |
 
 Report as table with interpretation (healthy / formalized-but-dead / alive-but-unformalized / dead).
+
+### 6h. Knowledge Staleness by Age
+
+Read `ops/sdlc/knowledge/provenance_log.md` for each knowledge file's last ingestion or refresh date.
+
+**Thresholds** (projects can override via `ops/sdlc/knowledge/provenance_log.md` header):
+- **>180 days** since last ingestion/refresh in an **active discipline** (discipline usage = healthy or alive-but-unformalized): **Warning**
+- **>90 days** since last ingestion/refresh (early warning): **Info**
+- **No provenance entry** for a knowledge file (pre-dates the log): **Info** — note as "no provenance record, age unknown"
+
+**How to check:**
+1. List all knowledge YAML files across `ops/sdlc/knowledge/`
+2. For each, search `ops/sdlc/knowledge/provenance_log.md` for entries with matching `files-created` or `files-updated` paths
+3. Use the most recent matching entry's date as "last refreshed"
+4. If no entry exists, check git blame for the file's last substantive modification date as a fallback
+5. Compare against thresholds; only flag active disciplines at Warning level
+
+### 6i. Cross-File Contradiction Detection
+
+Heuristic scan for conflicting guidance across knowledge files within the same discipline and across disciplines.
+
+**Contradiction patterns to detect:**
+- **Direct negation** — one file says "always X" while another says "never X" or "avoid X"
+- **Conflicting defaults** — two files recommend different default values for the same setting or threshold
+- **Overlapping scope with divergent advice** — two files cover the same topic area but give incompatible guidance (e.g., testing knowledge says "mock external services" while coding knowledge says "never mock — use real integrations")
+
+**Contradiction-prone areas** (check these first):
+- Testing vs coding on mocking strategy and test isolation
+- Architecture vs deployment on service boundaries and coupling
+- Design vs coding on component structure and abstraction levels
+- Security rules vs convenience patterns (strict validation vs developer ergonomics)
+
+**All findings are "potential"** — the audit flags them for human confirmation. Severity: **Warning** for all detected contradictions.
+
+**Output format per finding:**
+```
+POTENTIAL CONTRADICTION
+  File A: [path] — "[quoted guidance]"
+  File B: [path] — "[quoted guidance]"
+  Conflict: [brief description of why these may conflict]
+```
+
+### 6j. Coverage Gap Detection
+
+Identify areas where the knowledge layer has structural gaps.
+
+**What to check:**
+
+1. **Disciplines with promotable entries but no knowledge store** — discipline parking lot has `[READY TO PROMOTE]` entries but no corresponding `ops/sdlc/knowledge/<discipline>/` directory. Severity: **Warning** (actionable — promotion is blocked).
+
+2. **Knowledge files not referenced by any agent** — extends 6e (agent context map integrity). Any YAML file in `ops/sdlc/knowledge/` not listed in any agent's mapping in `agent-context-map.yaml`. Severity: **Warning** (the knowledge exists but no agent consumes it).
+
+3. **Agents with empty knowledge mappings** — agents listed in `agent-context-map.yaml` with an empty file list, or agents in `.claude/agents/` not present in the context map at all. Severity: **Info** (possibly intentional for simple utility agents).
+
+4. **Discipline-to-knowledge store alignment** — disciplines at Level 2+ in the Process Maturity Tracker should have a corresponding knowledge store directory. Flag Level 2+ disciplines without stores. Severity: **Warning**.
 
 ## Dimension 7: Migration Integrity
 
@@ -301,6 +356,15 @@ Promoted: N | Deferred: N | Skipped: N
 
 #### Playbook Freshness
 [per-playbook status]
+
+#### Knowledge Staleness (6h)
+[per-file staleness status — last refreshed date, threshold comparison]
+
+#### Cross-File Contradictions (6i)
+[potential contradictions found, or "No contradictions detected"]
+
+#### Coverage Gaps (6j)
+[promotable entries without stores, unreferenced knowledge files, empty agent mappings]
 
 ### Migration Integrity
 - Manifest version: [hash] ([age] behind)

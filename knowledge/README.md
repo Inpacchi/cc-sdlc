@@ -36,6 +36,17 @@ Cross-project knowledge accumulates here; project-specific knowledge stays local
 
 **Accelerating knowledge stores:** Beyond organic discipline capture, the `sdlc-ingest` skill enables bulk import of external content (transcripts, articles, documentation) directly into knowledge files and discipline parking lots.
 
+### Provenance Log
+
+The `provenance_log.md` file in this directory is an append-only record of where knowledge entered the knowledge layer. Every ingestion (via `sdlc-ingest`) and every research handoff (via `research-external`) creates an entry with source attribution, status, and — once ingested — the files created or updated and rule counts.
+
+**Purpose:**
+- **Staleness tracing** — the audit system (`sdlc-audit` dimension 6h) reads provenance entries to detect knowledge files that haven't been refreshed
+- **Audit lineage** — every knowledge file can be traced back to its source material
+- **Research handoff** — `research-external` writes `pending-review` entries; once approved, `sdlc-ingest` can consume them directly via "ingest from provenance"
+
+**Status lifecycle:** `pending-review` -> `approved-for-ingest` -> `ingested` (or `rejected` at any point). The user manually transitions entries from `pending-review` to `approved-for-ingest` after reviewing the source material.
+
 ## Knowledge File Metadata Fields
 
 All knowledge YAML files share a common metadata header. While domain-specific content varies, these top-level fields are standardized:

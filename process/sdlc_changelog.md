@@ -34,6 +34,26 @@ Each entry contains:
 
 ---
 
+## 2026-04-06: Knowledge provenance log, health lint, and research handoff
+
+**Origin:** Inspired by Karpathy's "LLM Wiki" pattern — the knowledge layer needed source tracing, staleness detection, and a prepared handoff between research and ingestion.
+
+**What happened:** Three interconnected enhancements to the knowledge layer: (1) a provenance log for tracking where knowledge came from, (2) new audit sub-dimensions for detecting staleness, contradictions, and coverage gaps, and (3) a research-to-ingest handoff via the provenance log.
+
+**Changes made:**
+
+1. **`knowledge/provenance_log.md`** — Created append-only provenance log with entry format, status lifecycle (`pending-review` -> `approved-for-ingest` -> `ingested`), and ID convention (`prov-YYYY-MM-DD-NNN`)
+2. **`knowledge/README.md`** — Added Provenance Log section documenting purpose (staleness tracing, audit lineage, research handoff) and status lifecycle
+3. **`skeleton/manifest.json`** — Added `knowledge/provenance_log.md` to `source_files.knowledge`
+4. **`skills/sdlc-ingest/SKILL.md`** — Added PROVENANCE step (step 6) between PLACE and REPORT; records ingestion in provenance log with files created/updated and rule counts. Added "ingest from provenance" alternative input mode that consumes `approved-for-ingest` entries
+5. **`skills/research-external/SKILL.md`** — Added PROVENANCE step (step 6) between SAVE and REPORT; creates `pending-review` entries per source with tier counts. Updated integration section to document provenance log as the handoff mechanism
+6. **`skills/sdlc-audit/references/compliance-methodology.md`** — Added three new sub-dimensions: 6h (knowledge staleness by age — 180-day warning threshold), 6i (cross-file contradiction detection — heuristic scan for conflicting guidance), 6j (coverage gap detection — promotable entries without stores, unreferenced knowledge files, empty agent mappings)
+7. **`skills/sdlc-audit/SKILL.md`** — Updated Dimension 6 summary to mention staleness, contradictions, and coverage gaps
+
+**Rationale:** The knowledge layer previously had no record of where knowledge came from or when it was last refreshed. The provenance log creates an audit trail that enables the three capabilities: staleness detection catches knowledge that drifts from current practice, contradiction detection catches divergent guidance across files, and the research handoff eliminates the manual step of remembering which research output is ready for ingestion.
+
+---
+
 ## 2026-04-05: Commit format — deliverable ID required, type set defined
 
 **Origin:** User request to improve commit traceability by embedding the deliverable ID directly in every commit message.

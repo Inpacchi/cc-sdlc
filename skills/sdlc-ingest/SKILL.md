@@ -54,12 +54,26 @@ Signs this skill is NOT appropriate:
 ## Workflow
 
 ```
-SURVEY → SCOPE → EXTRACT → STRUCTURE → PLACE → REPORT
+SURVEY → SCOPE → EXTRACT → STRUCTURE → PLACE → PROVENANCE → REPORT → CHANGELOG
 ```
 
 The flow is sequential. Each step must complete before the next begins. The user confirms scope (step 2) before extraction begins.
 
 ## Steps
+
+### Alternative Input: Ingest from Provenance
+
+If the user says "ingest from provenance", "ingest approved research", or similar:
+
+1. Read `knowledge/provenance_log.md` (or target project's `ops/sdlc/knowledge/provenance_log.md`)
+2. Filter for entries with `status: approved-for-ingest`
+3. Present matching entries for the user to select
+4. For each selected entry, read the reference doc at the `source` path to get article URLs
+5. Fetch content via research-analyst agents using WebFetch
+6. Proceed with normal EXTRACT flow (step 3) using the fetched content
+7. After completion, update the selected provenance entry's status to `ingested` (in the PROVENANCE step)
+
+This mode replaces steps 1-2 (SURVEY and SCOPE) — the provenance entry already contains source metadata and discipline targeting.
 
 ### 1. Survey the Content
 
@@ -201,13 +215,30 @@ Route each output to its correct destination:
 - Write new YAML files or append to existing ones
 - Update the knowledge store's `README.md` to list new files
 - If new files are created, add them to the README's structure listing and "Knowledge Categories" table
-- If ingested knowledge is likely spec-relevant (domain models, design principles, product methodology), note it in the report (Step 6) so the project team can evaluate whether to set `spec_relevant: true`
+- If ingested knowledge is likely spec-relevant (domain models, design principles, product methodology), note it in the report (Step 7) so the project team can evaluate whether to set `spec_relevant: true`
 
 **Playbook updates:**
 - If a related playbook exists, check whether new rules should be added to its checklist
 - If enough rules cluster around a specific task type to warrant a new playbook, note it in the report but do not auto-create — propose the playbook structure for CD approval
 
-### 6. Report
+### 6. Provenance
+
+Record the ingestion in the provenance log:
+
+1. Read `knowledge/provenance_log.md` (or target project's `ops/sdlc/knowledge/provenance_log.md`) to determine the next `prov-YYYY-MM-DD-NNN` ID
+2. **If consuming an `approved-for-ingest` entry** (from-provenance mode): update that entry's status to `ingested` and populate the ingestion fields (`files-created`, `files-updated`, `rule-count`, `ingested-by: sdlc-ingest`)
+3. **Otherwise** (normal mode): append a new entry with:
+   - `status: ingested`
+   - `source-type`: based on input (file, directory, url, etc.)
+   - `source`: the path or description from SURVEY
+   - `discipline`: the target discipline from SCOPE
+   - `files-created`: paths of new YAML files from PLACE
+   - `files-updated`: paths of existing files modified in PLACE
+   - `rule-count`: total new rules created
+   - `ingested-by: sdlc-ingest`
+   - `notes`: source characterization from SURVEY
+
+### 7. Report
 
 Present a structured summary of what was ingested:
 
@@ -249,7 +280,7 @@ SPEC RELEVANCE
   Potentially spec-relevant: [list files that may warrant override to true, with rationale]
 ```
 
-### 7. Changelog Update
+### 8. Changelog Update
 
 Update `ops/sdlc/process/sdlc_changelog.md` with the ingestion event:
 
