@@ -230,9 +230,8 @@ Run the discipline capture protocol per `ops/sdlc/process/discipline_capture.md`
    ```
    **Types:** `feat` (new feature), `fix` (bug fix), `refactor` (restructure, no behavior change), `docs` (documentation only), `test` (adding/updating tests), `chore` (build, config, tooling, dependencies), `style` (formatting, no logic change), `perf` (performance improvement), `ci` (CI/CD changes), `sdlc` (SDLC process, skills, agents, or framework changes)
    **Example:** `feat[D-042](auth): add session refresh endpoint`
-5. **Deployment guide (if applicable):** If the work touches infrastructure that requires manual deployment steps beyond an automatic CI/CD deploy (e.g., Cloud Functions, search index config, database indexes/rules, environment variables), present a concise deployment guide to the user. Include: deploy commands in order, any backfill/migration steps, and post-deploy verification checks. Skip this step for changes that deploy automatically.
-6. Move the plan file and result doc to `docs/current_work/sdlc-lite/completed/` — preserves the "why this approach" and "what was built" context for reconciliation
-7. Present the full commit to the user:
+5. Move the plan file and result doc to `docs/current_work/sdlc-lite/completed/` — preserves the "why this approach" and "what was built" context for reconciliation
+6. Present the full commit to the user:
 
 ```
 Commit: {short-sha}
@@ -243,6 +242,52 @@ Files changed:
 - {file path}
 - {file path}
 ```
+
+7. Emit the **Completion Report** (step 5)
+
+### 5. Completion Report
+
+Every execution MUST end with a Completion Report presented to the user. This is the final output — the definitive summary of what happened. Emit this block after all commits are made:
+
+```
+COMPLETION REPORT — [deliverable ID]
+═══════════════════════════════════════
+
+## Summary
+[2-3 sentences: what was built, the core value delivered]
+
+## Commits
+| Commit | Repo | Description |
+|--------|------|-------------|
+| {short-sha} | {repo name} | {commit message title} |
+
+## What Changed (detailed)
+- [file or component]: [what changed and why]
+- [file or component]: [what changed and why]
+
+## Infrastructure Changes
+- [what needs to happen outside of the code — deployments, migrations, env vars, accounts, API keys, database changes, search index config, etc.]
+
+## Smoke Tests
+- [ ] [user-facing action — what to do in the app and what to verify]
+- [ ] [another user-facing action]
+
+## Deeper Testing
+- [area]: [what to test and why it's worth deeper attention]
+
+## Known Gaps / Deferred Items
+- [what was deliberately skipped or left incomplete, and why]
+
+## Next Steps
+- [planned forward motion — what comes next]
+```
+
+**Rules:**
+- **Smoke tests are user-facing actions.** "Open the app and navigate to X", "Try creating a Y", "Check that Z appears on the dashboard." These are things you do in the running application — NOT CLI commands. Exception: if the deliverable's domain is CLI/terminal tooling (e.g., a CLI app, build scripts, developer tools, CME/LME), then commands are the appropriate smoke test format.
+- **Omit sections when empty.** Infrastructure Changes, Known Gaps, and Next Steps should be omitted entirely when not applicable. Don't include empty sections or "none" placeholders.
+- **"What Changed" is exhaustive** — every meaningful change, not just the highlights. This is the audit trail.
+- **"Known Gaps" is separate from "Next Steps."** Gaps = deliberately incomplete or skipped. Next steps = planned forward motion. They serve different purposes.
+- **Infrastructure Changes absorbs the deployment guide.** If the work requires manual deployment steps, environment variables, migrations, database changes, or account setup, it goes here. This replaces the standalone deployment guide step.
 
 ### Session Handoff
 

@@ -34,6 +34,21 @@ Each entry contains:
 
 ---
 
+## 2026-04-06: Add mandatory Completion Report to execution skills
+
+**Origin:** CD feedback — executions ended with commits and scattered output, no structured summary of what happened, what to verify, or what's next.
+
+**What happened:** Identified that plan executions lacked a structured closing output. Commits were tracked per-phase but there was no single artifact that captured: what was built, what changed in detail, infrastructure needs, smoke tests, areas for deeper QA, known gaps, and next steps. The standalone deployment guide step was also disconnected from the rest of the summary.
+
+**Changes made:**
+
+1. **`skills/sdlc-execute/SKILL.md`** — Added "Step 5: Completion Report" as mandatory final output block. Folded the standalone deployment guide (old step 7) into the report's "Infrastructure Changes" section. Renumbered final verify substeps. Smoke tests defined as user-facing app actions, not CLI commands (exception: CLI/terminal domain deliverables).
+2. **`skills/sdlc-lite-execute/SKILL.md`** — Added identical "Step 5: Completion Report" block. Folded deployment guide (old step 5) into the report. Renumbered final verify substeps. Same smoke test rules.
+
+**Rationale:** A structured completion report gives the CD a single artifact to review after every execution — what happened, what to check, what's deferred, what's next. Smoke tests as user-facing actions (not CLI commands) ensure verification matches how the product is actually used. Separating "Known Gaps" from "Next Steps" distinguishes deliberate incompleteness from forward motion.
+
+---
+
 ## 2026-04-06: CS146S course analysis — 10 improvements across process, knowledge, skills, and disciplines
 
 **Origin:** Analysis of Stanford CS146S "The Modern Software Developer" (Fall 2025) course syllabus and reading materials, cross-referenced against existing cc-sdlc coverage. Sources fetched and grounded: Claude Code Best Practices (code.claude.com), Chroma "Context Rot" research, Anthropic "Writing Tools for Agents," Splunk "SAST vs DAST," Ravi Mehta "Specs Are the New Source Code," Google SRE Book Introduction, Resolve AI "Top 5 Benefits of Agentic AI in On-call," OutsightAI "Peeking Under the Hood of Claude Code," Semgrep "Finding Vulnerabilities Using Claude Code and OpenAI Codex," Embracethered "Copilot RCE via Prompt Injection" (CVE-2025-53773), Reddit r/vibecoding "How we vibe code at a FAANG," Google AutoCommenter paper (AIware '24, arXiv:2405.13565).
