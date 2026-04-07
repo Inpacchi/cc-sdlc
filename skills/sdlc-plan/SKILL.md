@@ -237,6 +237,35 @@ Gate: PASS | FAIL (need [N] more questions)
 
 Ask clarifying questions **one at a time** — batched questions get vague answers. Search the codebase BEFORE asking — don't ask what you can look up. Use LSP (`goToDefinition`, `findReferences`, `hover`) to verify function signatures, trace dependencies, and understand interface contracts — do not read files and infer types. Fall back to Grep for string literals and non-TypeScript content. If the gate shows FAIL, ask more questions before proceeding.
 
+<!-- Source: Claude Code Best Practices (code.claude.com/docs/en/best-practices) — "Let Claude interview you" pattern.
+     CS146S Wk 3: PRDs for agents.
+     Ravi Mehta, "Specs Are the New Source Code" (blog.ravi-mehta.com/p/specs-are-the-new-source-code):
+       - Specs are the durable artifact; generated code is transient output
+       - Vague specs produce messy codebases — specificity gates before implementation
+       - Document intent alongside requirements — code generation loses context
+       - Spec-driven testing: let specs define acceptance criteria AI must satisfy
+     Reddit r/vibecoding, "How we vibe code at a FAANG" (TreeTopologyTroubado):
+       - 7-step process: design doc → design review → development → sprint → implement (tests first) → code review → staging
+       - "The vibes are based on a design document" — ~30% speed increase
+       - AI coding agent writes tests first, then implementation follows
+       - TL;DR: "Always start with a solid design doc and architecture. Build from there in chunks. Always write tests first."
+     Google AutoCommenter paper (Vijayvergiya et al., AIware '24):
+       - AI code review at Google scale — used by tens of thousands of developers daily
+       - High confidence threshold (t=0.98) needed to manage developer trust
+       - Comments on unchanged code waste reviewer attention — filter to changed files only
+       - Nuanced best practices (naming, clarity) require human judgment; formatting can be automated -->
+**Deep interview technique:** Don't ask obvious questions — dig into the hard parts the user hasn't considered:
+- **Edge cases** — "What happens when [unusual but plausible scenario]?"
+- **Failure modes** — "If this breaks, what's the blast radius? How would you know?"
+- **Hidden dependencies** — "This assumes [X] will always be true. What if it isn't?"
+- **Scale implications** — "Does this need to work for 10 items or 10,000?"
+- **Second-order effects** — "If we build this, what else changes downstream?"
+- **Tradeoffs** — "If you had to choose between [A] and [B], which matters more?"
+
+The goal is to surface unknowns that would become expensive surprises during implementation. Questions that confirm what the user already knows are wasted questions.
+
+**Spec as durable artifact:** The spec is more durable than the code it produces. Code can be regenerated; the spec preserves intent, constraints, and decision context that generated code loses. Document *why* alongside *what* — a spec that only lists requirements without rationale becomes opaque the moment someone asks "why was it built this way?"
+
 **CHRONICLE-CONTEXT** — after the DISCOVERY-GATE passes, scan `docs/chronicle/` for concepts related to this task:
 
 1. List concept directories in `docs/chronicle/`
@@ -395,6 +424,8 @@ The plan MUST include:
 
   Constraint values must be concrete — "maximum 4 copies per card" not "a maximum copy count". If the value is a product decision the user hasn't made, mark it explicitly (e.g., `USER DECISION NEEDED: max table count — what should the limit be?`) so the reviewer routes it as a product decision for CD.
 - **A "Post-Execution Review" note at the end** — stating that all completed work must be reviewed by all relevant domain agents, and all findings must be fixed before the task is considered done
+
+**Tests-first consideration:** When the spec defines precise expected behavior with clear acceptance criteria, consider writing tests as an early implementation phase (Phase 1 or 2) so subsequent phases implement code to pass them. This front-loads verification and catches spec ambiguity early. The planning template includes a Test Phase Ordering checkbox — select the appropriate strategy. Tests-first is especially valuable for bug fixes (write a failing test that reproduces the bug, then fix it) and for features with well-defined input/output contracts.
 
 **Phase limit:** Plans are capped at 7 phases. If a plan reaches phase 8, **stop writing and split into sub-deliverables** (D1a, D1b) before continuing. Over-phased plans signal insufficient decomposition.
 

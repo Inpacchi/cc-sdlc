@@ -597,6 +597,133 @@ review_process:
 # Maintenance
 # ─────────────────────────────────────────────
 
+# ─────────────────────────────────────────────
+# Security Tooling Integration
+# ─────────────────────────────────────────────
+#
+# Source: CS146S Wk 6 topics (Secure vibe coding, SAST vs DAST) and guest
+#   speaker Isaac Evans (CEO Semgrep).
+#   Splunk, "SAST vs DAST" (splunk.com/en_us/blog/learn/sast-vs-dast.html):
+#     SAST = white-box (source access), early in SDLC, high false positives.
+#     DAST = black-box (runtime), late in SDLC, can't see inside code.
+#     Both required — SAST catches coding flaws, DAST catches misconfigurations.
+#   Semgrep blog, "Finding Vulnerabilities in Modern Web Apps Using Claude Code
+#     and OpenAI Codex" (semgrep.dev/blog/2025/finding-vulnerabilities-...):
+#     - Claude Code: 14% true positive rate (46/330 reports), 86% false positives
+#     - OpenAI Codex: 18% true positive rate (21/115 reports), 82% false positives
+#     - Non-determinism: identical prompts on same codebase yield different results
+#     - Agent review catches IDOR and auth bypass better than injection patterns
+#     - Semgrep's /security-review command underperformed targeted vulnerability prompts
+#     KEY IMPLICATION: Agent-based security review has high noise — tool-based SAST
+#     is far more reliable for known patterns. Use agents for design/logic flaws only.
+#   Embracethered, "GitHub Copilot RCE via Prompt Injection" (CVE-2025-53773):
+#     - Prompt injection in code/issues can modify agent security settings
+#     - Agents writing to .vscode/settings.json enabled auto-approve of all tools
+#     - Invisible Unicode characters bypass visual detection
+#     IMPLICATION: Agents must never modify their own permission/security settings.
+#   Extended from existing cc-sdlc Domain 4/5 patterns.
+#
+# Agent-based security review identifies design flaws and contextual risks
+# that tools cannot catch. Tool-based scanning identifies known vulnerability
+# patterns with zero false negatives for their rule sets. Both are required.
+# Tools run first (in the verification gate); agent review follows.
+
+security_tooling:
+  principle: >
+    Security findings from automated tools are machine-verified and reproducible.
+    They have higher confidence than agent opinions for the vulnerability classes
+    they cover. Agent review catches design-level issues, business logic flaws,
+    and novel attack patterns that tools miss. The combination is stronger than
+    either alone.
+
+  agent_vs_tool_reliability: >
+    Agent-based security scanning (prompting an LLM to find vulnerabilities) has
+    a measured ~85% false positive rate (Semgrep 2025 study: 14-18% TPR across
+    Claude Code and OpenAI Codex). Agents excel at contextual reasoning —
+    permission-check gaps, authorization logic flaws, IDOR patterns — but fail
+    at inter-procedural taint tracking and multi-file data flow analysis. Tool-based
+    SAST (Semgrep, ESLint) has near-zero false negatives for their rule sets but
+    cannot reason about business logic. The combination is: tools catch known
+    patterns reliably, agents catch design-level flaws with high noise. Never
+    rely on agent-only security review for production code.
+
+  agent_security_concerns: >
+    AI coding agents themselves are attack surfaces. Prompt injection embedded in
+    source code, issues, or tool responses can cause agents to modify their own
+    security settings (CVE-2025-53773: Copilot RCE via settings.json modification).
+    Agents must never: modify permission or security configuration files, execute
+    commands that disable safety checks, or write to .vscode/settings.json or
+    equivalent IDE config without explicit human approval. Invisible Unicode
+    characters in source code can carry instructions that bypass visual review.
+
+  sast_tools:
+    description: "Static Application Security Testing — analyzes source code without executing it (white-box, early in SDLC, high false positive rate but catches issues cheaply)"
+    tools:
+      semgrep:
+        purpose: "Pattern-based static analysis with custom rule support"
+        domains_covered: ["injection", "auth bypass", "secrets", "insecure defaults"]
+        integration: "Run as CI gate and in the verification gate (Step 0 of review-fix-loop)"
+        custom_rules: "Project-specific rules should be maintained in a .semgrep/ directory"
+        note: "Semgrep rules are pattern-based — they catch known patterns, not novel vulnerabilities"
+      eslint_security:
+        purpose: "JavaScript/TypeScript-specific security linting"
+        plugins: ["eslint-plugin-security", "eslint-plugin-no-unsanitized"]
+        domains_covered: ["eval injection", "prototype pollution", "unsafe regex"]
+        integration: "Run as part of standard lint step in verification gate"
+      bandit:
+        purpose: "Python-specific security linter"
+        domains_covered: ["shell injection", "hardcoded passwords", "insecure crypto"]
+        integration: "Run as CI gate for Python projects"
+
+  dependency_auditing:
+    description: "Automated scanning for known vulnerabilities in dependencies"
+    tools:
+      - name: "npm audit / pnpm audit"
+        when: "JavaScript/TypeScript projects"
+        integration: "CI gate with severity threshold (typically HIGH+)"
+      - name: "socket.dev"
+        when: "Supply chain risk analysis beyond CVEs"
+        covers: "Typosquatting, install scripts, maintenance risk"
+      - name: "trivy"
+        when: "Container image and filesystem scanning"
+        covers: "OS packages, language dependencies, misconfigurations"
+
+  dast_tools:
+    description: "Dynamic Application Security Testing — tests running applications (black-box, late in SDLC, catches runtime/config issues SAST misses)"
+    tools:
+      zap:
+        purpose: "OWASP ZAP — automated web application security scanner"
+        domains_covered: ["XSS", "SQL injection", "CSRF", "security headers"]
+        integration: "Run against staging environment in CI or pre-release"
+        limitation: "Cannot test authenticated flows without session configuration"
+      nuclei:
+        purpose: "Template-based vulnerability scanner"
+        domains_covered: ["CVE detection", "misconfiguration", "exposed panels"]
+        integration: "Run against staging with project-specific template set"
+
+  secret_scanning:
+    description: "Detect secrets committed to source control"
+    tools:
+      - name: "GitHub Advanced Security secret scanning"
+        integration: "Enable at repository level; alerts on push"
+      - name: "gitleaks"
+        integration: "Pre-commit hook and CI gate"
+      - name: "trufflehog"
+        integration: "CI gate; scans git history for historical leaks"
+
+  integration_with_review_loop: >
+    Security tooling runs in the verification gate (Step 0 of the review-fix-loop)
+    before any agent dispatch. Tool findings are treated as machine-verified:
+    they skip agent triage and go directly to FIX classification unless the
+    finding is clearly a false positive (which should be documented with a
+    suppression comment explaining why). Agent-based security review then runs
+    as a normal review dispatch, focusing on design-level and business-logic
+    concerns that tools cannot catch.
+
+# ─────────────────────────────────────────────
+# Maintenance
+# ─────────────────────────────────────────────
+
 maintenance:
   add_when: >
     A new class of vulnerability is found during a security review that does not fit

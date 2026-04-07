@@ -88,3 +88,83 @@ practical_guidelines:
       exists. Cross-project knowledge must be compact and high-signal because every
       byte competes for context space. Project-specific knowledge can be larger because
       it's loaded selectively by agents working in that project.
+
+# ─────────────────────────────────────────────
+# Session Degradation Patterns
+# ─────────────────────────────────────────────
+#
+# Source: Claude Code Best Practices (code.claude.com/docs/en/best-practices) —
+#   "Manage context aggressively" and "Avoid common failure patterns" sections.
+#   Chroma Research, "Context Rot" (trychroma.com/research/context-rot):
+#     - Models perform BETTER on shuffled haystacks than logically structured ones
+#     - Claude abstains when uncertain; GPT hallucinates confident wrong answers
+#     - Degradation starts above ~500 words for some tasks, intensifies with length
+#     - Lower semantic similarity between query and target accelerates degradation
+#     - Distractors have non-uniform impact — some cause far more degradation than others
+#   CS146S Wk 6: "Context Rot: Understanding Degradation in AI Context Windows."
+#
+# Context quality is not static — it degrades dynamically over a session
+# as failed approaches, corrections, tool output, and exploration accumulate.
+# Managing static token budgets (file sizes, knowledge loading) is necessary
+# but not sufficient. Session hygiene addresses the dynamic problem.
+
+session_degradation:
+  principle: >
+    LLM performance degrades as context fills — not just because capacity is
+    exhausted, but because the signal-to-noise ratio drops. A context window
+    full of failed approaches, corrections, and irrelevant file reads produces
+    worse output than a fresh context with only the approved plan loaded.
+    Counterintuitively, structured context can perform worse than shuffled
+    context — models may over-attend to narrative coherence rather than
+    extracting the specific information needed. Context engineering (deliberate
+    construction and management of what enters the window) matters more than
+    context size.
+
+  model_behavior_under_degradation:
+    claude: "Tends to abstain when uncertain — explicitly states it cannot find an answer. Preferable to hallucination but can stall workflows."
+    gpt_models: "Highest rates of hallucination — generates confident but incorrect responses. More dangerous in review contexts where wrong assertions pass as findings."
+    implication: >
+      Claude's abstention behavior means degraded context is more likely to produce
+      incomplete reviews than wrong reviews. GPT-family models in degraded context
+      produce plausible-sounding but incorrect findings. When using any model for
+      review in long sessions, bias toward false negatives (missed issues) is safer
+      than bias toward false positives (wrong findings that waste fix cycles).
+
+  degradation_signals:
+    - signal: "Agent repeats a mistake that was already corrected"
+      cause: "Trajectory poisoning — the conversation pattern has become 'error → correction → error'"
+      response: "Clear context and restart with better initial guidance. Do not correct a third time."
+    - signal: "Agent starts ignoring CLAUDE.md rules or plan constraints"
+      cause: "Critical instructions pushed out of effective attention by accumulated context"
+      response: "Compact or clear. If the session is long, the plan file may need to be re-read."
+    - signal: "Agent proposes approaches that contradict earlier agreed-upon decisions"
+      cause: "Earlier decisions have been compacted away or lost in noise"
+      response: "Re-read the plan or spec file to restore the decision context."
+    - signal: "Agent reads files it already read earlier in the session"
+      cause: "Earlier reads compacted; context no longer contains the information"
+      response: "This is normal after compaction but wastes tokens. Consider checkpointing and restarting."
+
+  session_hygiene_rules:
+    clear_between_phases: >
+      Each SDLC phase (spec, plan, execute) should start with a fresh context.
+      The plan file is the compaction artifact — it compresses all research and
+      decisions into a document that a fresh context can act on immediately.
+      Carrying planning context into execution wastes budget on information
+      the agent no longer needs.
+    subagent_for_exploration: >
+      When investigating a question that requires reading many files (understanding
+      how auth works, tracing a data flow, exploring test patterns), dispatch a
+      subagent. The subagent explores in its own context and returns a summary.
+      The main context stays clean for implementation. Exploration is the single
+      largest source of context pollution.
+    checkpoint_long_executions: >
+      For sdlc-execute runs that span many implementation phases, checkpoint
+      progress between phases. Each phase should start with only: the plan,
+      the current phase's scope, and a summary of what prior phases produced.
+      Do not carry full tool output history across phases.
+    two_correction_limit: >
+      If the agent makes the same category of mistake twice despite correction,
+      the context trajectory is poisoned. Clear and restart with a better initial
+      prompt that incorporates the lesson. A third correction in the same context
+      will almost certainly fail because the conversation pattern itself has become
+      the signal the model follows.

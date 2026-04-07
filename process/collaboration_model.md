@@ -134,6 +134,36 @@ As AI-generated code throughput increases, plan review becomes the primary mecha
 
 ---
 
+## Autonomy Spectrum
+
+<!-- Source: Claude Code Best Practices (code.claude.com/docs/en/best-practices) — auto mode and permission calibration.
+     CS146S Wk 4: Managing agent autonomy levels, Human-agent collaboration patterns.
+     Reddit "How we vibe code at a FAANG" (TreeTopologyTroubado): "the vibes are based on a design document" —
+       even at FAANG scale, AI-assisted coding starts with human-authored design docs reviewed by senior engineers.
+       The human role shifts from writing code to writing specs and reviewing output.
+     Medium/OutsightAI, "Peeking Under the Hood of Claude Code": Claude Code uses layered prompt scaffolding
+       with risk-gated command safety — different autonomy levels for different risk classes.
+     Embracethered, "GitHub Copilot RCE via Prompt Injection" (CVE-2025-53773): Agents modifying their own
+       security settings = privilege escalation. Auto-approve modes are attack surfaces. -->
+
+Not all tasks require the same level of human oversight. The CD/CC model is not binary (direct vs. execute) — it operates on a spectrum calibrated to the risk and reversibility of the work.
+
+| Level | Name | CC Behavior | CD Involvement | When |
+|-------|------|-------------|----------------|------|
+| **1** | **Full autonomy** | CC implements and commits without checking in | CD reviews async (PR review, result doc) | Bug fixes with clear reproduction, config changes, lint/format fixes, dependency patches |
+| **2** | **Guided autonomy** | CC proposes approach, implements after implicit approval (no objection) | CD sets direction, reviews output | Well-scoped tasks within established patterns, test writing, documentation |
+| **3** | **Collaborative** | CC proposes approach, waits for explicit approval before implementing | CD approves approach, reviews implementation | Multi-file features, new integrations, changes touching multiple domains |
+| **4** | **Directed** | CC presents options with tradeoffs, CD chooses, CC implements | CD makes design decisions, CC executes | Architectural changes, data model changes, API contract changes |
+| **5** | **Supervised** | CC explores via subagent with bounded scope, presents findings for CD decision | CD drives every significant decision | Security-critical changes, irreversible migrations, payment/PII flows |
+
+**Calibration heuristic:** Match autonomy level to the *cost of getting it wrong*. A typo fix costs nothing to revert (level 1). A database migration costs hours to undo (level 5). When in doubt, err toward lower autonomy — the cost of asking is low, the cost of an unwanted action can be high.
+
+**Subagent-bounded exploration (Level 5):** For high-risk domains, CC should explore options via subagents rather than accumulating exploration in the main context. The subagent returns a summary of findings; CD decides the direction; CC implements in a fresh context. This prevents both context pollution and premature commitment to an approach.
+
+**Dynamic adjustment:** Autonomy level can shift within a session. A task may start at level 3 (new feature, need to agree on approach) and shift to level 2 once the approach is approved and CC is implementing within established patterns. CD can explicitly adjust: "you're good, just run with it" (shift up) or "hold on, let me see each step" (shift down).
+
+---
+
 ## Anti-Patterns
 
 ### CD Anti-Patterns

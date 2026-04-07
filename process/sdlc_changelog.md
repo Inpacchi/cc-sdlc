@@ -34,6 +34,48 @@ Each entry contains:
 
 ---
 
+## 2026-04-06: CS146S course analysis — 10 improvements across process, knowledge, skills, and disciplines
+
+**Origin:** Analysis of Stanford CS146S "The Modern Software Developer" (Fall 2025) course syllabus and reading materials, cross-referenced against existing cc-sdlc coverage. Sources fetched and grounded: Claude Code Best Practices (code.claude.com), Chroma "Context Rot" research, Anthropic "Writing Tools for Agents," Splunk "SAST vs DAST," Ravi Mehta "Specs Are the New Source Code," Google SRE Book Introduction, Resolve AI "Top 5 Benefits of Agentic AI in On-call," OutsightAI "Peeking Under the Hood of Claude Code," Semgrep "Finding Vulnerabilities Using Claude Code and OpenAI Codex," Embracethered "Copilot RCE via Prompt Injection" (CVE-2025-53773), Reddit r/vibecoding "How we vibe code at a FAANG," Google AutoCommenter paper (AIware '24, arXiv:2405.13565).
+
+**What happened:** Reviewed the full course curriculum (10 weeks covering coding agents, MCP, IDE setup, agent patterns, testing/security, code review, UI building, post-deployment ops, and future trends) against our existing framework. Identified 7 improvements to existing coverage and 3 new additions.
+
+**Changes made:**
+
+1. **`process/review-fix-loop.md`** — Added Step 0: Verification Gate. Tests, type checks, linting, and SAST must pass before agent review dispatch. Also added context separation rule: review agents must be dispatched as subagents to prevent confirmation bias.
+   - *Source: Claude Code Best Practices (code.claude.com/docs/en/best-practices) — "Give Claude a way to verify its work" section and Writer/Reviewer pattern.*
+2. **`knowledge/architecture/token-economics.yaml`** — Added Session Degradation Patterns section. Covers dynamic context quality degradation, session hygiene rules (clear between phases, subagent for exploration, two-correction limit).
+   - *Source: Claude Code Best Practices (code.claude.com/docs/en/best-practices) — "Manage context aggressively" and "Avoid common failure patterns" sections. CS146S Wk 6 reading: "Context Rot: Understanding Degradation in AI Context Windows."*
+3. **`knowledge/architecture/security-review-taxonomy.yaml`** — Added Security Tooling Integration section. Covers SAST (Semgrep, ESLint security, Bandit), DAST (OWASP ZAP, Nuclei), dependency auditing, secret scanning. Wired into verification gate.
+   - *Source: CS146S Wk 6 topics (Secure vibe coding, SAST vs DAST) and guest speaker Isaac Evans (CEO Semgrep). Existing cc-sdlc security-review-taxonomy Domain 4/5 patterns extended.*
+4. **`process/collaboration_model.md`** — Added Autonomy Spectrum. Five-level autonomy scale from full autonomy (bug fixes) to supervised (security-critical).
+   - *Source: Claude Code Best Practices — auto mode and permission calibration sections. CS146S Wk 4 topics (Managing agent autonomy levels, Human-agent collaboration patterns). CS146S Wk 4 reading: "How Anthropic Uses Claude Code."*
+5. **`process/incident_response.md`** — NEW. Incident classification (SEV-1 through SEV-4), triage workflow, postmortem process, connection to deliverable lifecycle.
+   - *Source: CS146S Wk 9 topics (Monitoring and observability, Automated incident response, Triaging and debugging). CS146S Wk 9 readings: "Introduction to Site Reliability Engineering," "Benefits of Agentic AI in On-call Engineering." Existing cc-sdlc debugging-methodology.yaml for investigation approach.*
+6. **`templates/postmortem_template.md`** — NEW. Structured postmortem template with action item tracking.
+   - *Source: CS146S Wk 9 (SRE practices). Standard SRE postmortem format (Google SRE Book pattern).*
+7. **`skills/sdlc-idea/SKILL.md`** — Added deep interview technique to Socratic Questioning section.
+   - *Source: Claude Code Best Practices — "Let Claude interview you" pattern. CS146S Wk 3 reading: "Specs Are the New Source Code." CS146S Wk 3 topics (PRDs for agents).*
+8. **`skills/sdlc-plan/SKILL.md`** — Added deep interview technique to DISCOVERY-GATE questioning.
+   - *Source: Same as #7. Applied to planning context rather than exploration.*
+9. **`knowledge/architecture/prompt-engineering-patterns.yaml`** — Added Tool Design Patterns for AI Agents section. Covers naming, descriptions, parameters, error messages, composition.
+   - *Source: CS146S Wk 2 topics (Tool use and function calling) and Wk 3 reading: "Writing Effective Tools for Agents" (Anthropic). Claude Code Best Practices — tool design guidance in skills and MCP sections.*
+10. **`disciplines/observability.md`** — NEW. Three pillars (logs/metrics/traces), structured logging, RED/USE methods, alerting design, observability as review concern.
+    - *Source: CS146S Wk 9 topics (Monitoring and observability for AI systems). CS146S Wk 9 readings: "Introduction to Site Reliability Engineering," "Observability Basics You Should Know." Existing cc-sdlc deployment-patterns.yaml and debugging-methodology.yaml extended.*
+11. **`skeleton/manifest.json`** — Added `process/incident_response.md`, `templates/postmortem_template.md`, `disciplines/observability.md` to source_files.
+12. **`skills/sdlc-execute/SKILL.md`** — Added explicit Step 0 (Verification Gate) callout at the review-loop transition. Skills previously said "run per process doc" which would pick it up, but the verification gate is new enough to warrant explicit mention.
+    - *Source: Same as #1. Semgrep study: 85% false positive rate for agent security review makes tool verification essential.*
+13. **`skills/sdlc-lite-execute/SKILL.md`** — Same Step 0 callout as sdlc-execute.
+14. **`process/review-fix-loop.md`** — Added security finding calibration to Step C (Triage). Agent-based security findings not corroborated by tool output should be classified INVESTIGATE, not FIX.
+    - *Source: Semgrep blog (semgrep.dev/blog/2025/finding-vulnerabilities-...): 85% false positive rate across Claude Code and OpenAI Codex.*
+15. **`skills/sdlc-plan/SKILL.md`** — Added tests-first consideration to phase planning. When spec defines clear acceptance criteria, tests should be an early implementation phase.
+    - *Source: Reddit "How we vibe code at a FAANG": "I have the AI coding agent write the tests first for the feature I'm going to build. Only then do I start using the agent to build the feature." Ravi Mehta "Specs Are the New Source Code": spec-driven testing — let specs define acceptance criteria AI must satisfy.*
+16. **`templates/planning_template.md`** — Added Test Phase Ordering checkbox (tests-first vs tests-after) to Testing Strategy section.
+
+**Rationale:** The course highlighted that "covered" doesn't mean "optimized." Our review loop lacked machine verification before agent opinions. Our context management treated token budgets as static when the real problem is dynamic degradation. Our security review was opinion-based without tooling integration. These changes shift the framework from "agents have opinions" to "tools verify, agents reason about what tools can't catch."
+
+---
+
 ## 2026-04-06: Convention compliance fixes across skills and agents
 
 **Origin:** Post-commit review by `sdlc-reviewer` and `sdlc-compliance-auditor` agents across commits c4d70bb..HEAD.

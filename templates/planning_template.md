@@ -83,7 +83,15 @@
 
 ---
 
-## Testing
+## Testing Strategy
+
+<!-- Consider tests-first: if acceptance criteria are clear, write tests as an early
+     implementation phase so subsequent phases implement code to pass them. This is
+     especially valuable when the spec defines precise expected behavior. -->
+
+### Test Phase Ordering
+- [ ] **Tests-first** — Tests written as Phase 1 (or early phase), implementation follows to pass them
+- [ ] **Tests-after** — Implementation first, tests written after to verify behavior
 
 ### Manual Testing
 1. [Test step 1]

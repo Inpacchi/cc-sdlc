@@ -165,7 +165,7 @@ Review agents (from plan): [list all agent names]
 Dispatching: [count] agents
 ```
 
-After ALL phases are done, run the **Review-Fix Loop** per `ops/sdlc/process/review-fix-loop.md`. Agent source: the plan's agent assignment table. Classifications: use all five per `ops/sdlc/process/finding-classification.md`.
+After ALL phases are done, run the **Review-Fix Loop** per `ops/sdlc/process/review-fix-loop.md`. **Start with Step 0 (Verification Gate):** run tests, type checks, linting, and any configured SAST tooling BEFORE dispatching review agents. Fix any verification failures first. Agent source: the plan's agent assignment table. Classifications: use all five per `ops/sdlc/process/finding-classification.md`.
 
 **Plan contract briefing (mandatory):** When dispatching review agents in the loop, each agent's prompt must include the plan's specification for the phases they are reviewing — specifically: the expected behavior, acceptance criteria, and implementation approach from the plan. Reviewers check "does the implementation match what was specified?" in addition to "is the code well-written?" A well-structured stub passes code quality review but fails plan compliance review. Without the plan contract, reviewers can only assess code quality — they cannot detect whether the agent delivered what was actually asked for.
 

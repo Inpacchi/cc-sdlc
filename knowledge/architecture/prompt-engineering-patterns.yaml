@@ -344,3 +344,117 @@ nlp_production_patterns:
       - "Accuracy drops > 5% from baseline on monitored sample"
       - "PSI > 0.2 on key input features"
       - "Confidence score mean drops > 10% over 30-day window"
+
+# ─────────────────────────────────────────────
+# Tool Design Patterns for AI Agents
+# ─────────────────────────────────────────────
+#
+# Source: Anthropic Engineering Blog, "Writing Effective Tools for Agents"
+#   (anthropic.com/engineering/writing-tools-for-agents).
+#   CS146S Wk 2 topics (Tool use and function calling), Wk 3 reading.
+#   Claude Code Best Practices (code.claude.com/docs/en/best-practices).
+#
+# How to design tools (MCP tools, function calls, CLI wrappers) that
+# AI agents can use effectively. Poor tool design is a leading cause
+# of agent failure — the agent understands the task but can't figure
+# out how to use the tools available to it.
+
+tool_design_patterns:
+  principle: >
+    A tool is an interface between an agent and a capability. The agent
+    reads the tool's name, description, and parameter schema to decide
+    whether and how to use it. Every element of that interface is a
+    prompt — poor naming or vague descriptions cause the agent to
+    misuse or skip the tool entirely.
+
+  consolidation:
+    principle: >
+      Don't simply wrap API endpoints. More tools don't improve outcomes.
+      Build a few thoughtful tools targeting specific high-impact workflows.
+      Agents have different affordances than traditional software — they
+      operate with limited context.
+    examples:
+      - "One schedule_event tool instead of separate list_users, list_events, and create_event tools"
+      - "A search_logs tool that returns relevant lines with context, not raw read_logs"
+      - "A get_customer_context tool compiling recent information rather than separate lookup tools"
+    anti_pattern: "Wrapping every REST endpoint as a separate tool — creates a combinatorial explosion the agent can't navigate"
+
+  naming:
+    rules:
+      - "Use verb-noun format: create_user, search_files, get_schema — not user, files, schema"
+      - "Be specific: get_user_by_email, not get_user (ambiguous — by ID? by name?)"
+      - "Avoid abbreviations: delete_repository, not del_repo"
+      - "Use consistent vocabulary across tools: if one tool uses 'create', don't use 'add' for the same operation in another"
+      - "Use clear namespacing — group related tools under common prefixes (asana_search, jira_search)"
+    anti_patterns:
+      - "Generic names (process, handle, do) — the agent can't infer purpose"
+      - "Overloaded tools that do different things based on parameter combinations"
+
+  descriptions:
+    rules:
+      - "Lead with WHEN to use the tool, not WHAT it does — agents need to match tools to intent"
+      - "Include what the tool returns — agents plan based on expected output"
+      - "State limitations explicitly: 'Does NOT modify the file' or 'Requires authentication'"
+      - "If two tools overlap, explain when to prefer one over the other"
+      - "Think of how you would describe the tool to a new hire on your team — make implicit context explicit"
+      - "Document specialized query formats, niche terminology, and resource relationships"
+    structure: |
+      Line 1: When to use this tool (the triggering condition)
+      Line 2: What it does (the action)
+      Line 3: What it returns (the output shape)
+      Line 4: Limitations or caveats (what it does NOT do)
+    key_insight: >
+      Tool descriptions are one of the most effective methods for improving agent
+      performance. Even small refinements yield dramatic improvements. When Anthropic
+      launched Claude's web search tool, they identified that Claude was needlessly
+      appending "2025" to queries — they fixed it by improving the tool description.
+
+  parameters:
+    rules:
+      - "Required vs optional must be explicit — agents guess wrong on ambiguous optionality"
+      - "Use descriptive names: file_path, not path; search_query, not q; user_id, not user"
+      - "Enum values are better than free-text when the options are finite"
+      - "Default values should handle the common case — agents often omit optional params"
+      - "Include examples in parameter descriptions for non-obvious formats"
+    anti_patterns:
+      - "Boolean flags that change tool behavior radically — split into separate tools"
+      - "Accepting both a single item and a list in the same parameter without clear docs"
+      - "Parameters that are only required in certain combinations"
+
+  response_design:
+    rules:
+      - "Return only contextually relevant data — prioritize high-signal information"
+      - "Resolve arbitrary alphanumeric UUIDs to semantically meaningful names — this significantly improves agent precision"
+      - "Expose a response_format enum (concise/detailed) so agents can request what they need"
+      - "Implement pagination, filtering, and truncation with sensible defaults"
+      - "In truncated responses, include instructions that encourage more targeted follow-up queries"
+    token_efficiency: >
+      Tools should help agents be token-efficient. If a tool returns 10,000 lines
+      when the agent needs 10, the context fills with noise. Design tools that
+      allow scoped retrieval — agents should be able to narrow before reading.
+
+  error_messages:
+    rules:
+      - "Error messages should tell the agent HOW TO FIX the problem, not just what went wrong"
+      - "Include the invalid value in the error: 'File not found: /path/to/file' not 'File not found'"
+      - "Suggest the correct action: 'Use list_files first to find available files' not 'Invalid file'"
+      - "Distinguish user errors (fixable) from system errors (not fixable by the agent)"
+      - "Include examples of correctly formatted inputs in error messages"
+    pattern: |
+      Bad:  "Error: invalid parameter"
+      Good: "Error: 'status' must be one of [open, closed, merged]. Received: 'active'. Did you mean 'open'?"
+
+  composition:
+    principle: "Design tools that compose well — each tool does one thing; agents chain them"
+    rules:
+      - "Output of one tool should be directly usable as input to another"
+      - "Avoid tools that require multi-step setup — agents lose track of state"
+      - "Idempotent tools are safer — agents may retry on ambiguous failure"
+      - "Prefer returning structured data (JSON) over formatted text — agents parse structured data reliably"
+
+  evaluation:
+    principle: "Test tools with realistic multi-step tasks, not isolated single-call examples"
+    methods:
+      - "Track tool call metrics — redundant calls suggest pagination issues; parameter errors suggest unclear descriptions"
+      - "Analyze agent transcripts to identify contradictory descriptions, inefficient implementations, and confusing schemas"
+      - "Use the agent itself to review and refactor tool definitions — agents excel at spotting ambiguity in tool docs"

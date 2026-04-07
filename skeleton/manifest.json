@@ -65,7 +65,8 @@
       "process/discipline_capture.md",
       "process/manager-rule.md",
       "process/review-fix-loop.md",
-      "process/finding-classification.md"
+      "process/finding-classification.md",
+      "process/incident_response.md"
     ],
     "templates": [
       "templates/spec_template.md",
@@ -76,7 +77,8 @@
       "templates/concept_index_template.md",
       "templates/test_spec_template.md",
       "templates/sdlc_lite_plan_template.md",
-      "templates/sdlc_lite_result_template.md"
+      "templates/sdlc_lite_result_template.md",
+      "templates/postmortem_template.md"
     ],
     "examples": [
       "examples/spec_example.md",
@@ -93,7 +95,8 @@
       "disciplines/design.md",
       "disciplines/process-improvement.md",
       "disciplines/product-research.md",
-      "disciplines/testing.md"
+      "disciplines/testing.md",
+      "disciplines/observability.md"
     ],
     "playbooks": [
       "playbooks/README.md",

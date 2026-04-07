@@ -108,6 +108,18 @@ Ask questions that deepen understanding of the problem space. The goal is NOT to
 | **Risk** | Identify the scary parts | "What's the part of this that makes you most nervous?" |
 | **Value** | Clarify motivation | "If this existed and worked perfectly, what changes for the user/team/product?" |
 
+<!-- Source: Claude Code Best Practices (code.claude.com/docs/en/best-practices) — "Let Claude interview you" pattern.
+     CS146S Wk 3: PRDs for agents.
+     Ravi Mehta, "Specs Are the New Source Code" (blog.ravi-mehta.com/p/specs-are-the-new-source-code). -->
+**Deep interview technique:** Don't ask obvious questions — dig into the hard parts the user might not have considered. Probe specifically for:
+- **Edge cases** — "What happens when [unusual but plausible scenario]?"
+- **Failure modes** — "If this breaks, what's the blast radius? How would you know it broke?"
+- **Hidden dependencies** — "Does this assume [X] will always be true? What if it isn't?"
+- **Scale implications** — "Does this need to work for 10 items or 10,000? Does that change the approach?"
+- **Second-order effects** — "If we build this, what else changes? What becomes possible or impossible?"
+
+The goal is to surface the things the user hasn't thought about yet — not to validate what they already know.
+
 **Questioning discipline:**
 - Ask ONE question per turn
 - Let the answer land before pivoting to a new category
