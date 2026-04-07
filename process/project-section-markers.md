@@ -1,0 +1,119 @@
+# PROJECT-SECTION Markers
+
+A convention for protecting project-specific content in framework files across migrations. Every skill that writes project-specific content into framework-owned files references this document.
+
+---
+
+## The Problem
+
+Multiple skills write project-specific content into framework files:
+- `sdlc-ingest` adds knowledge rules and parking lot entries
+- `sdlc-execute` / `sdlc-lite-execute` add discipline capture entries
+- `sdlc-create-agent` adds dispatcher table rows
+- `sdlc-develop-skill` (modify mode) adds project-specific phases or sections
+- `sdlc-audit` (improvement mode) applies project-specific fixes
+
+When `sdlc-migrate` updates framework files from upstream, this project-specific content is destroyed unless explicitly marked for preservation.
+
+---
+
+## The Convention
+
+Wrap project-specific content in paired markers that `sdlc-migrate` recognizes and preserves.
+
+### Markdown Files
+
+```html
+<!-- PROJECT-SECTION-START: descriptive-label -->
+... project content preserved across migrations ...
+<!-- PROJECT-SECTION-END: descriptive-label -->
+```
+
+### YAML Files
+
+```yaml
+# PROJECT-SECTION-START: descriptive-label
+... project content ...
+# PROJECT-SECTION-END: descriptive-label
+```
+
+### Label Format
+
+Labels must be descriptive and unique within the file. Use this pattern:
+
+```
+{origin}-{date}-{topic}
+```
+
+| Origin | When | Example Label |
+|--------|------|---------------|
+| `ingest` | `sdlc-ingest` adds knowledge rules or parking lot entries | `ingest-2026-04-07-coding` |
+| `dNN-phaseN` | `sdlc-execute` / `sdlc-lite-execute` discipline capture | `d15-phase2-discipline-capture` |
+| `agent-wiring` | `sdlc-create-agent` adds dispatcher table entries | `agent-wiring-ba-agent` |
+| `modify` | `sdlc-develop-skill` modifies a framework skill | `modify-2026-04-07-custom-gate` |
+| `audit-improve` | `sdlc-audit` improvement mode applies a project-specific fix | `audit-improve-2026-04-07-env-check` |
+| `deviation` | `sdlc-migrate` wraps detected customizations during migration | `deviation-2026-04-07-build-commands` |
+
+---
+
+## Rules
+
+1. **Every START must have a matching END with the same label.** Orphaned markers are flagged by `sdlc-compliance-auditor` (Dimension 7).
+
+2. **Labels must be unique within a file.** Duplicate labels cause ambiguity during extraction and re-injection.
+
+3. **Markers must not nest.** A `PROJECT-SECTION-START` inside another `PROJECT-SECTION` block is malformed. Use separate, sequential blocks instead.
+
+4. **Content inside markers is preserved verbatim.** `sdlc-migrate` does not modify, reformat, or merge content within markers — it extracts the block before overwriting and re-injects it afterward.
+
+5. **Markers use the file's native comment syntax.** HTML comments (`<!-- -->`) for Markdown, hash comments (`#`) for YAML. Do not mix formats.
+
+6. **Skills that produce project-specific content are responsible for adding markers at creation time.** This is a producing-skill obligation, not a migration-time responsibility. If content is created without markers, it can only be protected retroactively via deviation detection (§2.1c in `sdlc-migrate`).
+
+---
+
+## How Migration Uses Markers
+
+### Direct Copy Files (§2.1)
+
+1. Before overwriting, extract all `PROJECT-SECTION` blocks with their labels and heading context
+2. Copy the upstream file (overwriting the project's version)
+3. Re-inject each block at its original heading position
+4. If the heading no longer exists upstream, append at end with a warning comment
+
+### Content-Merge Files (§2.2–2.4)
+
+1. Marked blocks are preserved verbatim regardless of surrounding framework changes
+2. Framework sections outside markers are updated to match upstream
+3. Markers are never moved, split, or merged during content-merge
+
+### Deviation Detection (§2.1c)
+
+1. Before direct-copying, diff the project's version against the previous upstream version
+2. If the project modified content outside existing markers, present the customizations
+3. User can choose to: wrap in markers (preserve), overwrite (discard), or skip the file
+
+---
+
+## Validation
+
+The `sdlc-compliance-auditor` validates marker integrity as part of Dimension 7 (Migration Integrity):
+
+- Every `START` has a matching `END` with the same label
+- No orphaned `END` without a `START`
+- No mismatched labels between paired markers
+- Correct comment syntax for the file type
+
+The `sdlc-reviewer` recognizes markers when reviewing skills and agents:
+
+- Does not flag content inside markers as convention violations
+- Verifies markers are well-formed if present
+- Flags malformed markers as minor findings
+
+---
+
+## What Markers Are NOT
+
+- **Not a way to opt out of upstream changes.** Framework sections outside markers are still updated by migration. Markers protect additions, not overrides.
+- **Not version control.** Markers don't track history — they mark boundaries. Use git for history.
+- **Not a substitute for upstream contribution.** If a project-specific change would benefit all projects, propose it upstream rather than wrapping it in markers permanently.

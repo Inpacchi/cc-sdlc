@@ -323,7 +323,7 @@ Present the proposed roster to CD via `AskUserQuestion`:
 3. Cross-cutting roles (architect, sdet)
 
 **Framework agents (pre-installed by setup.sh — do NOT create as domain agents):**
-- `sdlc-reviewer` — reviews skill/agent files against cc-sdlc conventions (dispatched by `sdlc-create-skill`, `sdlc-create-agent`, `sdlc-review`)
+- `sdlc-reviewer` — reviews skill/agent files against cc-sdlc conventions (dispatched by `sdlc-develop-skill`, `sdlc-create-agent`, `sdlc-review`)
 - `sdlc-compliance-auditor` — performs 9-dimension compliance scan (dispatched by `sdlc-audit`)
 
 The `sdlc-audit` skill is already installed by setup.sh — do not recreate it as an agent.

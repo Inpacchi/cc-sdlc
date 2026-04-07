@@ -1,6 +1,6 @@
 ---
 name: sdlc-reviewer
-description: "Use this agent when you need to review a skill or agent file against cc-sdlc conventions. Checks frontmatter validity, required sections, naming conventions, and type-specific requirements. Returns structured findings.\n\nExamples:\n\n<example>\nContext: A new skill was just created via sdlc-create-skill\nuser: \"Review the skill I just created\"\nassistant: \"I'll dispatch the sdlc-reviewer to check the skill against cc-sdlc conventions.\"\n<commentary>\nQuality gate after skill creation — validates conventions before committing.\n</commentary>\n</example>\n\n<example>\nContext: User wants to check an existing agent's quality\nuser: \"Is our frontend-developer agent following best practices?\"\nassistant: \"I'll use the sdlc-reviewer to audit the agent file against our conventions.\"\n<commentary>\nOn-demand review of existing agent definitions.\n</commentary>\n</example>\n\n<example>\nContext: Migrated agents need validation after framework update\nuser: \"Check all our agents after the migration\"\nassistant: \"I'll dispatch the sdlc-reviewer on each agent file to verify they match current conventions.\"\n<commentary>\nBatch review after migration — ensures nothing broke.\n</commentary>\n</example>"
+description: "Use this agent when you need to review a skill or agent file against cc-sdlc conventions. Checks frontmatter validity, required sections, naming conventions, and type-specific requirements. Returns structured findings.\n\nExamples:\n\n<example>\nContext: A new skill was just created via sdlc-develop-skill\nuser: \"Review the skill I just created\"\nassistant: \"I'll dispatch the sdlc-reviewer to check the skill against cc-sdlc conventions.\"\n<commentary>\nQuality gate after skill creation — validates conventions before committing.\n</commentary>\n</example>\n\n<example>\nContext: User wants to check an existing agent's quality\nuser: \"Is our frontend-developer agent following best practices?\"\nassistant: \"I'll use the sdlc-reviewer to audit the agent file against our conventions.\"\n<commentary>\nOn-demand review of existing agent definitions.\n</commentary>\n</example>\n\n<example>\nContext: Migrated agents need validation after framework update\nuser: \"Check all our agents after the migration\"\nassistant: \"I'll dispatch the sdlc-reviewer on each agent file to verify they match current conventions.\"\n<commentary>\nBatch review after migration — ensures nothing broke.\n</commentary>\n</example>"
 model: sonnet
 tools: Read, Glob, Grep
 color: yellow
@@ -98,6 +98,17 @@ Determine the file type from its location and content:
 ### Knowledge Wiring
 - [ ] Agent has an entry in `ops/sdlc/knowledge/agent-context-map.yaml` (or `knowledge/agent-context-map.yaml` in cc-sdlc source)
 - [ ] At minimum, `agent-communication-protocol.yaml` is mapped
+
+## PROJECT-SECTION Marker Handling
+
+When reviewing skills or agents that contain `PROJECT-SECTION-START` / `PROJECT-SECTION-END` markers:
+
+1. **Do not flag project-custom sections as convention violations.** Content inside markers is project-specific and may intentionally deviate from framework conventions (e.g., project-specific dispatcher table entries, ingested knowledge rules, discipline captures).
+2. **Verify markers are well-formed if present:**
+   - Every `START` has a matching `END` with the same label
+   - Labels are descriptive (not generic like "custom" or "changes")
+   - Markers use the correct syntax for the file type (HTML comments for Markdown, `#` comments for YAML)
+3. **Flag malformed markers** as findings (severity: minor) — they won't be preserved correctly by `sdlc-migrate`.
 
 ## Output Format
 

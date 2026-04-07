@@ -34,6 +34,62 @@ Each entry contains:
 
 ---
 
+## 2026-04-07: Migration Protection via PROJECT-SECTION Markers + Skill Rename
+
+**Origin:** NeuRoLoom migration wiped out intentional project-specific changes (business suite customizations, discipline captures, ingested knowledge, agent wiring). No mechanism existed to protect project-specific content in framework files across migrations.
+
+**What happened:** Running `sdlc-migrate` destroyed project-specific content because skills that write into framework files (sdlc-ingest, sdlc-execute, sdlc-lite-execute, sdlc-create-agent, sdlc-audit improvement mode) did not mark their output as project-specific. Additionally, the migration renamed subagent references to agents that didn't exist in the project.
+
+**Changes made:**
+
+1. **`skills/sdlc-migrate/SKILL.md`** — Added PROJECT-SECTION marker convention definition. Added marker preservation to Phase 2.1 (extract → re-inject marked blocks during direct copy). Added deviation detection as §2.1c (diff project vs previous upstream, ask user to wrap customizations in markers before overwriting). Added guarded renames to §4.3a (only rename skill references if target directory exists in project). Added PROJECT-SECTION preservation to content-merge sections (§2.2, §2.3).
+2. **`skills/sdlc-ingest/SKILL.md`** — Step 4 (Structure): wrap new YAML rules in `# PROJECT-SECTION-START: ingest-YYYY-MM-DD-discipline` markers. Step 5 (Place): wrap parking lot entries in `<!-- PROJECT-SECTION-START -->` markers.
+3. **`skills/sdlc-execute/SKILL.md`** — Step 3a (Discipline Capture): wrap new parking lot entries in `<!-- PROJECT-SECTION-START: dNN-phaseN-discipline-capture -->` markers.
+4. **`skills/sdlc-lite-execute/SKILL.md`** — Step 3c (Discipline Capture): same marker wrapping as sdlc-execute.
+5. **`skills/sdlc-create-agent/SKILL.md`** — Step 6 (Wire Into Dispatching Skills): wrap project-specific dispatcher table additions in `<!-- PROJECT-SECTION-START: agent-wiring-{agent-name} -->` markers.
+6. **`skills/sdlc-audit/references/improvement-methodology.md`** — Applying Improvements: wrap project-specific fixes in `PROJECT-SECTION` markers (distinguish from framework corrections which flow upstream).
+7. **`agents/sdlc-compliance-auditor.md`** — Dimension 7: added PROJECT-SECTION marker validation (balanced pairs, orphaned markers, mismatched labels).
+8. **`agents/sdlc-reviewer.md`** — Added PROJECT-SECTION Marker Handling section: don't flag project-custom sections as violations, verify markers are well-formed.
+9. **`skills/sdlc-create-skill/` → `skills/sdlc-develop-skill/`** — Renamed skill. Added MODIFY mode: reads existing skill, classifies changes as framework vs project-specific, auto-wraps project additions in markers, warns about framework section edits. CREATE mode retains all original behavior.
+10. **`skeleton/manifest.json`** — Updated skill entry from `sdlc-create-skill` to `sdlc-develop-skill`.
+11. **`CLAUDE-SDLC.md`** — Updated command table entry to `sdlc-develop-skill`.
+12. **Cross-references updated** — `sdlc-create-agent`, `sdlc-review`, `sdlc-initialize`, `sdlc-reviewer` agent, `sdlc-migrate` all updated to reference `sdlc-develop-skill`.
+13. **`process/project-section-markers.md`** (new) — Canonical process doc for the PROJECT-SECTION marker convention. Defines syntax (Markdown and YAML), label format, rules (pairing, uniqueness, no nesting), migration behavior (extract/re-inject, deviation detection), and validation (auditor and reviewer). All producing skills and consuming skills reference this doc instead of re-explaining the convention inline.
+
+**Rationale:** Project-specific content in framework files is an inevitable result of SDLC skills doing their jobs (ingesting knowledge, capturing discipline insights, wiring agents). Without explicit markers, migration is a destructive operation that erodes trust. The marker convention is minimal (comment-based, no tooling required), forward-looking (existing content gets detected by deviation detection), and consistent across all producing skills. The skill rename reflects the expanded scope (create + modify) and prevents migration from renaming references to skills that don't exist in the project.
+
+---
+
+## 2026-04-07: Add Spec Deviations section to plan templates
+
+**Origin:** CD feedback — plans that silently drop, add, or modify spec requirements create drift that only surfaces during execution or review.
+
+**What happened:** Plans could diverge from the approved spec without declaring it. This made it hard to tell whether a deviation was intentional or an oversight.
+
+**Changes made:**
+
+1. **`templates/planning_template.md`** — Added "Spec Deviations" section before Notes. Requires explicit declaration of any divergence from the spec, or "None — plan matches spec."
+2. **`templates/sdlc_lite_plan_template.md`** — Added matching "Spec Deviations" section before Post-Execution Review.
+
+**Rationale:** Making deviations explicit at plan time means the CD can approve or reject them before execution starts, rather than discovering drift after the work is done.
+
+---
+
+## 2026-04-07: Remove false positives from post-migration audit
+
+**Origin:** CD feedback — post-migration audit flagged uncommitted migration files as a CRITICAL finding and listed "review diff" as a manual next step, both of which are noise.
+
+**What happened:** After running a migration, the compliance auditor flagged ~63 uncommitted files as a critical finding. But uncommitted files are the *expected* state — the migration just applied changes and the user hasn't committed yet. Similarly, the migration report included "Review the migration diff: `git diff`" as a next step, which is redundant since the compliance audit (§4.4) already verified everything.
+
+**Changes made:**
+
+1. **`skills/sdlc-migrate/SKILL.md`** — Removed "Review the migration diff" from the Next Steps section (§4.6). The post-migration compliance audit already covers verification.
+2. **`skills/sdlc-migrate/SKILL.md`** — Added context to the §4.4 dispatch prompt telling the auditor that uncommitted files are expected and should not be flagged as findings.
+
+**Rationale:** False positives erode trust in the audit. Uncommitted files after migration are expected state, not a compliance gap. The diff review step was redundant with the automated audit.
+
+---
+
 ## 2026-04-06: Add mandatory Completion Report to execution skills
 
 **Origin:** CD feedback — executions ended with commits and scattered output, no structured summary of what happened, what to verify, or what's next.

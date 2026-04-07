@@ -9,7 +9,7 @@ description: >
   Triggers on "review this skill", "review this agent", "check skill quality", "check agent quality",
   "/sdlc-review", "analyze these", "incorporate from these", "compare against our agents",
   "what can we learn from this", "see if there's anything useful".
-  Do NOT use for creating new skills or agents — use sdlc-create-skill or sdlc-create-agent.
+  Do NOT use for creating new skills or agents — use sdlc-develop-skill or sdlc-create-agent.
   Do NOT use for bulk knowledge import — use sdlc-ingest.
 ---
 
@@ -132,7 +132,7 @@ KNOWLEDGE CANDIDATES (route to /sdlc-ingest)
 When the user approves specific improvements:
 - **Existing agent/skill edits** — apply directly
 - **New agents** — offer to invoke `/sdlc-create-agent`
-- **New skills** — offer to invoke `/sdlc-create-skill`
+- **New skills** — offer to invoke `/sdlc-develop-skill`
 - **Knowledge candidates** — remind user to run `/sdlc-ingest` with the identified content
 
 Update `process/sdlc_changelog.md` for any process changes applied.
@@ -151,6 +151,6 @@ Update `process/sdlc_changelog.md` for any process changes applied.
 ## Integration
 
 - **Uses:** `sdlc-reviewer` subagent (review mode), WebFetch (analyze mode URLs), existing agents/skills (comparison baseline)
-- **Feeds into:** Direct edits (improvements), `sdlc-create-agent` / `sdlc-create-skill` (new candidates), `sdlc-ingest` (knowledge candidates)
-- **Complements:** `sdlc-create-skill` and `sdlc-create-agent` (creation triggers review; review can trigger creation)
+- **Feeds into:** Direct edits (improvements), `sdlc-create-agent` / `sdlc-develop-skill` (new candidates), `sdlc-ingest` (knowledge candidates)
+- **Complements:** `sdlc-develop-skill` and `sdlc-create-agent` (creation triggers review; review can trigger creation)
 - **Does NOT replace:** `sdlc-audit` (audits project-wide compliance; this reviews individual files and external sources)

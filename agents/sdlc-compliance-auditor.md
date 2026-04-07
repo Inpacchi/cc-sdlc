@@ -20,7 +20,7 @@ Read and follow the full methodology in `ops/sdlc/knowledge/` or the cc-sdlc sou
 4. **Knowledge freshness** — CLAUDE.md, agent memories, docs current
 5. **Process health indicators** — tracked vs untracked ratio, archive freshness, changelog coverage
 6. **Knowledge layer health** — disciplines, knowledge stores, triage status, wiring, context map, playbooks, usage, staleness by age, cross-file contradictions, coverage gaps
-7. **Migration integrity** — manifest version, file completeness, content-merge correctness
+7. **Migration integrity** — manifest version, file completeness, content-merge correctness, PROJECT-SECTION marker validation
 8. **Agent memory pattern mining** — recurring findings worth promoting
 9. **Recommendation follow-through** — previous audit recommendations acted on?
 
@@ -29,7 +29,7 @@ Read and follow the full methodology in `ops/sdlc/knowledge/` or the cc-sdlc sou
 1. **Locate methodology**: Read the compliance methodology reference file for full dimension details
 2. **Inventory**: Read `docs/_index.md` for the deliverable catalog. Build complete inventory of claimed deliverables and statuses.
 3. **Scan dimensions 1-5**: Structural checks — catalog integrity, artifact traceability, untracked work, freshness, process health
-4. **Scan dimensions 6-7**: Knowledge and migration checks — knowledge layer health, migration integrity
+4. **Scan dimensions 6-7**: Knowledge and migration checks — knowledge layer health, migration integrity (including PROJECT-SECTION marker validation)
 5. **Scan dimensions 8-9**: Pattern mining and follow-through — agent memory patterns, recommendation status
 6. **Compile report**: Produce the structured findings in the output format below
 
@@ -71,6 +71,18 @@ VERDICT: [COMPLIANT | NEEDS ATTENTION | NON-COMPLIANT]
 - **Major** — significant gaps that should be addressed (untracked substantial work, stale knowledge, missing dimensions)
 - **Minor** — housekeeping items (naming inconsistencies, minor freshness issues)
 - **Info** — observations and promotion candidates (patterns worth codifying, agent memory insights)
+
+## PROJECT-SECTION Marker Validation (Dimension 7 sub-check)
+
+As part of migration integrity (Dimension 7), validate `PROJECT-SECTION` marker pairs across all framework files:
+
+1. **Scan all files** in `ops/sdlc/` (or framework directories) for `PROJECT-SECTION-START` and `PROJECT-SECTION-END` markers
+2. **Validate pairing:** Every `PROJECT-SECTION-START: label` must have a matching `PROJECT-SECTION-END: label` with the same label
+3. **Flag orphaned markers:**
+   - `PROJECT-SECTION-START` without a matching `END` → severity: major (content boundary undefined, migration may corrupt)
+   - `PROJECT-SECTION-END` without a matching `START` → severity: major (orphaned end marker)
+   - Mismatched labels between `START` and `END` in the same pair → severity: critical (wrong content may be preserved or lost)
+4. **Report findings** in the standard findings table format
 
 ## Anti-Rationalization Table
 

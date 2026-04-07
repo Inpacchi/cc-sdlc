@@ -209,6 +209,16 @@ The result doc lives alongside the plan file in `docs/current_work/sdlc-lite/`. 
 
 Run the discipline capture protocol per `ops/sdlc/process/discipline_capture.md`. Context format: `[DNN — phase N]`. This includes structured gap detection (using the review-fix triage table and agent dispatch data from this session) followed by the freeform insight scan.
 
+**Migration protection (mandatory):** Wrap all new parking lot entries in `PROJECT-SECTION` markers so they survive framework migrations (see `ops/sdlc/process/project-section-markers.md` for the full convention):
+
+```html
+<!-- PROJECT-SECTION-START: dNN-phaseN-discipline-capture -->
+- **[Insight title].** [NEEDS VALIDATION] [Description]. (Source: [DNN — phase N])
+<!-- PROJECT-SECTION-END: dNN-phaseN-discipline-capture -->
+```
+
+Use the deliverable ID and phase as the label (e.g., `d15-phase2-discipline-capture`). This tells `sdlc-migrate` that the content is project-specific and must be preserved when upstream discipline files are content-merged.
+
 ### 4. Verify, Commit, and Clean Up
 
 1. Run `[build command]` — confirm zero errors (see project CLAUDE.md)

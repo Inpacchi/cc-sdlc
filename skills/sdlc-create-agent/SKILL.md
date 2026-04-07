@@ -10,7 +10,7 @@ description: >
   sdlc-lite-plan). Dispatches sdlc-reviewer for quality gate.
   Triggers on "create a new agent", "new agent", "add an agent", "scaffold an agent",
   "I need an agent for", "make an agent", "/sdlc-create-agent".
-  Do NOT use for creating skills — use sdlc-create-skill.
+  Do NOT use for creating skills — use sdlc-develop-skill.
   Do NOT use for modifying existing agents — edit directly.
 ---
 
@@ -170,6 +170,16 @@ Most agents are multiple types. A `db-engineer` is a reviewer (catches schema is
    - Domain name, trigger conditions (phrased as questions), and specialist agent
    - Example: `` | Database/storage | Adds/modifies schema, migrations, indexes, or query patterns? | `db-engineer` | ``
 
+**Migration protection (mandatory):** Wrap all project-specific additions to dispatcher skill tables in `PROJECT-SECTION` markers so they survive framework migrations (see `ops/sdlc/process/project-section-markers.md` for the full convention):
+
+```markdown
+<!-- PROJECT-SECTION-START: agent-wiring-{agent-name} -->
+- `{agent-name}` — if the diff touches {domain files}. Covers {domain concerns}.
+<!-- PROJECT-SECTION-END: agent-wiring-{agent-name} -->
+```
+
+Use `agent-wiring-{agent-name}` as the label. This tells `sdlc-migrate` that these dispatcher table entries are project-specific and must be preserved when upstream skill files are content-merged.
+
 **Verify after wiring:**
 - The agent name in skills matches the actual agent filename (minus `.md`)
 - No duplicate entries (check if a generic placeholder already exists for this domain)
@@ -200,5 +210,5 @@ Dispatch the `sdlc-reviewer` subagent on the created agent file. Present its fin
 - **Feeds into:** The created agent becomes available for dispatch by orchestration skills
 - **Modifies:** `sdlc-review-commit` (Tier 1 reviewers), `sdlc-review-diff` (Tier 1 reviewers), `sdlc-plan` (agent table + infra triggers), `sdlc-lite-plan` (infra triggers) — see Step 6
 - **Uses:** `AGENT_TEMPLATE.md` (structural reference), `agent-context-map.yaml` (knowledge wiring), `AGENT_SUGGESTIONS.md` (reusable patterns), `sdlc-reviewer` (quality gate), existing agents (conflict checking)
-- **Complements:** `sdlc-create-skill` (skills vs agents), `sdlc-review` (review existing agents)
+- **Complements:** `sdlc-develop-skill` (skills vs agents), `sdlc-review` (review existing agents)
 - **Does NOT replace:** Direct editing of existing agents (this creates new ones only)

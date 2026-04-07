@@ -117,6 +117,14 @@ Group the changed cc-sdlc files by migration strategy:
 
 ---
 
+## PROJECT-SECTION Marker Convention
+
+Read and follow `ops/sdlc/process/project-section-markers.md` — the canonical definition of the marker convention. It defines the syntax (Markdown and YAML), label format, rules, and validation. All producing skills (`sdlc-ingest`, `sdlc-execute`, `sdlc-lite-execute`, `sdlc-create-agent`, `sdlc-develop-skill`, `sdlc-audit` improvement mode) reference that document.
+
+This migration skill is responsible for **consuming** markers: extracting, preserving, and re-injecting marked blocks during framework updates. Existing project content that lacks markers is detected by the deviation detection step (§2.1c).
+
+---
+
 ## Phase 2: Apply Framework Updates
 
 ### 2.1 Direct Copy Files
@@ -133,6 +141,15 @@ For files with no project customizations, copy directly from cc-sdlc to the proj
 - `examples/*.md`
 
 **All reads from the cc-sdlc source repo must use git commands** (e.g., `git -C [cc-sdlc-path] show HEAD:path/to/file`), not filesystem reads. This ensures you're reading committed state, not working tree.
+
+**PROJECT-SECTION preservation (mandatory for all direct-copy files):**
+
+Before overwriting any file:
+1. Scan the project's current version for `PROJECT-SECTION-START` / `PROJECT-SECTION-END` marker pairs
+2. Extract each marked block along with its label and the heading it appears under (nearest `#`/`##`/`###` above)
+3. After copying the upstream file, re-inject each block at its original heading position
+4. If the heading no longer exists in the upstream file, append the block at the end of the file with a warning comment: `<!-- MIGRATION WARNING: heading "[heading]" no longer exists in upstream — block preserved at end of file -->`
+5. Log all re-injected blocks in the migration report
 
 **Ensure `.claude/agent-memory/` is gitignored.** Agent memories are not source-controlled — check the project's `.gitignore` for the entry. If missing, append:
 
@@ -195,6 +212,43 @@ Knowledge YAML files are direct-copied from upstream (§2.1), but the project ma
 3. CD selects which to tag `true`; update the files
 4. If CD skips, all files stay `false` and `sdlc-plan` filtering remains dormant (backward compatible)
 
+### 2.1c Deviation Detection
+
+Before direct-copying any file, detect whether the project has made custom changes outside existing `PROJECT-SECTION` markers:
+
+**Process:**
+
+1. Read the project's current version of the file
+2. Read the previous upstream version (at `source_version` commit): `git -C [cc-sdlc-path] show [source_version]:<path>`
+3. Diff the project's version against the previous upstream version
+4. Identify changes that are:
+   - **Inside markers** — already protected, will be preserved automatically (§2.1 marker preservation)
+   - **Outside markers** — project customizations that will be lost on overwrite
+
+5. If the project modified content outside existing markers, present the customizations via `AskUserQuestion`:
+
+```
+DEVIATION DETECTED: [file path]
+
+The project has customized this framework file outside of any PROJECT-SECTION markers.
+These changes will be lost when the upstream version is copied.
+
+Customized sections:
+  [heading or line range]: [brief description of what changed]
+  [heading or line range]: [brief description of what changed]
+
+Options:
+1. Wrap customizations in markers — preserve this and future migrations
+2. Overwrite — accept upstream version, discard customizations
+3. Skip — don't update this file
+```
+
+6. If the user chooses option 1: wrap each customized section in `<!-- PROJECT-SECTION-START: deviation-YYYY-MM-DD-label -->` markers before applying the upstream copy, then proceed with marker-preserving copy
+7. If option 2: direct copy as normal
+8. If option 3: skip this file, log in migration report
+
+**Why this matters:** Without deviation detection, `sdlc-migrate` silently destroys intentional project-specific changes. Users invest time customizing business suite content, discipline captures, and agent wiring — a migration that discards that work without warning erodes trust in the framework.
+
 ### 2.2 Content-Merge: Skills
 
 Skills have two layers:
@@ -217,6 +271,8 @@ Skills have two layers:
 
 **Key rule:** If a section exists in cc-sdlc but not in the project, add it. If a section was removed from cc-sdlc, remove it from the project. If a section was modified in cc-sdlc, update the framework logic while keeping project-specific values.
 
+**PROJECT-SECTION preservation:** If `PROJECT-SECTION` blocks exist within a skill being content-merged, preserve them verbatim regardless of surrounding framework changes. These blocks contain project-specific content (e.g., dispatcher table entries added by `sdlc-create-agent`, custom modifications from `sdlc-develop-skill`) that must survive migration.
+
 ### 2.3 Content-Merge: Disciplines
 
 Discipline files have:
@@ -230,7 +286,8 @@ Discipline files have:
 3. Preserve active questions
 4. Preserve project context sections (added by `sdlc-initialize` Phase 7)
 5. Add any new seeded insights from cc-sdlc that the project doesn't have — but do NOT overwrite triage markers on existing entries (the project may have triaged differently than the source repo)
-6. **Preserve the Process Maturity Tracker table as-is.** The tracker is delimited by `<!-- PROJECT-TRACKER-START -->` and `<!-- PROJECT-TRACKER-END -->` markers. Everything between these markers (including the table and last-updated note) reflects the project's assessed levels — never overwrite it. Update the framework sections *outside* the markers (level definitions, assessment procedure) to match cc-sdlc. If the downstream file lacks these markers, treat the entire `### Process Maturity Tracker` section through the next heading as project data and preserve it.
+6. **Preserve `PROJECT-SECTION` blocks verbatim.** Discipline files may contain marked blocks from `sdlc-ingest`, `sdlc-execute`, or `sdlc-lite-execute` discipline captures. These survive migration unchanged regardless of surrounding framework updates.
+7. **Preserve the Process Maturity Tracker table as-is.** The tracker is delimited by `<!-- PROJECT-TRACKER-START -->` and `<!-- PROJECT-TRACKER-END -->` markers. Everything between these markers (including the table and last-updated note) reflects the project's assessed levels — never overwrite it. Update the framework sections *outside* the markers (level definitions, assessment procedure) to match cc-sdlc. If the downstream file lacks these markers, treat the entire `### Process Maturity Tracker` section through the next heading as project data and preserve it.
 
 ### 2.4 Content-Merge: Audit Skill
 
@@ -451,7 +508,16 @@ The project's `CLAUDE.md` contains CLAUDE-SDLC.md content — skill names, proce
 
 **Check for:**
 
-1. **Skill name references** — verify all skill names mentioned in CLAUDE.md (`sdlc-plan`, `sdlc-execute`, `sdlc-lite-plan`, `sdlc-lite-execute`, `sdlc-idea`, `sdlc-initialize`, `sdlc-reconcile`, `sdlc-review-diff`, `sdlc-review-commit`, `sdlc-review-fix`, `sdlc-create-skill`, `sdlc-create-agent`, `sdlc-review`) still match the actual skill directory names in `ops/sdlc/skills/`. Check for renamed skills: `diff-review` → `sdlc-review-diff`, `commit-review` → `sdlc-review-commit`, `commit-fix` → `sdlc-review-fix`
+1. **Skill name references (guarded renames)** — verify all skill names mentioned in CLAUDE.md (`sdlc-plan`, `sdlc-execute`, `sdlc-lite-plan`, `sdlc-lite-execute`, `sdlc-idea`, `sdlc-initialize`, `sdlc-reconcile`, `sdlc-review-diff`, `sdlc-review-commit`, `sdlc-review-fix`, `sdlc-develop-skill`, `sdlc-create-agent`, `sdlc-review`) still match the actual skill directory names in `ops/sdlc/skills/`. Check for renamed skills: `diff-review` → `sdlc-review-diff`, `commit-review` → `sdlc-review-commit`, `commit-fix` → `sdlc-review-fix`, `sdlc-create-skill` → `sdlc-develop-skill`
+
+   **Guarded rename rule:** Before renaming any skill reference in the project's CLAUDE.md or other files:
+   1. Build the project's actual skill inventory: `ls ops/sdlc/skills/` or `.claude/skills/`
+   2. Only rename if the target skill directory exists in the project
+   3. If the target doesn't exist (e.g., the project hasn't received the new skill yet), log a warning instead of renaming:
+      ```
+      GUARDED RENAME SKIPPED: [old-name] → [new-name] — target directory does not exist in project
+      ```
+   This prevents renaming references to skills that don't exist in the project, which causes silent process failures.
 
 2. **Process file paths** — verify paths like `ops/sdlc/process/overview.md`, `ops/sdlc/process/sdlc_changelog.md`, `ops/sdlc/process/compliance_audit.md` still exist
 
@@ -474,6 +540,8 @@ The project's `CLAUDE.md` contains CLAUDE-SDLC.md content — skill names, proce
 > - Content-merge preserved project data (tracker levels, parking lot entries, skill customizations)
 > - CLAUDE-SDLC.md references in CLAUDE.md are valid
 > - `agents/sdlc-compliance-auditor.md` is present and current
+>
+> **Context:** This audit runs immediately after migration applied changes. Uncommitted files in the working tree are expected — the user has not committed yet. Do NOT flag uncommitted migration files as findings.
 
 Present the subagent's findings to the user before proceeding to §4.5.
 
@@ -542,8 +610,7 @@ After migration, update `.sdlc-manifest.json` with the new source version:
 - Post-migration audit: passed/findings fixed (auditor dispatched automatically in §4.4)
 
 ### Next Steps
-1. Review the migration diff: `git diff`
-2. Commit the migration
+1. Commit the migration
 ```
 
 ---
@@ -561,6 +628,8 @@ After migration, update `.sdlc-manifest.json` with the new source version:
 | "No files were deleted, so §2.1a doesn't apply" | Always check. Moved files appear as add+delete pairs, not renames. |
 | "I'll just read the file from the cc-sdlc directory" | Use `git -C [path] show HEAD:file` — never raw filesystem reads. The repo may have uncommitted WIP. |
 | "New knowledge files are installed, so the project benefits automatically" | Knowledge in ops/sdlc/ is available but not applied until skills and agents are updated to use it. §3.4 closes this gap. |
+| "This file has no PROJECT-SECTION markers, so I'll just overwrite it" | Run deviation detection (§2.1c) first — the project may have customized framework content that should be wrapped in markers before overwriting. |
+| "I'll rename all skill references to match upstream" | Guarded renames (§4.3a) — only rename if the target skill exists in the project. Renaming to a nonexistent skill causes silent process failures. |
 | "I'll auto-fix all the downstream impact findings" | Present findings to the user. They choose what to apply — some findings may not suit the project's context. |
 
 ## Integration

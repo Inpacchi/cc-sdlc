@@ -187,6 +187,18 @@ spec_relevant: false
 
 **`spec_relevant` tagging:** All newly created knowledge files must include `spec_relevant: false` as a top-level field. This is the safe default — the project team can override to `true` for stores that inform spec writing (see `knowledge/README.md` § "spec_relevant Field"). When appending rules to existing files, preserve the file's existing `spec_relevant` value — do not change it.
 
+**Migration protection (mandatory):** Wrap all newly added YAML rules in `PROJECT-SECTION` markers so they survive framework migrations (see `ops/sdlc/process/project-section-markers.md` for the full convention):
+
+```yaml
+# PROJECT-SECTION-START: ingest-YYYY-MM-DD-discipline
+- rule_id: XX
+  name: rule-name
+  ...
+# PROJECT-SECTION-END: ingest-YYYY-MM-DD-discipline
+```
+
+Use the ingestion date and target discipline as the label (e.g., `ingest-2026-04-07-coding`). This tells `sdlc-migrate` that the content is project-specific and must be preserved when upstream knowledge files are direct-copied.
+
 **Project-specific application notes (optional):**
 If the user provided project context in step 2, add application notes to rules where the generic rule maps to specific product surfaces, components, or patterns. These are informational — they help agents apply generic rules in context.
 
@@ -203,12 +215,16 @@ Route each output to its correct destination:
 
 **Parking lot entry format:**
 
+Wrap new parking lot entries in `PROJECT-SECTION` markers so they survive framework migrations:
+
 ```
+<!-- PROJECT-SECTION-START: ingest-YYYY-MM-DD-discipline -->
 ### [Category Name] ([date], source: [source description])
 
 *Bulk import from [source characterization]. Rules promoted to knowledge store; parking lot entries below are principles that need validation against [project]'s specific context before full adoption.*
 
 - **[Insight title].** [NEEDS VALIDATION] [Description]. *[Project relevance note if applicable].* (Source: `[source-file-id]`)
+<!-- PROJECT-SECTION-END: ingest-YYYY-MM-DD-discipline -->
 ```
 
 **Knowledge file placement:**
