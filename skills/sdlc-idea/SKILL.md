@@ -108,9 +108,6 @@ Ask questions that deepen understanding of the problem space. The goal is NOT to
 | **Risk** | Identify the scary parts | "What's the part of this that makes you most nervous?" |
 | **Value** | Clarify motivation | "If this existed and worked perfectly, what changes for the user/team/product?" |
 
-<!-- Source: Claude Code Best Practices (code.claude.com/docs/en/best-practices) — "Let Claude interview you" pattern.
-     CS146S Wk 3: PRDs for agents.
-     Ravi Mehta, "Specs Are the New Source Code" (blog.ravi-mehta.com/p/specs-are-the-new-source-code). -->
 **Deep interview technique:** Don't ask obvious questions — dig into the hard parts the user might not have considered. Probe specifically for:
 - **Edge cases** — "What happens when [unusual but plausible scenario]?"
 - **Failure modes** — "If this breaks, what's the blast radius? How would you know it broke?"

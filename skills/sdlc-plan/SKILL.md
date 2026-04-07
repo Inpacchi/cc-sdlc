@@ -237,23 +237,6 @@ Gate: PASS | FAIL (need [N] more questions)
 
 Ask clarifying questions **one at a time** — batched questions get vague answers. Search the codebase BEFORE asking — don't ask what you can look up. Use LSP (`goToDefinition`, `findReferences`, `hover`) to verify function signatures, trace dependencies, and understand interface contracts — do not read files and infer types. Fall back to Grep for string literals and non-TypeScript content. If the gate shows FAIL, ask more questions before proceeding.
 
-<!-- Source: Claude Code Best Practices (code.claude.com/docs/en/best-practices) — "Let Claude interview you" pattern.
-     CS146S Wk 3: PRDs for agents.
-     Ravi Mehta, "Specs Are the New Source Code" (blog.ravi-mehta.com/p/specs-are-the-new-source-code):
-       - Specs are the durable artifact; generated code is transient output
-       - Vague specs produce messy codebases — specificity gates before implementation
-       - Document intent alongside requirements — code generation loses context
-       - Spec-driven testing: let specs define acceptance criteria AI must satisfy
-     Reddit r/vibecoding, "How we vibe code at a FAANG" (TreeTopologyTroubado):
-       - 7-step process: design doc → design review → development → sprint → implement (tests first) → code review → staging
-       - "The vibes are based on a design document" — ~30% speed increase
-       - AI coding agent writes tests first, then implementation follows
-       - TL;DR: "Always start with a solid design doc and architecture. Build from there in chunks. Always write tests first."
-     Google AutoCommenter paper (Vijayvergiya et al., AIware '24):
-       - AI code review at Google scale — used by tens of thousands of developers daily
-       - High confidence threshold (t=0.98) needed to manage developer trust
-       - Comments on unchanged code waste reviewer attention — filter to changed files only
-       - Nuanced best practices (naming, clarity) require human judgment; formatting can be automated -->
 **Deep interview technique:** Don't ask obvious questions — dig into the hard parts the user hasn't considered:
 - **Edge cases** — "What happens when [unusual but plausible scenario]?"
 - **Failure modes** — "If this breaks, what's the blast radius? How would you know?"

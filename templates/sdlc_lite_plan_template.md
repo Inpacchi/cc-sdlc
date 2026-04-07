@@ -24,6 +24,12 @@
 ### Phase 2: [Name]
 ...
 
+## Spec Deviations
+
+[List any intentional divergences from the spec. If the plan implements the spec exactly, write "None — plan matches spec." If the plan drops, adds, or modifies requirements, declare each deviation with a reason.]
+
+- **[Deviation]**: [What changed from spec and why]
+
 ## Post-Execution Review
 All completed work must be reviewed by all relevant worker domain agents.
 All findings must be fixed by the most relevant domain agent.

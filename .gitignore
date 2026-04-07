@@ -26,3 +26,5 @@ node_modules/
 .claude/
 
 docs/current_work/audits/
+
+.obsidian/

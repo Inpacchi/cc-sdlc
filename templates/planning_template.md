@@ -112,6 +112,14 @@
 
 ---
 
+## Spec Deviations
+
+[List any intentional divergences from the spec. If the plan implements the spec exactly, write "None — plan matches spec." If the plan drops, adds, or modifies requirements, declare each deviation with a reason.]
+
+- **[Deviation]**: [What changed from spec and why]
+
+---
+
 ## Notes
 
 [Any additional context, gotchas, or references]
