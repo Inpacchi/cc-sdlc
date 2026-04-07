@@ -58,35 +58,41 @@ Verify the project's SDLC health across 9 audit dimensions. Full methodology in 
 DISPATCH AUDITOR → REPORT → TRIAGE → FIX
 ```
 
-**Dispatch the `sdlc-compliance-auditor` subagent** to perform the 9-dimension scan. The subagent reads the methodology, scans all dimensions, and returns structured findings with a score and promotion candidates. This skill then handles the interactive triage and fix phases.
+### Steps
 
-### Audit Dimensions (summary)
+### 1. Dispatch Auditor
+
+Dispatch the `sdlc-compliance-auditor` subagent to perform the 9-dimension scan. The subagent reads the methodology, scans all dimensions, and returns structured findings with a score and promotion candidates.
+
+**Audit Dimensions (summary):**
 
 1. **Deliverable catalog integrity** — `docs/_index.md` matches reality
 2. **Artifact traceability** — spec → plan → result chains complete
 3. **Untracked work detection** — git commits without deliverable tracking
 4. **Knowledge freshness** — CLAUDE.md, agent memories, docs current
 5. **Process health indicators** — tracked vs untracked ratio, archive freshness, changelog coverage
-6. **Knowledge layer health** — disciplines, knowledge stores, triage status, wiring, playbooks, usage, staleness by age, cross-file contradictions, coverage gaps
+6. **Knowledge layer health** — disciplines, knowledge stores, triage status, wiring, context map, playbooks, usage, staleness by age, cross-file contradictions, coverage gaps
 7. **Migration integrity** — manifest version, file completeness, content-merge correctness
 8. **Agent memory pattern mining** — recurring findings worth promoting
 9. **Recommendation follow-through** — previous audit recommendations acted on?
-
-### Compliance with Session/Commit Input
 
 When fed a session or commits (not just current state):
 - **Session input:** Read the conversation and verify SDLC process was followed — were skills invoked? Were deliverable IDs assigned? Were specs written before execution?
 - **Commit input:** Check whether commits have corresponding deliverable artifacts. Cross-reference commit messages against `docs/_index.md`. Flag substantial multi-file changes without tracking.
 
-### Output
+### 2. Report
 
 Produce audit artifact at `docs/current_work/audits/sdlc_audit_YYYY-MM-DD.md` using the report format in `references/compliance-methodology.md`. Present findings to user in the standardized format from CLAUDE-SDLC.md (score/10, verdict, findings table).
 
-### Interactive Triage Phase
+### 3. Triage
 
 After presenting the audit report, if any parking lot entries are promotion candidates (from Dimensions 6c and 8), run an interactive triage session. See `references/compliance-methodology.md` step 11 for the full workflow.
 
 The triage phase presents candidates grouped by discipline and asks CD to decide on each: promote to knowledge store, defer (with reason), or leave as-is. Promotions are applied immediately — the audit creates or updates the target knowledge store file and marks the parking lot entry as `Promoted → [target file]`.
+
+### 4. Fix
+
+Offer to fix actionable items from the findings. Apply fixes the user approves.
 
 ## Improvement Mode
 

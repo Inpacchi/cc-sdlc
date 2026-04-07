@@ -86,7 +86,7 @@ Read and follow `ops/sdlc/process/manager-rule.md` — the canonical definition 
 
 1. **Read `docs/_index.md`** to find the next deliverable ID (listed in the header as "Next ID: **DNN**").
 2. Claim the ID by incrementing the "Next ID" counter in the catalog.
-3. Add the deliverable to the catalog table with status `In Progress (lite)`.
+3. Add the deliverable to the catalog table with status `In Progress` and tier `lite`.
 
 This ID will be used in the plan filename (`dNN_{slug}_plan.md`).
 
@@ -289,5 +289,7 @@ The Manager Rule remains in effect per `ops/sdlc/process/manager-rule.md` — se
 
 ## Integration
 
-- **sdlc-lite-execute** — The next skill; executes the reviewed plan from the saved file
-- **sdlc-plan** — Use instead when work warrants SDLC tracking
+- **Feeds into:** `sdlc-lite-execute` (executes the reviewed plan from the saved file)
+- **Uses:** worker domain agents (plan writing + review), `ops/sdlc/process/manager-rule.md`, `ops/sdlc/process/collaboration_model.md`, `ops/sdlc/process/deliverable_lifecycle.md`
+- **Complements:** `sdlc-plan` (handles full SDLC deliverables that need specs)
+- **Does NOT replace:** `sdlc-plan` (use that for new features, integrations, or architectural changes)

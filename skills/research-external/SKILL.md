@@ -44,7 +44,7 @@ Read and follow `ops/sdlc/process/manager-rule.md`. The research-analyst agents 
 
 ```
 SCOPE ──> DISCOVER ──> RESEARCH ──> CURATE ──> SAVE ──> PROVENANCE ──> REPORT
-  (you)     (you)      (agents)     (you)     (agent)    (you)
+  (you)     (you)      (agents)     (you)     (agent)   (you)      (you)
                           │
                     ┌─────┴─────┐
                     │ parallel  │

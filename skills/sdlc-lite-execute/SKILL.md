@@ -280,6 +280,7 @@ The Manager Rule remains in effect per `ops/sdlc/process/manager-rule.md` — se
 
 ## Integration
 
-- **sdlc-lite-plan** — The prerequisite skill that produces the plan file
-- **sdlc-execute** — Use instead when executing SDLC deliverable plans
-- **sdlc-tests-run** — If the plan included test files, run after commit to verify tests pass and fix failures automatically
+- **Feeds into:** `sdlc-tests-run` (post-commit test verification), `sdlc-archive` (when deliverable is complete)
+- **Uses:** worker domain agents (implementation + review), `sdlc-lite-plan` output (the plan file), `ops/sdlc/process/manager-rule.md`, `ops/sdlc/process/collaboration_model.md`
+- **Complements:** `sdlc-execute` (handles full SDLC deliverables)
+- **Does NOT replace:** `sdlc-lite-plan` (plan must exist before execution), `sdlc-tests-run` (separate test verification step)

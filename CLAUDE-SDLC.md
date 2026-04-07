@@ -172,6 +172,10 @@ Rules:
 | `/sdlc-create-agent` | Create a new domain agent with frontmatter validation and knowledge wiring. Invokes `sdlc-create-agent` skill |
 | `/sdlc-review` | Review a skill/agent for convention compliance, or analyze external sources for improvements. Invokes `sdlc-review` skill |
 | `/sdlc-enrich-agent` | Extract patterns from external sources and integrate them into an existing agent definition. Invokes `sdlc-enrich-agent` skill |
+| `/sdlc-review-diff` | Review staged or unstaged diff for quality, correctness, and convention compliance. Invokes `sdlc-review-diff` skill |
+| `/sdlc-review-fix` | Review-fix loop — review code, present findings, fix approved items. Invokes `sdlc-review-fix` skill |
+| `/sdlc-review-commit` | Review a specific commit or commit range for quality and convention compliance. Invokes `sdlc-review-commit` skill |
+| `/sdlc-design-consult` | Consult domain design agents on UX, visual design, or interaction patterns. Invokes `sdlc-design-consult` skill |
 | `/sdlc-research-external` | Research external knowledge sources (blogs, talks, papers) and curate tiered reference docs. Invokes `sdlc-research-external` skill |
 
 ### Key References
@@ -260,12 +264,22 @@ Assert (plausible) → Search to confirm → Correct when challenged
 If you haven't read the relevant file, say so: *"Let me check"* — then check.
 
 **Use LSP when available.** For type-system and call-graph questions, prefer LSP over Grep:
-- `hover` for type signatures (don't read a file and infer the type)
-- `goToDefinition` to navigate to source (don't Glob for the filename)
-- `findReferences` for all callers (don't Grep for the function name — it misses renames and aliased imports)
-- `goToImplementation` for interface implementations
 
-Fall back to Grep for string literals, config keys, and non-code content (YAML, markdown). See `ops/sdlc/plugins/lsp-setup.md` for setup.
+| Task | Use | Not |
+|------|-----|-----|
+| Find where a symbol is defined | LSP `goToDefinition` | Grep for the name |
+| Find all call sites of a function | LSP `findReferences` | Grep for the name (misses renames and aliased imports) |
+| Get the type signature of a function/variable | LSP `hover` | Read the file and infer |
+| Find implementations of an interface method | LSP `goToImplementation` | Grep for method name |
+| Trace what a function calls / who calls it | LSP `outgoingCalls` / `incomingCalls` | Manually following imports |
+| List all symbols in a file | LSP `documentSymbol` | Reading the entire file |
+| Search for a string literal or comment | Grep | LSP |
+| Search non-code files (JSON, YAML, md) | Grep | LSP |
+| Find a file by name pattern | Glob | LSP |
+
+**If LSP returns an error or empty result:** Fall back to Grep + Read. Do not retry LSP in a loop.
+
+See `ops/sdlc/plugins/lsp-setup.md` for setup.
 
 ---
 

@@ -1,6 +1,14 @@
 ---
 name: sdlc-execute
-description: Use when executing an approved implementation plan. The plan must already exist at docs/current_work/planning/dNN_name_plan.md — written and reviewed by worker domain agents via sdlc-plan. This skill loads the plan, executes phases in parallel using worker domain agents, reviews all completed work with worker domain agents, fixes all findings, and commits. Use when someone says "execute the plan", "implement the plan", or references an existing plan file.
+description: >
+  Execute an approved implementation plan. The plan must already exist at
+  docs/current_work/planning/dNN_name_plan.md — written and reviewed by worker domain agents via
+  sdlc-plan. Loads the plan, executes phases using worker domain agents, reviews all completed work
+  with worker domain agents, fixes all findings, and commits.
+  Triggers on "execute the plan", "implement the plan", or references to an existing plan file.
+  Do NOT use without a plan — if no plan exists, use sdlc-plan first.
+  Do NOT use for lite deliverables — those use sdlc-lite-execute.
+  Do NOT use for auditing completed work against a plan — use CHECKER mode (this skill supports both).
 ---
 
 # SDLC Execution
@@ -240,7 +248,7 @@ After each phase's POST-GATE clears, commit the phase's work before starting the
 1. Stage **all** files created or modified by the phase's agent(s) — this includes:
    - Application code and test files
    - Discipline parking lot entries (`ops/sdlc/disciplines/*.md`) if discipline capture added entries
-2. Commit with the format: `feat(DNN): phase N — [phase name]`
+2. Commit with the cc-sdlc format: `feat[DNN](phase-N): [phase name] — [brief description]`
 3. Do NOT wait until all phases are complete to commit
 
 This ensures each phase is independently reviewable, bisectable, and revertable. A single monolithic commit at the end defeats the purpose of phased execution.
@@ -341,5 +349,7 @@ When the deliverable is complete, the "Let's organize the chronicles" command mo
 
 ## Integration
 
-- **sdlc-plan** — The prerequisite skill that produces the plan
-- **sdlc-tests-run** — If the plan included test files, run after commit to verify tests pass and fix failures automatically
+- **Feeds into:** `sdlc-tests-run` (post-commit test verification), `sdlc-archive` (when deliverable is complete)
+- **Uses:** worker domain agents (implementation + review), `sdlc-plan` output (the plan file), `ops/sdlc/process/manager-rule.md`, `ops/sdlc/process/collaboration_model.md`
+- **Complements:** `sdlc-lite-execute` (handles lite deliverables), `sdlc-audit` (can audit execution quality post-hoc)
+- **Does NOT replace:** `sdlc-plan` (plan must exist before execution), `sdlc-tests-run` (separate test verification step)

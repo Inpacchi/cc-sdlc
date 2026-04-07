@@ -34,6 +34,26 @@ Each entry contains:
 
 ---
 
+## 2026-04-06: Convention compliance fixes across skills and agents
+
+**Origin:** Post-commit review by `sdlc-reviewer` and `sdlc-compliance-auditor` agents across commits c4d70bb..HEAD.
+
+**What happened:** Review identified convention violations accumulated across 9 recent commits: contradictory commit formats, missing anti-triggers, truncated Integration sections, non-canonical status markers, missing numbered steps, stale Dimension 6 summaries, and missing CLAUDE-SDLC.md skill table entries.
+
+**Changes made:**
+
+1. **`skills/sdlc-execute/SKILL.md`** — Fixed per-phase commit format in 3b to use cc-sdlc format (`feat[DNN](phase-N):`) instead of old conventional commit format. Converted description to `>` folded scalar with trigger phrases and anti-triggers. Expanded Integration section with Feeds into / Uses / Complements / Does NOT replace.
+2. **`skills/sdlc-lite-execute/SKILL.md`** — Expanded Integration section with standard sub-categories.
+3. **`skills/sdlc-lite-plan/SKILL.md`** — Fixed `In Progress (lite)` to canonical `In Progress` with separate tier attribute. Expanded Integration section.
+4. **`skills/sdlc-audit/SKILL.md`** — Restructured Compliance mode into numbered steps (1. Dispatch Auditor, 2. Report, 3. Triage, 4. Fix). Added "context map" to Dimension 6 summary to match methodology.
+5. **`skills/research-external/SKILL.md`** — Added PROVENANCE to responsibility annotation row under workflow diagram.
+6. **`agents/sdlc-compliance-auditor.md`** — Added "context map" to Dimension 6 summary to match methodology.
+7. **`CLAUDE-SDLC.md`** — Added four missing skills to command table: sdlc-review-diff, sdlc-review-fix, sdlc-review-commit, sdlc-design-consult.
+
+**Rationale:** Accumulated convention drift from rapid iteration. The per-phase commit format contradiction was the most impactful — agents following step 3b would produce commits in the old format while step 4 required the new one. The other fixes bring Integration sections, step numbering, and cross-file text into alignment with framework conventions.
+
+---
+
 ## 2026-04-06: Knowledge provenance log, health lint, and research handoff
 
 **Origin:** Inspired by Karpathy's "LLM Wiki" pattern — the knowledge layer needed source tracing, staleness detection, and a prepared handoff between research and ingestion.
