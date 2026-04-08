@@ -34,6 +34,21 @@ Each entry contains:
 
 ---
 
+## 2026-04-08: Completion Report Terminal Formatting
+
+**Origin:** User feedback — completion reports rendered poorly in Claude Code's terminal output. Wide markdown tables overflowed, `═` box-drawing characters looked inconsistent, and the dense layout was hard to scan.
+
+**What happened:** The completion report template used markdown tables for commits, `##` sub-headers inside a code block, and `═══` dividers. These don't render well in Claude Code's monospace terminal. Tables with long commit messages or file paths overflow horizontally.
+
+**Changes made:**
+
+1. **`skills/sdlc-execute/SKILL.md`** — Redesigned completion report template: replaced commit table with bullet list using inline code for SHAs, replaced `═══` divider with `---` rules, replaced `##` headers with bold text labels, shortened section names (Infrastructure Changes → Infra / Deploy, Known Gaps / Deferred Items → Known Gaps), grouped related sections (Smoke Tests + Deeper Testing, Known Gaps + Next Steps) under shared dividers.
+2. **`skills/sdlc-lite-execute/SKILL.md`** — Same template changes as sdlc-execute.
+
+**Rationale:** Completion reports are the primary user-facing output of every execution. Optimizing for terminal readability reduces friction at the moment the user is deciding what to do next (deploy, test, continue). Flat lists scan faster than tables in narrow terminals, and `---` renders as a clean horizontal rule in Claude Code's markdown renderer.
+
+---
+
 ## 2026-04-07: Migration Protection via PROJECT-SECTION Markers + Skill Rename
 
 **Origin:** NeuRoLoom migration wiped out intentional project-specific changes (business suite customizations, discipline captures, ingested knowledge, agent wiring). No mechanism existed to protect project-specific content in framework files across migrations.
