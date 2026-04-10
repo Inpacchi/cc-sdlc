@@ -34,6 +34,27 @@ Each entry contains:
 
 ---
 
+## 2026-04-10: Team-Powered Review Skill with Inter-Agent Debate
+
+**Origin:** Plan `twinkly-dreaming-lerdorf` — agent teams feature enables review agents to challenge each other's findings before reporting, resolving contradictions that users would otherwise reconcile manually.
+
+**What happened:** The existing review skills (`review-diff`, `review-commit`) dispatch domain agents as isolated subagents with no inter-agent communication. Claude Code's agent teams feature allows agents to share a task list and message each other. This was identified as the lowest-risk, highest-signal entry point for agent teams in the framework. A prerequisite DRY extraction was needed — agent selection logic and review lenses were duplicated between both existing review skills.
+
+**Changes made:**
+
+1. **`process/review-agent-selection.md`** — New shared process doc. Extracted Tier 1/Tier 2 agent selection logic, 4-step selection process, and all 5 review lenses from `review-diff` and `review-commit`. Added teammate grouping rules for teams with >5 agents.
+2. **`process/debate-protocol.md`** — New process doc defining the multi-agent debate protocol: independent review (Phase 1), conflict detection, 2-round debate with adaptive early termination, anti-conformity safeguards, synthesis rules. Grounded in multi-agent debate research (Du et al. 2023, Liang et al. EMNLP 2024, FREE-MAD, ACL 2025).
+3. **`skills/review-team/SKILL.md`** — New skill. Workflow: environment gate (requires `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1`), diff gathering, teammate selection via shared doc, team creation/spawn, independent review (Phase 1), architect-mediated debate (Phase 2), synthesis, cleanup. Output format matches existing review skills so `review-fix` works unchanged.
+4. **`skills/review-diff/SKILL.md`** — Replaced inline agent selection and review lenses (formerly lines 30-137) with reference to `review-agent-selection.md`. Removed DRY note. Added `review-team` as sibling.
+5. **`skills/review-commit/SKILL.md`** — Same changes as review-diff.
+6. **`skills/sdlc-create-agent/SKILL.md`** — Updated Step 6 (Wire Into Dispatching Skills) to point reviewer wiring at `review-agent-selection.md` instead of individual review skill files. Updated Integration section and description frontmatter accordingly.
+7. **`skeleton/manifest.json`** — Added `review-team/SKILL.md`, `review-agent-selection.md`, `debate-protocol.md`.
+8. **`CLAUDE-SDLC.md`** — Added `/sdlc-review-team` to SDLC Commands table.
+
+**Rationale:** Agent teams enable a qualitatively different review mode where conflicting findings are resolved before reaching the user. The DRY extraction was overdue — three review skills sharing the same selection logic and lenses should reference a single source of truth. The debate protocol is research-grounded with explicit anti-conformity safeguards because LLM debate literature shows conformity bias degrades quality past 2 rounds.
+
+---
+
 ## 2026-04-09: Documentation Artifacts Ship with Work Commits
 
 **Origin:** User feedback — SDLC doc commits (archive moves, catalog updates, result docs) were landing as separate `sdlc[DNN]` commits instead of being bundled with the work they describe.
