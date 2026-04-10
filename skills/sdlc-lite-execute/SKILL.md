@@ -221,16 +221,19 @@ Use the deliverable ID and phase as the label (e.g., `d15-phase2-discipline-capt
 
 ### 4. Verify, Commit, and Clean Up
 
+**Principle: documentation artifacts ship with their work.** Result docs, catalog updates, discipline entries, and archive moves are part of the deliverable — not afterthoughts. They go in the same commit as the work they describe. Never create separate doc-only or `sdlc`-type commits for artifacts that belong to a work commit.
+
 1. Run `[build command]` — confirm zero errors (see project CLAUDE.md)
 2. Review the git diff for unintended changes
-3. Stage **all** modified files — not just application code. Check every category:
+3. Move the plan file and result doc to `docs/current_work/sdlc-lite/completed/` — preserves the "why this approach" and "what was built" context for reconciliation
+4. Stage **all** modified files — not just application code. Check every category:
    - Application code and test files
    - Result doc (`docs/current_work/sdlc-lite/dNN_*_result.md`)
    - Discipline parking lot entries (`ops/sdlc/disciplines/*.md`)
    - Knowledge store updates (`ops/sdlc/knowledge/*.md`)
-   - Plan file move (step 6 below)
+   - Plan and result archive move (step 3 above)
    - Any other SDLC artifacts modified during execution
-4. Commit using the cc-sdlc commit format:
+5. Commit using the cc-sdlc commit format:
    ```
    {type}[{deliverable_id}]({scope}): {description}
 
@@ -240,7 +243,6 @@ Use the deliverable ID and phase as the label (e.g., `d15-phase2-discipline-capt
    ```
    **Types:** `feat` (new feature), `fix` (bug fix), `refactor` (restructure, no behavior change), `docs` (documentation only), `test` (adding/updating tests), `chore` (build, config, tooling, dependencies), `style` (formatting, no logic change), `perf` (performance improvement), `ci` (CI/CD changes), `sdlc` (SDLC process, skills, agents, or framework changes)
    **Example:** `feat[D-042](auth): add session refresh endpoint`
-5. Move the plan file and result doc to `docs/current_work/sdlc-lite/completed/` — preserves the "why this approach" and "what was built" context for reconciliation
 6. Present the full commit to the user:
 
 ```
@@ -338,6 +340,7 @@ The Manager Rule remains in effect per `ops/sdlc/process/manager-rule.md` — se
 | "This phase produces a scraper/consumer that should align with the seed/config from Phase N" | Tell the agent to READ the Phase N output file for canonical values. Agents will fabricate their own allowlists if not pointed at the canonical source. |
 | "The plan is committed, this is just a small follow-up" | Manager Rule applies for the full session. Dispatch the domain agent. |
 | "The user asked about the server code — I'll just fix it while I'm here" | Domain crossing. Dispatch the relevant domain agent for that scope. Read domain boundaries in agent definitions. |
+| "I'll commit the code now and the docs separately" | Documentation artifacts (result docs, catalog updates, discipline entries, archive moves) ship in the same commit as the work they describe. Separate doc commits fragment the history and break bisectability. |
 
 ## Integration
 

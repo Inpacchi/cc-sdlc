@@ -253,11 +253,12 @@ Use the deliverable ID and phase as the label (e.g., `d15-phase2-discipline-capt
 
 ### 3b. Per-Phase Commits (Mandatory)
 
-After each phase's POST-GATE clears, commit the phase's work before starting the next phase:
+After each phase's POST-GATE clears, commit the phase's work before starting the next phase. **Documentation artifacts ship with their work** — discipline entries, knowledge updates, and any other SDLC artifacts produced during the phase go in the same commit as the code, not in a separate doc commit.
 
 1. Stage **all** files created or modified by the phase's agent(s) — this includes:
    - Application code and test files
    - Discipline parking lot entries (`ops/sdlc/disciplines/*.md`) if discipline capture added entries
+   - Any other SDLC artifacts produced during the phase
 2. Commit with the cc-sdlc format: `feat[DNN](phase-N): [phase name] — [brief description]`
 3. Do NOT wait until all phases are complete to commit
 
@@ -267,19 +268,22 @@ This ensures each phase is independently reviewable, bisectable, and revertable.
 
 ### 4. Final Verify, Commit, and Mark Complete
 
+**Principle: documentation artifacts ship with their work.** Result docs, catalog updates, discipline entries, and archive moves are part of the deliverable — not afterthoughts. They go in the same commit as the work they describe. Never create separate doc-only or `sdlc`-type commits for artifacts that belong to a work commit.
+
 Before claiming the work is done:
 
 1. Run the full build (`[build command]` — see project CLAUDE.md)
 2. Confirm build passes with zero errors
 3. Review the git diff for unintended changes (should be minimal — most work committed per-phase)
-4. Stage any remaining modified files — **all categories, not just application code:**
+4. Update `docs/_index.md` — change the deliverable's status from "In Progress" to "Complete" in the Active Work table
+5. Stage any remaining modified files — **all categories, not just application code:**
    - Result doc (`docs/current_work/results/dNN_*_result.md`)
    - Catalog updates (`docs/_index.md`)
    - Discipline parking lot entries (`ops/sdlc/disciplines/*.md`)
    - Knowledge store updates (`ops/sdlc/knowledge/*.md`)
    - Process changelog (`ops/sdlc/process/sdlc_changelog.md`) if updated
    - Review fixes from the review loop
-5. Commit using the cc-sdlc commit format:
+6. Commit using the cc-sdlc commit format:
    ```
    {type}[{deliverable_id}]({scope}): {description}
 
@@ -289,7 +293,7 @@ Before claiming the work is done:
    ```
    **Types:** `feat` (new feature), `fix` (bug fix), `refactor` (restructure, no behavior change), `docs` (documentation only), `test` (adding/updating tests), `chore` (build, config, tooling, dependencies), `style` (formatting, no logic change), `perf` (performance improvement), `ci` (CI/CD changes), `sdlc` (SDLC process, skills, agents, or framework changes)
    **Example:** `feat[D-042](auth): add session refresh endpoint`
-6. Present the full commit to the user:
+7. Present the full commit to the user:
 
 ```
 Commit: {short-sha}
@@ -301,7 +305,6 @@ Files changed:
 - {file path}
 ```
 
-7. Update `docs/_index.md` — change the deliverable's status from "In Progress" to "Complete" in the Active Work table
 8. If on a feature branch, push and create a PR
 9. Emit the **Completion Report** (step 5)
 
@@ -406,6 +409,7 @@ When the deliverable is complete, the "Let's organize the chronicles" command mo
 | "This phase produces a scraper/consumer that should align with the seed/config from Phase N" | Tell the agent to READ the Phase N output file for canonical values. Agents will fabricate their own allowlists if not pointed at the canonical source. |
 | "The plan is committed, this is just a small follow-up" | Manager Rule applies for the full session. Dispatch the domain agent. |
 | "The user asked about the server code — I'll just fix it while I'm here" | Domain crossing. Dispatch the relevant domain agent for that scope. Read domain boundaries in agent definitions. |
+| "I'll commit the code now and the docs separately" | Documentation artifacts (result docs, catalog updates, discipline entries, archive moves) ship in the same commit as the work they describe. Separate doc commits fragment the history and break bisectability. |
 
 ## Integration
 

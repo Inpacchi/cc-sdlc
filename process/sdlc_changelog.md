@@ -34,6 +34,21 @@ Each entry contains:
 
 ---
 
+## 2026-04-09: Documentation Artifacts Ship with Work Commits
+
+**Origin:** User feedback — SDLC doc commits (archive moves, catalog updates, result docs) were landing as separate `sdlc[DNN]` commits instead of being bundled with the work they describe.
+
+**What happened:** In `sdlc-execute`, the `_index.md` catalog update (step 7) was ordered after the commit (step 5), forcing a separate commit. In `sdlc-lite-execute`, the archive move to `completed/` (step 5) was ordered after the commit (step 4), same problem. This produced fragmented git history where a feature commit was always followed by a doc-only commit.
+
+**Changes made:**
+
+1. **`skills/sdlc-execute/SKILL.md`** — Added "documentation artifacts ship with their work" principle to step 4 and section 3b. Moved `_index.md` update before staging/commit. Added red flag for separate doc commits.
+2. **`skills/sdlc-lite-execute/SKILL.md`** — Same principle added to step 4. Moved archive move (plan+result to `completed/`) before staging/commit. Added red flag for separate doc commits.
+
+**Rationale:** Doc commits that describe work should be atomically committed with that work. Separate doc commits fragment history, break bisectability, and create noise in the commit log. A single commit per unit of work (code + its documentation) is the correct granularity.
+
+---
+
 ## 2026-04-08: Completion Report Terminal Formatting
 
 **Origin:** User feedback — completion reports rendered poorly in Claude Code's terminal output. Wide markdown tables overflowed, `═` box-drawing characters looked inconsistent, and the dense layout was hard to scan.
