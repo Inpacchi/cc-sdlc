@@ -34,6 +34,20 @@ Each entry contains:
 
 ---
 
+## 2026-04-10: Initialize Skill — Dispatcher Wiring and Architect-First Creation
+
+**Origin:** Follow-up to review-team addition — initialization needed to verify dispatcher wiring after agent creation and recommend `software-architect` as the first agent.
+
+**What happened:** After extracting agent selection into `review-agent-selection.md` and adding the `review-team` skill, the initialization skill had no step to verify that created agents were wired into the dispatching tables. Additionally, `software-architect` and `code-reviewer` were buried in the creation order despite being the most critical agents — architect mediates `review-team` debate, reviews every plan, and seeds knowledge; code-reviewer is unconditionally dispatched by every review skill.
+
+**Changes made:**
+
+1. **`skills/sdlc-initialize/SKILL.md`** — Made `software-architect` and `code-reviewer` mandatory agents, created first before all others. Added Phase 4e (dispatcher wiring verification) to confirm all agents appear in `review-agent-selection.md`, `sdlc-plan` agent table, and infra trigger tables. Updated Phase 10 verification checklist to include mandatory agent presence and dispatcher wiring. Added red flags for skipping mandatory agents and skipping wiring verification. Updated minimum agent count to reflect 2 mandatory + at least 1 implementer.
+
+**Rationale:** Agents created during initialization but not wired into dispatching tables are invisible to review and planning skills. The verification step catches this. `software-architect` and `code-reviewer` are mandatory because review and planning skills depend on them unconditionally — without them, core SDLC workflows are broken.
+
+---
+
 ## 2026-04-10: Team-Powered Review Skill with Inter-Agent Debate
 
 **Origin:** Plan `twinkly-dreaming-lerdorf` — agent teams feature enables review agents to challenge each other's findings before reporting, resolving contradictions that users would otherwise reconcile manually.

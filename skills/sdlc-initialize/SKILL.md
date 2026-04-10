@@ -317,10 +317,16 @@ Present the proposed roster to CD via `AskUserQuestion`:
 - System prompt scaffolding (Knowledge Context, Communication Protocol, Anti-Rationalization Table)
 - Template compliance (AGENT_TEMPLATE.md structure)
 
-**Creation order:**
-1. Roles dispatched most often first (usually backend + frontend + code-reviewer)
-2. Specialized roles (db-engineer, security, performance)
-3. Cross-cutting roles (architect, sdet)
+**Mandatory agents (create these regardless of project size):**
+1. **`software-architect`** — dispatched by both review and planning skills, mediates debate in `review-team`, seeds disciplines and knowledge in later initialization phases, and reviews every other agent's plan output. Create first so it's available for dispatch throughout initialization.
+2. **`code-reviewer`** — always dispatched in every review skill (Tier 1, unconditional). Without it, no review skill produces findings. This is the one agent that reviews every diff regardless of what changed.
+
+If CD's proposed roster omits either of these, add them and explain why. These are not optional.
+
+**Creation order (after mandatory agents):**
+3. Core implementation roles (backend, frontend)
+4. Specialized roles (db-engineer, security, performance)
+5. Testing and infrastructure (sdet, build-engineer)
 
 **Framework agents (pre-installed by setup.sh — do NOT create as domain agents):**
 - `sdlc-reviewer` — reviews skill/agent files against cc-sdlc conventions (dispatched by `sdlc-develop-skill`, `sdlc-create-agent`, `sdlc-review`)
@@ -351,6 +357,29 @@ Deviations:
 ```
 
 Present deviations to CD. This prevents the neuroloom-bootstrap gap where spec-listed agents were silently dropped without a deviation record.
+
+**4e. Verify dispatcher wiring.**
+
+`/sdlc-create-agent` Step 6 wires each agent into the dispatching tables during creation. After all agents are created, verify that nothing was missed:
+
+```
+DISPATCHER WIRING CHECK
+Agent                    | review-agent-selection.md | sdlc-plan agent table | sdlc-plan infra triggers
+-------------------------|--------------------------|----------------------|------------------------
+software-architect       | Tier 2                   | yes                  | n/a
+frontend-developer       | Tier 1                   | yes                  | yes
+backend-developer        | Tier 1                   | yes                  | yes
+code-reviewer            | Tier 1 (always)          | yes                  | n/a
+sdet                     | Tier 1                   | yes                  | n/a
+...
+```
+
+For each created agent, confirm:
+1. A Tier 1 or Tier 2 entry exists in `ops/sdlc/process/review-agent-selection.md` (if the agent reviews code)
+2. A row exists in the `sdlc-plan` agent table
+3. An infra trigger row exists in `sdlc-plan` / `sdlc-lite-plan` (if the agent owns an infrastructure domain)
+
+If any agent is missing from a table it belongs in, add the entry now. All entries must be wrapped in `PROJECT-SECTION` markers per `ops/sdlc/process/project-section-markers.md`.
 
 ### Phase 5: Wire the Agent-Context Map
 
@@ -568,9 +597,11 @@ Skeleton & Infrastructure:
 Agents:
 [ ] All agents created via /sdlc-create-agent — confirmed
     Created: [list all agents]
+[ ] Mandatory agents created: software-architect, code-reviewer
 [ ] Spec-vs-roster reconciliation complete — all spec-listed roles created or deviation logged
 [ ] AGENT_TEMPLATE.md and AGENT_SUGGESTIONS.md present in .claude/agents/
 [ ] Framework subagents present in .claude/agents/: sdlc-reviewer.md, sdlc-compliance-auditor.md
+[ ] Dispatcher wiring: all agents in review-agent-selection.md, sdlc-plan agent table, infra triggers
 [ ] Context map: agent-context-map.yaml wired to actual agent filenames
 [ ] All knowledge files mapped in agent-context-map.yaml (no unmapped YAMLs)
 
@@ -679,7 +710,9 @@ Same as Greenfield Phases 10–11 (verification checklist + compliance audit), p
 | "Disciplines can be seeded later" | A few bullets now costs 2 minutes; discovering the gap mid-execution costs a review round. |
 | "Context7 is optional for now" | Without it, agents will hallucinate library APIs from training data. Install it before any agent work begins. |
 | "I'll overwrite their existing CLAUDE.md with a fresh one" | In retrofit mode, ALWAYS augment. Existing project instructions are authoritative. |
-| "The project only needs 2 agents" | Even small projects benefit from code-reviewer + sdet separation. The minimum viable set is 3 (implementer + reviewer + tester). |
+| "The project only needs 2 agents" | `software-architect` and `code-reviewer` are mandatory — that's already 2. Add at least one implementer. The minimum viable set is 3+. |
+| "We don't need a software-architect or code-reviewer for a small project" | Both are mandatory. The architect mediates debate, reviews plans, and seeds knowledge. The code-reviewer is unconditionally dispatched by every review skill. Without them, review and planning skills are broken. |
+| "The agents are created, we're done with Phase 4" | Verify dispatcher wiring (4e). An agent that isn't in the selection tables won't be dispatched by review or planning skills. |
 | "I'll seed knowledge from training data" | Verify all library/framework claims via Context7 before writing knowledge files. Training data goes stale. |
 | "Setup.sh failed, I'll create the directories manually" | Fix the setup.sh failure. Manual creation misses files and skips version tracking. |
 | "Manager Rule applies from the start" | In greenfield Phases 0–3, no agents exist. CC works directly. Manager Rule activates at Phase 4. |
