@@ -34,6 +34,22 @@ Each entry contains:
 
 ---
 
+## 2026-04-12: Fix Incorrect "Project Skill" Guidance — All `.claude/` Content Is Framework-Managed
+
+**Origin:** User correction — `sdlc-develop-skill` MODIFY mode incorrectly claimed that "project skills" in `.claude/skills/` could be edited without migration markers.
+
+**What happened:** The `sdlc-develop-skill` skill's MODIFY mode classified skills into "framework skills" (in `ops/sdlc/skills/`) and "project skills" (created by the project), stating project skills could be edited directly without markers. This was wrong on two counts: (1) skills are installed to `.claude/skills/`, not `ops/sdlc/skills/`; (2) all content in `.claude/skills/` and `.claude/agents/` is framework-installed via `setup.sh` — any project modifications need `PROJECT-SECTION` markers to survive migration. Several other files also referenced the incorrect `ops/sdlc/skills/` path.
+
+**Changes made:**
+
+1. **`skills/sdlc-develop-skill/SKILL.md`** — Removed the false "project skill" classification row from the M2 change classification table. Updated M1 analysis to state that all skills in `.claude/skills/` are framework-installed and need migration protection. Removed the incorrect `ops/sdlc/skills/` path reference.
+2. **`skills/sdlc-migrate/SKILL.md`** — Fixed two `ops/sdlc/skills/` references to `.claude/skills/` in the CLAUDE.md compatibility check (§4.3a).
+3. **`knowledge/architecture/knowledge-management-methodology.yaml`** — Fixed `ops/sdlc/skills/` reference to `.claude/skills/` in the skill_instructions persistence layer description.
+
+**Rationale:** `.claude/skills/` and `.claude/agents/` are framework-managed directories. `setup.sh` copies all skills and agents from cc-sdlc into these directories. Telling users that some skills don't need migration markers creates a false sense of safety — those edits would be silently overwritten on the next `sdlc-migrate` run.
+
+---
+
 ## 2026-04-10: Initialize Skill — Dispatcher Wiring and Architect-First Creation
 
 **Origin:** Follow-up to review-team addition — initialization needed to verify dispatcher wiring after agent creation and recommend `software-architect` as the first agent.

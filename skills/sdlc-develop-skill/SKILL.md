@@ -178,8 +178,8 @@ Safely modify an existing skill with migration-aware wrapping. This mode reads t
 ### M1. Read and Analyze
 
 1. Read the existing skill's `SKILL.md`
-2. Identify whether the skill is a **framework skill** (lives in `ops/sdlc/skills/` and is installed from cc-sdlc) or a **project skill** (created by the project)
-3. For framework skills: warn that direct edits to framework sections will be overwritten on next `sdlc-migrate`
+2. All skills in `.claude/skills/` are framework-installed from cc-sdlc — direct edits to framework sections will be overwritten on next `sdlc-migrate`
+3. Warn the user accordingly before making changes
 
 ### M2. Classify the Change
 
@@ -190,7 +190,6 @@ Determine whether the user's requested change targets:
 | Framework section (gates, workflow, dispatch protocol) | **Framework change** | Warn: "This section is framework-owned and will be overwritten on next migration. Consider proposing this upstream instead." |
 | Project-specific addition (new phase, custom agent wiring, domain-specific step) | **Project addition** | Auto-wrap in `PROJECT-SECTION` markers |
 | Existing `PROJECT-SECTION` block | **Project update** | Edit within existing markers |
-| Project skill (not from cc-sdlc) | **Project skill** | Edit directly, no markers needed |
 
 ### M3. Apply with Protection
 

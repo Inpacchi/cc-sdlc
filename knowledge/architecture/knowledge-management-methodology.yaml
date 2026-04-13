@@ -147,7 +147,7 @@ learning_distribution:
       update_trigger: "Agent self-updates or orchestrator updates after significant session"
 
     skill_instructions:
-      description: "SDLC skill files in ops/sdlc/skills/ updated with process improvements"
+      description: "SDLC skill files in .claude/skills/ updated with process improvements"
       latency: "Available to next skill invocation"
       format: "Markdown with explicit instructions and Red Flags sections"
       update_trigger: "SDLC process improvement decision"

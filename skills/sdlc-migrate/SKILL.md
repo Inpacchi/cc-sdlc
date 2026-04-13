@@ -508,10 +508,10 @@ The project's `CLAUDE.md` contains CLAUDE-SDLC.md content — skill names, proce
 
 **Check for:**
 
-1. **Skill name references (guarded renames)** — verify all skill names mentioned in CLAUDE.md (`sdlc-plan`, `sdlc-execute`, `sdlc-lite-plan`, `sdlc-lite-execute`, `sdlc-idea`, `sdlc-initialize`, `sdlc-reconcile`, `sdlc-review-diff`, `sdlc-review-commit`, `sdlc-review-fix`, `sdlc-develop-skill`, `sdlc-create-agent`, `sdlc-review`) still match the actual skill directory names in `ops/sdlc/skills/`. Check for renamed skills: `diff-review` → `sdlc-review-diff`, `commit-review` → `sdlc-review-commit`, `commit-fix` → `sdlc-review-fix`, `sdlc-create-skill` → `sdlc-develop-skill`
+1. **Skill name references (guarded renames)** — verify all skill names mentioned in CLAUDE.md (`sdlc-plan`, `sdlc-execute`, `sdlc-lite-plan`, `sdlc-lite-execute`, `sdlc-idea`, `sdlc-initialize`, `sdlc-reconcile`, `sdlc-review-diff`, `sdlc-review-commit`, `sdlc-review-fix`, `sdlc-develop-skill`, `sdlc-create-agent`, `sdlc-review`) still match the actual skill directory names in `.claude/skills/`. Check for renamed skills: `diff-review` → `sdlc-review-diff`, `commit-review` → `sdlc-review-commit`, `commit-fix` → `sdlc-review-fix`, `sdlc-create-skill` → `sdlc-develop-skill`
 
    **Guarded rename rule:** Before renaming any skill reference in the project's CLAUDE.md or other files:
-   1. Build the project's actual skill inventory: `ls ops/sdlc/skills/` or `.claude/skills/`
+   1. Build the project's actual skill inventory: `ls .claude/skills/`
    2. Only rename if the target skill directory exists in the project
    3. If the target doesn't exist (e.g., the project hasn't received the new skill yet), log a warning instead of renaming:
       ```
