@@ -34,6 +34,27 @@ Each entry contains:
 
 ---
 
+## 2026-04-13: Overhaul sdlc-archive — Comprehensive Inventory, Git Verification, Reduced Gates
+
+**Origin:** Real-world usage on neuroloom project exposed 7 gaps: incomplete inventory (missed idea briefs), no git history verification, lite deliverables not handled, bug reports/handoffs not covered, too many approval gates, catalog inconsistencies not caught, weak graduation detection.
+
+**What happened:** User had to manually list ~15 items, explicitly ask for `git log`, instruct deletion of stale bug reports, and declined AskUserQuestion twice due to excessive interruption. Catalog showed "In Progress" for a completed deliverable.
+
+**Changes made:**
+
+1. **`skills/sdlc-archive/SKILL.md`** — Complete rewrite:
+   - Merged two inventory steps into single exhaustive scan covering full deliverables, lite deliverables, idea briefs, bug reports, handoffs, and ad hoc results
+   - Added mandatory git history verification step (step 2) — runs `git log` for every artifact before classification, cross-checks catalog status against actual file state
+   - Strengthened graduation detection — searches git log for topic-matching commits when frontmatter lacks explicit status
+   - Added catalog inconsistency detection and fix step (step 6)
+   - Reduced approval gates from 2-3 AskUserQuestion calls to exactly 1 (step 4) — single comprehensive table with all artifact types and actions
+   - Knowledge hygiene (step 9) now applies reasonable defaults instead of always asking — only gates if >3 ambiguous entries
+   - Added lite deliverable path handling (`sdlc-lite/` → `chronicle/{concept}/results/`)
+   - Added Delete classification for stale bug reports, resolved handoffs, duplicates
+   - Updated Red Flags table with new anti-patterns
+
+**Rationale:** Archive skill must be autonomous enough to find everything without user enumeration, verify status via git (not just frontmatter/catalog), and execute with minimal interruption after a single approval point.
+
 ## 2026-04-13: Fix Agent Color Check — Semantic Category, Not Uniqueness
 
 **Origin:** User observed the reviewer reassigning agent colors using "too many in one color group" logic instead of "assign to the appropriate semantic group" logic.

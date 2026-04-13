@@ -5,60 +5,102 @@ description: Archive completed deliverables and resolved idea briefs from curren
 
 # Archive Completed Deliverables
 
-Move completed work from `docs/current_work/` to `docs/chronicle/`. Follows the process defined in `ops/sdlc/process/chronicle_organization.md`. Only deliverables in the **Complete** state (per `ops/sdlc/process/deliverable_lifecycle.md`) are eligible for archival — verify the `**Status:**` marker before proceeding. Idea briefs that have graduated to deliverables or been abandoned are also archived.
+Move completed work from `docs/current_work/` to `docs/chronicle/`. Follows the process defined in `ops/sdlc/process/chronicle_organization.md`. Only deliverables in the **Complete** state (per `ops/sdlc/process/deliverable_lifecycle.md`) are eligible for archival — verify the `**Status:**` marker before proceeding. Idea briefs, bug reports, handoffs, and lite deliverables are also handled.
 
 ## Steps
 
-### 1. Inventory Deliverables
+### 1. Comprehensive Inventory
 
-Scan `docs/current_work/` across all subdirectories (specs, planning, results). Identify deliverables that are **Complete** — meaning they have a spec, plan, AND result file.
+Perform a single exhaustive scan across ALL artifact types in `docs/current_work/`. Do not split this into multiple passes — scan everything at once.
 
-Skip any deliverable that:
-- Is missing a result file (still in progress)
-- Has a matching issue file in `issues/` (blocked)
+#### Artifact types to scan:
 
-### 2. Inventory Idea Briefs
+| Type | Location pattern | What makes it complete |
+|------|-----------------|----------------------|
+| **Full deliverable** | `docs/current_work/{specs,planning,results}/dNN_*` | Has spec + plan + result files |
+| **Lite deliverable** | `docs/current_work/sdlc-lite/dNN_*_result.md` | Result file exists |
+| **Idea brief** | `docs/current_work/ideas/*_idea-brief.md` | Any state (triage in step 3) |
+| **Bug report** | `docs/current_work/ideas/*_bug-report.md` | Any state (triage in step 3) |
+| **Handoff** | `docs/current_work/ideas/*_handoff.md` | Any state (triage in step 3) |
+| **Ad hoc result** | `docs/current_work/results/adhoc_*` | Result file exists |
 
-Scan `docs/current_work/ideas/` for idea brief files. For each brief, classify its state:
+For EACH artifact found:
+1. Read its content and frontmatter (status field, problem statement, outcome)
+2. Check its entry in `docs/_index.md` — record the catalog status for cross-checking in step 2
 
-Idea briefs have YAML frontmatter with a `status` field. Check frontmatter first, then fall back to content-based detection:
+If a type yields zero results for a given pattern, also try broader globs (e.g., `docs/current_work/ideas/*bug*`, `docs/current_work/ideas/*handoff*`) to catch naming variations.
 
-| State | How to detect | Action |
-|-------|--------------|--------|
-| **Graduated** | Frontmatter `status: graduated`, OR a deliverable exists whose spec traces to this idea (shared concept, matching problem description, or the brief's "Recommended Next Step" was followed) | Archive alongside the deliverable's concept chronicle |
-| **Abandoned/Stale** | Frontmatter `status: abandoned`, OR no deliverable emerged and the brief is old (check git log for creation date — >30 days with no follow-up activity) OR the user confirms it's dead | Archive into the best-fit concept chronicle |
-| **Still active** | Frontmatter `status: active`, OR user is actively exploring, or the brief is recent with no deliverable yet | Skip — leave in `current_work/ideas/` |
+### 2. Git History Verification
 
-If classification is ambiguous, include the brief in the categorization table (Step 3) and let the user decide.
+**Mandatory.** Do not skip this step or defer it to the user.
 
-### 3. Categorize
+For every artifact found in step 1:
 
-**Gate:** Do not proceed to step 4 without explicit user approval via AskUserQuestion.
+1. **Verify implementation commits exist:**
+   ```bash
+   git log --oneline --grep="DNN" --grep="dNN" -i
+   ```
+   Also search for the artifact's topic keywords if the ID search yields nothing.
 
-For each complete deliverable, determine which concept chronicle it belongs to by reading the spec's problem statement and the existing concepts in `docs/chronicle/`.
+2. **Cross-check catalog status against reality:**
+   - Catalog says "In Progress" but result file exists → flag as **catalog inconsistency** (fix in step 6)
+   - Catalog says "Complete" but no result file → flag as **premature status** (skip archival)
+   - No catalog entry but artifact exists → flag as **missing catalog entry**
 
-For each archivable idea brief, determine which concept chronicle it best fits by reading the brief's problem understanding and direction.
+3. **Graduation detection for idea briefs:**
+   - First check frontmatter `status: graduated` / `status: abandoned` / `status: active`
+   - If no explicit status, search git log for commits whose messages reference the brief's topic, concept name, or recommended next steps
+   - If a deliverable exists whose spec traces to the brief (shared concept, matching problem description), mark as graduated even without frontmatter
 
-Present a combined categorization table and ask for approval:
+Record all findings — they feed directly into step 3 classification.
+
+### 3. Classification
+
+For each artifact, classify using this priority order: **frontmatter status → git history evidence → content analysis**.
+
+| Classification | Criteria | Action |
+|---------------|----------|--------|
+| **Archive (deliverable)** | Complete full or lite deliverable with implementation commits | Move to concept chronicle |
+| **Archive (graduated idea)** | Idea brief that led to a deliverable (linked by topic/ID) | Archive alongside the deliverable's concept |
+| **Archive (resolved idea)** | Idea brief whose question was answered without needing a deliverable | Archive into best-fit concept chronicle |
+| **Archive (resolved bug)** | Bug report that was fixed (commits exist, issue closed) | Archive into relevant concept chronicle |
+| **Delete** | Stale bug reports with no follow-up, duplicate artifacts, resolved handoffs that have been fully acted on | Remove entirely |
+| **Skip** | Active, recent, or in-progress work | Leave in place |
+
+### 4. Single Approval Gate
+
+**This is the ONLY AskUserQuestion in the entire flow.** Present one comprehensive table covering all artifact types and all proposed actions:
 
 ```
-Ready to archive:
+Archive & cleanup plan:
 
-| Item | Type | Target Concept | Action |
-|------|------|---------------|--------|
-| D1 — User Authentication | deliverable | auth | Extend existing |
-| D2 — Search Integration | deliverable | search | Extend existing |
-| caching_idea-brief | idea (graduated → D2) | search | Archive with D2 |
-| notification_idea-brief | idea (abandoned) | messaging | New concept |
-
-Proceed? (yes / adjust)
+| Item | Type | Status Evidence | Target Concept | Action |
+|------|------|----------------|----------------|--------|
+| D12 — Auth Tokens | full deliverable | spec+plan+result, 8 commits | auth | Archive |
+| D15 — Cache Layer | lite deliverable | result exists, 3 commits | performance | Archive |
+| caching_idea-brief | idea (graduated → D15) | topic match to D15 | performance | Archive with D15 |
+| notification_idea-brief | idea (resolved) | question answered in D12 result | auth | Archive |
+| stale_bug-report | bug report | fixed in commit abc123 | — | Delete |
+| api_handoff | handoff | fully acted on | — | Delete |
+| D18 — New Feature | full deliverable | no result file yet | — | Skip |
 ```
 
-Use AskUserQuestion to confirm. If the user adjusts mappings, apply their changes.
+If catalog inconsistencies were found in step 2, append a **Catalog Fixes** section:
 
-### 4. Archive Deliverables
+```
+Catalog fixes needed:
 
-For each approved deliverable:
+| Item | Current Status | Actual Status | Fix |
+|------|---------------|---------------|-----|
+| D14 | In Progress | Complete (result exists) | Update to Complete |
+| D19 | — | Active (spec exists) | Add missing entry |
+```
+
+Use AskUserQuestion to confirm. If the user adjusts mappings or actions, apply their changes.
+
+### 5. Archive Deliverables
+
+For each approved deliverable (both full AND lite):
 
 1. **Create concept directory** if it doesn't exist:
    ```
@@ -67,7 +109,10 @@ For each approved deliverable:
    docs/chronicle/{concept_name}/results/
    ```
 
-2. **Copy files** from `docs/current_work/{type}/` to `docs/chronicle/{concept_name}/{type}/`
+2. **Copy files** to the concept chronicle:
+   - Full deliverables: `docs/current_work/{type}/` → `docs/chronicle/{concept_name}/{type}/`
+   - Lite deliverables: `docs/current_work/sdlc-lite/dNN_*_result.md` → `docs/chronicle/{concept_name}/results/`
+   - If a lite deliverable has an associated plan or spec in `docs/current_work/sdlc-lite/`, copy those to the matching subdirectory
 
 3. **Update or create `_index.md`** in the concept directory with:
    - Overview of the concept
@@ -81,35 +126,44 @@ For each approved deliverable:
    - Update its status to "Archived"
    - Add a link to the concept chronicle
 
-### 5. Archive Idea Briefs
+### 6. Fix Catalog Inconsistencies
 
-For each approved idea brief:
+Apply all approved catalog fixes from the table in step 4:
+- Update status markers in `docs/_index.md` to match reality
+- Add missing catalog entries
+- Correct any stale status fields
+
+### 7. Archive Idea Briefs & Resolved Artifacts
+
+For each approved idea brief, bug report, or handoff marked for archival:
 
 1. **Create `ideas/` subdirectory** in the target concept chronicle if it doesn't exist:
    ```
    docs/chronicle/{concept_name}/ideas/
    ```
 
-2. **Copy the brief** from `docs/current_work/ideas/` to `docs/chronicle/{concept_name}/ideas/`
+2. **Copy the file** from `docs/current_work/ideas/` to `docs/chronicle/{concept_name}/ideas/`
 
-3. **Update `_index.md`** in the concept directory — add an "Exploration History" section (if not already present) with a table for idea briefs:
+3. **Update `_index.md`** in the concept directory — add an "Exploration History" section (if not already present):
    ```markdown
    ## Exploration History
 
    | Brief | Seed | Outcome | Date |
    |-------|------|---------|------|
-   | [filename.md] | [original seed from brief] | Graduated → DNN / Abandoned | [explored date] |
+   | [filename.md] | [original seed from brief] | Graduated → DNN / Resolved / Abandoned | [explored date] |
    ```
 
-   This section sits below the Deliverables table and above Common Tasks. It is separate from the deliverables table — idea briefs are context, not deliverables.
+4. **Remove the file** from `docs/current_work/ideas/`
 
-4. **Remove the brief** from `docs/current_work/ideas/`
+### 8. Delete Approved Artifacts
 
-### 6. Knowledge Hygiene
+Remove all artifacts marked for deletion in step 4. This includes stale bug reports, resolved handoffs, and duplicates.
+
+### 9. Knowledge Hygiene
 
 Archival is a natural triage checkpoint for parking lot entries generated during the work being archived. This is NOT discipline capture (no new insights are generated) — it closes the loop on entries that were captured during the original work sessions.
 
-#### 6a. Scan Related Parking Lot Entries
+#### 9a. Scan Related Parking Lot Entries
 
 For each deliverable being archived, scan `ops/sdlc/disciplines/*.md` for parking lot entries tagged with that deliverable's ID (e.g., `[D05 — phase 2]`, `[D05 — planning]`).
 
@@ -117,49 +171,37 @@ For each idea brief being archived, scan for entries tagged with its context (e.
 
 Collect all entries that are still marked `[NEEDS VALIDATION]`.
 
-#### 6b. Check Idea Brief Insight Coverage
+#### 9b. Check Idea Brief Insight Coverage
 
-For each idea brief being archived, read its "Key Insights from Exploration" section. For each insight listed, check whether a corresponding parking lot entry exists (the `sdlc-idea` skill runs discipline capture at crystallization, but coverage may be incomplete).
+For each idea brief being archived, read its "Key Insights from Exploration" section. For each insight listed, check whether a corresponding parking lot entry exists.
 
 Flag any insight that appears significant and reusable but has no parking lot entry.
 
-#### 6c. Present Triage Table
+#### 9c. Present Triage Table (only if needed)
 
-If any entries need triage or insights lack coverage, present a table:
+**Skip this entire sub-step if no `[NEEDS VALIDATION]` entries exist AND all idea brief insights have coverage.** Do not use AskUserQuestion — apply reasonable defaults instead:
 
-```
-Knowledge hygiene — entries related to archived work:
+- Entries clearly validated by the archived work → promote to `[READY TO PROMOTE]`
+- Entries not yet proven → mark `[DEFERRED]`
+- Missing insight entries → capture with `[NEEDS VALIDATION]`
 
-| # | Entry/Insight | Source | Current State | Suggested Action |
-|---|--------------|--------|---------------|-----------------|
-| 1 | React StrictMode double-mount gotcha | [D05 — phase 2] coding | [NEEDS VALIDATION] | Promote to knowledge |
-| 2 | Queue retry needs idempotency keys | [idea: notifications] architecture | [NEEDS VALIDATION] | Defer — not yet proven |
-| 3 | Auth token refresh race condition | D07 idea brief insight | No parking lot entry | Capture to coding |
+If more than 3 entries require judgment calls, present a brief summary and use AskUserQuestion. Otherwise, apply defaults and report what was done.
 
-Actions: promote / defer / discard / capture (for missing entries)
-```
-
-Use AskUserQuestion to confirm. Apply the user's decisions:
-- **Promote** → Change marker to `[READY TO PROMOTE]`
-- **Defer** → Change marker to `[DEFERRED]` with reason
-- **Discard** → Remove the entry
-- **Capture** → Write a new parking lot entry with `[NEEDS VALIDATION]` marker
-
-**Skip this step entirely** if no `[NEEDS VALIDATION]` entries exist for the archived work and all idea brief insights have coverage. Do not fabricate triage work.
-
-### 7. Clean Up Issues
+### 10. Clean Up Issues
 
 If a deliverable had an associated issue file in `docs/current_work/issues/` and the deliverable is now archived, remove the issue file too.
 
-### 8. Verify
+### 11. Verify
 
-List the archived files in their new locations and confirm nothing was left behind in `docs/current_work/`.
+List the archived files in their new locations and confirm nothing was left behind in `docs/current_work/` that should have been moved.
 
-### 9. Commit
+### 12. Commit
 
-Commit with message: `docs: archive DXX-DYY into chronicles`
+Commit with message format: `docs: archive DXX-DYY into chronicles`
 
-If idea briefs were archived, include them: `docs: archive DXX-DYY + idea briefs into chronicles`
+Include artifact types in the message when relevant:
+- `docs: archive DXX-DYY + idea briefs into chronicles`
+- `docs: archive DXX-DYY + lite deliverables + idea briefs, fix catalog`
 
 Ask for confirmation before committing.
 
@@ -168,13 +210,16 @@ Ask for confirmation before committing.
 | Thought | Reality |
 |---------|---------|
 | "Archive everything, skip categorization" | Each deliverable needs correct concept mapping. Wrong categorization breaks chronicle discoverability. |
-| "This deliverable is obviously complete, skip the check" | Verify spec + plan + result all exist. Missing artifacts mean in-progress work. |
+| "This deliverable is obviously complete, skip the check" | Run git log verification. Catalog status lies — commits don't. |
 | "I'll pick the concept category myself" | Present the table and use AskUserQuestion. The user decides categorization. |
 | "This idea brief is old, just delete it" | Old briefs still contain exploration context. Archive them — don't discard. The thinking is valuable even if the idea was abandoned. |
 | "I should run full discipline capture during archival" | Archival is housekeeping, not creative work. Knowledge hygiene triages existing entries — it does not generate new ones. |
-| "No parking lot entries to triage, skip step 6" | Still check idea brief insights for missing coverage (step 6b). But if both 6a and 6b are clean, skip the triage table — don't fabricate work. |
+| "No parking lot entries to triage, skip step 9" | Still check idea brief insights for missing coverage (step 9b). But if both 9a and 9b are clean, skip the triage table — don't fabricate work. |
+| "I'll ask the user at each step" | ONE AskUserQuestion in step 4. After approval, execute autonomously. Knowledge hygiene gets a second gate only if >3 ambiguous entries exist. |
+| "Lite deliverables go through the same path as full" | Lite deliverables may only have a result file — don't fail on missing spec/plan. Archive what exists. |
+| "Bug reports should always be archived" | Stale, duplicate, or fully-resolved bug reports can be deleted. Only archive bugs with valuable diagnostic context. |
 
 ## Integration
-- **Depends on:** `docs/current_work/` (source of completed deliverables and idea briefs), `docs/_index.md` (catalog), `ops/sdlc/disciplines/*.md` (parking lot entries for knowledge hygiene)
+- **Depends on:** `docs/current_work/` (source of completed deliverables, lite deliverables, idea briefs, bug reports, handoffs), `docs/_index.md` (catalog), `ops/sdlc/disciplines/*.md` (parking lot entries for knowledge hygiene)
 - **Fed by:** `sdlc-status` (identifies archivable work), `sdlc-reconcile` (catalogs ad hoc work first), `sdlc-idea` (produces idea briefs)
 - **Updates:** `docs/_index.md`, `docs/chronicle/`, `ops/sdlc/disciplines/*.md` (triage markers)
