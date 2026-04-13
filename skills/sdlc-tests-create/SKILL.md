@@ -1,23 +1,37 @@
 ---
 name: sdlc-tests-create
 description: >
-  Generate integration and E2E test suites for completed work by dispatching the SDET agent.
-  Analyzes scope (SDLC plan, SDLC-Lite plan, specific commit, or unstaged changes), designs test
-  cases covering happy paths, edge cases, and error scenarios, implements them, then hands off
-  to sdlc-tests-run for the red-green fix cycle.
+  Generate integration and E2E test suites for completed work by dispatching domain experts
+  for coverage gap analysis and the SDET agent for implementation. Two-phase approach: domain
+  agents audit what needs testing, SDET builds the tests. Prioritizes integration and E2E
+  tests that exercise real application behavior over isolated unit tests.
   Trigger when someone says "create tests", "write tests", "generate test suite",
   "create test suite", "test this work", "write tests for this", or after completing
   a deliverable or SDLC-Lite execution.
   Do NOT use for running or fixing existing tests — use sdlc-tests-run for that.
+  Do NOT use for trivial single-file changes with no branching logic — direct SDET dispatch
+  is sufficient when the scope is one pure function with obvious test cases.
 ---
 
 # Create Test Suite
 
-Dispatch the SDET agent to design and implement tests for completed work. You are the manager — you identify what was built, gather scope context, and dispatch. The SDET agent decides test cases, writes the tests, and verifies they compile. Then hand off to `sdlc-tests-run`.
+Two-phase test creation: domain experts identify what needs testing, SDET implements the tests. You are the manager — you gather scope, run the coverage inventory, dispatch domain experts for gap analysis, synthesize their findings into a test brief, then dispatch SDET to implement. Hand off to `sdlc-tests-run` when done.
+
+## Testing Philosophy
+
+**Integration and E2E tests are the standard.** These test real application behavior — actual HTTP requests, real database queries, genuine service interactions. Unit tests are appropriate only for pure functions with complex logic (validators, parsers, state machines). Do not create unit tests for simple getters, trivial wrappers, or code that's already exercised by integration tests.
+
+**No useless tests.** Every test must verify behavior a user or operator cares about. "Does this function return the right type" is not a useful test. "Does completing checkout result in an active subscription" is.
+
+**Test the workflow, not the pieces.** Testing individual functions in isolation and the orchestrator in isolation can leave the entire end-to-end chain (the actual business logic) untested. Integration tests should exercise the full chain — from entry point to final state change.
+
+## Collaboration Model
+
+Read `ops/sdlc/process/collaboration_model.md` for the CD/CC role definitions, communication patterns (AskUserQuestion rule), decision authority table, and anti-patterns. All questions to the user must use `AskUserQuestion`. All anti-patterns in that doc apply during test creation.
 
 ## Manager Rule
 
-**You never write test code.** The SDET agent designs test cases, implements tests, and fixes test compilation issues. If you notice a gap in test coverage, dispatch SDET to address it. Do not write test files, fixtures, or helpers yourself.
+Read and follow `ops/sdlc/process/manager-rule.md`. **You never write test code.** The SDET agent designs test cases, implements tests, and fixes test compilation issues. If you notice a gap in test coverage, dispatch SDET to address it. Do not write test files, fixtures, or helpers yourself.
 
 ## Step 0: Identify Scope
 
@@ -34,9 +48,7 @@ What work should I create tests for?
 
 Use `AskUserQuestion` — do not type this as conversational text.
 
-**Also ask:** "Any specific test cases you want included?" Accept the user's suggestions and pass them to the SDET agent in the dispatch prompt.
-
-If the user already specified scope and test cases (or said none), skip the questions.
+If the user already specified scope or passed arguments, skip the question. User-requested test cases are passed as skill arguments — do not ask separately.
 
 ### Scope Resolution
 
@@ -53,54 +65,162 @@ Extract from the scope:
 3. **User-facing behavior** — what a user would interact with
 4. **Acceptance criteria** — from plan if available, otherwise infer from the diff
 
-## Step 1: Dispatch SDET to Design and Implement
+## Step 1: Coverage Inventory (Mandatory)
 
-Dispatch `sdet` with a single prompt that covers both design and implementation.
+**Do not skip this step.** File-level scoping ("17 integration tests exist") masks function-level gaps ("none of the webhook handlers are tested end-to-end"). This step builds the actual inventory.
 
-**Cross-domain knowledge injection:** The SDET is testing code written by domain agents (frontend, backend, etc.). Consult `ops/sdlc/knowledge/agent-context-map.yaml` for the agents who built the feature being tested and include their domain knowledge files in the SDET's dispatch prompt. This helps the SDET understand domain patterns, data flows, and known gotchas in the code under test.
+### 1a. Build the Implementation Inventory
+
+For each implementation file in scope, list every public function/method/endpoint:
+
+```
+Implementation Inventory:
+
+| File | Function/Endpoint | Type | Description |
+|------|------------------|------|-------------|
+| services/billing_service.py | create_checkout_session | async | Creates checkout, returns URL |
+| jobs/processor.py | process_event | job | Dispatches to event handlers |
+| jobs/processor.py | _handle_completed | handler | Full completion→activation flow |
+| routers/billing.py | POST /checkout-session | endpoint | Auth + service + response |
+...
+```
+
+Include private functions that contain significant business logic (like `_handle_*` or `_classify_*`). Skip trivial helpers.
+
+### 1b. Map Existing Test Coverage
+
+For each function in the inventory, check if existing tests cover it:
+
+```
+Coverage Map:
+
+| Function | Tested By | Coverage Level | Gap |
+|----------|-----------|---------------|-----|
+| create_checkout_session | test_integration:TestCheckout | Integration (isolated) | Not tested as part of full chain |
+| _handle_completed | NOT TESTED | None | Full handler chain untested |
+| POST /checkout-session | test_endpoints:TestCreate | Endpoint (mocked service) | Happy path + auth covered |
+...
+```
+
+**Coverage levels:**
+- **None** — no test touches this function
+- **Unit (isolated)** — tested in isolation with mocks
+- **Integration (isolated)** — tested with real DB but not as part of a workflow
+- **Integration (chain)** — tested as part of a realistic workflow end-to-end
+- **Endpoint** — tested via HTTP request through the full stack
+
+**The goal is "Integration (chain)" or "Endpoint" for every function that contains business logic.** Unit (isolated) and Integration (isolated) are insufficient for workflow functions — they prove the piece works alone but not that the pieces work together.
+
+## Step 2: Domain Expert Gap Analysis
+
+**Dispatch ALL relevant domain agents to audit the coverage map.** The SDET knows testing patterns but doesn't have deep domain knowledge of (for example) webhook lifecycle, subscription state machines, or recovery flows. Domain experts catch gaps the SDET would miss. Each agent's perspective matters — do not subset.
+
+### Which agents to dispatch
+
+Use `ops/sdlc/process/agent-selection.md` to identify which agents to dispatch and which lenses apply. For test gap analysis, agents apply the **coverage**, **security at boundaries**, **contract safety**, **performance**, **data integrity**, and **standard** lenses — not the overengineering or type safety lenses (those are review-only). See the lens applicability table in `agent-selection.md`.
+
+- If a plan exists: read the `agents:` frontmatter list as the starting set
+- If no plan exists (commit or unstaged scope): match changed files against the Tier 1 agent selection rules in `agent-selection.md`
+- Add agents if the Coverage Map reveals domains not in the initial set
+
+**Dispatch every agent identified — not a subset.** Each agent reviews the coverage map and reports gaps from their domain perspective. Output a checklist before dispatching:
+
+```
+Gap analysis — dispatching:
+- [ ] agent-name-1
+- [ ] agent-name-2
+- [ ] agent-name-3
+```
+
+Every checkbox must have a corresponding dispatch. Each agent receives:
+
+```
+Review the implementation code and the existing test coverage map below.
+Identify workflows, edge cases, and critical paths that are NOT covered
+by existing tests. Focus on:
+
+1. End-to-end workflows that cross function boundaries
+2. State machine transitions and their edge cases
+3. Error handling paths that affect user-visible behavior
+4. Integration points (external APIs, DB transactions, job queues)
+
+Do NOT suggest unit tests for simple functions already covered by
+integration tests. Focus on gaps where real behavior is untested.
+
+IMPLEMENTATION FILES:
+[list all implementation files]
+
+EXISTING COVERAGE MAP:
+[paste the coverage map from Step 1b]
+
+Output a prioritized gap list:
+| Gap | What's Untested | Suggested Test Type | Priority |
+```
+
+### Synthesize findings
+
+Collect all domain agent findings. Deduplicate (multiple agents may flag the same gap). Produce the **Test Brief** — the definitive list of what the SDET should implement:
+
+```
+Test Brief:
+
+COVERAGE GAPS (from domain expert analysis):
+[deduplicated, prioritized list]
+
+EXISTING TESTS (do not duplicate):
+[list of existing test files and what they cover]
+
+USER-REQUESTED TEST CASES:
+[from skill arguments, or "None specified"]
+```
+## Step 3: Dispatch SDET to Implement
+
+Dispatch `sdet` with the Test Brief and full implementation context.
+
+**Cross-domain knowledge injection:** Consult `ops/sdlc/knowledge/agent-context-map.yaml` for the agents who built the feature being tested and include their domain knowledge files in the SDET's dispatch prompt.
 
 The dispatch prompt must include:
-- The scope context gathered in step 0 (changed files, packages, acceptance criteria)
-- Any user-suggested test cases
+- The Test Brief from Step 2 (coverage gaps, existing tests, user requests)
+- The Implementation Inventory from Step 1a (every function to consider)
 - Cross-domain knowledge file paths from the feature's domain agents
-- **Library verification instructions** (when tests involve external library APIs — test frameworks, assertion libraries, mocking tools): verify API usage via Context7 (`mcp__context7__resolve-library-id` → `mcp__context7__query-docs`) before writing tests. Include the test framework name and version from the project's dependency files.
+- **Library verification instructions** (when tests involve external library APIs): verify API usage via Context7 before writing tests
 - These instructions:
 
 ```
-Design and implement tests for the following completed work.
+Implement tests based on the Test Brief below. Domain experts have
+identified the coverage gaps — your job is to implement tests that
+close them.
 
-SCOPE:
-[paste scope context]
+TEST BRIEF:
+[paste from Step 2]
 
-USER-REQUESTED TEST CASES:
-[paste user suggestions, or "None specified"]
+IMPLEMENTATION INVENTORY:
+[paste from Step 1a]
 
 GUIDELINES:
-- Apply the testing paradigm from ops/sdlc/knowledge/testing/testing-paradigm.yaml:
-  - Unit test pure logic (transforms, validators, parsers) — no mocks needed
-  - Integration test I/O boundaries (DB queries, API calls) — hit real systems
-  - E2E test critical user flows — small, curated suite
-  - If a function mixes I/O and logic, flag it as a testability issue — don't mock around it
-- Design test cases from a real user's perspective — what would a user do?
-- Cover: happy paths, edge cases, error scenarios. Use your judgment on which
-  edge cases matter.
-- Tests live in the [test directory per project CLAUDE.md]. Follow existing conventions
-  in the test config and existing test files.
-- Use existing fixtures and helpers where applicable.
-- Check for existing tests that already cover this area — avoid duplication.
-- Read the source files under test before writing selectors or assertions.
-- Verify the tests compile by running the test list command for your framework.
+- Apply the testing paradigm from ops/sdlc/knowledge/testing/testing-paradigm.yaml
+- PRIORITIZE integration and E2E tests that exercise real workflows end-to-end
+- Unit tests ONLY for pure functions with complex branching logic (state machines,
+  classifiers, validators with multiple edge cases)
+- Do NOT create unit tests for functions already covered by integration tests
+- Do NOT create trivial tests (type checks, simple getter verification)
+- Test the chain, not the piece: if a workflow goes A → B → C, test A → C,
+  not A alone and B alone and C alone
+- Read the source files under test before writing assertions
+- Check for existing tests and avoid duplication
+- Use existing fixtures and helpers where applicable
+- Verify the tests compile by running the test list command for your framework
 ```
 
-**Do not constrain the SDET agent's test case selection.** The agent has domain expertise in what to test. Your role is to provide complete scope context, not prescribe test cases (except for user-requested ones).
-
-## Step 2: Verify and Hand Off
+**Do not pre-filter the Test Brief.** Pass the domain expert findings directly to SDET. The SDET decides how to organize tests — you decide what needs coverage (via domain experts).
+## Step 4: Verify and Hand Off
 
 After SDET returns:
 
 1. **Check that test files were created** — verify via `git diff --stat` or agent report
 2. **Run a compilation check** — run the test list command for your framework on the new test files to confirm they parse
-3. **Invoke `sdlc-tests-run`** — hand off to the sdlc-tests-run skill targeting the newly created test files
+3. **Quick coverage spot-check** — verify at least the critical gaps from the Test Brief have corresponding tests. If a critical gap has no test, re-dispatch SDET with the specific gap.
+4. **Invoke `sdlc-tests-run`** — hand off to the sdlc-tests-run skill targeting the newly created test files
 
 ```
 Test suite created. Handing off to sdlc-tests-run to run and fix.
@@ -114,15 +234,21 @@ If compilation check fails, re-dispatch SDET with the error output. Do not fix t
 | Thought | Reality |
 |---------|---------|
 | "I'll write a quick test myself" | SDET writes all test code. Manager Rule. |
-| "I'll specify exactly which test cases to write" | Provide scope context, not test prescriptions. SDET has domain expertise. |
+| "I'll tell SDET exactly which test cases to write" | Provide the Test Brief (what needs coverage). SDET decides how to implement. |
+| "Skip the domain expert analysis, SDET can figure it out" | SDET knows testing patterns but not domain logic. Domain experts catch gaps the SDET would miss — they know which handlers exist and which workflows matter. |
+| "The coverage map shows tests exist, so skip Step 2" | Tests existing ≠ workflows covered. Integration tests can exist for a module but zero tests cover the actual handler chain. File-level coverage ≠ function-level coverage ≠ workflow coverage. |
+| "I know what's missing, skip the domain expert" | The manager can identify "endpoint tests missing" and miss that the entire handler chain is untested. Domain experts see gaps the manager doesn't. |
+| "Unit tests for every function" | Integration tests that exercise the workflow are worth 10x more than unit tests of individual functions. Only add unit tests for complex pure logic. |
+| "More tests = better coverage" | Useless tests are worse than no tests — they create maintenance burden and false confidence. Every test must verify behavior someone cares about. |
 | "Skip sdlc-tests-run, the tests already pass" | sdlc-tests-run catches what a single run misses. Always hand off. |
-| "Let me ask if they want to run sdlc-tests-run" | Step 2 says invoke sdlc-tests-run, not ask about it. Hand off automatically. |
 | "The scope is obvious, skip step 0" | Ask if not specified. Wrong scope = wrong tests. |
-| "Unit tests are enough for this" | Default to integration/E2E. Unit tests only where they genuinely fit. |
 | "I'll fix the compilation error, it's one line" | Re-dispatch SDET. Size is not an exception. |
+| "This is a small change, skip the domain expert phase" | The description has an anti-trigger for trivial single-file changes. But if the scope has any workflow logic, branching, or integration points, run the full two-phase flow. When in doubt, run it. |
 
 ## Integration
 
-- **sdlc-tests-run** — Receives the created tests and runs the red-green fix cycle
-- **sdlc-execute** — Can be invoked after execution completes to generate tests for the deliverable
-- **sdlc-lite-execute** — Same — invoke after SDLC-Lite work to generate tests
+- **Depends on:** `ops/sdlc/process/agent-selection.md` (agent identification), `ops/sdlc/knowledge/agent-context-map.yaml` (cross-domain knowledge injection), `ops/sdlc/knowledge/testing/testing-paradigm.yaml` (SDET dispatch guidelines)
+- **Feeds into:** `sdlc-tests-run` (receives the created tests and runs the red-green fix cycle)
+- **Uses:** Domain agents (Step 2 gap analysis), SDET agent (Step 3 implementation), `ops/sdlc/process/manager-rule.md`, `ops/sdlc/process/collaboration_model.md`
+- **Complements:** `sdlc-execute` / `sdlc-lite-execute` (invoke after execution to generate tests for the deliverable)
+- **Does NOT replace:** `sdlc-tests-run` (this creates tests; that runs and fixes them). Direct SDET dispatch (appropriate for trivial scope where two-phase is overkill).

@@ -364,7 +364,7 @@ Present deviations to CD. This prevents the neuroloom-bootstrap gap where spec-l
 
 ```
 DISPATCHER WIRING CHECK
-Agent                    | review-agent-selection.md | sdlc-plan agent table | sdlc-plan infra triggers
+Agent                    | agent-selection.md | sdlc-plan agent table | sdlc-plan infra triggers
 -------------------------|--------------------------|----------------------|------------------------
 software-architect       | Tier 2                   | yes                  | n/a
 frontend-developer       | Tier 1                   | yes                  | yes
@@ -375,7 +375,7 @@ sdet                     | Tier 1                   | yes                  | n/a
 ```
 
 For each created agent, confirm:
-1. A Tier 1 or Tier 2 entry exists in `ops/sdlc/process/review-agent-selection.md` (if the agent reviews code)
+1. A Tier 1 or Tier 2 entry exists in `ops/sdlc/process/agent-selection.md` (if the agent reviews code)
 2. A row exists in the `sdlc-plan` agent table
 3. An infra trigger row exists in `sdlc-plan` / `sdlc-lite-plan` (if the agent owns an infrastructure domain)
 
@@ -601,7 +601,7 @@ Agents:
 [ ] Spec-vs-roster reconciliation complete — all spec-listed roles created or deviation logged
 [ ] AGENT_TEMPLATE.md and AGENT_SUGGESTIONS.md present in .claude/agents/
 [ ] Framework subagents present in .claude/agents/: sdlc-reviewer.md, sdlc-compliance-auditor.md
-[ ] Dispatcher wiring: all agents in review-agent-selection.md, sdlc-plan agent table, infra triggers
+[ ] Dispatcher wiring: all agents in agent-selection.md, sdlc-plan agent table, infra triggers
 [ ] Context map: agent-context-map.yaml wired to actual agent filenames
 [ ] All knowledge files mapped in agent-context-map.yaml (no unmapped YAMLs)
 

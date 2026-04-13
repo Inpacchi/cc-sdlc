@@ -130,59 +130,12 @@ digraph planning {
 
 ## Agent Selection
 
-### Project-Level Agents (Primary)
+### Agent Source
 
-These are your project's domain experts. **Always select from here first.**
+Use `ops/sdlc/process/agent-selection.md` as the canonical agent-to-domain mapping. The Tier 1 table lists every project-level agent and its file-scope triggers. For planning, read the trigger descriptions as domain coverage — if a phase touches files that would trigger an agent in review, that agent should be assigned to that phase.
 
-Located at: `.claude/agents/` (project root)
-
-**Add your project's agents here.** Each agent entry should include the agent name and its domain coverage. Common agent roles:
-
-| Agent | Domain (examples — customize for your project) |
-|-------|--------|
-| `frontend-developer` | Frontend framework, UI components, state management, search UI |
-| `backend-developer` | API layer, database access, background jobs, server config |
-| `software-architect` | System design, patterns, scalability, integration strategy |
-| `ui-ux-designer` | Visual design, interaction patterns, accessibility |
-| `code-reviewer` | Code quality, maintainability, correctness |
-| `data-architect` | Database schema, indexes, security rules, storage patterns |
-| `domain-specialist` | Core domain logic specific to your product area |
-| `data-engineer` | Data pipelines, ETL, background processing, scraping |
-| `data-researcher` | External data sources, API evaluation, data validation |
-| `debug-specialist` | Root cause analysis, unexpected behavior, regressions |
-| `sdet` | E2E tests, integration tests, test architecture, flake diagnosis |
-| `performance-engineer` | Web vitals, bundle size, query optimization, rendering perf |
-| `realtime-systems-engineer` | WebSocket, real-time communication, streaming |
-| `ml-architect` | AI/ML system design, model selection, inference pipelines |
-| `ml-engineer` | ML feature implementation, inference services |
-| `security-engineer` | Security assessments, vulnerability analysis, compliance |
-| `payment-engineer` | Payment integrations, billing, revenue infrastructure |
-| `chief-product-officer` | Product strategy, feature prioritization, user value |
-| `chief-sales-officer` | Pricing, revenue modeling, go-to-market |
-| `legal-advisor` | Legal guidance, compliance, risk assessment |
-| `accessibility-auditor` | WCAG compliance, contrast analysis, keyboard navigation, ARIA labeling |
-| `build-engineer` | Build infra, bundler config, CI pipeline, package boundaries |
-| `refactor-engineer` | Code restructuring, abstraction boundaries, safe incremental refactoring |
-
-*Remove agents not relevant to your project. Add project-specific agents (e.g., `game-integration-engineer`, `payment-engineer`) with their specific domain. Use `/sdlc-create-agent` to create new agents.*
-
-### Personal-Level Agents (Fallback)
-
-Generic, stack-agnostic agents. Use when the task extends beyond project-scoped expertise.
-
-Located at: `~/.claude/agents/`
-
-| Agent | Use Case |
-|-------|----------|
-| `prompt-engineer` | LLM prompt design, optimization, and evaluation for production systems |
-| `refactoring-specialist` | Restructuring complex or duplicated code while preserving behavior |
-| `search-specialist` | Advanced search strategies, query optimization, targeted info retrieval |
-| `content-marketer` | Content strategy, SEO-optimized marketing copy, multi-channel campaigns |
-| `seo-specialist` | Technical SEO audits, keyword strategy, search rankings improvement |
-| `competitive-analyst` | Competitor analysis, benchmarking, competitive positioning strategy |
-| `market-researcher` | Market analysis, consumer behavior, opportunity sizing, market entry |
-| `research-analyst` | Multi-source research synthesis, trend identification, detailed reporting |
-| `trend-analyst` | Emerging patterns, industry shift prediction, future scenario planning |
+**Project agents:** `.claude/agents/` (project root) — listed in `agent-selection.md` Tier 1
+**Personal agents:** `~/.claude/agents/` — fallback for tasks extending beyond project-scoped expertise (prompt-engineer, refactoring-specialist, research-analyst, competitive-analyst, market-researcher, trend-analyst, etc.)
 
 ### Selection Rule
 
@@ -271,7 +224,7 @@ This prevents re-discovering decisions already made. If a prior deliverable esta
 
 The spec is the contract between CD (human) and CC (agent system). It defines **what** will be built and **why**, not how.
 
-The primary domain agent writes the core spec. Other relevant agents contribute domain-specific constraints (e.g., `database-architect` adds schema requirements, `security-engineer` adds security constraints).
+The primary domain agent writes the core spec. Other relevant agents contribute domain-specific constraints (e.g., `data-architect` adds schema requirements, `security-engineer` adds security constraints).
 
 **Research integration:** If the spec requires research into external services, APIs, competitors, or technologies — use WebSearch for web research grounded in project context (CLAUDE.md). Incorporate findings into the spec's Design section.
 

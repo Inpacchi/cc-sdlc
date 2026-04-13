@@ -34,6 +34,44 @@ Each entry contains:
 
 ---
 
+## 2026-04-13: Add design-brand-asset Skill
+
+**Origin:** Endless Galaxy Studios project — needed a repeatable workflow for generating brand asset specifications.
+
+**What happened:** Brand asset creation (logos, favicons, OG images, social avatars) kept requiring the same structure: exact dimensions, element positioning, color values, typography, and AI image generation prompts. Extracted as a framework skill.
+
+**Changes made:**
+
+1. **`skills/design-brand-asset/SKILL.md`** — NEW. Generates detailed visual asset specs with canvas dimensions, element positioning, color hex values, typography, AI image prompts, and export checklists. Covers logomarks, favicons, OG images, social avatars, and PWA icons.
+2. **`skeleton/manifest.json`** — Added `design-brand-asset/SKILL.md`.
+
+**Rationale:** Brand asset specs are generic across projects — every project with a web presence needs favicons, OG images, and social avatars with exact dimensions and consistent branding.
+
+---
+
+## 2026-04-13: Unified Agent Selection, Two-Phase Test Creation, Lenses Framework
+
+**Origin:** Neuroloom project real-world usage: D97a billing test gaps exposed that file-level test scoping masks function-level gaps; agent selection was fragmented across review-only and planning contexts; lenses lacked performance and data integrity coverage.
+
+**What happened:** Three interconnected improvements developed in neuroloom imported back to the framework source.
+
+**Changes made:**
+
+1. **`process/agent-selection.md`** — NEW. Unified agent-to-domain mapping replacing `review-agent-selection.md`. Now serves all dispatching skills (review-diff, review-commit, review-team, sdlc-tests-create, sdlc-plan, sdlc-create-agent, sdlc-initialize). Added `legal-advisor`, `security-auditor`, `devops-engineer`, `systems-engineer`, `ml-engineer` to Tier 1. Added Personal-Level Agents fallback section.
+2. **`process/review-agent-selection.md`** — DELETED. Replaced by `agent-selection.md`.
+3. **Lenses framework expanded** — "Review Lenses" (5 lenses) → "Lenses" (7 lenses) with per-skill applicability table. New lenses: performance (N+1 queries, missing pagination, re-render chains), data integrity (missing constraints, race conditions, orphaned records), coverage (workflow chain testing, state machine transitions, auth boundaries). Overengineering and type safety lenses now marked review-only.
+4. **`skills/sdlc-tests-create/SKILL.md`** — Upgraded from single SDET dispatch to two-phase approach: mandatory coverage inventory (function-level, not file-level), domain expert gap analysis (all relevant agents audit coverage map), then SDET implements from synthesized Test Brief. Added testing philosophy section.
+5. **`skills/sdlc-plan/SKILL.md`** — Replaced duplicate agent table with reference to `agent-selection.md`.
+6. **`skills/review-diff/SKILL.md`**, **`skills/review-commit/SKILL.md`**, **`skills/review-team/SKILL.md`** — Updated references from `review-agent-selection.md` → `agent-selection.md`, "Review Lenses" → "Lenses".
+7. **`skills/sdlc-create-agent/SKILL.md`** — Updated all references from `review-agent-selection.md` → `agent-selection.md`.
+8. **`skills/sdlc-initialize/SKILL.md`** — Updated all references from `review-agent-selection.md` → `agent-selection.md`.
+9. **`agents/AGENT_SUGGESTIONS.md`** — Added `security-auditor` agent suggestion (distinct from `security-engineer`: assesses and recommends vs implements).
+10. **`skeleton/manifest.json`** — Renamed `review-agent-selection.md` → `agent-selection.md`, added `sdlc-create-skill/SKILL.md`.
+
+**Rationale:** Unified agent selection eliminates divergence between review and planning agent dispatch. Two-phase test creation prevents the D97a failure mode where file-level "tests exist" masks function-level "handler chain untested."
+
+---
+
 ## 2026-04-13: Overhaul sdlc-archive — Comprehensive Inventory, Git Verification, Reduced Gates
 
 **Origin:** Real-world usage on neuroloom project exposed 7 gaps: incomplete inventory (missed idea briefs), no git history verification, lite deliverables not handled, bug reports/handoffs not covered, too many approval gates, catalog inconsistencies not caught, weak graduation detection.

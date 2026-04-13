@@ -42,7 +42,7 @@ If there are no changes, tell the user and stop.
 
 ### 2. Select Teammates
 
-Follow the agent selection process in `ops/sdlc/process/review-agent-selection.md`:
+Follow the agent selection process in `ops/sdlc/process/agent-selection.md`:
 
 1. Always add `code-reviewer`
 2. Add Tier 1 agents based on file paths
@@ -74,7 +74,7 @@ Create the agent team. The main session acts as team lead — it manages team li
 
 Spawn each selected agent as a teammate. Each teammate receives:
 - The full diff
-- Review lenses from `ops/sdlc/process/review-agent-selection.md` § Review Lenses
+- Review lenses from `ops/sdlc/process/agent-selection.md` § Lenses
 - Relevant knowledge context from `ops/sdlc/knowledge/agent-context-map.yaml` for their role
 - Instructions to post findings as task completions with required fields:
   - `file` — path and line range
@@ -180,5 +180,5 @@ Do NOT fix anything in this skill. The review skill only reviews — `/sdlc-revi
 - **Feeds into:** `sdlc-review-fix` (if findings need fixing)
 - **Siblings:** `sdlc-review-diff` (same lenses, no debate), `sdlc-review-commit` (same lenses, no debate)
 - **Shared references:**
-  - Agent selection and review lenses: `ops/sdlc/process/review-agent-selection.md`
+  - Agent selection and lenses: `ops/sdlc/process/agent-selection.md`
   - Debate protocol: `ops/sdlc/process/debate-protocol.md`

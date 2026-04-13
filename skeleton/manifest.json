@@ -68,7 +68,7 @@
       "process/finding-classification.md",
       "process/incident_response.md",
       "process/project-section-markers.md",
-      "process/review-agent-selection.md",
+      "process/agent-selection.md",
       "process/debate-protocol.md"
     ],
     "templates": [
@@ -170,6 +170,7 @@
       "skills/review-commit/SKILL.md",
       "skills/sdlc-tests-create/SKILL.md",
       "skills/design-consult/SKILL.md",
+      "skills/design-brand-asset/SKILL.md",
       "skills/sdlc-archive/SKILL.md",
       "skills/sdlc-execute/SKILL.md",
       "skills/sdlc-plan/SKILL.md",
@@ -189,6 +190,7 @@
       "skills/sdlc-audit/references/session-reading.md",
       "skills/sdlc-develop-skill/SKILL.md",
       "skills/sdlc-create-agent/SKILL.md",
+      "skills/sdlc-create-skill/SKILL.md",
       "skills/sdlc-review/SKILL.md",
       "skills/enrich-agent/SKILL.md",
       "skills/research-external/SKILL.md",
