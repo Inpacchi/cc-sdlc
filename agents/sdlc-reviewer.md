@@ -76,7 +76,7 @@ Determine the file type from its location and content:
 - [ ] Description includes 2-4 `<example>` blocks with Context/user/assistant/commentary
 - [ ] `model:` is one of: sonnet, opus, haiku
 - [ ] `tools:` lists only necessary tools (flag if all tools are listed without justification)
-- [ ] `color:` does not conflict with existing agents (scan other agent files)
+- [ ] `color:` matches the agent's semantic group: green (core product), cyan (architecture + domain), orange (infrastructure), red (quality + debugging), yellow (SDLC process), blue (business intelligence), purple (product + design), pink (creative / external). Multiple agents CAN share a color if they belong to the same semantic group — color indicates category, not uniqueness.
 - [ ] `memory:` is either `project` or omitted (not other values)
 
 ### Required Sections

@@ -19,7 +19,8 @@ FRONTMATTER REFERENCE:
 
   description:
     The most critical field — determines when Claude triggers this agent.
-    Format: single-line YAML string using \n for newlines, never a block scalar (|, >)
+    Format: single-line YAML double-quoted string using \\n (double-backslash n) for newlines, never a block scalar (|, >)
+    WARNING: In YAML double-quoted strings, \n = real newline (breaks parser), \\n = literal \n (correct)
     Must include:
     - Triggering conditions ("Use this agent when...")
     - 2-4 <example> blocks with Context/user/assistant/commentary
@@ -41,7 +42,9 @@ FRONTMATTER REFERENCE:
 
   color:
     Options: green | cyan | orange | red | yellow | blue | purple | pink
-    Semantic guidance:
+    Pick the color matching the agent's semantic category. Multiple agents CAN share
+    a color if they belong to the same group — color indicates category, not uniqueness.
+    Semantic groups:
     - green: core product
     - cyan: architecture + domain
     - orange: infrastructure

@@ -34,6 +34,38 @@ Each entry contains:
 
 ---
 
+## 2026-04-13: Fix Agent Color Check — Semantic Category, Not Uniqueness
+
+**Origin:** User observed the reviewer reassigning agent colors using "too many in one color group" logic instead of "assign to the appropriate semantic group" logic.
+
+**What happened:** The `sdlc-reviewer` agent's color check said "does not conflict with existing agents" which LLMs interpreted as "no two agents should share a color." The correct semantics are that color indicates category (green=product, cyan=architecture, etc.) and multiple agents in the same category SHOULD share a color.
+
+**Changes made:**
+
+1. **`agents/sdlc-reviewer.md`** — Replaced "does not conflict" color check with semantic group matching check. Explicitly states multiple agents CAN share a color if they belong to the same group.
+2. **`skills/sdlc-create-agent/SKILL.md`** — Updated color field guidance and Red Flags table to clarify color = category, not uniqueness.
+3. **`agents/AGENT_TEMPLATE.md`** — Updated color comment to clarify sharing is expected within semantic groups.
+
+**Rationale:** Color encodes agent category for visual grouping in the agent list. Treating it as a uniqueness constraint causes the reviewer to suggest wrong colors just to avoid duplicates, which defeats the purpose of semantic color coding.
+
+---
+
+## 2026-04-13: Clarify YAML `\\n` Escaping in Agent Description Frontmatter
+
+**Origin:** User discovered agents with `\n` (single backslash) in YAML double-quoted descriptions silently broke Claude Code's frontmatter parser, while agents with `\\n` (double backslash) worked correctly.
+
+**What happened:** Documentation across the framework consistently said to use `\n` for newlines in agent description strings, but in YAML double-quoted strings `\n` is interpreted as a real newline character. The correct syntax is `\\n` which produces a literal `\n` in the parsed string. Two agents (`security-auditor`, `legal-advisor`) shipped with `\n` and were broken; all other agents used `\\n` and worked. The documentation was ambiguous enough to cause this error.
+
+**Changes made:**
+
+1. **`skills/sdlc-create-agent/SKILL.md`** — Updated CRITICAL note (Step 2) and Red Flags table to specify `\\n` (double-backslash n) and explain the YAML parsing distinction.
+2. **`agents/AGENT_TEMPLATE.md`** — Updated description format comment to specify `\\n` with a WARNING line explaining the `\n` vs `\\n` difference.
+3. **`CLAUDE-SDLC.md`** — Updated Agent Conventions section to specify `\\n` with explanation.
+
+**Rationale:** The ambiguity between "use `\n`" (meaning the two-character sequence) and YAML's interpretation of `\n` (meaning a real newline) was the root cause of broken agent descriptions. Making the documentation unambiguous about double-backslash prevents future agents from shipping with the same parser-breaking bug.
+
+---
+
 ## 2026-04-12: Fix Incorrect "Project Skill" Guidance — All `.claude/` Content Is Framework-Managed
 
 **Origin:** User correction — `sdlc-develop-skill` MODIFY mode incorrectly claimed that "project skills" in `.claude/skills/` could be edited without migration markers.

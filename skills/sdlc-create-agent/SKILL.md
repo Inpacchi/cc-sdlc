@@ -38,7 +38,7 @@ Read the `.claude/agents/` directory to identify existing agents and their domai
 
 ### 2. Frontmatter Generation
 
-**CRITICAL:** The `description` field MUST be a double-quoted single-line string using `\n` for newlines. Block scalars (`|`, `>`) and multi-line quoted strings break Claude Code's agent frontmatter parser.
+**CRITICAL:** The `description` field MUST be a double-quoted single-line string using `\\n` (double-backslash n) for newlines. In YAML double-quoted strings, a single `\n` is interpreted as a real newline character which breaks Claude Code's agent frontmatter parser. Always use `\\n` so the parsed string contains a literal `\n`. Block scalars (`|`, `>`) and multi-line quoted strings also break the parser.
 
 The description MUST include:
 - Triggering conditions ("Use this agent when...")
@@ -62,7 +62,7 @@ Generate each field:
 - Full engineering: `Read, Write, Edit, Bash, Glob, Grep`
 - Research: `Read, Glob, Grep, WebFetch, WebSearch`
 
-**color:** Must not conflict with existing agents. Semantic guidance:
+**color:** Choose the color that matches the agent's semantic category. Multiple agents CAN share a color if they belong to the same group — color indicates category, not uniqueness. Semantic groups:
 - green: core product
 - cyan: architecture + domain
 - orange: infrastructure
@@ -194,7 +194,7 @@ Dispatch the `sdlc-reviewer` subagent on the created agent file. Present its fin
 
 | Thought | Reality |
 |---------|---------|
-| "The description can use block scalars (> or \|)" | Agent descriptions MUST be double-quoted single-line with `\n` escapes. Block scalars break Claude Code's agent frontmatter parser. |
+| "The description can use block scalars (> or \|)" | Agent descriptions MUST be double-quoted single-line with `\\n` escapes (double-backslash). A single `\n` in YAML double-quoted strings becomes a real newline and breaks the parser. |
 | "I'll give the agent all tools to be safe" | Fewer tools = less latitude to diverge. Only list what the agent actually needs. |
 | "The example blocks are optional" | Examples are the primary trigger mechanism. Without them, Claude Code won't suggest this agent. 2-4 examples minimum. |
 | "I don't need anti-rationalization entries" | Every agent rationalizes shortcuts. The table is mandatory. |
@@ -202,7 +202,7 @@ Dispatch the `sdlc-reviewer` subagent on the created agent file. Present its fin
 | "I'll skip the self-verification checklist" | The checklist is the agent's last chance to catch mistakes before handoff. Mandatory. |
 | "The scope statement can be vague" | Vague scope leads to domain overlap. Be explicit about what the agent owns AND does not touch. |
 | "Memory should default to project" | Only set `memory: project` if the agent genuinely needs session-to-session continuity. Stateless is simpler. |
-| "I'll pick a color that looks good" | Check existing agents first — color conflicts make the agent list confusing. |
+| "I'll pick a color that looks good" | Pick the color matching the agent's semantic category (green=product, cyan=architecture, etc.). Multiple agents sharing a color is fine if they're in the same group. |
 | "I'll write the agent file directly" | Hand-written agents skip frontmatter validation and convention checks. Use this skill. |
 | "I'll wire it into the skills later" | An agent that isn't in the dispatching skills won't get selected. Wire it now or it's invisible. |
 

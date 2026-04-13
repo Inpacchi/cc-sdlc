@@ -293,7 +293,7 @@ If you have spent 3 or more rounds of read/search/grep investigating a bug witho
 ## Agent Conventions
 
 - **Agent memories are not git-tracked** — `.claude/agent-memory/` is a private scratchpad for per-agent session continuity. Reusable learnings should flow through `knowledge_feedback` in agent handoffs → discipline capture → knowledge stores. See the "Surfacing Learnings to the SDLC" section in the agent template.
-- **Agent frontmatter: single-line descriptions only** — The `description` field in `.claude/agents/*.md` must be a single-line YAML string using `\n` for newlines. Multi-line quoted strings silently break Claude Code's frontmatter parser.
+- **Agent frontmatter: single-line descriptions only** — The `description` field in `.claude/agents/*.md` must be a double-quoted single-line YAML string using `\\n` (double-backslash n) for newlines. A single `\n` in YAML double-quoted strings is interpreted as a real newline character and silently breaks Claude Code's frontmatter parser.
 
 ## Commit Completeness Rule
 
