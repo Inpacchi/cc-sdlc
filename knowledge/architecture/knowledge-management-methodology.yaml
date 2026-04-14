@@ -135,7 +135,7 @@ learning_distribution:
 
   distribution_channels:
     knowledge_files:
-      description: "YAML knowledge files in ops/sdlc/knowledge/ consulted at agent dispatch time"
+      description: "YAML knowledge files in [sdlc-root]/knowledge/ consulted at agent dispatch time"
       latency: "Available to next session immediately after file is written"
       format: "Structured YAML with sections indexed by topic"
       update_trigger: "Human decision after pattern validation"
@@ -153,7 +153,7 @@ learning_distribution:
       update_trigger: "SDLC process improvement decision"
 
     agent_context_map:
-      description: "ops/sdlc/knowledge/agent-context-map.yaml maps agent roles to relevant knowledge files"
+      description: "[sdlc-root]/knowledge/agent-context-map.yaml maps agent roles to relevant knowledge files"
       role: "Orchestration layer — determines which knowledge each agent receives"
       update_trigger: "When new knowledge files are created or agent responsibilities change"
 
@@ -268,7 +268,7 @@ two_tier_architecture:
     from being lost when it's only stored in the cross-project tier.
 
   cross_project_tier:
-    location: "ops/sdlc/knowledge/"
+    location: "[sdlc-root]/knowledge/"
     scope: "Framework patterns, general conventions, methodology, anti-patterns"
     examples:
       - "Functional Core / Imperative Shell pattern (applies to any project)"
@@ -298,7 +298,7 @@ two_tier_architecture:
     validating on a second project.
 
   migration_behavior: >
-    sdlc-initialize installs cross-project knowledge into ops/sdlc/knowledge/.
+    sdlc-initialize installs cross-project knowledge into [sdlc-root]/knowledge/.
     Project-specific knowledge directories are created by initialization but
     never overwritten by migrations. The two tiers coexist without conflict.
 

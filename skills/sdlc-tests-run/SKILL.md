@@ -150,7 +150,7 @@ For each failed test, classify the failure as **test-code** or **app-code** by a
 - Runtime errors in application code (console errors, unhandled rejections)
 - Auth flow broken — auth provider or guard component bug
 
-**Testability signal:** If a test failure requires adding a mock to fix, that's a **code structure issue**, not a test issue. The app code likely mixes I/O and logic. Classify as APP-CODE and dispatch the domain agent to separate I/O from logic (see `ops/sdlc/knowledge/testing/testing-paradigm.yaml`). Do not tell SDET to add mocks to work around poorly structured app code.
+**Testability signal:** If a test failure requires adding a mock to fix, that's a **code structure issue**, not a test issue. The app code likely mixes I/O and logic. Classify as APP-CODE and dispatch the domain agent to separate I/O from logic (see `[sdlc-root]/knowledge/testing/testing-paradigm.yaml`). Do not tell SDET to add mocks to work around poorly structured app code.
 
 **Classification signals:**
 - Stack trace points to test files → likely test-code
@@ -240,7 +240,7 @@ Group APP-CODE failures by assigned agent. Each agent receives:
 - Instruction: fix the application code so the described behavior works correctly. Do NOT modify test files.
 - **Library verification instructions** (when the fix involves external library APIs): verify API usage via Context7 (`mcp__context7__resolve-library-id` → `mcp__context7__query-docs`) before writing the fix. Do not rely on training data for API signatures or behaviors.
 
-**Cross-domain knowledge injection:** Domain agents fixing app bugs exposed by tests are working in a testing context they wouldn't normally encounter. Consult `ops/sdlc/knowledge/agent-context-map.yaml` for the `sdet` entry and include the SDET's testing knowledge files (e.g., `testing/gotchas.yaml`, `testing/timing-defaults.yaml`) in the domain agent's dispatch prompt. This helps the agent understand test-specific constraints like timing, fixture patterns, and known gotchas that may affect the fix.
+**Cross-domain knowledge injection:** Domain agents fixing app bugs exposed by tests are working in a testing context they wouldn't normally encounter. Consult `[sdlc-root]/knowledge/agent-context-map.yaml` for the `sdet` entry and include the SDET's testing knowledge files (e.g., `testing/gotchas.yaml`, `testing/timing-defaults.yaml`) in the domain agent's dispatch prompt. This helps the agent understand test-specific constraints like timing, fixture patterns, and known gotchas that may affect the fix.
 
 **Scope the dispatch prompt tightly.** Name the exact file(s) and function(s) to change. If the diagnosis identified the root cause, state the cause and the fix location explicitly. Do not use vague prompts like "fix the WebSocket bug" — the agent will interpret latitude as permission to refactor adjacent code.
 

@@ -10,7 +10,9 @@ You perform SDLC compliance auditing — analyzing project structure, deliverabl
 
 ## Methodology
 
-Read and follow the full methodology in `ops/sdlc/knowledge/` or the cc-sdlc source at `skills/sdlc-audit/references/compliance-methodology.md`. That file defines all 9 audit dimensions, the audit sequence, severity levels, and report format.
+Read and follow the full methodology in the SDLC knowledge directory (`[sdlc-root]/knowledge/` or `.claude/sdlc/knowledge/` depending on project structure) or the cc-sdlc source at `skills/sdlc-audit/references/compliance-methodology.md`. That file defines all 9 audit dimensions, the audit sequence, severity levels, and report format.
+
+**Path detection:** Check `.sdlc-manifest.json` for the `sdlc_root` field, or detect via `[ -d ops/sdlc ] || [ -d .claude/sdlc ]`. Use `[sdlc-root]` as a variable throughout this audit.
 
 ## Audit Dimensions (summary)
 
@@ -76,7 +78,7 @@ VERDICT: [COMPLIANT | NEEDS ATTENTION | NON-COMPLIANT]
 
 As part of migration integrity (Dimension 7), validate `PROJECT-SECTION` marker pairs across all framework files:
 
-1. **Scan all files** in `ops/sdlc/` (or framework directories) for `PROJECT-SECTION-START` and `PROJECT-SECTION-END` markers
+1. **Scan all files** in `[sdlc-root]/` (detected in methodology section above) for `PROJECT-SECTION-START` and `PROJECT-SECTION-END` markers
 2. **Validate pairing:** Every `PROJECT-SECTION-START: label` must have a matching `PROJECT-SECTION-END: label` with the same label
 3. **Flag orphaned markers:**
    - `PROJECT-SECTION-START` without a matching `END` → severity: major (content boundary undefined, migration may corrupt)

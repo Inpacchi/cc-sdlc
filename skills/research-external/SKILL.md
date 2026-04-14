@@ -38,7 +38,7 @@ Signs this skill is NOT appropriate:
 
 ## Manager Rule
 
-Read and follow `ops/sdlc/process/manager-rule.md`. The research-analyst agents do the fetching, reading, and classification. You orchestrate — you do not fetch articles yourself. If you notice a source needs more investigation, dispatch another agent — do not WebFetch it yourself.
+Read and follow `[sdlc-root]/process/manager-rule.md`. The research-analyst agents do the fetching, reading, and classification. You orchestrate — you do not fetch articles yourself. If you notice a source needs more investigation, dispatch another agent — do not WebFetch it yourself.
 
 ## Workflow
 
@@ -69,8 +69,8 @@ Clarify with the user:
 
 **Domain classification lens:** Before dispatching agents, establish the project's technology domains. Check for:
 1. Agent definitions in `.claude/agents/` — each agent's domain expertise line reveals a project domain
-2. Knowledge stores in `ops/sdlc/knowledge/` — directory names and YAML files reveal domain areas
-3. Discipline files in `ops/sdlc/disciplines/` — each discipline maps to a domain
+2. Knowledge stores in `[sdlc-root]/knowledge/` — directory names and YAML files reveal domain areas
+3. Discipline files in `[sdlc-root]/disciplines/` — each discipline maps to a domain
 4. User-provided list — the user may specify domains directly
 
 Build a domain table (domain name + examples/keywords) and use it as the classification lens for all research. If no clear domain list emerges, ask the user to enumerate their project's key technology areas before proceeding.
@@ -149,7 +149,7 @@ When agent results return, curate into a reference doc:
 
 Append entries to the provenance log to create a prepared handoff for `sdlc-ingest`:
 
-1. Read `knowledge/provenance_log.md` (or target project's `ops/sdlc/knowledge/provenance_log.md`) to determine the next `prov-YYYY-MM-DD-NNN` ID
+1. Read `knowledge/provenance_log.md` (or target project's `[sdlc-root]/knowledge/provenance_log.md`) to determine the next `prov-YYYY-MM-DD-NNN` ID
 2. Append one entry per researched source with:
    - `status: pending-review`
    - `source-type: reference-doc`
@@ -201,4 +201,4 @@ Present a summary to the user:
 - **Uses:** `research-analyst` agent (primary), `general-purpose` agent (doc writing), WebFetch, WebSearch
 - **Complements:** `sdlc-ingest` (this discovers, ingest absorbs), `sdlc-idea` (research may spark ideas)
 - **Does NOT replace:** `sdlc-ingest` (that extracts rules into knowledge stores; this catalogs external articles), direct WebSearch (for specific one-off questions)
-- **DRY notes:** This skill discovers and catalogs external content. `sdlc-ingest` takes content (potentially discovered by this skill) and extracts structured knowledge rules into SDLC disciplines. The boundary: this skill produces reference docs; `sdlc-ingest` produces knowledge YAML in `ops/sdlc/knowledge/`.
+- **DRY notes:** This skill discovers and catalogs external content. `sdlc-ingest` takes content (potentially discovered by this skill) and extracts structured knowledge rules into SDLC disciplines. The boundary: this skill produces reference docs; `sdlc-ingest` produces knowledge YAML in `[sdlc-root]/knowledge/`.

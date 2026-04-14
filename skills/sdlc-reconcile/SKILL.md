@@ -10,7 +10,7 @@ description: >
 
 # SDLC Reconciliation
 
-Read `ops/sdlc/process/ad_hoc_reconciliation.md` and follow it exactly. When assigning deliverable states during reconciliation, use the canonical states from `ops/sdlc/process/deliverable_lifecycle.md` — do not invent custom states.
+Read `[sdlc-root]/process/ad_hoc_reconciliation.md` and follow it exactly. When assigning deliverable states during reconciliation, use the canonical states from `[sdlc-root]/process/deliverable_lifecycle.md` — do not invent custom states.
 
 The process has 5 phases:
 1. **Discovery** — identify the boundary (last formal commit), list ad hoc commits, categorize each
@@ -38,11 +38,11 @@ After reconciliation is complete, check `docs/current_work/sdlc-lite/completed/`
 | "Skip spec maintenance, the specs are fine" | Ad hoc work often reveals spec gaps. Check every spec that touches the same domain. |
 
 ## Failure Guards
-- If `ops/sdlc/process/ad_hoc_reconciliation.md` does not exist, stop and alert the user
+- If `[sdlc-root]/process/ad_hoc_reconciliation.md` does not exist, stop and alert the user
 - If `docs/_index.md` is missing or the Next ID field is absent, stop and alert the user
 - Do NOT bulk-classify commits as trivial — each commit must be individually categorized
 
 ## Integration
-- **Depends on:** `ops/sdlc/process/ad_hoc_reconciliation.md` (process definition), `docs/_index.md` (catalog + next ID)
+- **Depends on:** `[sdlc-root]/process/ad_hoc_reconciliation.md` (process definition), `docs/_index.md` (catalog + next ID)
 - **Fed by:** `sdlc-status` (user sees untracked work and decides to reconcile)
 - **Feeds into:** `sdlc-plan` (if reconciliation surfaces work needing a deliverable), `sdlc-archive` (if reconciled deliverables are complete)

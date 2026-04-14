@@ -66,17 +66,17 @@ digraph sdlc_lite_execution {
 
 ## Collaboration Model
 
-Read `ops/sdlc/process/collaboration_model.md` for the CD/CC role definitions, communication patterns (AskUserQuestion rule), decision authority table, and anti-patterns. All questions to the user must use `AskUserQuestion`. All anti-patterns in that doc apply during execution.
+Read `[sdlc-root]/process/collaboration_model.md` for the CD/CC role definitions, communication patterns (AskUserQuestion rule), decision authority table, and anti-patterns. All questions to the user must use `AskUserQuestion`. All anti-patterns in that doc apply during execution.
 
 ## Deliverable Lifecycle
 
-Follow the state machine in `ops/sdlc/process/deliverable_lifecycle.md`. Update the `**Status:**` marker as the deliverable transitions: In Progress (at phase start), Complete (after final commit). Lite deliverables use the same canonical states — do not invent custom states.
+Follow the state machine in `[sdlc-root]/process/deliverable_lifecycle.md`. Update the `**Status:**` marker as the deliverable transitions: In Progress (at phase start), Complete (after final commit). Lite deliverables use the same canonical states — do not invent custom states.
 
 ## Step Details
 
 ### Manager Rule
 
-Read and follow `ops/sdlc/process/manager-rule.md` — the canonical definition of this rule. It applies unconditionally for the entire session.
+Read and follow `[sdlc-root]/process/manager-rule.md` — the canonical definition of this rule. It applies unconditionally for the entire session.
 
 ### Agent Dispatch Protocol
 
@@ -129,7 +129,7 @@ Agent: [agent-name]
 6. **Library verification instructions** — when the phase involves external library/framework APIs, tell the agent to verify API usage via Context7 (`mcp__context7__resolve-library-id` → `mcp__context7__query-docs`) before writing integration code. Include the library names and versions from the project's dependency files. Agents must not rely on training data for API signatures, parameter names, or default behaviors.
 For independent phases, dispatch in parallel using multiple Agent tool calls in a single message.
 
-**Cross-domain knowledge injection:** When a phase requires an agent to work in a context outside its primary domain, consult `ops/sdlc/knowledge/agent-context-map.yaml` for the other domain's agent and include those knowledge files in the dispatch prompt. Use judgment — only inject when the agent is genuinely crossing into unfamiliar territory. Do not inject for routine single-domain work.
+**Cross-domain knowledge injection:** When a phase requires an agent to work in a context outside its primary domain, consult `[sdlc-root]/knowledge/agent-context-map.yaml` for the other domain's agent and include those knowledge files in the dispatch prompt. Use judgment — only inject when the agent is genuinely crossing into unfamiliar territory. Do not inject for routine single-domain work.
 
 **POST-GATE:**
 - Verify build passes: `[build command]` — see project CLAUDE.md
@@ -165,7 +165,7 @@ Review agents (from plan): [list all agent names]
 Dispatching: [count] agents
 ```
 
-After ALL phases are done, run the **Review-Fix Loop** per `ops/sdlc/process/review-fix-loop.md`. **Start with Step 0 (Verification Gate):** run tests, type checks, linting, and any configured SAST tooling BEFORE dispatching review agents. Fix any verification failures first. Agent source: the plan's agent assignment table. Classifications: use all five per `ops/sdlc/process/finding-classification.md`.
+After ALL phases are done, run the **Review-Fix Loop** per `[sdlc-root]/process/review-fix-loop.md`. **Start with Step 0 (Verification Gate):** run tests, type checks, linting, and any configured SAST tooling BEFORE dispatching review agents. Fix any verification failures first. Agent source: the plan's agent assignment table. Classifications: use all five per `[sdlc-root]/process/finding-classification.md`.
 
 **Plan contract briefing (mandatory):** When dispatching review agents in the loop, each agent's prompt must include the plan's specification for the phases they are reviewing — specifically: the expected behavior, acceptance criteria, and implementation approach from the plan. Reviewers check "does the implementation match what was specified?" in addition to "is the code well-written?" A well-structured stub passes code quality review but fails plan compliance review. Without the plan contract, reviewers can only assess code quality — they cannot detect whether the agent delivered what was actually asked for.
 
@@ -196,7 +196,7 @@ Key feedback incorporated:
 
 Save a result doc to: `docs/current_work/sdlc-lite/dNN_{slug}_result.md`
 
-Reference the template at `ops/sdlc/templates/sdlc_lite_result_template.md`. The result doc captures:
+Reference the template at `[sdlc-root]/templates/sdlc_lite_result_template.md`. The result doc captures:
 - What was built (summary + file lists)
 - Deviations from the plan (from POST-GATE logs)
 - Acceptance criteria verification (map each criterion from the plan to pass/partial/deferred)
@@ -207,9 +207,9 @@ The result doc lives alongside the plan file in `docs/current_work/sdlc-lite/`. 
 
 ### 3c. Discipline Capture
 
-Run the discipline capture protocol per `ops/sdlc/process/discipline_capture.md`. Context format: `[DNN — phase N]`. This includes structured gap detection (using the review-fix triage table and agent dispatch data from this session) followed by the freeform insight scan.
+Run the discipline capture protocol per `[sdlc-root]/process/discipline_capture.md`. Context format: `[DNN — phase N]`. This includes structured gap detection (using the review-fix triage table and agent dispatch data from this session) followed by the freeform insight scan.
 
-**Migration protection (mandatory):** Wrap all new parking lot entries in `PROJECT-SECTION` markers so they survive framework migrations (see `ops/sdlc/process/project-section-markers.md` for the full convention):
+**Migration protection (mandatory):** Wrap all new parking lot entries in `PROJECT-SECTION` markers so they survive framework migrations (see `[sdlc-root]/process/project-section-markers.md` for the full convention):
 
 ```html
 <!-- PROJECT-SECTION-START: dNN-phaseN-discipline-capture -->
@@ -229,8 +229,8 @@ Use the deliverable ID and phase as the label (e.g., `d15-phase2-discipline-capt
 4. Stage **all** modified files — not just application code. Check every category:
    - Application code and test files
    - Result doc (`docs/current_work/sdlc-lite/dNN_*_result.md`)
-   - Discipline parking lot entries (`ops/sdlc/disciplines/*.md`)
-   - Knowledge store updates (`ops/sdlc/knowledge/*.md`)
+   - Discipline parking lot entries (`[sdlc-root]/disciplines/*.md`)
+   - Knowledge store updates (`[sdlc-root]/knowledge/*.md`)
    - Plan and result archive move (step 3 above)
    - Any other SDLC artifacts modified during execution
 5. Commit using the cc-sdlc commit format:
@@ -309,7 +309,7 @@ Every execution MUST end with a Completion Report presented to the user. This is
 
 ### Session Handoff
 
-The Manager Rule remains in effect per `ops/sdlc/process/manager-rule.md` — see the Session Scope section.
+The Manager Rule remains in effect per `[sdlc-root]/process/manager-rule.md` — see the Session Scope section.
 
 ## What This Skill Does NOT Do
 
@@ -345,6 +345,6 @@ The Manager Rule remains in effect per `ops/sdlc/process/manager-rule.md` — se
 ## Integration
 
 - **Feeds into:** `sdlc-tests-run` (post-commit test verification), `sdlc-archive` (when deliverable is complete)
-- **Uses:** worker domain agents (implementation + review), `sdlc-lite-plan` output (the plan file), `ops/sdlc/process/manager-rule.md`, `ops/sdlc/process/collaboration_model.md`
+- **Uses:** worker domain agents (implementation + review), `sdlc-lite-plan` output (the plan file), `[sdlc-root]/process/manager-rule.md`, `[sdlc-root]/process/collaboration_model.md`
 - **Complements:** `sdlc-execute` (handles full SDLC deliverables)
 - **Does NOT replace:** `sdlc-lite-plan` (plan must exist before execution), `sdlc-tests-run` (separate test verification step)

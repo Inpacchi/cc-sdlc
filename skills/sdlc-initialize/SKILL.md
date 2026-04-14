@@ -257,6 +257,24 @@ This is the single source of truth for all deliverable IDs and their statuses.
 - Status: Draft | Ready | In Progress | Validated | Deployed | Complete | Archived
 ```
 
+**Detect project structure before writing manifest:**
+
+```bash
+# Determine SDLC root — default to ops/sdlc unless .claude/sdlc already exists
+# (only relevant for repair mode or custom installations)
+if [ -d .claude/sdlc ]; then
+  SDLC_ROOT=".claude/sdlc"
+else
+  SDLC_ROOT="ops/sdlc"
+fi
+
+# Detect Neuroloom integration
+HAS_NEUROLOOM=false
+[ -d neuroloom-sdlc-plugin ] && HAS_NEUROLOOM=true
+[ -d neuroloom-claude-plugin ] && HAS_NEUROLOOM=true
+grep -q '"neuroloom"' .claude/settings.json 2>/dev/null && HAS_NEUROLOOM=true
+```
+
 **Write `.sdlc-manifest.json`** at project root:
 ```json
 {
@@ -265,9 +283,13 @@ This is the single source of truth for all deliverable IDs and their statuses.
   "source_repo": "<git remote origin from cc-sdlc source, or 'local'>",
   "source_version": "<git HEAD SHA from cc-sdlc source, or 'unknown'>",
   "install_date": "<ISO 8601 timestamp>",
-  "file_count": <number of files installed>
+  "file_count": <number of files installed>,
+  "sdlc_root": "<SDLC_ROOT value from detection above>",
+  "neuroloom_integration": <HAS_NEUROLOOM value from detection above>
 }
 ```
+
+The `sdlc_root` and `neuroloom_integration` fields enable `sdlc-migrate` to apply correct path transformations and preserve MCP tool calls during migration.
 
 Report progress to CD:
 ```
@@ -803,10 +825,12 @@ Same as Greenfield Phases 10–11 (verification checklist + compliance audit), p
 | "Installation failed, I'll create the directories manually" | Fix the installation failure. Manual creation misses files and skips version tracking. |
 | "Manager Rule applies from the start" | In greenfield Phases 0–3, no agents exist. CC works directly. Manager Rule activates at Phase 4. |
 | "I'll batch all the ideation questions" | One question at a time via AskUserQuestion. Batched questions get shallow answers. |
+| "I only found neuroloom-sdlc-plugin, so neuroloom_integration is false" | Check for both `neuroloom-sdlc-plugin` AND `neuroloom-claude-plugin`. Also check `.claude/settings.json` for "neuroloom". Any of these signals Neuroloom integration. |
+| "I'll set neuroloom_integration based on the plugin directory alone" | The full detection includes plugin directories, settings.json, and manifest flags. Run the full detection script — partial checks miss edge cases. |
 
 ## Integration
 
-- **Feeds into:** `sdlc-plan` (first deliverable), `sdlc-lite-plan` (first lightweight task), `sdlc-status` (health check)
+- **Feeds into:** `sdlc-plan` (first deliverable), `sdlc-lite-plan` (first lightweight task), `sdlc-status` (health check), `sdlc-migrate` (consumes `.sdlc-manifest.json` for version tracking and path detection)
 - **Uses:** `/sdlc-create-agent` (agent creation), Context7 (knowledge verification), `AskUserQuestion` (CD gates)
-- **Produces:** Fully initialized SDLC framework with project-specific agents, knowledge, and disciplines
+- **Produces:** Fully initialized SDLC framework with project-specific agents, knowledge, and disciplines; `.sdlc-manifest.json` with `sdlc_root` and `neuroloom_integration` fields
 - **Borrows from:** `sdlc-idea` (ideation principles for Phase 0), spec template (Phase 0c structure)

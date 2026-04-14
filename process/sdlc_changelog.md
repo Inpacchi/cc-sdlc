@@ -34,6 +34,72 @@ Each entry contains:
 
 ---
 
+## 2026-04-14: Complete [sdlc-root] Variable Replacement Across All Skills
+
+**Origin:** Continuation of Neuroloom path-awareness migration — background audit revealed ~146 remaining hardcoded `ops/sdlc/` references across skills, agents, knowledge files, playbooks, and templates.
+
+**What happened:** Initial migration updated core files (sdlc-migrate, sdlc-initialize, CLAUDE-SDLC.md, sdlc-compliance-auditor) but left references in most other skills. A comprehensive audit found hardcoded paths in 36 files spanning planning, execution, review, testing, archival, ingestion, and knowledge layer management skills.
+
+**Changes made:**
+
+1. **Skills (25 files)** — Replaced all `ops/sdlc/` references with `[sdlc-root]/`:
+   - Planning: `sdlc-plan`, `sdlc-lite-plan`, `sdlc-idea`
+   - Execution: `sdlc-execute`, `sdlc-lite-execute`
+   - Review: `review-diff`, `review-commit`, `review-fix`, `review-team`, `sdlc-review`
+   - Testing: `sdlc-tests-create`, `sdlc-tests-run`
+   - Archival/Knowledge: `sdlc-archive`, `sdlc-ingest`, `research-external`, `sdlc-reconcile`, `sdlc-playbook-generate`, `sdlc-audit`
+   - Skill/Agent Creation: `sdlc-create-agent`, `sdlc-create-skill`, `sdlc-develop-skill`
+   - Design: `design-consult`
+   - Reference methodology files in skill subdirectories
+2. **Agents (3 files)** — `AGENT_TEMPLATE.md`, `sdlc-compliance-auditor.md`, `sdlc-reviewer.md`
+3. **Knowledge files (3 files)** — `agent-context-map.yaml`, `agent-communication-protocol.yaml`, `knowledge-management-methodology.yaml`
+4. **Playbooks & Templates (4 files)** — `playbooks/README.md`, `playbooks/example-playbook.md`, `templates/test_spec_template.md`, `process/discipline_capture.md`, `process/overview.md`
+
+**Excluded (intentional):**
+- `skeleton/manifest.json` — defines actual install destinations
+- `sdlc-initialize` & `sdlc-migrate` — contain detection logic for literal filesystem paths
+- `process/sdlc_changelog.md` — historical entries
+- `process/compliance_audit.md` & template — legacy `~/src/ops/sdlc/` source references
+
+**Rationale:** Skills must work across both `ops/sdlc/` and `.claude/sdlc/` directory structures. Hardcoded paths break projects using non-default SDLC locations (Neuroloom integration, organizational preferences). The `[sdlc-root]` variable resolves to the actual path from `.sdlc-manifest.json` at runtime.
+
+---
+
+## 2026-04-14: Path-Aware Migration with Neuroloom Integration Preservation
+
+**Origin:** Neuroloom SDLC plugin migration — observed that cc-sdlc content-merge was overwriting Neuroloom MCP tool calls with generic file path references, breaking the integration.
+
+**What happened:** The cc-sdlc source uses generic file path references (`ops/sdlc/knowledge/...`, `Append to ops/sdlc/disciplines/...`). Projects with Neuroloom integration use MCP tool calls (`memory_search`, `memory_store`) instead. When `sdlc-migrate` content-merged, it replaced the MCP calls with file paths, breaking the Neuroloom knowledge layer. Additionally, some projects use `.claude/sdlc/` instead of `ops/sdlc/` — hardcoded paths caused migration failures.
+
+**Changes made:**
+
+1. **`skills/sdlc-migrate/SKILL.md`** — Major path-awareness, Neuroloom integration, and PROJECT-SECTION content review:
+   - **Path awareness:**
+     - Added "Project Structure Detection" in Pre-Flight Check: detects SDLC root (`ops/sdlc/` vs `.claude/sdlc/`) and Neuroloom integration (plugin directories, settings.json, or manifest flag)
+     - Added "Path Transformation Rules" section: source→project path mapping and Neuroloom-aware content transformation rules for MCP tool preservation
+     - All hardcoded `ops/sdlc/` references replaced with `[sdlc-root]` placeholder
+   - **Neuroloom integration:**
+     - Added Neuroloom conditionals to sections that assume `agent-context-map.yaml` exists: §3.3 (context map updates — skip), §4.1 (file path integrity — skip), §4.4 (compliance audit prompt includes project type)
+     - §2.1 direct-copy now has Neuroloom conditional for agent template and subagents (apply content-merge for MCP pattern preservation)
+     - Migration report template includes Neuroloom-specific section
+   - **PROJECT-SECTION content review (§2.1d — NEW):**
+     - Instead of blindly re-injecting marked blocks, migration now reviews content against upstream changes
+     - Classifies findings: OK (re-inject), REVIEW (upstream changed significantly), ORPHAN (section removed), OPPORTUNITY (new patterns nearby), CONFLICT (contradicts upstream)
+     - Presents non-OK findings to user with options: keep, update, remove, merge
+     - Logs all decisions in migration report
+     - Skip threshold for recent blocks (< 7 days) that can't have drifted
+     - Updated Skills (§2.2) and Disciplines (§2.3) content-merge to reference the review process
+     - Added three Red Flag entries for marker review anti-patterns
+   - **Manifest upgrades:**
+     - §4.5 now writes `sdlc_root` and `neuroloom_integration` to manifest if fields are missing (upgrade path for pre-existing manifests)
+2. **`skills/sdlc-initialize/SKILL.md`** — Added detection logic for `sdlc_root` and `neuroloom_integration` before writing manifest. Updated manifest template with these fields. Added two Red Flag entries for Neuroloom detection edge cases. Updated Integration section to list sdlc-migrate as a consumer.
+3. **`CLAUDE-SDLC.md`** — Replaced hardcoded `ops/sdlc/` paths with `[sdlc-root]` variable throughout (Key References, Commit Completeness Rule, Process Changelog rule, LSP setup reference, SDLC Commands table). Added note explaining the variable.
+4. **`agents/sdlc-compliance-auditor.md`** — Made methodology reference path-aware (check `.sdlc-manifest.json` for `sdlc_root` or detect via directory existence). Updated PROJECT-SECTION marker validation to use `[sdlc-root]` instead of hardcoded `ops/sdlc/`.
+
+**Rationale:** Migration must be structure-aware. Neuroloom projects store SDLC knowledge in the memory graph accessed via MCP tools — overwriting these with file paths breaks semantic search and context injection. Neuroloom projects also don't have `agent-context-map.yaml` on disk (agents use `memory_search` instead), so verification steps that reference it must be conditional. The `[sdlc-root]` variable enables a single skill to work across both directory structures.
+
+---
+
 ## 2026-04-14: Remove setup.sh — BOOTSTRAP.md One-Liner Install
 
 **Origin:** User request to simplify installation approach.

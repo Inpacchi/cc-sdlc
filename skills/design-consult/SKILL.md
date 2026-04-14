@@ -101,9 +101,9 @@ Check the SDLC knowledge layer for context that should inform the design:
 1. **Active deliverables**: Read `docs/current_work/` — related specs or plans that set constraints?
 2. **SDLC-Lite work**: Check `docs/current_work/sdlc-lite/` for plans touching the same UI surface
 3. **Archived decisions**: Check `docs/chronicle/` for past design decisions
-4. **Design discipline**: Read `ops/sdlc/disciplines/design.md` — UX modeling pipeline, parking lot items, trajectory
-5. **UX methodology**: Read `ops/sdlc/knowledge/design/ux-modeling-methodology.yaml`
-6. **ASCII conventions**: Read `ops/sdlc/knowledge/design/ascii-conventions.yaml`
+4. **Design discipline**: Read `[sdlc-root]/disciplines/design.md` — UX modeling pipeline, parking lot items, trajectory
+5. **UX methodology**: Read `[sdlc-root]/knowledge/design/ux-modeling-methodology.yaml`
+6. **ASCII conventions**: Read `[sdlc-root]/knowledge/design/ascii-conventions.yaml`
 
 #### 2e. Compile the Context Brief
 
@@ -262,7 +262,7 @@ When the user confirms a final direction:
    - 2-3 files → suggest `sdlc-lite-plan`
    - 4+ files or new abstractions → suggest `sdlc-plan`
 
-**Discipline capture:** Run the protocol per `ops/sdlc/process/discipline_capture.md`. Context format: `[sdlc-design-consult: {slug}]`. Structured gap detection: comparison #2 (cross-domain friction) only — comparisons #1 and #3 are not applicable without a review-fix loop.
+**Discipline capture:** Run the protocol per `[sdlc-root]/process/discipline_capture.md`. Context format: `[sdlc-design-consult: {slug}]`. Structured gap detection: comparison #2 (cross-domain friction) only — comparisons #1 and #3 are not applicable without a review-fix loop.
 
 Do NOT start implementing. The design consultation ends with a direction and a handoff.
 
@@ -288,6 +288,6 @@ Do NOT start implementing. The design consultation ends with a direction and a h
 
 - **Feeds into:** `sdlc-lite-plan` or `sdlc-plan` (for implementation)
 - **Uses:** `ui-ux-designer` agent, WebSearch (for design research), Playwright MCP (for visual mockups)
-- **SDLC knowledge:** `ops/sdlc/knowledge/design/`, `ops/sdlc/disciplines/design.md`
+- **SDLC knowledge:** `[sdlc-root]/knowledge/design/`, `[sdlc-root]/disciplines/design.md`
 - **Complements:** `sdlc-idea` (conceptual exploration) — `sdlc-design-consult` explores visual direction, `sdlc-idea` explores conceptual direction. An idea brief from `sdlc-idea` can feed into `sdlc-design-consult` when the concept needs visual exploration.
 - **Does NOT replace:** `sdlc-review-commit` (code review), `accessibility-auditor` (WCAG compliance on implemented code)

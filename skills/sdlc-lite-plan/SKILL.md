@@ -70,15 +70,15 @@ Refer to the full agent table in the `sdlc-plan` skill if you need the complete 
 
 ## Collaboration Model
 
-Read `ops/sdlc/process/collaboration_model.md` for the CD/CC role definitions, communication patterns (proposal-first, AskUserQuestion rule), decision authority table, and anti-patterns. All questions to the user must use `AskUserQuestion`. Planning is where proposal-first matters most — CC proposes approaches, CD approves.
+Read `[sdlc-root]/process/collaboration_model.md` for the CD/CC role definitions, communication patterns (proposal-first, AskUserQuestion rule), decision authority table, and anti-patterns. All questions to the user must use `AskUserQuestion`. Planning is where proposal-first matters most — CC proposes approaches, CD approves.
 
 ## Deliverable Lifecycle
 
-Follow the state machine in `ops/sdlc/process/deliverable_lifecycle.md`. When registering a deliverable (step 0), use the canonical states — do not invent custom states like "In Progress (lite)". Lite deliverables follow the same state definitions as full deliverables.
+Follow the state machine in `[sdlc-root]/process/deliverable_lifecycle.md`. When registering a deliverable (step 0), use the canonical states — do not invent custom states like "In Progress (lite)". Lite deliverables follow the same state definitions as full deliverables.
 
 ## Manager Rule
 
-Read and follow `ops/sdlc/process/manager-rule.md` — the canonical definition of this rule. It applies unconditionally for the entire session.
+Read and follow `[sdlc-root]/process/manager-rule.md` — the canonical definition of this rule. It applies unconditionally for the entire session.
 
 ## Steps
 
@@ -98,7 +98,7 @@ Dispatch prompts must pass through all relevant context — outcomes, constraint
 
 ### 1. Identify Relevant Worker Domain Agents
 
-List which agents are relevant and why. For recurring task types, consult `ops/sdlc/playbooks/` for pre-seeded agent selection and reference implementations. When exploring existing patterns, use LSP (`goToDefinition`, `findReferences`, `goToImplementation`) for type-system and call-graph questions. Use Grep for string literals and non-TypeScript content.
+List which agents are relevant and why. For recurring task types, consult `[sdlc-root]/playbooks/` for pre-seeded agent selection and reference implementations. When exploring existing patterns, use LSP (`goToDefinition`, `findReferences`, `goToImplementation`) for type-system and call-graph questions. Use Grep for string literals and non-TypeScript content.
 
 ```
 Relevant worker domain agents for this task:
@@ -156,7 +156,7 @@ This prevents re-inventing patterns established by prior deliverables.
 
 The most relevant worker domain agent writes the plan. Other worker agents contribute to sections in their domain.
 
-**Plan structure:** Use the template at `ops/sdlc/templates/sdlc_lite_plan_template.md`. Read it before writing the plan.
+**Plan structure:** Use the template at `[sdlc-root]/templates/sdlc_lite_plan_template.md`. Read it before writing the plan.
 
 **Plan rules:**
 - **Default to WHAT and WHY.** Phases should lead with outcomes and constraints — what must be true when the phase is done, and why it matters. This is the baseline because it lets the executing agent reason against the live codebase rather than following stale instructions.
@@ -188,7 +188,7 @@ Plan review — dispatching:
 
 Dispatch all review worker agents in parallel. Collect feedback.
 
-If agents have findings, classify per `ops/sdlc/process/finding-classification.md`. Planning context uses FIX, DECIDE, and PRE-EXISTING only. Output the classification table, then:
+If agents have findings, classify per `[sdlc-root]/process/finding-classification.md`. Planning context uses FIX, DECIDE, and PRE-EXISTING only. Output the classification table, then:
 
 - Only FIX findings go to the writing worker agent for revision
 - DECIDE findings go to the user via `AskUserQuestion`
@@ -229,7 +229,7 @@ Key feedback incorporated:
 
 ### 3a. Discipline Capture
 
-Run the discipline capture protocol per `ops/sdlc/process/discipline_capture.md`. Context format: `[DNN — planning]`. This includes structured gap detection (using the finding classification table and agent dispatch data from this session) followed by the freeform insight scan.
+Run the discipline capture protocol per `[sdlc-root]/process/discipline_capture.md`. Context format: `[DNN — planning]`. This includes structured gap detection (using the finding classification table and agent dispatch data from this session) followed by the freeform insight scan.
 
 ### 4. Save Plan to File
 
@@ -270,7 +270,7 @@ When execution begins (whether in this session or a fresh one), `sdlc-lite-execu
 
 ### Session Handoff
 
-The Manager Rule remains in effect per `ops/sdlc/process/manager-rule.md` — see the Session Scope section.
+The Manager Rule remains in effect per `[sdlc-root]/process/manager-rule.md` — see the Session Scope section.
 
 ## Red Flags
 
@@ -290,6 +290,6 @@ The Manager Rule remains in effect per `ops/sdlc/process/manager-rule.md` — se
 ## Integration
 
 - **Feeds into:** `sdlc-lite-execute` (executes the reviewed plan from the saved file)
-- **Uses:** worker domain agents (plan writing + review), `ops/sdlc/process/manager-rule.md`, `ops/sdlc/process/collaboration_model.md`, `ops/sdlc/process/deliverable_lifecycle.md`
+- **Uses:** worker domain agents (plan writing + review), `[sdlc-root]/process/manager-rule.md`, `[sdlc-root]/process/collaboration_model.md`, `[sdlc-root]/process/deliverable_lifecycle.md`
 - **Complements:** `sdlc-plan` (handles full SDLC deliverables that need specs)
 - **Does NOT replace:** `sdlc-plan` (use that for new features, integrations, or architectural changes)

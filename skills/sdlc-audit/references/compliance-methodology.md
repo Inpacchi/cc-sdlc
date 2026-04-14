@@ -54,11 +54,11 @@ For each active deliverable, verify the expected artifact chain:
 - Average artifact completeness per deliverable
 - Chronicle freshness (how long completed work sits in `current_work/` before archiving)
 - Spec approval coverage (deliverables that went through proper CD approval)
-- **Changelog freshness** — compare `ops/sdlc/process/sdlc_changelog.md` against recent commits modifying SDLC process files. Flag process changes without changelog entries.
+- **Changelog freshness** — compare `[sdlc-root]/process/sdlc_changelog.md` against recent commits modifying SDLC process files. Flag process changes without changelog entries.
 
 ## Dimension 6: Knowledge Layer Health
 
-### 6a. Discipline Parking Lots (`ops/sdlc/disciplines/`)
+### 6a. Discipline Parking Lots (`[sdlc-root]/disciplines/`)
 
 Check each discipline file:
 
@@ -87,7 +87,7 @@ Check each discipline file:
 - Level 2 claim: knowledge store directory with YAML files + agent-context-map wired + at least one triage pass
 - Flag claims lacking supporting evidence
 
-### 6b. Knowledge Stores (`ops/sdlc/knowledge/`)
+### 6b. Knowledge Stores (`[sdlc-root]/knowledge/`)
 
 | Directory | Purpose |
 |-----------|---------|
@@ -126,7 +126,7 @@ Two ownership tiers:
 
 ### 6e. Agent Context Map Integrity
 
-Check `ops/sdlc/knowledge/agent-context-map.yaml`:
+Check `[sdlc-root]/knowledge/agent-context-map.yaml`:
 - All mapped file paths resolve to actual files
 - Knowledge YAML files not referenced by any agent (gaps)
 - Agents in skill tables without knowledge mapping
@@ -134,7 +134,7 @@ Check `ops/sdlc/knowledge/agent-context-map.yaml`:
 
 ### 6f. Playbook Freshness
 
-Check `ops/sdlc/playbooks/`:
+Check `[sdlc-root]/playbooks/`:
 - Each playbook has `last_validated` and `validation_triggers`
 - Validation triggers fired since `last_validated`?
 - All referenced file paths resolve
@@ -156,16 +156,16 @@ Report as table with interpretation (healthy / formalized-but-dead / alive-but-u
 
 ### 6h. Knowledge Staleness by Age
 
-Read `ops/sdlc/knowledge/provenance_log.md` for each knowledge file's last ingestion or refresh date.
+Read `[sdlc-root]/knowledge/provenance_log.md` for each knowledge file's last ingestion or refresh date.
 
-**Thresholds** (projects can override via `ops/sdlc/knowledge/provenance_log.md` header):
+**Thresholds** (projects can override via `[sdlc-root]/knowledge/provenance_log.md` header):
 - **>180 days** since last ingestion/refresh in an **active discipline** (discipline usage = healthy or alive-but-unformalized): **Warning**
 - **>90 days** since last ingestion/refresh (early warning): **Info**
 - **No provenance entry** for a knowledge file (pre-dates the log): **Info** — note as "no provenance record, age unknown"
 
 **How to check:**
-1. List all knowledge YAML files across `ops/sdlc/knowledge/`
-2. For each, search `ops/sdlc/knowledge/provenance_log.md` for entries with matching `files-created` or `files-updated` paths
+1. List all knowledge YAML files across `[sdlc-root]/knowledge/`
+2. For each, search `[sdlc-root]/knowledge/provenance_log.md` for entries with matching `files-created` or `files-updated` paths
 3. Use the most recent matching entry's date as "last refreshed"
 4. If no entry exists, check git blame for the file's last substantive modification date as a fallback
 5. Compare against thresholds; only flag active disciplines at Warning level
@@ -201,9 +201,9 @@ Identify areas where the knowledge layer has structural gaps.
 
 **What to check:**
 
-1. **Disciplines with promotable entries but no knowledge store** — discipline parking lot has `[READY TO PROMOTE]` entries but no corresponding `ops/sdlc/knowledge/<discipline>/` directory. Severity: **Warning** (actionable — promotion is blocked).
+1. **Disciplines with promotable entries but no knowledge store** — discipline parking lot has `[READY TO PROMOTE]` entries but no corresponding `[sdlc-root]/knowledge/<discipline>/` directory. Severity: **Warning** (actionable — promotion is blocked).
 
-2. **Knowledge files not referenced by any agent** — extends 6e (agent context map integrity). Any YAML file in `ops/sdlc/knowledge/` not listed in any agent's mapping in `agent-context-map.yaml`. Severity: **Warning** (the knowledge exists but no agent consumes it).
+2. **Knowledge files not referenced by any agent** — extends 6e (agent context map integrity). Any YAML file in `[sdlc-root]/knowledge/` not listed in any agent's mapping in `agent-context-map.yaml`. Severity: **Warning** (the knowledge exists but no agent consumes it).
 
 3. **Agents with empty knowledge mappings** — agents listed in `agent-context-map.yaml` with an empty file list, or agents in `.claude/agents/` not present in the context map at all. Severity: **Info** (possibly intentional for simple utility agents).
 
@@ -220,7 +220,7 @@ Identify areas where the knowledge layer has structural gaps.
 
 - Read each agent's `MEMORY.md` in `.claude/agent-memory/*/`
 - Identify recurring themes across multiple agents or cycles
-- Flag patterns that should be in `ops/sdlc/knowledge/` or `ops/sdlc/disciplines/` but aren't
+- Flag patterns that should be in `[sdlc-root]/knowledge/` or `[sdlc-root]/disciplines/` but aren't
 - Check for stale memories contradicting current codebase
 
 Promotion criteria: appears in 2+ agent memories independently, reusable pattern, saves future agents from rediscovery.

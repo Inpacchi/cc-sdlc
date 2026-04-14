@@ -1,6 +1,6 @@
 # Agent-to-Knowledge Context Map
 # Skills consult this file before dispatching agents.
-# Only maps to ops/sdlc/knowledge/ files (not disciplines/).
+# Only maps to [sdlc-root]/knowledge/ files (not disciplines/).
 #
 # When dispatching an agent listed here, include its mapped files
 # in the dispatch prompt: "Before implementing, read [paths] for
@@ -14,198 +14,198 @@
 mappings:
   # ── Architecture / System Design ──────────────────────────────────
   architect:
-    - ops/sdlc/knowledge/architecture/backend-capability-assessment.yaml
-    - ops/sdlc/knowledge/architecture/technology-patterns.yaml
-    - ops/sdlc/knowledge/architecture/pipeline-design-patterns.yaml
-    - ops/sdlc/knowledge/architecture/domain-boundary-gotchas.yaml
-    - ops/sdlc/knowledge/coding/typescript-patterns.yaml
-    - ops/sdlc/knowledge/architecture/agent-communication-protocol.yaml
-    - ops/sdlc/knowledge/architecture/api-design-methodology.yaml
-    - ops/sdlc/knowledge/architecture/deployment-patterns.yaml
-    - ops/sdlc/knowledge/architecture/knowledge-management-methodology.yaml
-    - ops/sdlc/knowledge/architecture/token-economics.yaml
+    - [sdlc-root]/knowledge/architecture/backend-capability-assessment.yaml
+    - [sdlc-root]/knowledge/architecture/technology-patterns.yaml
+    - [sdlc-root]/knowledge/architecture/pipeline-design-patterns.yaml
+    - [sdlc-root]/knowledge/architecture/domain-boundary-gotchas.yaml
+    - [sdlc-root]/knowledge/coding/typescript-patterns.yaml
+    - [sdlc-root]/knowledge/architecture/agent-communication-protocol.yaml
+    - [sdlc-root]/knowledge/architecture/api-design-methodology.yaml
+    - [sdlc-root]/knowledge/architecture/deployment-patterns.yaml
+    - [sdlc-root]/knowledge/architecture/knowledge-management-methodology.yaml
+    - [sdlc-root]/knowledge/architecture/token-economics.yaml
 
   # ── Data / Database ────────────────────────────────────────────────
   data-architect:
-    - ops/sdlc/knowledge/data-modeling/anti-patterns/common-modeling-mistakes.yaml
-    - ops/sdlc/knowledge/data-modeling/assessment/model-health-check.yaml
-    - ops/sdlc/knowledge/data-modeling/patterns/meta-framework.yaml
-    - ops/sdlc/knowledge/data-modeling/patterns/people-and-organizations.yaml
-    - ops/sdlc/knowledge/architecture/pipeline-design-patterns.yaml
-    - ops/sdlc/knowledge/architecture/agent-communication-protocol.yaml
-    - ops/sdlc/knowledge/architecture/database-optimization-methodology.yaml
+    - [sdlc-root]/knowledge/data-modeling/anti-patterns/common-modeling-mistakes.yaml
+    - [sdlc-root]/knowledge/data-modeling/assessment/model-health-check.yaml
+    - [sdlc-root]/knowledge/data-modeling/patterns/meta-framework.yaml
+    - [sdlc-root]/knowledge/data-modeling/patterns/people-and-organizations.yaml
+    - [sdlc-root]/knowledge/architecture/pipeline-design-patterns.yaml
+    - [sdlc-root]/knowledge/architecture/agent-communication-protocol.yaml
+    - [sdlc-root]/knowledge/architecture/database-optimization-methodology.yaml
 
   data-engineer:
-    - ops/sdlc/knowledge/data-modeling/anti-patterns/common-modeling-mistakes.yaml
-    - ops/sdlc/knowledge/data-modeling/assessment/model-health-check.yaml
-    - ops/sdlc/knowledge/data-modeling/patterns/meta-framework.yaml
-    - ops/sdlc/knowledge/data-modeling/patterns/people-and-organizations.yaml
-    - ops/sdlc/knowledge/architecture/pipeline-design-patterns.yaml
-    - ops/sdlc/knowledge/architecture/agent-communication-protocol.yaml
-    - ops/sdlc/knowledge/architecture/database-optimization-methodology.yaml
+    - [sdlc-root]/knowledge/data-modeling/anti-patterns/common-modeling-mistakes.yaml
+    - [sdlc-root]/knowledge/data-modeling/assessment/model-health-check.yaml
+    - [sdlc-root]/knowledge/data-modeling/patterns/meta-framework.yaml
+    - [sdlc-root]/knowledge/data-modeling/patterns/people-and-organizations.yaml
+    - [sdlc-root]/knowledge/architecture/pipeline-design-patterns.yaml
+    - [sdlc-root]/knowledge/architecture/agent-communication-protocol.yaml
+    - [sdlc-root]/knowledge/architecture/database-optimization-methodology.yaml
 
   # ── Frontend / Design ──────────────────────────────────────────────
   ui-ux-designer:
-    - ops/sdlc/knowledge/design/ux-modeling-methodology.yaml
-    - ops/sdlc/knowledge/design/ascii-conventions.yaml
-    - ops/sdlc/knowledge/design/accessibility-testability-principles.yaml
-    - ops/sdlc/knowledge/design/component-patterns.yaml
-    - ops/sdlc/knowledge/design/interaction-animation.yaml
-    - ops/sdlc/knowledge/design/visual-design-rules.yaml
-    - ops/sdlc/knowledge/design/layout-principles.yaml
-    - ops/sdlc/knowledge/architecture/agent-communication-protocol.yaml
+    - [sdlc-root]/knowledge/design/ux-modeling-methodology.yaml
+    - [sdlc-root]/knowledge/design/ascii-conventions.yaml
+    - [sdlc-root]/knowledge/design/accessibility-testability-principles.yaml
+    - [sdlc-root]/knowledge/design/component-patterns.yaml
+    - [sdlc-root]/knowledge/design/interaction-animation.yaml
+    - [sdlc-root]/knowledge/design/visual-design-rules.yaml
+    - [sdlc-root]/knowledge/design/layout-principles.yaml
+    - [sdlc-root]/knowledge/architecture/agent-communication-protocol.yaml
 
   frontend-developer:
-    - ops/sdlc/knowledge/coding/code-quality-principles.yaml
-    - ops/sdlc/knowledge/design/ux-modeling-methodology.yaml
-    - ops/sdlc/knowledge/design/accessibility-testability-principles.yaml
-    - ops/sdlc/knowledge/design/component-patterns.yaml
-    - ops/sdlc/knowledge/design/layout-principles.yaml
-    - ops/sdlc/knowledge/coding/typescript-patterns.yaml
-    - ops/sdlc/knowledge/architecture/agent-communication-protocol.yaml
+    - [sdlc-root]/knowledge/coding/code-quality-principles.yaml
+    - [sdlc-root]/knowledge/design/ux-modeling-methodology.yaml
+    - [sdlc-root]/knowledge/design/accessibility-testability-principles.yaml
+    - [sdlc-root]/knowledge/design/component-patterns.yaml
+    - [sdlc-root]/knowledge/design/layout-principles.yaml
+    - [sdlc-root]/knowledge/coding/typescript-patterns.yaml
+    - [sdlc-root]/knowledge/architecture/agent-communication-protocol.yaml
 
   # ── Backend ────────────────────────────────────────────────────────
   backend-developer:
-    - ops/sdlc/knowledge/coding/code-quality-principles.yaml
-    - ops/sdlc/knowledge/architecture/technology-patterns.yaml
-    - ops/sdlc/knowledge/data-modeling/anti-patterns/common-modeling-mistakes.yaml
-    - ops/sdlc/knowledge/coding/typescript-patterns.yaml
-    - ops/sdlc/knowledge/architecture/pipeline-design-patterns.yaml
-    - ops/sdlc/knowledge/architecture/agent-communication-protocol.yaml
-    - ops/sdlc/knowledge/architecture/api-design-methodology.yaml
-    - ops/sdlc/knowledge/architecture/deployment-patterns.yaml
-    - ops/sdlc/knowledge/architecture/database-optimization-methodology.yaml
+    - [sdlc-root]/knowledge/coding/code-quality-principles.yaml
+    - [sdlc-root]/knowledge/architecture/technology-patterns.yaml
+    - [sdlc-root]/knowledge/data-modeling/anti-patterns/common-modeling-mistakes.yaml
+    - [sdlc-root]/knowledge/coding/typescript-patterns.yaml
+    - [sdlc-root]/knowledge/architecture/pipeline-design-patterns.yaml
+    - [sdlc-root]/knowledge/architecture/agent-communication-protocol.yaml
+    - [sdlc-root]/knowledge/architecture/api-design-methodology.yaml
+    - [sdlc-root]/knowledge/architecture/deployment-patterns.yaml
+    - [sdlc-root]/knowledge/architecture/database-optimization-methodology.yaml
 
   # ── Review / Quality ───────────────────────────────────────────────
   code-reviewer:
-    - ops/sdlc/knowledge/coding/code-quality-principles.yaml
-    - ops/sdlc/knowledge/coding/context-engineering-patterns.yaml
-    - ops/sdlc/knowledge/architecture/domain-boundary-gotchas.yaml
-    - ops/sdlc/knowledge/architecture/technology-patterns.yaml
-    - ops/sdlc/knowledge/testing/testing-paradigm.yaml
-    - ops/sdlc/knowledge/testing/gotchas.yaml
-    - ops/sdlc/knowledge/testing/tool-patterns.yaml
-    - ops/sdlc/knowledge/testing/component-catalog.yaml
-    - ops/sdlc/knowledge/architecture/debugging-methodology.yaml
-    - ops/sdlc/knowledge/coding/typescript-patterns.yaml
-    - ops/sdlc/knowledge/architecture/security-review-taxonomy.yaml
-    - ops/sdlc/knowledge/architecture/agent-communication-protocol.yaml
-    - ops/sdlc/knowledge/architecture/investigation-report-format.yaml
-    - ops/sdlc/knowledge/architecture/error-cascade-methodology.yaml
+    - [sdlc-root]/knowledge/coding/code-quality-principles.yaml
+    - [sdlc-root]/knowledge/coding/context-engineering-patterns.yaml
+    - [sdlc-root]/knowledge/architecture/domain-boundary-gotchas.yaml
+    - [sdlc-root]/knowledge/architecture/technology-patterns.yaml
+    - [sdlc-root]/knowledge/testing/testing-paradigm.yaml
+    - [sdlc-root]/knowledge/testing/gotchas.yaml
+    - [sdlc-root]/knowledge/testing/tool-patterns.yaml
+    - [sdlc-root]/knowledge/testing/component-catalog.yaml
+    - [sdlc-root]/knowledge/architecture/debugging-methodology.yaml
+    - [sdlc-root]/knowledge/coding/typescript-patterns.yaml
+    - [sdlc-root]/knowledge/architecture/security-review-taxonomy.yaml
+    - [sdlc-root]/knowledge/architecture/agent-communication-protocol.yaml
+    - [sdlc-root]/knowledge/architecture/investigation-report-format.yaml
+    - [sdlc-root]/knowledge/architecture/error-cascade-methodology.yaml
 
   # ── Testing ────────────────────────────────────────────────────────
   sdet:
-    - ops/sdlc/knowledge/testing/testing-paradigm.yaml
-    - ops/sdlc/knowledge/testing/gotchas.yaml
-    - ops/sdlc/knowledge/testing/tool-patterns.yaml
-    - ops/sdlc/knowledge/testing/component-catalog.yaml
-    - ops/sdlc/knowledge/testing/timing-defaults.yaml
-    - ops/sdlc/knowledge/testing/advanced-test-patterns.yaml
-    - ops/sdlc/knowledge/testing/ai-generated-code-verification.yaml
-    - ops/sdlc/knowledge/architecture/agent-communication-protocol.yaml
+    - [sdlc-root]/knowledge/testing/testing-paradigm.yaml
+    - [sdlc-root]/knowledge/testing/gotchas.yaml
+    - [sdlc-root]/knowledge/testing/tool-patterns.yaml
+    - [sdlc-root]/knowledge/testing/component-catalog.yaml
+    - [sdlc-root]/knowledge/testing/timing-defaults.yaml
+    - [sdlc-root]/knowledge/testing/advanced-test-patterns.yaml
+    - [sdlc-root]/knowledge/testing/ai-generated-code-verification.yaml
+    - [sdlc-root]/knowledge/architecture/agent-communication-protocol.yaml
 
   accessibility-auditor:
-    - ops/sdlc/knowledge/design/ux-modeling-methodology.yaml
-    - ops/sdlc/knowledge/design/accessibility-testability-principles.yaml
-    - ops/sdlc/knowledge/design/component-patterns.yaml
-    - ops/sdlc/knowledge/design/interaction-animation.yaml
-    - ops/sdlc/knowledge/architecture/agent-communication-protocol.yaml
-    - ops/sdlc/knowledge/architecture/investigation-report-format.yaml
+    - [sdlc-root]/knowledge/design/ux-modeling-methodology.yaml
+    - [sdlc-root]/knowledge/design/accessibility-testability-principles.yaml
+    - [sdlc-root]/knowledge/design/component-patterns.yaml
+    - [sdlc-root]/knowledge/design/interaction-animation.yaml
+    - [sdlc-root]/knowledge/architecture/agent-communication-protocol.yaml
+    - [sdlc-root]/knowledge/architecture/investigation-report-format.yaml
 
   # ── Debugging / Performance ────────────────────────────────────────
   debug-specialist:
-    - ops/sdlc/knowledge/testing/gotchas.yaml
-    - ops/sdlc/knowledge/testing/tool-patterns.yaml
-    - ops/sdlc/knowledge/testing/component-catalog.yaml
-    - ops/sdlc/knowledge/testing/timing-defaults.yaml
-    - ops/sdlc/knowledge/architecture/debugging-methodology.yaml
-    - ops/sdlc/knowledge/architecture/agent-communication-protocol.yaml
-    - ops/sdlc/knowledge/architecture/investigation-report-format.yaml
-    - ops/sdlc/knowledge/architecture/error-cascade-methodology.yaml
+    - [sdlc-root]/knowledge/testing/gotchas.yaml
+    - [sdlc-root]/knowledge/testing/tool-patterns.yaml
+    - [sdlc-root]/knowledge/testing/component-catalog.yaml
+    - [sdlc-root]/knowledge/testing/timing-defaults.yaml
+    - [sdlc-root]/knowledge/architecture/debugging-methodology.yaml
+    - [sdlc-root]/knowledge/architecture/agent-communication-protocol.yaml
+    - [sdlc-root]/knowledge/architecture/investigation-report-format.yaml
+    - [sdlc-root]/knowledge/architecture/error-cascade-methodology.yaml
 
   performance-engineer:
-    - ops/sdlc/knowledge/testing/timing-defaults.yaml
-    - ops/sdlc/knowledge/testing/tool-patterns.yaml
-    - ops/sdlc/knowledge/architecture/debugging-methodology.yaml
-    - ops/sdlc/knowledge/architecture/agent-communication-protocol.yaml
-    - ops/sdlc/knowledge/architecture/investigation-report-format.yaml
-    - ops/sdlc/knowledge/architecture/error-cascade-methodology.yaml
-    - ops/sdlc/knowledge/architecture/database-optimization-methodology.yaml
+    - [sdlc-root]/knowledge/testing/timing-defaults.yaml
+    - [sdlc-root]/knowledge/testing/tool-patterns.yaml
+    - [sdlc-root]/knowledge/architecture/debugging-methodology.yaml
+    - [sdlc-root]/knowledge/architecture/agent-communication-protocol.yaml
+    - [sdlc-root]/knowledge/architecture/investigation-report-format.yaml
+    - [sdlc-root]/knowledge/architecture/error-cascade-methodology.yaml
+    - [sdlc-root]/knowledge/architecture/database-optimization-methodology.yaml
 
   # ── Security ───────────────────────────────────────────────────────
   security-engineer:
-    - ops/sdlc/knowledge/architecture/security-review-taxonomy.yaml
-    - ops/sdlc/knowledge/architecture/agent-communication-protocol.yaml
-    - ops/sdlc/knowledge/architecture/investigation-report-format.yaml
+    - [sdlc-root]/knowledge/architecture/security-review-taxonomy.yaml
+    - [sdlc-root]/knowledge/architecture/agent-communication-protocol.yaml
+    - [sdlc-root]/knowledge/architecture/investigation-report-format.yaml
 
   # ── Product / Research ─────────────────────────────────────────────
   chief-product-officer:
-    - ops/sdlc/knowledge/product-research/competitive-analysis-methodology.yaml
-    - ops/sdlc/knowledge/product-research/dimension-catalog.yaml
-    - ops/sdlc/knowledge/product-research/data-source-evaluation.yaml
-    - ops/sdlc/knowledge/architecture/agent-communication-protocol.yaml
-    - ops/sdlc/knowledge/product-research/product-methodology.yaml
+    - [sdlc-root]/knowledge/product-research/competitive-analysis-methodology.yaml
+    - [sdlc-root]/knowledge/product-research/dimension-catalog.yaml
+    - [sdlc-root]/knowledge/product-research/data-source-evaluation.yaml
+    - [sdlc-root]/knowledge/architecture/agent-communication-protocol.yaml
+    - [sdlc-root]/knowledge/product-research/product-methodology.yaml
 
   competitive-analyst:
-    - ops/sdlc/knowledge/product-research/competitive-analysis-methodology.yaml
-    - ops/sdlc/knowledge/product-research/dimension-catalog.yaml
-    - ops/sdlc/knowledge/architecture/agent-communication-protocol.yaml
+    - [sdlc-root]/knowledge/product-research/competitive-analysis-methodology.yaml
+    - [sdlc-root]/knowledge/product-research/dimension-catalog.yaml
+    - [sdlc-root]/knowledge/architecture/agent-communication-protocol.yaml
 
   market-researcher:
-    - ops/sdlc/knowledge/product-research/competitive-analysis-methodology.yaml
-    - ops/sdlc/knowledge/product-research/dimension-catalog.yaml
-    - ops/sdlc/knowledge/architecture/agent-communication-protocol.yaml
+    - [sdlc-root]/knowledge/product-research/competitive-analysis-methodology.yaml
+    - [sdlc-root]/knowledge/product-research/dimension-catalog.yaml
+    - [sdlc-root]/knowledge/architecture/agent-communication-protocol.yaml
 
   data-researcher:
-    - ops/sdlc/knowledge/product-research/data-source-evaluation.yaml
-    - ops/sdlc/knowledge/architecture/agent-communication-protocol.yaml
+    - [sdlc-root]/knowledge/product-research/data-source-evaluation.yaml
+    - [sdlc-root]/knowledge/architecture/agent-communication-protocol.yaml
 
   # ── Build / Infrastructure ─────────────────────────────────────────
   build-engineer:
-    - ops/sdlc/knowledge/architecture/technology-patterns.yaml
-    - ops/sdlc/knowledge/architecture/debugging-methodology.yaml
-    - ops/sdlc/knowledge/architecture/agent-communication-protocol.yaml
-    - ops/sdlc/knowledge/architecture/deployment-patterns.yaml
+    - [sdlc-root]/knowledge/architecture/technology-patterns.yaml
+    - [sdlc-root]/knowledge/architecture/debugging-methodology.yaml
+    - [sdlc-root]/knowledge/architecture/agent-communication-protocol.yaml
+    - [sdlc-root]/knowledge/architecture/deployment-patterns.yaml
 
   refactor-engineer:
-    - ops/sdlc/knowledge/architecture/technology-patterns.yaml
-    - ops/sdlc/knowledge/coding/typescript-patterns.yaml
-    - ops/sdlc/knowledge/architecture/agent-communication-protocol.yaml
+    - [sdlc-root]/knowledge/architecture/technology-patterns.yaml
+    - [sdlc-root]/knowledge/coding/typescript-patterns.yaml
+    - [sdlc-root]/knowledge/architecture/agent-communication-protocol.yaml
 
   # ── ML / AI ────────────────────────────────────────────────────────
   ml-architect:
-    - ops/sdlc/knowledge/architecture/ml-system-design.yaml
-    - ops/sdlc/knowledge/architecture/pipeline-design-patterns.yaml
-    - ops/sdlc/knowledge/architecture/agent-communication-protocol.yaml
-    - ops/sdlc/knowledge/architecture/prompt-engineering-patterns.yaml
+    - [sdlc-root]/knowledge/architecture/ml-system-design.yaml
+    - [sdlc-root]/knowledge/architecture/pipeline-design-patterns.yaml
+    - [sdlc-root]/knowledge/architecture/agent-communication-protocol.yaml
+    - [sdlc-root]/knowledge/architecture/prompt-engineering-patterns.yaml
 
   ml-engineer:
-    - ops/sdlc/knowledge/architecture/ml-system-design.yaml
-    - ops/sdlc/knowledge/architecture/pipeline-design-patterns.yaml
-    - ops/sdlc/knowledge/coding/typescript-patterns.yaml
-    - ops/sdlc/knowledge/architecture/agent-communication-protocol.yaml
-    - ops/sdlc/knowledge/architecture/prompt-engineering-patterns.yaml
+    - [sdlc-root]/knowledge/architecture/ml-system-design.yaml
+    - [sdlc-root]/knowledge/architecture/pipeline-design-patterns.yaml
+    - [sdlc-root]/knowledge/coding/typescript-patterns.yaml
+    - [sdlc-root]/knowledge/architecture/agent-communication-protocol.yaml
+    - [sdlc-root]/knowledge/architecture/prompt-engineering-patterns.yaml
 
   # ── Payments / Legal ───────────────────────────────────────────────
   payment-engineer:
-    - ops/sdlc/knowledge/architecture/payment-state-machine.yaml
-    - ops/sdlc/knowledge/product-research/risk-assessment-framework.yaml
-    - ops/sdlc/knowledge/architecture/agent-communication-protocol.yaml
+    - [sdlc-root]/knowledge/architecture/payment-state-machine.yaml
+    - [sdlc-root]/knowledge/product-research/risk-assessment-framework.yaml
+    - [sdlc-root]/knowledge/architecture/agent-communication-protocol.yaml
 
   legal-advisor:
-    - ops/sdlc/knowledge/product-research/risk-assessment-framework.yaml
-    - ops/sdlc/knowledge/architecture/agent-communication-protocol.yaml
+    - [sdlc-root]/knowledge/product-research/risk-assessment-framework.yaml
+    - [sdlc-root]/knowledge/architecture/agent-communication-protocol.yaml
 
   # ── SDLC ───────────────────────────────────────────────────────────
   sdlc-compliance-auditor:
-    - ops/sdlc/knowledge/architecture/investigation-report-format.yaml
-    - ops/sdlc/knowledge/architecture/knowledge-management-methodology.yaml
-    - ops/sdlc/knowledge/architecture/domain-boundary-gotchas.yaml
+    - [sdlc-root]/knowledge/architecture/investigation-report-format.yaml
+    - [sdlc-root]/knowledge/architecture/knowledge-management-methodology.yaml
+    - [sdlc-root]/knowledge/architecture/domain-boundary-gotchas.yaml
 
   # ── Business Analysis ──────────────────────────────────────────────
   business-analyst:
-    - ops/sdlc/knowledge/business-analysis/requirements-feedback-loops.yaml
-    - ops/sdlc/knowledge/architecture/agent-communication-protocol.yaml
+    - [sdlc-root]/knowledge/business-analysis/requirements-feedback-loops.yaml
+    - [sdlc-root]/knowledge/architecture/agent-communication-protocol.yaml
 
 # Unmapped agents (no relevant cross-project knowledge files yet):
 # - Add your project-specific agents here as they are defined

@@ -65,7 +65,7 @@ The flow is sequential. Each step must complete before the next begins. The user
 
 If the user says "ingest from provenance", "ingest approved research", or similar:
 
-1. Read `knowledge/provenance_log.md` (or target project's `ops/sdlc/knowledge/provenance_log.md`)
+1. Read `knowledge/provenance_log.md` (or target project's `[sdlc-root]/knowledge/provenance_log.md`)
 2. Filter for entries with `status: approved-for-ingest`
 3. Present matching entries for the user to select
 4. For each selected entry, read the reference doc at the `source` path to get article URLs
@@ -100,9 +100,9 @@ Before extracting anything, align with the user on:
 
 1. **Target discipline(s)** — which discipline(s) will receive the knowledge. Usually 1-2; if the content spans many disciplines, pick the primary and note secondary captures.
 2. **Existing knowledge audit** — read the target discipline's current state:
-   - Discipline file (`ops/sdlc/disciplines/<name>.md`) — existing parking lot entries
-   - Knowledge store (`ops/sdlc/knowledge/<name>/`) — existing YAML files and their rule IDs
-   - Playbooks (`ops/sdlc/playbooks/`) — related playbooks that might need updating
+   - Discipline file (`[sdlc-root]/disciplines/<name>.md`) — existing parking lot entries
+   - Knowledge store (`[sdlc-root]/knowledge/<name>/`) — existing YAML files and their rule IDs
+   - Playbooks (`[sdlc-root]/playbooks/`) — related playbooks that might need updating
 3. **Extraction depth** — based on file count and user preference:
    - **Shallow** (>20 files): read all files but extract only high-confidence, broadly-applicable rules. Best for large collections where comprehensive extraction would exceed context limits.
    - **Deep** (<20 files): thorough extraction with nuance, including edge cases and conditional rules. Best for focused, high-quality source material.
@@ -187,7 +187,7 @@ spec_relevant: false
 
 **`spec_relevant` tagging:** All newly created knowledge files must include `spec_relevant: false` as a top-level field. This is the safe default — the project team can override to `true` for stores that inform spec writing (see `knowledge/README.md` § "spec_relevant Field"). When appending rules to existing files, preserve the file's existing `spec_relevant` value — do not change it.
 
-**Migration protection (mandatory):** Wrap all newly added YAML rules in `PROJECT-SECTION` markers so they survive framework migrations (see `ops/sdlc/process/project-section-markers.md` for the full convention):
+**Migration protection (mandatory):** Wrap all newly added YAML rules in `PROJECT-SECTION` markers so they survive framework migrations (see `[sdlc-root]/process/project-section-markers.md` for the full convention):
 
 ```yaml
 # PROJECT-SECTION-START: ingest-YYYY-MM-DD-discipline
@@ -208,8 +208,8 @@ Route each output to its correct destination:
 
 | Output Type | Destination | Criteria |
 |-------------|-------------|----------|
-| Validated, testable rules | `ops/sdlc/knowledge/<discipline>/<file>.yaml` | Specific, testable, broadly applicable, has rationale |
-| Promising but unvalidated insights | `ops/sdlc/disciplines/<name>.md` parking lot | Needs project-specific validation, or too context-dependent to codify as a rule |
+| Validated, testable rules | `[sdlc-root]/knowledge/<discipline>/<file>.yaml` | Specific, testable, broadly applicable, has rationale |
+| Promising but unvalidated insights | `[sdlc-root]/disciplines/<name>.md` parking lot | Needs project-specific validation, or too context-dependent to codify as a rule |
 | Cross-discipline insights | Adjacent discipline's parking lot | Belongs to a different discipline than the primary target |
 | Playbook candidates | Noted in report (not auto-created) | Enough related rules emerged to warrant a review checklist |
 
@@ -241,7 +241,7 @@ Wrap new parking lot entries in `PROJECT-SECTION` markers so they survive framew
 
 Record the ingestion in the provenance log:
 
-1. Read `knowledge/provenance_log.md` (or target project's `ops/sdlc/knowledge/provenance_log.md`) to determine the next `prov-YYYY-MM-DD-NNN` ID
+1. Read `knowledge/provenance_log.md` (or target project's `[sdlc-root]/knowledge/provenance_log.md`) to determine the next `prov-YYYY-MM-DD-NNN` ID
 2. **If consuming an `approved-for-ingest` entry** (from-provenance mode): update that entry's status to `ingested` and populate the ingestion fields (`files-created`, `files-updated`, `rule-count`, `ingested-by: sdlc-ingest`)
 3. **Otherwise** (normal mode): append a new entry with:
    - `status: ingested`
@@ -298,7 +298,7 @@ SPEC RELEVANCE
 
 ### 8. Changelog Update
 
-Update `ops/sdlc/process/sdlc_changelog.md` with the ingestion event:
+Update `[sdlc-root]/process/sdlc_changelog.md` with the ingestion event:
 
 ```markdown
 ## [date]: Knowledge Ingestion — [discipline name]

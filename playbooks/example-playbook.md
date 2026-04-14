@@ -36,10 +36,10 @@ Include these knowledge files when dispatching agents for this task type:
 
 | File | When to include |
 |------|----------------|
-| `ops/sdlc/knowledge/architecture/backend-capability-assessment.yaml` | Always |
-| `ops/sdlc/knowledge/architecture/api-design-methodology.yaml` | If adding new API endpoints |
-| `ops/sdlc/knowledge/data-modeling/patterns/meta-framework.yaml` | If adding or changing data models |
-| `ops/sdlc/knowledge/testing/tool-patterns.yaml` | For test planning phase |
+| `[sdlc-root]/knowledge/architecture/backend-capability-assessment.yaml` | Always |
+| `[sdlc-root]/knowledge/architecture/api-design-methodology.yaml` | If adding new API endpoints |
+| `[sdlc-root]/knowledge/data-modeling/patterns/meta-framework.yaml` | If adding or changing data models |
+| `[sdlc-root]/knowledge/testing/tool-patterns.yaml` | For test planning phase |
 
 ---
 

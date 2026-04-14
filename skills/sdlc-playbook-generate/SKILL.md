@@ -17,7 +17,7 @@ description: >
 
 Extract structured, reusable playbooks from completed session conversations and their git history. The goal is to capture both the **process that worked** (steps to formalize and repeat) and the **gap that didn't** (corrections, missed setup, environment surprises, configuration gotchas that only surfaced during execution).
 
-**This skill produces a playbook artifact in `ops/sdlc/playbooks/`. It does NOT produce specs, plans, or implementations.**
+**This skill produces a playbook artifact in `[sdlc-root]/playbooks/`. It does NOT produce specs, plans, or implementations.**
 
 **Argument:** `$ARGUMENTS` (session identifier — a name, search term, or session ID; plus optional playbook purpose/scope hint)
 
@@ -132,7 +132,7 @@ Read the session JSONL and extract structured insights. This is the core analyti
 
 ### 4. Draft the Playbook
 
-Generate the playbook following the project's template format (`ops/sdlc/playbooks/example-playbook.md`). Read the template first to match the exact structure.
+Generate the playbook following the project's template format (`[sdlc-root]/playbooks/example-playbook.md`). Read the template first to match the exact structure.
 
 **Key sections to populate from analysis:**
 
@@ -160,8 +160,8 @@ Present the draft to the user for review before writing.
 
 After user approval:
 
-1. Write the playbook to `ops/sdlc/playbooks/<slug>.md`
-2. Update `ops/sdlc/playbooks/README.md` — add entry to the "Available playbooks" table
+1. Write the playbook to `[sdlc-root]/playbooks/<slug>.md`
+2. Update `[sdlc-root]/playbooks/README.md` — add entry to the "Available playbooks" table
 3. Check if any existing knowledge stores should cross-reference the new playbook (note in report, don't auto-modify)
 
 ### 6. Report
@@ -172,7 +172,7 @@ PLAYBOOK GENERATION REPORT
 
 Source session: [session-id] ([date range])
 Commits analyzed: [count] ([count] files changed)
-Playbook: ops/sdlc/playbooks/[slug].md
+Playbook: [sdlc-root]/playbooks/[slug].md
 
 PROCESS CAPTURED
   Phases: [count]
@@ -197,7 +197,7 @@ SESSION COVERAGE
 
 ### 7. Changelog Update
 
-Update `ops/sdlc/process/sdlc_changelog.md`:
+Update `[sdlc-root]/process/sdlc_changelog.md`:
 
 ```markdown
 ## [date]: Playbook Generated — [playbook name]

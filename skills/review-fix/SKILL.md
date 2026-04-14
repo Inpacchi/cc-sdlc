@@ -21,7 +21,7 @@ A `/sdlc-review-commit` must have been run in this conversation. If no review fi
 
 ### Manager Rule
 
-Read and follow `ops/sdlc/process/manager-rule.md` — the canonical definition of this rule.
+Read and follow `[sdlc-root]/process/manager-rule.md` — the canonical definition of this rule.
 
 ### 1. Load Findings
 
@@ -48,7 +48,7 @@ Dispatching fixes:
 
 **Every checkbox must have a corresponding agent dispatch.** Count the checkboxes. Count the dispatches. They must match. If you find yourself editing files directly instead of dispatching an agent, stop — that violates this command.
 
-**Cross-domain knowledge injection:** When the fixing agent differs from the agent that found the issue, the fixer may lack context about the reviewer's domain. Consult `ops/sdlc/knowledge/agent-context-map.yaml` for the *finding* agent's entry and include relevant knowledge files in the *fixing* agent's dispatch prompt. For example, if `performance-engineer` found a re-render issue and `frontend-developer` is fixing it, include the performance engineer's knowledge files so the fixer understands the performance constraints.
+**Cross-domain knowledge injection:** When the fixing agent differs from the agent that found the issue, the fixer may lack context about the reviewer's domain. Consult `[sdlc-root]/knowledge/agent-context-map.yaml` for the *finding* agent's entry and include relevant knowledge files in the *fixing* agent's dispatch prompt. For example, if `performance-engineer` found a re-render issue and `frontend-developer` is fixing it, include the performance engineer's knowledge files so the fixer understands the performance constraints.
 
 Each agent receives:
 - The specific findings assigned to them (description, file, line, category)
@@ -65,7 +65,7 @@ After all agents complete, verify the project builds successfully (`[build comma
 
 ### 3. Review-Fix Loop
 
-Fixes can introduce new issues. Run the **Review-Fix Loop** per `ops/sdlc/process/review-fix-loop.md`. Agent source: the original `/sdlc-review-commit` agent list. Classifications: FIX, INVESTIGATE, DECIDE, PRE-EXISTING per `ops/sdlc/process/finding-classification.md` (no PLAN — commit fixes are scoped to the current diff).
+Fixes can introduce new issues. Run the **Review-Fix Loop** per `[sdlc-root]/process/review-fix-loop.md`. Agent source: the original `/sdlc-review-commit` agent list. Classifications: FIX, INVESTIGATE, DECIDE, PRE-EXISTING per `[sdlc-root]/process/finding-classification.md` (no PLAN — commit fixes are scoped to the current diff).
 
 When the loop exits cleanly, go to step 4.
 

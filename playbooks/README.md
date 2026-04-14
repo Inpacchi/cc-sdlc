@@ -6,7 +6,7 @@ Playbooks capture recurring task patterns so that planning doesn't start from sc
 
 Playbooks are a **reference, not a mandatory gate**. The planning agent decides whether a playbook is relevant — the same way templates work today. Consult a playbook when the task clearly matches a known pattern. Skip it when the task is novel or doesn't fit.
 
-Planning skills reference this directory with: "For recurring task types, consult `ops/sdlc/playbooks/` for pre-seeded agent selection, knowledge context, and reference implementations."
+Planning skills reference this directory with: "For recurring task types, consult `[sdlc-root]/playbooks/` for pre-seeded agent selection, knowledge context, and reference implementations."
 
 ## Format
 
@@ -16,7 +16,7 @@ Each playbook includes:
 - **Validation triggers** — conditions that should prompt re-validation (e.g., "domain adapter interface changes")
 - **When to use** — 1-2 sentence trigger description
 - **Recommended agents** — who leads, who contributes
-- **Knowledge context** — which `ops/sdlc/knowledge/` files to include when dispatching
+- **Knowledge context** — which `[sdlc-root]/knowledge/` files to include when dispatching
 - **Typical phases** — the usual phase structure for this task type
 - **Reference implementation** — existing code to study
 - **Key decisions to surface** — decision points that always come up

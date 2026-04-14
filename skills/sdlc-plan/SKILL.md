@@ -15,15 +15,15 @@ Domain agents own the planning lifecycle: they write the spec, they write the pl
 
 ## Collaboration Model
 
-Read `ops/sdlc/process/collaboration_model.md` for the CD/CC role definitions, communication patterns (proposal-first, AskUserQuestion rule), decision authority table, and anti-patterns. Planning is where proposal-first and decision authority matter most — CC proposes approaches, CD approves.
+Read `[sdlc-root]/process/collaboration_model.md` for the CD/CC role definitions, communication patterns (proposal-first, AskUserQuestion rule), decision authority table, and anti-patterns. Planning is where proposal-first and decision authority matter most — CC proposes approaches, CD approves.
 
 ## Deliverable Lifecycle
 
-Follow the state machine in `ops/sdlc/process/deliverable_lifecycle.md`. When registering a deliverable (step 0), it enters Draft state. After spec approval (step 3), it transitions to Ready. Use the defined `**Status:**` markers in the spec file.
+Follow the state machine in `[sdlc-root]/process/deliverable_lifecycle.md`. When registering a deliverable (step 0), it enters Draft state. After spec approval (step 3), it transitions to Ready. Use the defined `**Status:**` markers in the spec file.
 
 ## Manager Rule
 
-Read and follow `ops/sdlc/process/manager-rule.md` — the canonical definition of this rule. It applies unconditionally for the entire session.
+Read and follow `[sdlc-root]/process/manager-rule.md` — the canonical definition of this rule. It applies unconditionally for the entire session.
 
 ## Mode Selection
 
@@ -132,7 +132,7 @@ digraph planning {
 
 ### Agent Source
 
-Use `ops/sdlc/process/agent-selection.md` as the canonical agent-to-domain mapping. The Tier 1 table lists every project-level agent and its file-scope triggers. For planning, read the trigger descriptions as domain coverage — if a phase touches files that would trigger an agent in review, that agent should be assigned to that phase.
+Use `[sdlc-root]/process/agent-selection.md` as the canonical agent-to-domain mapping. The Tier 1 table lists every project-level agent and its file-scope triggers. For planning, read the trigger descriptions as domain coverage — if a phase touches files that would trigger an agent in review, that agent should be assigned to that phase.
 
 **Project agents:** `.claude/agents/` (project root) — listed in `agent-selection.md` Tier 1
 **Personal agents:** `~/.claude/agents/` — fallback for tasks extending beyond project-scoped expertise (prompt-engineer, refactoring-specialist, research-analyst, competitive-analyst, market-researcher, trend-analyst, etc.)
@@ -175,7 +175,7 @@ Relevant domain agents for this task:
 - code-reviewer: always included for implementation tasks
 ```
 
-For recurring task types, consult `ops/sdlc/playbooks/` for pre-seeded agent selection and reference implementations.
+For recurring task types, consult `[sdlc-root]/playbooks/` for pre-seeded agent selection and reference implementations.
 
 **DISCOVERY-GATE** — you cannot dispatch agents to write the spec until this block appears in your response:
 
@@ -231,14 +231,14 @@ The primary domain agent writes the core spec. Other relevant agents contribute 
 **Library verification:** When the spec involves external libraries or frameworks, verify API capabilities and constraints via Context7 (`mcp__context7__resolve-library-id` → `mcp__context7__query-docs`) before finalizing requirements. Check the project's actual dependency versions (package.json, lock files) — version-specific behavior matters. Pass verified API details to the spec-writing agent so requirements are grounded in real library capabilities, not training-data assumptions.
 
 **Spec-time knowledge filtering (opt-in):** When dispatching agents for spec writing, filter their knowledge context to spec-relevant files only — if the project has configured spec-relevance tagging. For each agent being dispatched:
-1. Look up the agent's mapped files in `ops/sdlc/knowledge/agent-context-map.yaml`
+1. Look up the agent's mapped files in `[sdlc-root]/knowledge/agent-context-map.yaml`
 2. Check whether **any** knowledge file in the project has `spec_relevant: true`. If none do, load ALL mapped files (the project hasn't configured spec-relevance yet — preserve current behavior).
 3. If at least one file is tagged `true`: read each mapped YAML file's top-level `spec_relevant` field. Include only files where `spec_relevant: true` — skip files where `spec_relevant: false` or the field is absent.
-4. The testing paradigm (`ops/sdlc/knowledge/testing/testing-paradigm.yaml`) is ALWAYS included at spec time regardless of its `spec_relevant` tag — it is explicitly referenced for the Testing Strategy section below.
+4. The testing paradigm (`[sdlc-root]/knowledge/testing/testing-paradigm.yaml`) is ALWAYS included at spec time regardless of its `spec_relevant` tag — it is explicitly referenced for the Testing Strategy section below.
 
 This filtering reduces context load during spec writing by excluding implementation-detail knowledge (code patterns, debugging guides, deployment patterns) that does not inform **what** to build. At plan time (Step 4), ALL mapped files load for each dispatched agent — no `spec_relevant` filtering.
 
-Reference the template at `ops/sdlc/templates/spec_template.md`. Required fields:
+Reference the template at `[sdlc-root]/templates/spec_template.md`. Required fields:
 - Problem statement
 - Requirements (functional + non-functional)
 - Components/packages affected
@@ -246,7 +246,7 @@ Reference the template at `ops/sdlc/templates/spec_template.md`. Required fields
 - Data model changes
 - Interface/adapter changes required
 - Depends on (other deliverable IDs)
-- Testing strategy — informed by the testing paradigm (`ops/sdlc/knowledge/testing/testing-paradigm.yaml`, always loaded at spec time regardless of `spec_relevant` tag): unit tests for pure logic, integration tests for I/O boundaries, E2E for critical user flows. Identify which code layers the feature introduces and match test types accordingly.
+- Testing strategy — informed by the testing paradigm (`[sdlc-root]/knowledge/testing/testing-paradigm.yaml`, always loaded at spec time regardless of `spec_relevant` tag): unit tests for pure logic, integration tests for I/O boundaries, E2E for critical user flows. Identify which code layers the feature introduces and match test types accordingly.
 - Success criteria
 - Constraints
 - Open questions / unknowns — explicitly state what the spec does NOT know yet. Each unknown is a risk; the plan must address or accept each one.
@@ -331,7 +331,7 @@ If the approach follows an existing codebase pattern with no structural ambiguit
 
 After spec approval, the most relevant domain agent(s) **author** the implementation plan. The agent with the deepest expertise in the primary domain writes the plan. Other relevant agents contribute to sections in their domain.
 
-Reference the template at `ops/sdlc/templates/planning_template.md`.
+Reference the template at `[sdlc-root]/templates/planning_template.md`.
 
 Example: For a new frontend feature, `frontend-developer` writes the plan, with `ui-ux-designer` contributing the design spec section and `software-architect` contributing the architecture section.
 
@@ -399,7 +399,7 @@ Plan review — dispatching:
 
 Dispatch all review agents in parallel. Collect feedback.
 
-If agents have findings, classify per `ops/sdlc/process/finding-classification.md`. Planning context uses FIX, DECIDE, and PRE-EXISTING only. Output the classification table, then:
+If agents have findings, classify per `[sdlc-root]/process/finding-classification.md`. Planning context uses FIX, DECIDE, and PRE-EXISTING only. Output the classification table, then:
 
 - Only FIX findings go to the writing agent for revision
 - DECIDE findings go to the user via `AskUserQuestion`
@@ -440,7 +440,7 @@ Key feedback incorporated:
 
 ### 5a. Discipline Capture
 
-Run the discipline capture protocol per `ops/sdlc/process/discipline_capture.md`. Context format: `[DNN — planning]`. This includes structured gap detection (using the finding classification table and agent dispatch data from this session) followed by the freeform insight scan.
+Run the discipline capture protocol per `[sdlc-root]/process/discipline_capture.md`. Context format: `[DNN — planning]`. This includes structured gap detection (using the finding classification table and agent dispatch data from this session) followed by the freeform insight scan.
 
 ### 6. Prompt for Execution
 
@@ -502,7 +502,7 @@ Not every invocation needs a deliverable ID. For ad hoc work (bug fixes, small t
 
 ### Session Handoff
 
-The Manager Rule remains in effect per `ops/sdlc/process/manager-rule.md` — see the Session Scope section.
+The Manager Rule remains in effect per `[sdlc-root]/process/manager-rule.md` — see the Session Scope section.
 
 ## Integration
 

@@ -81,11 +81,11 @@ Generate the skill body based on type. All types share common requirements; each
 #### Orchestration Skills (additional requirements)
 
 - **Workflow diagram** — `STEP → STEP → STEP` showing the flow
-- **Manager Rule** — `## Manager Rule` section: "Read and follow `ops/sdlc/process/manager-rule.md`."
+- **Manager Rule** — `## Manager Rule` section: "Read and follow `[sdlc-root]/process/manager-rule.md`."
 - **Agent Dispatch Protocol** — "Dispatch prompts must describe WHAT/WHY — implementation HOW is the agent's domain."
 - **Agent Selection Criteria** — table or tiered list showing which agents to dispatch and when
 - **Review lenses** — what each reviewing agent checks for
-- **Review-Fix Loop** — reference to `ops/sdlc/process/review-fix-loop.md` if the skill has iterative review
+- **Review-Fix Loop** — reference to `[sdlc-root]/process/review-fix-loop.md` if the skill has iterative review
 
 #### Utility Skills (additional requirements)
 

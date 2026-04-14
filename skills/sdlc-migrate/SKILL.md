@@ -7,7 +7,7 @@ description: >
   Triggers on "migrate my SDLC", "update the SDLC", "migrate SDLC framework", "update SDLC framework",
   "upgrade SDLC", "sync SDLC with upstream".
   Do NOT use for first-time installation — use sdlc-initialize.
-  Do NOT use when ops/sdlc/ does not exist — use sdlc-initialize.
+  Do NOT use when neither ops/sdlc/ nor .claude/sdlc/ exists — use sdlc-initialize.
 ---
 
 # SDLC Migrate
@@ -22,7 +22,7 @@ Apply cc-sdlc upstream updates to a project while preserving project-specific cu
 
 - Read a file: `git -C [cc-sdlc-path] show HEAD:<path>`
 - List files: `git -C [cc-sdlc-path] ls-tree -r --name-only HEAD`
-- Extract a file to the project: `git -C [cc-sdlc-path] show HEAD:<path> > [project-path]/ops/sdlc/<path>`
+- Extract a file to the project: `git -C [cc-sdlc-path] show HEAD:<path> > [project-path]/[sdlc-root]/<path>`
 - Diff since version: `git -C [cc-sdlc-path] diff [source_version]..HEAD`
 
 Never use `cat`, `cp`, `ls`, or direct file reads against `[cc-sdlc-path]`. The source repo may have uncommitted work in progress.
@@ -31,7 +31,7 @@ Never use `cat`, `cp`, `ls`, or direct file reads against `[cc-sdlc-path]`. The 
 
 Before starting, verify this is a migration (not initialization):
 
-If `ops/sdlc/` doesn't exist → tell user to run `sdlc-initialize` instead and stop.
+If neither `ops/sdlc/` nor `.claude/sdlc/` exists → tell user to run `sdlc-initialize` instead and stop.
 
 **Step 1 — Resolve cc-sdlc source to a local path** (in priority order):
 1. `$ARGUMENTS` — if the user passed a local clone path, verify with `git -C [path] rev-parse HEAD`
@@ -42,17 +42,126 @@ If `ops/sdlc/` doesn't exist → tell user to run `sdlc-initialize` instead and 
    This is safe and expected — it's a shallow clone of the user's own repo. Use `/tmp/cc-sdlc-migrate` as `[cc-sdlc-path]` for all subsequent phases. Clean up with `rm -rf /tmp/cc-sdlc-migrate` after migration completes.
 3. If neither is available, ask the user.
 
-**Step 2 — Report assessment:**
+**Step 2 — Detect project structure:**
+
+The cc-sdlc source uses canonical paths (`knowledge/`, `disciplines/`, `process/`). Projects install these to different locations. Detect the project's structure before applying any changes.
+
+| Signal | Detection | Result |
+|--------|-----------|--------|
+| **SDLC directory** | `[ -d ops/sdlc ]` vs `[ -d .claude/sdlc ]` | Set `[sdlc-root]` to whichever exists (if both exist, prefer `ops/sdlc` and warn user) |
+| **Neuroloom integration** | `[ -d neuroloom-sdlc-plugin ]` OR `[ -d neuroloom-claude-plugin ]` OR `grep -q "neuroloom" .claude/settings.json` OR manifest has `neuroloom_integration: true` | Set `[has-neuroloom]` flag |
+
+```bash
+# Detect SDLC root
+if [ -d ops/sdlc ] && [ -d .claude/sdlc ]; then
+  SDLC_ROOT="ops/sdlc"
+  echo "WARNING: Both ops/sdlc and .claude/sdlc exist. Using ops/sdlc. Consider consolidating."
+elif [ -d ops/sdlc ]; then
+  SDLC_ROOT="ops/sdlc"
+elif [ -d .claude/sdlc ]; then
+  SDLC_ROOT=".claude/sdlc"
+else
+  echo "No SDLC directory found — use sdlc-initialize"
+  exit 1
+fi
+
+# Detect Neuroloom integration
+HAS_NEUROLOOM=false
+[ -d neuroloom-sdlc-plugin ] && HAS_NEUROLOOM=true
+[ -d neuroloom-claude-plugin ] && HAS_NEUROLOOM=true
+grep -q '"neuroloom"' .claude/settings.json 2>/dev/null && HAS_NEUROLOOM=true
+jq -e '.neuroloom_integration == true' .sdlc-manifest.json 2>/dev/null && HAS_NEUROLOOM=true
+```
+
+**Step 3 — Report assessment:**
 
 ```
 MIGRATION ASSESSMENT
-Has ops/sdlc/: [yes/no]
+SDLC root: [sdlc-root] (ops/sdlc or .claude/sdlc)
+Neuroloom integration: [yes/no]
 Has .sdlc-manifest.json: [yes/no]
 Has .claude/agents/: [yes/no]
 Has .claude/skills/: [yes/no]
 cc-sdlc source: [local path or "cloned from [URL] to /tmp/cc-sdlc-migrate"]
 cc-sdlc HEAD: [commit hash from git -C [cc-sdlc-path] rev-parse HEAD]
 ```
+
+---
+
+## Path Transformation Rules
+
+Throughout this migration, apply these transformations when copying or merging content:
+
+### Source → Project Path Mapping
+
+| cc-sdlc Source Path | Project Path |
+|---------------------|--------------|
+| `knowledge/` | `[sdlc-root]/knowledge/` |
+| `disciplines/` | `[sdlc-root]/disciplines/` |
+| `process/` | `[sdlc-root]/process/` |
+| `templates/` | `[sdlc-root]/templates/` |
+| `playbooks/` | `[sdlc-root]/playbooks/` |
+| `examples/` | `[sdlc-root]/examples/` |
+| `agents/` | `.claude/agents/` (always — Claude Code requires this location) |
+| `skills/` | `.claude/skills/` (always — Claude Code requires this location) |
+
+### Neuroloom-Aware Content Transformation
+
+When `[has-neuroloom]` is true, **preserve MCP tool calls** in framework content. The cc-sdlc source uses file path references (generic), but Neuroloom projects use MCP tools for knowledge access.
+
+#### Pattern Mapping
+
+| cc-sdlc Generic Pattern | Neuroloom Pattern (preserve if present) |
+|-------------------------|----------------------------------------|
+| `consult [sdlc-root]/knowledge/agent-context-map.yaml` | `memory_search(query="[agent-name] domain-specific patterns...", tags=["sdlc:knowledge"])` |
+| `Read [sdlc-root]/knowledge/architecture/agent-communication-protocol.yaml` | `memory_search(query="agent communication protocol...", tags=["sdlc:knowledge", "sdlc:domain:architecture"])` |
+| `Append to [sdlc-root]/disciplines/*.md` | `memory_store(tags=["sdlc:discipline:{name}", "sdlc:parking-lot"])` |
+| `knowledge stores ([sdlc-root]/knowledge/)` | `Neuroloom knowledge store (via memory_store)` |
+| `[sdlc-root]/knowledge/testing/` | `memory_store with tags ["sdlc:knowledge", "sdlc:domain:testing"]` |
+| `look up agent's mapped files from agent-context-map.yaml` | `memory_search(query="{agent-name} domain patterns", tags=["sdlc:knowledge"])` |
+
+#### Files Containing These Patterns
+
+These framework files contain knowledge access patterns that differ between generic cc-sdlc and Neuroloom:
+
+| File | Section | Pattern Type |
+|------|---------|--------------|
+| `agents/AGENT_TEMPLATE.md` | `## Knowledge Context` | Agent knowledge retrieval |
+| `agents/AGENT_TEMPLATE.md` | `## Communication Protocol` | Protocol retrieval |
+| `agents/AGENT_TEMPLATE.md` | "Surfacing Learnings" | Knowledge store reference |
+| `agents/sdlc-compliance-auditor.md` | Methodology reference | Knowledge retrieval |
+| `agents/sdlc-reviewer.md` | Agent wiring checklist | Knowledge wiring validation |
+| `process/discipline_capture.md` | Agent knowledge lookup | Knowledge retrieval |
+| `process/discipline_capture.md` | "How to Capture" | Discipline store |
+| `process/overview.md` | Knowledge capture | Knowledge store |
+
+#### Content-Merge Rules for Neuroloom Projects
+
+1. **Detection heuristic:** Before merging any file listed above, scan the project's current version for `memory_search(` or `memory_store(`. If present, the project uses Neuroloom integration.
+
+2. **Section-level preservation:** When merging a file with Neuroloom patterns:
+   - Identify sections containing MCP tool calls (usually delimited by `##` headings)
+   - Extract the project's MCP-based version of those sections
+   - Apply upstream framework updates to sections WITHOUT MCP calls
+   - Re-inject the project's MCP-based sections verbatim
+   - Log: `Neuroloom pattern preserved: [file] § [section]`
+
+3. **Per-file detection for partial Neuroloom:** Even when `[has-neuroloom]` is true at the project level, apply detection at file level before merging. Scan the project's current version of each file in the "Files Containing These Patterns" table for `memory_search(` or `memory_store(`. If present, apply content-merge preservation for that file. If absent, direct-copy is safe. This handles projects that migrated to Neuroloom piecemeal — some files may have MCP patterns while others still use file paths.
+
+4. **Reviewer checklist transformation:** The `sdlc-reviewer.md` contains checklists that validate knowledge wiring. For Neuroloom projects:
+   - Preserve: `Knowledge Context section includes a memory_search call`
+   - Don't overwrite with: `Knowledge Context section references agent-context-map.yaml`
+
+5. **Agent template sections:** The `AGENT_TEMPLATE.md` drives new agent creation. For Neuroloom projects:
+   - Preserve: `call memory_search(query="[agent-name] domain-specific patterns...`
+   - Don't overwrite with: `consult [sdlc-root]/knowledge/agent-context-map.yaml`
+
+**Why this matters:** Neuroloom projects store SDLC knowledge in the Neuroloom memory graph, accessed via MCP tools. Overwriting these with file path references breaks:
+- Semantic search (queries by meaning, not file membership)
+- Cross-domain discovery (relevant knowledge from unexpected domains)
+- Context injection (Neuroloom plugin injects memories into agent context)
+
+The migration must preserve whichever pattern the project uses.
 
 ---
 
@@ -119,7 +228,7 @@ Group the changed cc-sdlc files by migration strategy:
 
 ## PROJECT-SECTION Marker Convention
 
-Read and follow `ops/sdlc/process/project-section-markers.md` — the canonical definition of the marker convention. It defines the syntax (Markdown and YAML), label format, rules, and validation. All producing skills (`sdlc-ingest`, `sdlc-execute`, `sdlc-lite-execute`, `sdlc-create-agent`, `sdlc-develop-skill`, `sdlc-audit` improvement mode) reference that document.
+Read and follow `[sdlc-root]/process/project-section-markers.md` — the canonical definition of the marker convention. It defines the syntax (Markdown and YAML), label format, rules, and validation. All producing skills (`sdlc-ingest`, `sdlc-execute`, `sdlc-lite-execute`, `sdlc-create-agent`, `sdlc-develop-skill`, `sdlc-audit` improvement mode) reference that document.
 
 This migration skill is responsible for **consuming** markers: extracting, preserving, and re-injecting marked blocks during framework updates. Existing project content that lacks markers is detected by the deviation detection step (§2.1c).
 
@@ -129,27 +238,132 @@ This migration skill is responsible for **consuming** markers: extracting, prese
 
 ### 2.1 Direct Copy Files
 
-For files with no project customizations, copy directly from cc-sdlc to the project's `ops/sdlc/` directory:
+For files with no project customizations, copy directly from cc-sdlc to the project's `[sdlc-root]/` directory:
 
 - `process/*.md`
 - `templates/*.md`
-- `knowledge/**/*.yaml` (but NOT `agent-context-map.yaml`)
+- `knowledge/**/*.yaml` (but NOT `agent-context-map.yaml`) — **Neuroloom projects:** skip this; knowledge files are stored in the memory graph and updated via the Neuroloom plugin's migrate skill
 - `README.md`, `CLAUDE-SDLC.md`
-- `agents/AGENT_TEMPLATE.md`, `agents/AGENT_SUGGESTIONS.md` → `.claude/agents/`
-- `agents/sdlc-reviewer.md`, `agents/sdlc-compliance-auditor.md` → `.claude/agents/` (framework subagents — must be in `.claude/agents/` for Claude Code to dispatch them, not just `ops/sdlc/agents/`)
+- `agents/AGENT_TEMPLATE.md`, `agents/AGENT_SUGGESTIONS.md` → `.claude/agents/` — **Neuroloom projects:** apply content-merge rules from "Neuroloom-Aware Content Transformation" section above; these files contain Knowledge Context patterns that differ between generic and Neuroloom projects
+- `agents/sdlc-reviewer.md`, `agents/sdlc-compliance-auditor.md` → `.claude/agents/` — **Neuroloom projects:** apply content-merge rules; these contain knowledge wiring validation patterns. (Framework subagents must be in `.claude/agents/` for Claude Code to dispatch them, not just `[sdlc-root]/agents/`)
 - `playbooks/*.md` (unless the project has written its own playbooks — check git blame)
 - `examples/*.md`
 
 **All reads from the cc-sdlc source repo must use git commands** (e.g., `git -C [cc-sdlc-path] show HEAD:path/to/file`), not filesystem reads. This ensures you're reading committed state, not working tree.
 
-**PROJECT-SECTION preservation (mandatory for all direct-copy files):**
+**PROJECT-SECTION preservation with content review (mandatory for all direct-copy files):**
 
 Before overwriting any file:
 1. Scan the project's current version for `PROJECT-SECTION-START` / `PROJECT-SECTION-END` marker pairs
 2. Extract each marked block along with its label and the heading it appears under (nearest `#`/`##`/`###` above)
-3. After copying the upstream file, re-inject each block at its original heading position
-4. If the heading no longer exists in the upstream file, append the block at the end of the file with a warning comment: `<!-- MIGRATION WARNING: heading "[heading]" no longer exists in upstream — block preserved at end of file -->`
-5. Log all re-injected blocks in the migration report
+3. **Review each marked block against upstream changes** (see §2.1d below)
+4. After copying the upstream file, re-inject each block at its original heading position (unless user chose to update/remove during review)
+5. If the heading no longer exists in the upstream file, append the block at the end of the file with a warning comment: `<!-- MIGRATION WARNING: heading "[heading]" no longer exists in upstream — block preserved at end of file -->`
+6. Log all re-injected blocks and review decisions in the migration report
+
+### 2.1d PROJECT-SECTION Content Review
+
+Markers preserve project content, but that content can become stale, conflicting, or improvable as upstream evolves. Before blindly re-injecting, review each marked block against upstream changes.
+
+**For each extracted `PROJECT-SECTION` block:**
+
+1. **Identify the surrounding context:**
+   - Which section heading is it under?
+   - What was the upstream content in that section at `source_version`?
+   - What is the upstream content in that section at `HEAD`?
+
+2. **Detect upstream changes to the same area:**
+   ```bash
+   # Get the section content at old version
+   git -C [cc-sdlc-path] show [source_version]:<path> | ... extract section ...
+   
+   # Get the section content at new version
+   git -C [cc-sdlc-path] show HEAD:<path> | ... extract section ...
+   
+   # Compare
+   diff <(old_section) <(new_section)
+   ```
+
+3. **Classify the marker review finding:**
+
+   | Upstream Change | Project Marker Status | Finding Type | Recommendation |
+   |-----------------|----------------------|--------------|----------------|
+   | Section unchanged | Any | `OK` | Re-inject as-is |
+   | Section updated (minor) | Content still valid | `OK` | Re-inject as-is |
+   | Section updated (significant) | Content may be stale | `REVIEW` | Present to user — content may need updating |
+   | Section restructured | Block position unclear | `REVIEW` | Present to user — may need repositioning |
+   | Section removed | Block orphaned | `ORPHAN` | Present to user — content has no home |
+   | New patterns added nearby | Could benefit project | `OPPORTUNITY` | Present to user — may want to adopt |
+   | Project content contradicts upstream | Conflict detected | `CONFLICT` | Present to user — resolve contradiction |
+
+4. **Build the review findings list** — collect all non-`OK` findings across all files
+
+5. **Present findings to user via `AskUserQuestion`:**
+
+   ```
+   PROJECT-SECTION CONTENT REVIEW
+   ══════════════════════════════
+   
+   Found [N] marked blocks that may need attention:
+   
+   ┌─ [file path] ─────────────────────────────────
+   │ Label: [marker label]
+   │ Section: [heading]
+   │ Finding: [REVIEW | ORPHAN | OPPORTUNITY | CONFLICT]
+   │
+   │ Upstream change:
+   │   [brief description of what changed in upstream]
+   │
+   │ Project content:
+   │   [first 3-5 lines of marked block, truncated if long]
+   │
+   │ Recommendation:
+   │   [specific suggestion based on finding type]
+   └────────────────────────────────────────────────
+   
+   [Repeat for each finding]
+   
+   For each finding, choose:
+   1. Keep as-is — re-inject project content unchanged
+   2. Update — [opens content for manual edit, then re-inject]
+   3. Remove — discard this marked block, adopt upstream
+   4. Merge — combine project additions with upstream changes
+   
+   Enter choices (e.g., "1:keep, 2:update, 3:remove" or "all:keep"):
+   ```
+
+6. **Apply user decisions:**
+   - `keep` → re-inject block verbatim after upstream copy
+   - `update` → user edits the block content, then re-inject
+   - `remove` → do not re-inject; block is discarded
+   - `merge` → combine project content with upstream changes (present merged result for confirmation)
+
+7. **Log all decisions in migration report:**
+   ```
+   PROJECT-SECTION review decisions:
+   - [file]#[label]: kept (upstream section unchanged)
+   - [file]#[label]: kept (user chose to preserve despite upstream changes)
+   - [file]#[label]: updated (user modified content to align with upstream)
+   - [file]#[label]: removed (user adopted upstream version)
+   - [file]#[label]: merged (combined project + upstream)
+   ```
+
+**Finding type details:**
+
+| Type | Detection | User Prompt |
+|------|-----------|-------------|
+| `REVIEW` | Upstream section diff > 20% changed lines, or key patterns added/removed | "Upstream significantly updated this section. Your marked content may reference outdated patterns or miss improvements." |
+| `ORPHAN` | Upstream removed the heading entirely | "The section this content lived under no longer exists. Consider: moving to a new location, removing if obsolete, or keeping at file end." |
+| `OPPORTUNITY` | Upstream added new content within 10 lines of marker position | "Upstream added new guidance near your marked content. Review whether to incorporate or reference it." |
+| `CONFLICT` | Project content contains patterns explicitly superseded in upstream changelog | "Your marked content uses [pattern] which upstream replaced with [new pattern]. Consider updating." |
+
+**When to skip review:**
+
+- If `source_version` is unknown (first migration after legacy install), skip review — no baseline to compare against
+- If the block label starts with `deviation-` (wrapped by previous migration), always flag for review — these are temporary preservations that should be re-evaluated
+- If the block is < 7 days old (parse date from label), skip review — too recent to be stale
+
+**Why this matters:** Markers protect project content from being overwritten, but they don't protect it from becoming stale. A discipline capture from 6 months ago may reference patterns that upstream has since improved. An agent wiring entry may use outdated dispatcher logic. Blind re-injection preserves content but also preserves technical debt. This review step ensures markers serve their purpose (preserving project work) without becoming a mechanism for accumulating outdated customizations.
 
 **Ensure `.claude/agent-memory/` is gitignored.** Agent memories are not source-controlled — check the project's `.gitignore` for the entry. If missing, append:
 
@@ -176,7 +390,7 @@ Check the cc-sdlc changelog for files that were **deleted, moved, or renamed** s
    git -C [cc-sdlc-path] diff --name-status [source_version]..HEAD | grep -E '^[DR]'
    ```
 
-2. For each deleted file: remove it from the downstream project's `ops/sdlc/` directory.
+2. For each deleted file: remove it from the downstream project's `[sdlc-root]/` directory.
 
 3. For each moved/renamed file: the new location was already copied in §2.1. Remove the old location. Then check whether the project's `agent-context-map.yaml` references the old path — if so, update the path (see §3.3).
 
@@ -271,7 +485,7 @@ Skills have two layers:
 
 **Key rule:** If a section exists in cc-sdlc but not in the project, add it. If a section was removed from cc-sdlc, remove it from the project. If a section was modified in cc-sdlc, update the framework logic while keeping project-specific values.
 
-**PROJECT-SECTION preservation:** If `PROJECT-SECTION` blocks exist within a skill being content-merged, preserve them verbatim regardless of surrounding framework changes. These blocks contain project-specific content (e.g., dispatcher table entries added by `sdlc-create-agent`, custom modifications from `sdlc-develop-skill`) that must survive migration.
+**PROJECT-SECTION preservation with review:** If `PROJECT-SECTION` blocks exist within a skill being content-merged, apply the §2.1d content review process. Present findings to user before re-injection. These blocks contain project-specific content (e.g., dispatcher table entries added by `sdlc-create-agent`, custom modifications from `sdlc-develop-skill`) that survive migration — but may need updating if upstream changed the surrounding framework patterns.
 
 ### 2.3 Content-Merge: Disciplines
 
@@ -286,7 +500,7 @@ Discipline files have:
 3. Preserve active questions
 4. Preserve project context sections (added by `sdlc-initialize` Phase 7)
 5. Add any new seeded insights from cc-sdlc that the project doesn't have — but do NOT overwrite triage markers on existing entries (the project may have triaged differently than the source repo)
-6. **Preserve `PROJECT-SECTION` blocks verbatim.** Discipline files may contain marked blocks from `sdlc-ingest`, `sdlc-execute`, or `sdlc-lite-execute` discipline captures. These survive migration unchanged regardless of surrounding framework updates.
+6. **Apply §2.1d content review to `PROJECT-SECTION` blocks.** Discipline files may contain marked blocks from `sdlc-ingest`, `sdlc-execute`, or `sdlc-lite-execute` discipline captures. Review each block against upstream changes before re-injection — discipline captures can become stale if upstream updated the relevant knowledge domain.
 7. **Preserve the Process Maturity Tracker table as-is.** The tracker is delimited by `<!-- PROJECT-TRACKER-START -->` and `<!-- PROJECT-TRACKER-END -->` markers. Everything between these markers (including the table and last-updated note) reflects the project's assessed levels — never overwrite it. Update the framework sections *outside* the markers (level definitions, assessment procedure) to match cc-sdlc. If the downstream file lacks these markers, treat the entire `### Process Maturity Tracker` section through the next heading as project data and preserve it.
 
 ### 2.4 Content-Merge: Audit Skill
@@ -347,11 +561,17 @@ These sections originate from the framework and should be updated across all pro
 
 For each agent in `.claude/agents/`:
 1. Check if `## Knowledge Context` section exists — add if missing
-2. Verify Communication Protocol references the correct YAML path
+2. Verify Communication Protocol references the correct source:
+   - **Non-Neuroloom projects:** correct YAML path (`[sdlc-root]/knowledge/agent-communication-protocol.yaml`)
+   - **Neuroloom projects:** `memory_search` with appropriate `sdlc:knowledge` tags
 3. Verify memory section guidelines match the latest template
 4. Do NOT touch: scope ownership, core principles, workflow, anti-rationalization tables, self-verification checklists, domain-specific content
 
 ### 3.3 Update Agent-Context-Map (if needed)
+
+**Skip this section if `[has-neuroloom]` is true.** Neuroloom projects do not use `agent-context-map.yaml` — agents load context via `memory_search` with `sdlc:knowledge` tags. Knowledge wiring changes are handled by the Neuroloom plugin's own migrate skill.
+
+**For non-Neuroloom projects:**
 
 The agent-context-map is **never overwritten** because projects have their own agent names. But it must be updated for four scenarios:
 
@@ -393,8 +613,8 @@ New or updated knowledge files and process docs may conflict with or improve the
 | Skill bodies | `.claude/skills/*/SKILL.md` content | AVOID example safety — flag unguarded anti-pattern examples missing the correct-pattern pairing |
 | Skill bodies | `.claude/skills/*/SKILL.md` content | Deterministic-first — flag procedural instructions (file scanning, API calls, pattern matching) that could be scripts |
 | Agent definitions | `.claude/agents/*.md` | New knowledge wiring — do any agents work in domains covered by newly added knowledge files but aren't wired to them? |
-| Discipline parking lots | `ops/sdlc/disciplines/*.md` | Stale entries — do any `[NEEDS VALIDATION]` entries now have evidence from newly landed knowledge? |
-| Project knowledge | `ops/sdlc/knowledge/**/*.yaml` | Contradictions — do any project-specific knowledge rules conflict with newly landed upstream rules? |
+| Discipline parking lots | `[sdlc-root]/disciplines/*.md` | Stale entries — do any `[NEEDS VALIDATION]` entries now have evidence from newly landed knowledge? |
+| Project knowledge | `[sdlc-root]/knowledge/**/*.yaml` | Contradictions — do any project-specific knowledge rules conflict with newly landed upstream rules? |
 
 **Process:**
 
@@ -414,12 +634,12 @@ New or updated knowledge files and process docs may conflict with or improve the
    - **Do not modify agents.** Collect findings.
 
 4. **Scan discipline parking lots:**
-   - Read each `ops/sdlc/disciplines/*.md` parking lot
+   - Read each `[sdlc-root]/disciplines/*.md` parking lot
    - For each `[NEEDS VALIDATION]` entry, check if newly landed knowledge provides evidence that would change the triage marker (promote to knowledge, or mark as validated)
    - **Do not modify entries.** Collect findings.
 
 5. **Scan project knowledge:**
-   - Read each `ops/sdlc/knowledge/**/*.yaml` that the project has customized (use `git diff HEAD -- ops/sdlc/knowledge/` to identify project-modified files)
+   - Read each `[sdlc-root]/knowledge/**/*.yaml` that the project has customized (use `git diff HEAD -- [sdlc-root]/knowledge/` to identify project-modified files)
    - Compare project-added rules against newly landed upstream rules for contradictions
    - **Do not modify files.** Collect findings.
 
@@ -471,7 +691,7 @@ Apply any of these? (list numbers, "all", or "skip")
 
 Log all applied changes in the migration report (§4.6). Log all skipped findings too — they serve as tech debt awareness.
 
-**Why this matters:** Without this step, new knowledge lands in `ops/sdlc/knowledge/` but the project's existing skills and agents continue operating with stale assumptions. The knowledge is available but not applied. This step closes the gap between "framework updated" and "project benefits from the update."
+**Why this matters:** Without this step, new knowledge lands in `[sdlc-root]/knowledge/` but the project's existing skills and agents continue operating with stale assumptions. The knowledge is available but not applied. This step closes the gap between "framework updated" and "project benefits from the update."
 
 ---
 
@@ -479,12 +699,18 @@ Log all applied changes in the migration report (§4.6). Log all skipped finding
 
 ### 4.1 File Path Integrity
 
+**For non-Neuroloom projects** (file-based knowledge layer):
+
 ```bash
 # Verify all agent-context-map paths resolve
-for path in $(grep -E '^\s+- ' ops/sdlc/knowledge/agent-context-map.yaml | sed 's/.*- //'); do
+for path in $(grep -E '^\s+- ' [sdlc-root]/knowledge/agent-context-map.yaml | sed 's/.*- //'); do
   [ -f "$path" ] || echo "BROKEN: $path"
 done
 ```
+
+**For Neuroloom projects** (memory-based knowledge layer):
+
+Skip this check — `agent-context-map.yaml` does not exist. Agents access knowledge via `memory_search` with appropriate `sdlc:knowledge` tags instead. Knowledge integrity is verified by the Neuroloom plugin's compliance checks.
 
 ### 4.2 Agent Consistency
 
@@ -519,7 +745,7 @@ The project's `CLAUDE.md` contains CLAUDE-SDLC.md content — skill names, proce
       ```
    This prevents renaming references to skills that don't exist in the project, which causes silent process failures.
 
-2. **Process file paths** — verify paths like `ops/sdlc/process/overview.md`, `ops/sdlc/process/sdlc_changelog.md`, `ops/sdlc/process/compliance_audit.md` still exist
+2. **Process file paths** — verify paths like `[sdlc-root]/process/overview.md`, `[sdlc-root]/process/sdlc_changelog.md`, `[sdlc-root]/process/compliance_audit.md` still exist
 
 3. **Convention changes** — if the changelog (§1.2) flagged breaking convention changes (renamed concepts, changed workflow rules), check whether the project's CLAUDE.md still uses the old terminology
 
@@ -536,12 +762,14 @@ The project's `CLAUDE.md` contains CLAUDE-SDLC.md content — skill names, proce
 > Run a compliance audit focused on migration integrity. Check all 9 dimensions, with special attention to:
 > - Dimension 7 (Migration Integrity): All framework files match the cc-sdlc source at [new commit hash]
 > - No orphaned files from previous versions remain
-> - Agent-context-map paths all resolve
+> - Agent-context-map paths all resolve (skip for Neuroloom projects — they use memory_search instead)
 > - Content-merge preserved project data (tracker levels, parking lot entries, skill customizations)
+> - For Neuroloom projects: MCP tool calls (memory_search, memory_store) were preserved, not overwritten with file paths
 > - CLAUDE-SDLC.md references in CLAUDE.md are valid
 > - `agents/sdlc-compliance-auditor.md` is present and current
 >
 > **Context:** This audit runs immediately after migration applied changes. Uncommitted files in the working tree are expected — the user has not committed yet. Do NOT flag uncommitted migration files as findings.
+> **Project type:** [non-Neuroloom | Neuroloom] (detected in pre-flight)
 
 Present the subagent's findings to the user before proceeding to §4.5.
 
@@ -551,10 +779,31 @@ If the audit returns findings:
 
 ### 4.5 Update Manifest
 
-After migration, update `.sdlc-manifest.json` with the new source version:
+After migration, update `.sdlc-manifest.json`:
+
+1. **Update `source_version`** to the current cc-sdlc commit hash
+2. **Add missing fields** if the manifest predates this migration:
+   - `sdlc_root`: set to `[sdlc-root]` detected in pre-flight
+   - `neuroloom_integration`: set to `[has-neuroloom]` detected in pre-flight
 
 ```bash
-# Update source_version to the current cc-sdlc commit hash
+# Read existing manifest
+MANIFEST=$(cat .sdlc-manifest.json)
+
+# Update source_version
+MANIFEST=$(echo "$MANIFEST" | jq --arg v "$(git -C [cc-sdlc-path] rev-parse HEAD)" '.source_version = $v')
+
+# Add sdlc_root if missing
+if ! echo "$MANIFEST" | jq -e '.sdlc_root' >/dev/null 2>&1; then
+  MANIFEST=$(echo "$MANIFEST" | jq --arg r "$SDLC_ROOT" '.sdlc_root = $r')
+fi
+
+# Add neuroloom_integration if missing
+if ! echo "$MANIFEST" | jq -e '.neuroloom_integration' >/dev/null 2>&1; then
+  MANIFEST=$(echo "$MANIFEST" | jq --argjson n "$HAS_NEUROLOOM" '.neuroloom_integration = $n')
+fi
+
+echo "$MANIFEST" > .sdlc-manifest.json
 ```
 
 ### 4.6 Report to User
@@ -582,6 +831,16 @@ After migration, update `.sdlc-manifest.json` with the new source version:
 - Auditor updated: yes/no
 - CLAUDE-SDLC.md sections updated in CLAUDE.md: yes/no/not needed
 
+### PROJECT-SECTION Content Review (§2.1d)
+- Marked blocks found: N
+- Reviewed (non-OK findings): N
+- Decisions:
+  - Kept as-is: N (list labels)
+  - Updated by user: N (list labels)
+  - Removed: N (list labels)
+  - Merged: N (list labels)
+- Blocks skipped (too recent or no baseline): N
+
 ### Preserved
 - Project-specific skill customizations (build commands, agent names, examples)
 - Discipline parking lot entries and triage markers
@@ -604,10 +863,16 @@ After migration, update `.sdlc-manifest.json` with the new source version:
 - §4.3a CLAUDE-SDLC.md compatibility: no stale references / [list fixes]
 
 ### Verification
-- All agent-context-map paths resolve: yes/no
+- All agent-context-map paths resolve: yes/no (N/A for Neuroloom projects — they use memory_search)
 - All agents have Knowledge Context: yes/no
 - Spot-check passed: yes/no
 - Post-migration audit: passed/findings fixed (auditor dispatched automatically in §4.4)
+
+### Neuroloom Integration (if applicable)
+- Project type: [non-Neuroloom | Neuroloom]
+- Files with MCP patterns preserved: [list files where memory_search/memory_store calls were kept]
+- Sections skipped for Neuroloom: §3.3 (context map), §4.1 (path integrity)
+- Knowledge files: [skipped — Neuroloom stores in memory graph | copied]
 
 ### Next Steps
 1. Commit the migration
@@ -627,10 +892,15 @@ After migration, update `.sdlc-manifest.json` with the new source version:
 | "I'll remove this agent mapping that cc-sdlc doesn't have" | Project-specific mappings are intentional. Never remove them. |
 | "No files were deleted, so §2.1a doesn't apply" | Always check. Moved files appear as add+delete pairs, not renames. |
 | "I'll just read the file from the cc-sdlc directory" | Use `git -C [path] show HEAD:file` — never raw filesystem reads. The repo may have uncommitted WIP. |
-| "New knowledge files are installed, so the project benefits automatically" | Knowledge in ops/sdlc/ is available but not applied until skills and agents are updated to use it. §3.4 closes this gap. |
+| "New knowledge files are installed, so the project benefits automatically" | Knowledge in [sdlc-root]/ is available but not applied until skills and agents are updated to use it. §3.4 closes this gap. |
 | "This file has no PROJECT-SECTION markers, so I'll just overwrite it" | Run deviation detection (§2.1c) first — the project may have customized framework content that should be wrapped in markers before overwriting. |
 | "I'll rename all skill references to match upstream" | Guarded renames (§4.3a) — only rename if the target skill exists in the project. Renaming to a nonexistent skill causes silent process failures. |
 | "I'll auto-fix all the downstream impact findings" | Present findings to the user. They choose what to apply — some findings may not suit the project's context. |
+| "This project uses file paths for knowledge access, same as cc-sdlc" | Check for Neuroloom integration first. Projects with `memory_search`/`memory_store` calls use MCP tools, not file paths. Preserve the integration pattern during content-merge — don't overwrite MCP calls with file references. |
+| "The SDLC is in `ops/sdlc/`" | Not always. Some projects use `.claude/sdlc/`. Detect the actual structure in pre-flight and use `[sdlc-root]` throughout. |
+| "PROJECT-SECTION markers mean this content is protected, just re-inject it" | Markers preserve content from being overwritten, but they don't prevent staleness. Review marked content against upstream changes (§2.1d) — a 6-month-old discipline capture may reference outdated patterns. |
+| "I'll skip the marker review for old blocks" | Old blocks are the most likely to be stale. The skip threshold is for recent blocks (< 7 days) that can't have drifted yet. |
+| "The user chose 'keep' last time, so keep all markers this time" | Each migration is a fresh review. Upstream may have changed differently this time. Don't cache decisions across migrations. |
 
 ## Integration
 

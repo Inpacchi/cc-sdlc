@@ -74,7 +74,7 @@ Before asking the user anything, search for relevant context:
 2. **Architectural constraints** — What patterns exist that this idea must work within? What boundaries exist (API layers, module boundaries, data flow)?
 3. **Related systems** — What adjacent code would this idea touch or depend on?
 4. **Chronicle context** — Scan `docs/chronicle/` for related concepts. Read `_index.md` for any that match. Prior deliverables may have explored adjacent territory.
-5. **Knowledge layer** — Check `ops/sdlc/knowledge/` and `ops/sdlc/disciplines/` for relevant domain knowledge, especially methodology files that define how the project approaches this domain.
+5. **Knowledge layer** — Check `[sdlc-root]/knowledge/` and `[sdlc-root]/disciplines/` for relevant domain knowledge, especially methodology files that define how the project approaches this domain.
 6. **Active work** — Check `docs/current_work/` for in-flight deliverables that might overlap or conflict.
 
 Use LSP (`goToDefinition`, `findReferences`, `hover`) for type-system questions. Use Grep for text patterns. Do NOT ask the user what you can discover by reading code.
@@ -137,7 +137,7 @@ During or after questioning, specific unknowns may emerge that require research:
 
 **Library/API verification** — If the idea involves external libraries or services, verify capabilities via Context7 (`mcp__context7__resolve-library-id` → `mcp__context7__query-docs`). Do NOT assume library capabilities from training data.
 
-**Knowledge store consultation** — Read relevant methodology files in `ops/sdlc/knowledge/` that define how the project approaches this domain (e.g., testing paradigm for test-related ideas, data modeling patterns for schema ideas).
+**Knowledge store consultation** — Read relevant methodology files in `[sdlc-root]/knowledge/` that define how the project approaches this domain (e.g., testing paradigm for test-related ideas, data modeling patterns for schema ideas).
 
 Share research findings with the user as they come in. New information often shifts the conversation.
 
@@ -227,7 +227,7 @@ If the `docs/current_work/ideas/` directory doesn't exist, create it.
 - Technical unknown needs prototyping → suggest a spike (direct dispatch)
 - Still too vague → keep exploring (this skill isn't done yet)
 
-**Discipline capture:** Run the protocol per `ops/sdlc/process/discipline_capture.md`. Context format: `[idea: {slug}]`. Structured gap detection: comparison #2 (cross-domain friction) only — comparisons #1 and #3 are not applicable without a review-fix loop.
+**Discipline capture:** Run the protocol per `[sdlc-root]/process/discipline_capture.md`. Context format: `[idea: {slug}]`. Structured gap detection: comparison #2 (cross-domain friction) only — comparisons #1 and #3 are not applicable without a review-fix loop.
 
 Do NOT start planning or implementing. The idea exploration ends with a direction and a handoff.
 

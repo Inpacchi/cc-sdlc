@@ -27,7 +27,7 @@ Also run `git status -s` to check for untracked files. If untracked files exist 
 
 ### 2. Identify Relevant Domain Agents
 
-Follow the agent selection process in `ops/sdlc/process/agent-selection.md`. That document defines:
+Follow the agent selection process in `[sdlc-root]/process/agent-selection.md`. That document defines:
 - Tier 1 (domain agents) — always dispatch when the work involves their domain
 - Tier 2 (structural agents) — dispatch only when warranted
 - The 4-step selection process
@@ -50,7 +50,7 @@ Not dispatching:
 - ui-ux-designer — logic-only changes, no visual modifications
 ```
 
-Dispatch ALL listed agents in parallel. Each agent receives the full diff and is asked to review using the lenses defined in `ops/sdlc/process/agent-selection.md` § Lenses (all lenses apply to code review — see applicability table). Each agent reviews through their domain expertise but applies all applicable lenses.
+Dispatch ALL listed agents in parallel. Each agent receives the full diff and is asked to review using the lenses defined in `[sdlc-root]/process/agent-selection.md` § Lenses (all lenses apply to code review — see applicability table). Each agent reviews through their domain expertise but applies all applicable lenses.
 
 ### 4. Collect and Present Findings
 
@@ -104,4 +104,4 @@ Do NOT fix anything in this skill. Do NOT offer partial fix options. The review 
 - **Depends on:** None (operates on uncommitted working tree changes)
 - **Feeds into:** `sdlc-review-fix` (if findings need fixing)
 - **Siblings:** `sdlc-review-commit` (same lenses, targets commits), `sdlc-review-team` (same lenses, adds inter-agent debate)
-- **Shared reference:** Agent selection and lenses live in `ops/sdlc/process/agent-selection.md`
+- **Shared reference:** Agent selection and lenses live in `[sdlc-root]/process/agent-selection.md`

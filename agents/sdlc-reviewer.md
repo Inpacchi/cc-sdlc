@@ -26,14 +26,14 @@ Determine the file type from its location and content:
 - [ ] Name is descriptive (not generic like "helper" or "util")
 
 ### Changelog
-- [ ] A changelog entry exists in `process/sdlc_changelog.md` or `ops/sdlc/process/sdlc_changelog.md` mentioning this file (check recent entries only — may not exist for pre-existing files)
+- [ ] A changelog entry exists in `process/sdlc_changelog.md` or `[sdlc-root]/process/sdlc_changelog.md` mentioning this file (check recent entries only — may not exist for pre-existing files)
 
 ### Collaboration Model
-- [ ] Orchestration skills (skills that dispatch agents) reference `ops/sdlc/process/collaboration_model.md` (or `process/collaboration_model.md` in cc-sdlc source)
+- [ ] Orchestration skills (skills that dispatch agents) reference `[sdlc-root]/process/collaboration_model.md` (or `process/collaboration_model.md` in cc-sdlc source)
 - [ ] Orchestration skills that use `AskUserQuestion` link to the collaboration model's Tool Rule (utility skills that use `AskUserQuestion` for a single gate do not need to reference the full collaboration model)
 
 ### Deliverable Lifecycle
-- [ ] Skills that create or transition deliverables reference `ops/sdlc/process/deliverable_lifecycle.md` (or `process/deliverable_lifecycle.md` in cc-sdlc source)
+- [ ] Skills that create or transition deliverables reference `[sdlc-root]/process/deliverable_lifecycle.md` (or `process/deliverable_lifecycle.md` in cc-sdlc source)
 - [ ] Status markers in skill output match the defined states (Draft, Ready, In Progress, Validated, Deployed, Complete, Archived)
 
 ## Skill-Specific Checks
@@ -51,7 +51,7 @@ Determine the file type from its location and content:
 ### Type-Specific (detect from content)
 
 **Orchestration skills** (dispatches agents, has agent selection):
-- [ ] References `ops/sdlc/process/manager-rule.md`
+- [ ] References `[sdlc-root]/process/manager-rule.md`
 - [ ] Has agent selection criteria (which agents, when, why)
 - [ ] Has agent dispatch protocol (context requirements)
 - [ ] Has workflow diagram
@@ -96,7 +96,7 @@ Determine the file type from its location and content:
 - [ ] "Surfacing Learnings to the SDLC" subsection exists
 
 ### Knowledge Wiring
-- [ ] Agent has an entry in `ops/sdlc/knowledge/agent-context-map.yaml` (or `knowledge/agent-context-map.yaml` in cc-sdlc source)
+- [ ] Agent has an entry in `[sdlc-root]/knowledge/agent-context-map.yaml` (or `knowledge/agent-context-map.yaml` in cc-sdlc source)
 - [ ] At minimum, `agent-communication-protocol.yaml` is mapped
 
 ## PROJECT-SECTION Marker Handling

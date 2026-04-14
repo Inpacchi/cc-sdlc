@@ -142,7 +142,7 @@ knowledge_feedback:
     loaded:
       type: "string[]"
       description: "Knowledge file paths read at session start from agent-context-map"
-      example: ["ops/sdlc/knowledge/testing/gotchas.yaml", "ops/sdlc/knowledge/testing/tool-patterns.yaml"]
+      example: ["[sdlc-root]/knowledge/testing/gotchas.yaml", "[sdlc-root]/knowledge/testing/tool-patterns.yaml"]
     useful:
       type: "string[]"
       description: "Subset of loaded files that directly informed a decision or prevented an error"

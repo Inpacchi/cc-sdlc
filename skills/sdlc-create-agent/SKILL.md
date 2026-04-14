@@ -90,13 +90,13 @@ Your domain expertise covers [technologies, frameworks, patterns].
 ```
 ## Knowledge Context
 
-Before starting substantive work, consult `ops/sdlc/knowledge/agent-context-map.yaml`
+Before starting substantive work, consult `[sdlc-root]/knowledge/agent-context-map.yaml`
 and find your entry. Read the mapped knowledge files — they contain reusable patterns,
 anti-patterns, and domain-specific guidance relevant to your work.
 ```
 
 #### 3c. Communication Protocol
-Reference the canonical protocol in `ops/sdlc/knowledge/architecture/agent-communication-protocol.yaml`. Add domain-specific handoff fields.
+Reference the canonical protocol in `[sdlc-root]/knowledge/architecture/agent-communication-protocol.yaml`. Add domain-specific handoff fields.
 
 #### 3d. Core Principles
 Generate 2-4 concern areas with concrete principles. Each principle has a rationale. Principles are domain-specific, not generic platitudes.
@@ -123,12 +123,12 @@ Include the standard memory section from AGENT_TEMPLATE.md:
 
 ### 4. Agent Context Map Update
 
-Read `ops/sdlc/knowledge/agent-context-map.yaml`. Add a new entry mapping the agent to relevant knowledge files:
+Read `[sdlc-root]/knowledge/agent-context-map.yaml`. Add a new entry mapping the agent to relevant knowledge files:
 
 ```yaml
   {agent-name}:
-    - ops/sdlc/knowledge/{domain}/relevant-file.yaml
-    - ops/sdlc/knowledge/architecture/agent-communication-protocol.yaml
+    - [sdlc-root]/knowledge/{domain}/relevant-file.yaml
+    - [sdlc-root]/knowledge/architecture/agent-communication-protocol.yaml
 ```
 
 If no domain-specific knowledge files exist yet, map only the communication protocol and note that knowledge files should be added as the domain matures.
@@ -136,7 +136,7 @@ If no domain-specific knowledge files exist yet, map only the communication prot
 ### 5. Write and Register
 
 1. Write the agent file to `.claude/agents/{agent-name}.md` (in the target project) or `agents/{agent-name}.md` (in cc-sdlc source)
-2. Update `ops/sdlc/knowledge/agent-context-map.yaml` with the mapping
+2. Update `[sdlc-root]/knowledge/agent-context-map.yaml` with the mapping
 3. Add to `agents/AGENT_SUGGESTIONS.md` if reusable across projects
 4. Add a changelog entry to `process/sdlc_changelog.md`
 
@@ -148,7 +148,7 @@ New agents are useless if the skills that select agents don't know about them. D
 
 | Role type | Description | Files to update |
 |-----------|-------------|-----------------|
-| **Reviewer** | Reviews code for domain-specific issues | `ops/sdlc/process/agent-selection.md` Tier 1 |
+| **Reviewer** | Reviews code for domain-specific issues | `[sdlc-root]/process/agent-selection.md` Tier 1 |
 | **Builder/Planner** | Implements or plans work in a domain | `sdlc-plan` agent table |
 | **Infrastructure specialist** | Owns a specific infrastructure domain | `sdlc-plan` infra trigger table, `sdlc-lite-plan` infra trigger table |
 
@@ -156,7 +156,7 @@ Most agents are multiple types. A `db-engineer` is a reviewer (catches schema is
 
 **For each applicable role:**
 
-1. **`ops/sdlc/process/agent-selection.md` Tier 1 entry** — Add a bullet with:
+1. **`[sdlc-root]/process/agent-selection.md` Tier 1 entry** — Add a bullet with:
    - Agent name (backtick-quoted)
    - File-match triggers ("if the diff touches...")
    - What it covers (domain-specific review concerns)
@@ -171,7 +171,7 @@ Most agents are multiple types. A `db-engineer` is a reviewer (catches schema is
    - Domain name, trigger conditions (phrased as questions), and specialist agent
    - Example: `` | Database/storage | Adds/modifies schema, migrations, indexes, or query patterns? | `db-engineer` | ``
 
-**Migration protection (mandatory):** Wrap all project-specific additions to dispatcher skill tables in `PROJECT-SECTION` markers so they survive framework migrations (see `ops/sdlc/process/project-section-markers.md` for the full convention):
+**Migration protection (mandatory):** Wrap all project-specific additions to dispatcher skill tables in `PROJECT-SECTION` markers so they survive framework migrations (see `[sdlc-root]/process/project-section-markers.md` for the full convention):
 
 ```markdown
 <!-- PROJECT-SECTION-START: agent-wiring-{agent-name} -->

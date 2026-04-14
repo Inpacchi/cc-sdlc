@@ -6,7 +6,7 @@ This file is a **drop-in addition** for your project's `CLAUDE.md`. Copy the rel
 
 ## SDLC Process
 
-This project follows a lightweight SDLC framework. Reference material lives in `ops/sdlc/`.
+This project follows a lightweight SDLC framework. Reference material lives in the SDLC directory (`ops/sdlc/` by default, or `.claude/sdlc/` for projects using Neuroloom integration).
 
 The SDLC defines what artifacts a deliverable requires; two skills define how CC produces them:
 - `sdlc-plan` — spec + plan (domain agents write and review)
@@ -124,10 +124,10 @@ This is the exact sequence that bypasses process incorrectly:
 Step 4 is wrong. After step 3, the correct action is to surface the scope assessment and ask which tier to use — or if the user is already steering, state scope and start dispatching agents.
 
 ### Process Changelog
-When you make changes to SDLC process files (skills, agents, process docs, CLAUDE-SDLC.md, disciplines, knowledge), update `ops/sdlc/process/sdlc_changelog.md` **immediately after the change, in the same step**. Do not defer changelog updates to a later step, a separate commit, or a future session. Every process decision change — new rules, classification changes, workflow adjustments, guard additions — must have a changelog entry written before moving on to other work. The changelog captures *why* process changes were made — context that git log alone doesn't preserve. Don't backdate entries for changes made in prior sessions.
+When you make changes to SDLC process files (skills, agents, process docs, CLAUDE-SDLC.md, disciplines, knowledge), update the process changelog (`[sdlc-root]/process/sdlc_changelog.md`) **immediately after the change, in the same step**. Do not defer changelog updates to a later step, a separate commit, or a future session. Every process decision change — new rules, classification changes, workflow adjustments, guard additions — must have a changelog entry written before moving on to other work. The changelog captures *why* process changes were made — context that git log alone doesn't preserve. Don't backdate entries for changes made in prior sessions.
 
 ### SDLC Auditing
-Run `/sdlc-audit` periodically (~every 2-4 weeks or at each version bump) for compliance checks, or `/sdlc-audit improve <session>` to extract process improvements from completed sessions. See `ops/sdlc/process/compliance_audit.md`.
+Run `/sdlc-audit` periodically (~every 2-4 weeks or at each version bump) for compliance checks, or `/sdlc-audit improve <session>` to extract process improvements from completed sessions. See `[sdlc-root]/process/compliance_audit.md`.
 
 **Presenting audit results:** Present results to CD in this standardized format:
 
@@ -161,10 +161,10 @@ Rules:
 |---------|--------|
 | "Initialize SDLC in this project" | Invokes `sdlc-initialize` — detects greenfield vs retrofit, walks through full framework setup |
 | "Let's catalog our ad hoc work" | Invokes the `sdlc-reconcile` skill — reconciles untracked ad hoc commits back into the deliverable catalog |
-| "Let's organize the chronicles" | Archive completed deliverables from `current_work/` to `chronicle/`. See `ops/sdlc/process/chronicle_organization.md` |
+| "Let's organize the chronicles" | Archive completed deliverables from `current_work/` to `chronicle/`. See `[sdlc-root]/process/chronicle_organization.md` |
 | `/sdlc-audit` | Compliance audit — deliverable integrity, knowledge layer health, migration correctness. Invokes `sdlc-audit` skill |
 | `/sdlc-audit improve` | Improvement audit — analyze current session or past session/commits for process gaps. Invokes `sdlc-audit` skill |
-| "Let's update the SDLC" | Propose process improvement. See `ops/sdlc/process/sdlc_changelog.md` |
+| "Let's update the SDLC" | Propose process improvement. See `[sdlc-root]/process/sdlc_changelog.md` |
 | "Migrate my SDLC framework" | Apply cc-sdlc upstream updates while preserving project customizations. Invokes `sdlc-migrate` skill |
 | "Ingest these transcripts/articles" | Bulk-import external knowledge into disciplines and knowledge stores. Invokes `sdlc-ingest` skill |
 | "Make a playbook from that session" | Analyze a previous session's conversation and git commits to generate a structured playbook. Invokes `sdlc-playbook-generate` skill |
@@ -180,9 +180,11 @@ Rules:
 | `/sdlc-research-external` | Research external knowledge sources (blogs, talks, papers) and curate tiered reference docs. Invokes `sdlc-research-external` skill |
 
 ### Key References
-- `ops/sdlc/process/overview.md` — Full workflow
-- `ops/sdlc/templates/` — Document templates (spec, plan, result, concept index)
+- `[sdlc-root]/process/overview.md` — Full workflow
+- `[sdlc-root]/templates/` — Document templates (spec, plan, result, concept index)
 - `docs/_index.md` — Deliverable catalog
+
+> **Note:** `[sdlc-root]` is `ops/sdlc/` by default, or `.claude/sdlc/` for projects using Neuroloom integration. The actual path is recorded in `.sdlc-manifest.json` under `sdlc_root`.
 
 ---
 
@@ -280,7 +282,7 @@ If you haven't read the relevant file, say so: *"Let me check"* — then check.
 
 **If LSP returns an error or empty result:** Fall back to Grep + Read. Do not retry LSP in a loop.
 
-See `ops/sdlc/plugins/lsp-setup.md` for setup.
+See `[sdlc-root]/plugins/lsp-setup.md` for setup.
 
 ---
 
@@ -302,9 +304,9 @@ Every commit must include **all** artifacts produced during the work — not jus
 | Category | Paths | When present |
 |----------|-------|--------------|
 | Application code & tests | Project-specific | Always |
-| Discipline parking lot entries | `ops/sdlc/disciplines/*.md` | When discipline capture adds entries |
-| Knowledge store updates | `ops/sdlc/knowledge/*.md` | When domain knowledge is added or corrected |
-| SDLC process changelog | `ops/sdlc/process/sdlc_changelog.md` | When process files change |
+| Discipline parking lot entries | `[sdlc-root]/disciplines/*.md` | When discipline capture adds entries |
+| Knowledge store updates | `[sdlc-root]/knowledge/*.md` | When domain knowledge is added or corrected |
+| SDLC process changelog | `[sdlc-root]/process/sdlc_changelog.md` | When process files change |
 | Result docs & catalog | `docs/current_work/results/`, `docs/_index.md` | During full SDLC execution |
 
 **Never split SDLC documentation into a separate follow-up commit.** The documentation is part of the work, not a chore after the work. If `git status` shows unstaged SDLC files after staging application code, something was missed.
@@ -336,7 +338,7 @@ Add these to your project's `.claude/settings.json` (create if it doesn't exist)
 - Pre-approve common git read operations so Claude Code can check status and history without prompting
 - Pre-approve git staging and commit so the commit skill runs without interruption
 - Pre-approve Context7 documentation lookups so verification happens without prompting (required by the Verification Policy)
-- Pre-approve LSP operations so code intelligence happens without prompting (highly recommended — see `ops/sdlc/plugins/lsp-setup.md`)
+- Pre-approve LSP operations so code intelligence happens without prompting (highly recommended — see `[sdlc-root]/plugins/lsp-setup.md`)
 
 **Optional additions** (tailor to your project's build tooling):
 

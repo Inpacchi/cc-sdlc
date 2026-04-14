@@ -77,15 +77,19 @@ Labels must be descriptive and unique within the file. Use this pattern:
 ### Direct Copy Files (§2.1)
 
 1. Before overwriting, extract all `PROJECT-SECTION` blocks with their labels and heading context
-2. Copy the upstream file (overwriting the project's version)
-3. Re-inject each block at its original heading position
-4. If the heading no longer exists upstream, append at end with a warning comment
+2. **Review each block against upstream changes (§2.1d):**
+   - Compare the upstream section at `source_version` vs `HEAD`
+   - Classify: OK, REVIEW (significant changes), ORPHAN (section removed), OPPORTUNITY (new patterns), CONFLICT (contradicts upstream)
+   - Present non-OK findings to user with options: keep, update, remove, merge
+3. Copy the upstream file (overwriting the project's version)
+4. Re-inject each block at its original heading position (unless user chose to update/remove)
+5. If the heading no longer exists upstream, append at end with a warning comment
 
 ### Content-Merge Files (§2.2–2.4)
 
-1. Marked blocks are preserved verbatim regardless of surrounding framework changes
+1. **Review marked blocks against upstream changes (§2.1d)** — same classification and user presentation
 2. Framework sections outside markers are updated to match upstream
-3. Markers are never moved, split, or merged during content-merge
+3. Markers are never moved, split, or merged automatically — but user can choose to update content during review
 
 ### Deviation Detection (§2.1c)
 
@@ -117,3 +121,4 @@ The `sdlc-reviewer` recognizes markers when reviewing skills and agents:
 - **Not a way to opt out of upstream changes.** Framework sections outside markers are still updated by migration. Markers protect additions, not overrides.
 - **Not version control.** Markers don't track history — they mark boundaries. Use git for history.
 - **Not a substitute for upstream contribution.** If a project-specific change would benefit all projects, propose it upstream rather than wrapping it in markers permanently.
+- **Not a guarantee of permanent preservation.** Migration reviews marked content against upstream changes (§2.1d). If upstream significantly changed the surrounding context, the user is prompted to review — they may choose to update, merge, or remove the marked content. Markers protect from silent overwriting, not from becoming stale.

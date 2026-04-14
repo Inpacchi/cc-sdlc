@@ -34,7 +34,7 @@
 
 ## Risk Areas
 
-[Concerns from architect notes, planning docs, prior test runs, or known gotchas. Each entry: what might go wrong, why, and what to probe. Reference relevant entries from `ops/sdlc/knowledge/testing/gotchas.yaml`.]
+[Concerns from architect notes, planning docs, prior test runs, or known gotchas. Each entry: what might go wrong, why, and what to probe. Reference relevant entries from `[sdlc-root]/knowledge/testing/gotchas.yaml`.]
 
 | Risk | Source | Gotcha ID | What to probe |
 |------|--------|-----------|---------------|
@@ -161,7 +161,7 @@ Expected message/event:
 
 [Pointers to knowledge layers the test author should read before executing. Prevents re-learning.]
 
-- **Gotchas**: `ops/sdlc/knowledge/testing/gotchas.yaml` — [relevant IDs]
-- **Components**: `ops/sdlc/knowledge/testing/component-catalog.yaml` — [relevant entries]
-- **Timing**: `ops/sdlc/knowledge/testing/timing-defaults.yaml` — [relevant profiles]
-- **Tools**: `ops/sdlc/knowledge/testing/tool-patterns.yaml` — [relevant patterns]
+- **Gotchas**: `[sdlc-root]/knowledge/testing/gotchas.yaml` — [relevant IDs]
+- **Components**: `[sdlc-root]/knowledge/testing/component-catalog.yaml` — [relevant entries]
+- **Timing**: `[sdlc-root]/knowledge/testing/timing-defaults.yaml` — [relevant profiles]
+- **Tools**: `[sdlc-root]/knowledge/testing/tool-patterns.yaml` — [relevant patterns]

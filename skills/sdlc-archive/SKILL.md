@@ -5,7 +5,7 @@ description: Archive completed deliverables and resolved idea briefs from curren
 
 # Archive Completed Deliverables
 
-Move completed work from `docs/current_work/` to `docs/chronicle/`. Follows the process defined in `ops/sdlc/process/chronicle_organization.md`. Only deliverables in the **Complete** state (per `ops/sdlc/process/deliverable_lifecycle.md`) are eligible for archival — verify the `**Status:**` marker before proceeding. Idea briefs, bug reports, handoffs, and lite deliverables are also handled.
+Move completed work from `docs/current_work/` to `docs/chronicle/`. Follows the process defined in `[sdlc-root]/process/chronicle_organization.md`. Only deliverables in the **Complete** state (per `[sdlc-root]/process/deliverable_lifecycle.md`) are eligible for archival — verify the `**Status:**` marker before proceeding. Idea briefs, bug reports, handoffs, and lite deliverables are also handled.
 
 ## Steps
 
@@ -165,7 +165,7 @@ Archival is a natural triage checkpoint for parking lot entries generated during
 
 #### 9a. Scan Related Parking Lot Entries
 
-For each deliverable being archived, scan `ops/sdlc/disciplines/*.md` for parking lot entries tagged with that deliverable's ID (e.g., `[D05 — phase 2]`, `[D05 — planning]`).
+For each deliverable being archived, scan `[sdlc-root]/disciplines/*.md` for parking lot entries tagged with that deliverable's ID (e.g., `[D05 — phase 2]`, `[D05 — planning]`).
 
 For each idea brief being archived, scan for entries tagged with its context (e.g., `[idea: caching]`).
 
@@ -220,6 +220,6 @@ Ask for confirmation before committing.
 | "Bug reports should always be archived" | Stale, duplicate, or fully-resolved bug reports can be deleted. Only archive bugs with valuable diagnostic context. |
 
 ## Integration
-- **Depends on:** `docs/current_work/` (source of completed deliverables, lite deliverables, idea briefs, bug reports, handoffs), `docs/_index.md` (catalog), `ops/sdlc/disciplines/*.md` (parking lot entries for knowledge hygiene)
+- **Depends on:** `docs/current_work/` (source of completed deliverables, lite deliverables, idea briefs, bug reports, handoffs), `docs/_index.md` (catalog), `[sdlc-root]/disciplines/*.md` (parking lot entries for knowledge hygiene)
 - **Fed by:** `sdlc-status` (identifies archivable work), `sdlc-reconcile` (catalogs ad hoc work first), `sdlc-idea` (produces idea briefs)
-- **Updates:** `docs/_index.md`, `docs/chronicle/`, `ops/sdlc/disciplines/*.md` (triage markers)
+- **Updates:** `docs/_index.md`, `docs/chronicle/`, `[sdlc-root]/disciplines/*.md` (triage markers)

@@ -178,7 +178,7 @@ When the user approves proposals, apply changes directly:
 - Process doc updates → edit the relevant process file
 - New playbook proposals → note for `sdlc-playbook-generate` (don't auto-create)
 
-Update `ops/sdlc/process/sdlc_changelog.md` for every process change applied.
+Update `[sdlc-root]/process/sdlc_changelog.md` for every process change applied.
 
 ## Red Flags
 

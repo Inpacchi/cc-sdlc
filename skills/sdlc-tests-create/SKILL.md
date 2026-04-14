@@ -27,11 +27,11 @@ Two-phase test creation: domain experts identify what needs testing, SDET implem
 
 ## Collaboration Model
 
-Read `ops/sdlc/process/collaboration_model.md` for the CD/CC role definitions, communication patterns (AskUserQuestion rule), decision authority table, and anti-patterns. All questions to the user must use `AskUserQuestion`. All anti-patterns in that doc apply during test creation.
+Read `[sdlc-root]/process/collaboration_model.md` for the CD/CC role definitions, communication patterns (AskUserQuestion rule), decision authority table, and anti-patterns. All questions to the user must use `AskUserQuestion`. All anti-patterns in that doc apply during test creation.
 
 ## Manager Rule
 
-Read and follow `ops/sdlc/process/manager-rule.md`. **You never write test code.** The SDET agent designs test cases, implements tests, and fixes test compilation issues. If you notice a gap in test coverage, dispatch SDET to address it. Do not write test files, fixtures, or helpers yourself.
+Read and follow `[sdlc-root]/process/manager-rule.md`. **You never write test code.** The SDET agent designs test cases, implements tests, and fixes test compilation issues. If you notice a gap in test coverage, dispatch SDET to address it. Do not write test files, fixtures, or helpers yourself.
 
 ## Step 0: Identify Scope
 
@@ -117,7 +117,7 @@ Coverage Map:
 
 ### Which agents to dispatch
 
-Use `ops/sdlc/process/agent-selection.md` to identify which agents to dispatch and which lenses apply. For test gap analysis, agents apply the **coverage**, **security at boundaries**, **contract safety**, **performance**, **data integrity**, and **standard** lenses — not the overengineering or type safety lenses (those are review-only). See the lens applicability table in `agent-selection.md`.
+Use `[sdlc-root]/process/agent-selection.md` to identify which agents to dispatch and which lenses apply. For test gap analysis, agents apply the **coverage**, **security at boundaries**, **contract safety**, **performance**, **data integrity**, and **standard** lenses — not the overengineering or type safety lenses (those are review-only). See the lens applicability table in `agent-selection.md`.
 
 - If a plan exists: read the `agents:` frontmatter list as the starting set
 - If no plan exists (commit or unstaged scope): match changed files against the Tier 1 agent selection rules in `agent-selection.md`
@@ -177,7 +177,7 @@ USER-REQUESTED TEST CASES:
 
 Dispatch `sdet` with the Test Brief and full implementation context.
 
-**Cross-domain knowledge injection:** Consult `ops/sdlc/knowledge/agent-context-map.yaml` for the agents who built the feature being tested and include their domain knowledge files in the SDET's dispatch prompt.
+**Cross-domain knowledge injection:** Consult `[sdlc-root]/knowledge/agent-context-map.yaml` for the agents who built the feature being tested and include their domain knowledge files in the SDET's dispatch prompt (Neuroloom projects: use `memory_search` with relevant domain tags instead).
 
 The dispatch prompt must include:
 - The Test Brief from Step 2 (coverage gaps, existing tests, user requests)
@@ -198,7 +198,7 @@ IMPLEMENTATION INVENTORY:
 [paste from Step 1a]
 
 GUIDELINES:
-- Apply the testing paradigm from ops/sdlc/knowledge/testing/testing-paradigm.yaml
+- Apply the testing paradigm from [sdlc-root]/knowledge/testing/testing-paradigm.yaml
 - PRIORITIZE integration and E2E tests that exercise real workflows end-to-end
 - Unit tests ONLY for pure functions with complex branching logic (state machines,
   classifiers, validators with multiple edge cases)
@@ -247,8 +247,8 @@ If compilation check fails, re-dispatch SDET with the error output. Do not fix t
 
 ## Integration
 
-- **Depends on:** `ops/sdlc/process/agent-selection.md` (agent identification), `ops/sdlc/knowledge/agent-context-map.yaml` (cross-domain knowledge injection), `ops/sdlc/knowledge/testing/testing-paradigm.yaml` (SDET dispatch guidelines)
+- **Depends on:** `[sdlc-root]/process/agent-selection.md` (agent identification), `[sdlc-root]/knowledge/agent-context-map.yaml` (cross-domain knowledge injection), `[sdlc-root]/knowledge/testing/testing-paradigm.yaml` (SDET dispatch guidelines)
 - **Feeds into:** `sdlc-tests-run` (receives the created tests and runs the red-green fix cycle)
-- **Uses:** Domain agents (Step 2 gap analysis), SDET agent (Step 3 implementation), `ops/sdlc/process/manager-rule.md`, `ops/sdlc/process/collaboration_model.md`
+- **Uses:** Domain agents (Step 2 gap analysis), SDET agent (Step 3 implementation), `[sdlc-root]/process/manager-rule.md`, `[sdlc-root]/process/collaboration_model.md`
 - **Complements:** `sdlc-execute` / `sdlc-lite-execute` (invoke after execution to generate tests for the deliverable)
 - **Does NOT replace:** `sdlc-tests-run` (this creates tests; that runs and fixes them). Direct SDET dispatch (appropriate for trivial scope where two-phase is overkill).
