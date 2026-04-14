@@ -34,6 +34,29 @@ Each entry contains:
 
 ---
 
+## 2026-04-14: Remove setup.sh — BOOTSTRAP.md One-Liner Install
+
+**Origin:** User request to simplify installation approach.
+
+**What happened:** The two-step installation (run setup.sh, then invoke sdlc-initialize) was unnecessary complexity. Users had to clone cc-sdlc, run a bash script, then invoke the skill. Simplified to a one-liner curl that downloads BOOTSTRAP.md, which tells Claude Code how to fetch and install everything from GitHub.
+
+**Changes made:**
+
+1. **`setup.sh`**, **`setup.ps1`** — DELETED. File installation logic moved into `sdlc-initialize` Phase 1.
+2. **`BOOTSTRAP.md`** — NEW. One-file bootstrap that users curl. Contains instructions for Claude Code to clone cc-sdlc to /tmp, install the initialize skill, run it, and clean up.
+3. **`skills/sdlc-initialize/SKILL.md`** — Phase 1a rewritten to handle bootstrap flow: checks for BOOTSTRAP.md, clones from GitHub if needed, falls back to local sources. Phase 1b copies files directly using manifest. Added Phase 12 for cleanup (removes temp clone and bootstrap file). All setup.sh references replaced.
+4. **`README.md`** — Quick Start is now a one-liner: `curl ... BOOTSTRAP.md`, then "Bootstrap SDLC".
+5. **`CLAUDE.md`** — Updated project structure table (removed setup.sh, added BOOTSTRAP.md and sdlc-initialize entries), updated testing instructions, updated agent installation paths check.
+6. **`skeleton/manifest.json`** — Updated comments to reference sdlc-initialize instead of setup.sh.
+7. **`process/overview.md`** — Updated initialize description to reference file installation instead of setup.sh.
+8. **`skills/sdlc-migrate/SKILL.md`** — Updated comparison text from "Unlike setup.sh" to "Unlike the initial installation."
+9. **`knowledge/architecture/knowledge-management-methodology.yaml`** — Updated migration_behavior to reference sdlc-initialize.
+10. **`.sdlc-manifest.json`** — Updated comments to reference sdlc-initialize.
+
+**Rationale:** One-liner install is the gold standard. Users don't need to clone the repo, understand the directory structure, or run shell scripts. Curl one file, say one command, done. The bootstrap file gives Claude Code everything it needs to fetch and install the framework from GitHub.
+
+---
+
 ## 2026-04-13: Add design-brand-asset Skill
 
 **Origin:** Endless Galaxy Studios project — needed a repeatable workflow for generating brand asset specifications.

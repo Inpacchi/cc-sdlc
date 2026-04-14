@@ -28,15 +28,17 @@ The framework is designed to be adopted incrementally — start with the core pr
 ### 1. Initialize a Project
 
 ```bash
-# Clone cc-sdlc to your machine
-git clone https://github.com/Inpacchi/cc-sdlc ~/src/ops/sdlc
+# One command — downloads the bootstrap file
+curl -fsSL https://raw.githubusercontent.com/Inpacchi/cc-sdlc/master/BOOTSTRAP.md -o .claude/BOOTSTRAP.md
 ```
 
 Open your project in Claude Code and say:
 
-> "Initialize SDLC in this project"
+> "Bootstrap SDLC"
 
-The `sdlc-initialize` skill auto-detects whether this is a greenfield project or a retrofit (existing code/docs), then walks through: skeleton installation, CLAUDE.md authoring, agent creation, knowledge wiring, and verification.
+That's it. Claude Code reads the bootstrap file, clones the framework, installs everything, and walks you through setup.
+
+The `sdlc-initialize` skill auto-detects whether this is a greenfield project or a retrofit (existing code/docs), then handles: file installation, CLAUDE.md authoring, agent creation, knowledge wiring, and verification.
 
 ### 2. Use the Process
 

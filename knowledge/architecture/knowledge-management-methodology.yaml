@@ -298,8 +298,8 @@ two_tier_architecture:
     validating on a second project.
 
   migration_behavior: >
-    setup.sh installs cross-project knowledge into ops/sdlc/knowledge/.
-    Project-specific knowledge directories are created by sdlc-initialize but
+    sdlc-initialize installs cross-project knowledge into ops/sdlc/knowledge/.
+    Project-specific knowledge directories are created by initialization but
     never overwritten by migrations. The two tiers coexist without conflict.
 
   mining_cadence:

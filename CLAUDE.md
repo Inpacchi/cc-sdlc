@@ -1,6 +1,6 @@
 # CC-SDLC — Claude Code SDLC Toolkit
 
-This is the **source repository** for the cc-sdlc framework. It contains SDLC skills, agents, knowledge stores, and compliance tooling that get installed into target projects via `setup.sh`.
+This is the **source repository** for the cc-sdlc framework. It contains SDLC skills, agents, knowledge stores, and compliance tooling that get installed into target projects via the `sdlc-initialize` skill.
 
 ## Project Structure
 
@@ -15,8 +15,9 @@ This is the **source repository** for the cc-sdlc framework. It contains SDLC sk
 | `plugins/` | Required/optional plugin setup guides (installed to target's `ops/sdlc/plugins/`) |
 | `skeleton/` | `manifest.json` — canonical directory structure and file list |
 | `CLAUDE-SDLC.md` | Drop-in CLAUDE.md addition for target projects |
+| `BOOTSTRAP.md` | One-file bootstrap — curl this, say "Bootstrap SDLC", framework installs itself |
 | `skills/sdlc-migrate/` | Skill for content-aware framework updates to existing projects |
-| `setup.sh` | Installation script |
+| `skills/sdlc-initialize/` | Installation skill — handles full framework setup from GitHub source |
 
 ## Plugin Dependencies
 
@@ -30,7 +31,7 @@ See `plugins/README.md` for details and `plugins/*-setup.md` for installation in
 ## When Editing This Repo
 
 - Changes to skills, agents, and process docs affect all downstream projects on next migration
-- Test changes by running `setup.sh` against a scratch directory
+- Test changes by copying `skills/sdlc-initialize/` to a scratch project and invoking "Initialize SDLC"
 - The `skeleton/manifest.json` is the source of truth for what gets installed — keep it in sync
 - CLAUDE-SDLC.md is the drop-in that target projects add to their CLAUDE.md — it must be self-contained
 - **Changelog rule:** When you change any process file (skills, agents, process docs, CLAUDE-SDLC.md, disciplines, knowledge), update `process/sdlc_changelog.md` **immediately in the same step** — not as a follow-up. If the user has to ask for the changelog update, it was already too late.
@@ -73,6 +74,6 @@ python3 -c "import json; json.load(open('skeleton/manifest.json'))"
 - `sdlc-initialize` references new skills/agents/knowledge where relevant
 - `sdlc-migrate` handles new files in its migration strategy (§2.1 for direct copy, §3.3 for context-map wiring)
 
-**4. Agent installation paths** — Framework subagents in `agents/` install to `.claude/agents/` (not `ops/sdlc/agents/`). Verify `setup.sh` copies them correctly.
+**4. Agent installation paths** — Framework subagents in `agents/` install to `.claude/agents/` (not `ops/sdlc/agents/`). Verify `sdlc-initialize` Phase 1 copies them correctly.
 
 If any check fails, fix it before committing. Do not present the summary until all checks pass.

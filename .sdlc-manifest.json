@@ -1,5 +1,5 @@
 {
-  "_comment": "Drop this file in the root of a project to mark it as using cc-sdlc. Used by setup.sh to track installation state.",
+  "_comment": "Drop this file in the root of a project to mark it as using cc-sdlc. Used by sdlc-initialize to track installation state.",
   "cc-sdlc": {
     "version": "1.0.0",
     "installed_at": "YYYY-MM-DD",
@@ -13,6 +13,6 @@
       "skills_root": ".claude/skills",
       "agents_root": ".claude/agents"
     },
-    "notes": "Update installed_at when running setup.sh to track when cc-sdlc content was last synchronized."
+    "notes": "Update installed_at when running sdlc-initialize or sdlc-migrate to track when cc-sdlc content was last synchronized."
   }
 }

@@ -12,7 +12,7 @@ description: >
 
 # SDLC Migrate
 
-Apply cc-sdlc upstream updates to a project while preserving project-specific customizations. Unlike `setup.sh` (which copies files and skips modified ones), this skill is **content-aware** — it understands which sections are framework-level vs project-customized and updates them independently.
+Apply cc-sdlc upstream updates to a project while preserving project-specific customizations. Unlike the initial installation (which copies files and skips modified ones), this skill is **content-aware** — it understands which sections are framework-level vs project-customized and updates them independently.
 
 **Argument:** `$ARGUMENTS` (optional — local path to a cc-sdlc clone. If omitted, resolve via `.sdlc-manifest.json` → `source_repo`, or ask user.)
 
