@@ -1,0 +1,158 @@
+name: Create Release on Tag
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history for tag comparison
+
+      - name: Get previous tag
+        id: prev_tag
+        run: |
+          PREV_TAG=$(git tag --sort=-v:refname | grep -E '^v' | sed -n '2p')
+          if [ -z "$PREV_TAG" ]; then
+            # First release — use initial commit
+            PREV_TAG=$(git rev-list --max-parents=0 HEAD)
+          fi
+          echo "tag=$PREV_TAG" >> "$GITHUB_OUTPUT"
+
+      - name: Generate codename
+        id: codename
+        run: |
+          ADJECTIVES=(
+            "Argent" "Blazing" "Celestial" "Divine" "Eternal"
+            "Fated" "Golden" "Hallowed" "Immortal" "Jovian"
+            "Kronian" "Labyrinthine" "Mystic" "Nectared" "Olympian"
+            "Primordial" "Questing" "Resplendent" "Stygian" "Titanic"
+            "Undying" "Venerable" "Wrathful" "Exalted" "Zealous"
+          )
+          NOUNS=(
+            "Apollo" "Athena" "Cerberus" "Daedalus" "Erebus"
+            "Furies" "Gorgon" "Hermes" "Icarus" "Janus"
+            "Kronos" "Labyrinth" "Medusa" "Nemesis" "Orpheus"
+            "Pegasus" "Prometheus" "Rhea" "Siren" "Tartarus"
+            "Typhon" "Ulysses" "Chimera" "Xanthos" "Zeus"
+          )
+
+          # Deterministic pick from version numbers
+          VERSION="${GITHUB_REF_NAME#v}"
+          MAJOR=$(echo "$VERSION" | cut -d. -f1)
+          MINOR=$(echo "$VERSION" | cut -d. -f2)
+          PATCH=$(echo "$VERSION" | cut -d. -f3)
+          PATCH=${PATCH:-0}
+
+          ADJ_IDX=$(( (MAJOR * 7 + MINOR * 13 + PATCH * 3) % ${#ADJECTIVES[@]} ))
+          NOUN_IDX=$(( (MAJOR * 3 + MINOR * 7 + PATCH * 13) % ${#NOUNS[@]} ))
+
+          CODENAME="${ADJECTIVES[$ADJ_IDX]} ${NOUNS[$NOUN_IDX]}"
+          echo "name=$CODENAME" >> "$GITHUB_OUTPUT"
+
+      - name: Extract changelog entries since last tag
+        id: changelog
+        run: |
+          PREV_TAG="${{ steps.prev_tag.outputs.tag }}"
+          CURRENT_TAG="${GITHUB_REF_NAME}"
+
+          # Get dates of the two tags
+          # For a commit SHA (first release), use its date
+          if git rev-parse --verify "$PREV_TAG^{tag}" >/dev/null 2>&1; then
+            PREV_DATE=$(git log -1 --format=%ci "$PREV_TAG" | cut -d' ' -f1)
+          else
+            PREV_DATE=$(git log -1 --format=%ci "$PREV_TAG" | cut -d' ' -f1)
+          fi
+
+          echo "Extracting changelog entries after $PREV_DATE (tag: $PREV_TAG)"
+
+          # Extract entries from the changelog between prev tag date and now
+          # Each entry starts with "## YYYY-MM-DD:" and ends before the next "---"
+          NOTES=$(python3 << 'PYEOF'
+          import sys
+          import re
+          from datetime import datetime
+
+          prev_date = "$PREV_DATE"
+
+          with open("process/sdlc_changelog.md", "r") as f:
+              content = f.read()
+
+          # Split into entries by the --- separator
+          blocks = re.split(r'\n---\n', content)
+
+          entries = []
+          for block in blocks:
+              # Match entry headers like "## 2026-04-13: Title"
+              match = re.match(r'\s*## (\d{4}-\d{2}-\d{2}):\s*(.*)', block.strip())
+              if not match:
+                  continue
+
+              entry_date = match.group(1)
+              title = match.group(2).strip()
+
+              # Include entries newer than the previous tag date
+              if entry_date > prev_date:
+                  entries.append((entry_date, title, block.strip()))
+
+          if not entries:
+              print("No changelog entries found for this release period.")
+              sys.exit(0)
+
+          # Sort newest first
+          entries.sort(key=lambda e: e[0], reverse=True)
+
+          # Build release notes — summarized
+          for date, title, body in entries:
+              print(f"### {date}: {title}\n")
+
+              # Extract the "Changes made" section for a concise summary
+              changes_match = re.search(
+                  r'\*\*Changes made:\*\*\s*\n(.*?)(?=\n\*\*Rationale|\Z)',
+                  body,
+                  re.DOTALL
+              )
+              if changes_match:
+                  changes = changes_match.group(1).strip()
+                  print(changes)
+              else:
+                  # Fallback: print everything after the header
+                  lines = body.split('\n')
+                  print('\n'.join(lines[1:]).strip())
+
+              print()
+          PYEOF
+          )
+
+          # Write to file to preserve formatting
+          echo "$NOTES" > /tmp/release_notes.md
+
+          # Also set as output (escaped for GH Actions)
+          {
+            echo "notes<<GHEOF"
+            echo "$NOTES"
+            echo "GHEOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: "${{ github.ref_name }} — ${{ steps.codename.outputs.name }}"
+          body: |
+            # ${{ github.ref_name }} — ${{ steps.codename.outputs.name }}
+
+            ${{ steps.changelog.outputs.notes }}
+
+            ---
+            *Release notes generated from [SDLC Changelog](process/sdlc_changelog.md)*
+          draft: false
+          prerelease: ${{ contains(github.ref_name, '-rc') || contains(github.ref_name, '-beta') || contains(github.ref_name, '-alpha') }}
