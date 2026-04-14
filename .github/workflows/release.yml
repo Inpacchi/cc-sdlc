@@ -20,11 +20,14 @@ jobs:
       - name: Get previous tag
         id: prev_tag
         run: |
-          PREV_TAG=$(git tag --sort=-v:refname | grep -E '^v' | sed -n '2p')
+          CURRENT_TAG="${GITHUB_REF_NAME}"
+          # Explicitly exclude current tag to avoid race conditions
+          PREV_TAG=$(git tag --sort=-v:refname | grep -E '^v' | grep -v "^${CURRENT_TAG}$" | head -1)
           if [ -z "$PREV_TAG" ]; then
             # First release — use initial commit
             PREV_TAG=$(git rev-list --max-parents=0 HEAD)
           fi
+          echo "Previous tag: $PREV_TAG (current: $CURRENT_TAG)"
           echo "tag=$PREV_TAG" >> "$GITHUB_OUTPUT"
 
       - name: Generate codename
@@ -64,13 +67,8 @@ jobs:
           PREV_TAG="${{ steps.prev_tag.outputs.tag }}"
           CURRENT_TAG="${GITHUB_REF_NAME}"
 
-          # Get dates of the two tags
-          # For a commit SHA (first release), use its date
-          if git rev-parse --verify "$PREV_TAG^{tag}" >/dev/null 2>&1; then
-            PREV_DATE=$(git log -1 --format=%ci "$PREV_TAG" | cut -d' ' -f1)
-          else
-            PREV_DATE=$(git log -1 --format=%ci "$PREV_TAG" | cut -d' ' -f1)
-          fi
+          # Get date of the previous tag (or commit SHA for first release)
+          PREV_DATE=$(git log -1 --format=%ci "$PREV_TAG" | cut -d' ' -f1)
 
           echo "Extracting changelog entries after $PREV_DATE (tag: $PREV_TAG)"
 
