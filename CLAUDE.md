@@ -36,6 +36,21 @@ See `plugins/README.md` for details and `plugins/*-setup.md` for installation in
 - **Changelog rule:** When you change any process file (skills, agents, process docs, CLAUDE-SDLC.md, disciplines, knowledge), update `process/sdlc_changelog.md` **immediately in the same step** — not as a follow-up. If the user has to ask for the changelog update, it was already too late.
 - **Consistency check rule:** After completing any batch of changes to this repo, run the following checks **before presenting the final summary to the user**. Do not wait to be asked.
 
+### Commit Convention
+
+Use conventional commits with scopes matching the content area:
+
+| Type | Scope | Example |
+|------|-------|---------|
+| `feat` | `skills`, `agents`, `knowledge`, `process` | `feat(skills): add brand-asset skill` |
+| `fix` | `skills`, `agents`, `knowledge`, `process` | `fix(agents): correct frontmatter escaping` |
+| `refactor` | `skills`, `agents`, `knowledge`, `process` | `refactor(skills): overhaul archive skill` |
+| `docs` | omit or specific area | `docs: update plugin setup guide` |
+| `ci` | omit | `ci: add auto-release workflow` |
+| `chore` | omit | `chore: update manifest` |
+
+The scope tells you *what* changed; the type tells you *how* it changed.
+
 ### Consistency Checks (mandatory after process changes)
 
 **1. Manifest completeness** — Every file on disk must be in `skeleton/manifest.json` and vice versa:
