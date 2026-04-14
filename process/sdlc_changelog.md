@@ -34,6 +34,24 @@ Each entry contains:
 
 ---
 
+## 2026-04-14: Fix Release Workflow for Same-Day Releases
+
+**Origin:** v1.1.1 release showed "No changelog entries found" despite having 5 new changelog entries.
+
+**What happened:** The release workflow used date-based comparison (`entry_date > prev_date`) to find changelog entries. When v1.1.0 and v1.1.1 were both released on 2026-04-14, entries dated 2026-04-14 failed the `>` comparison since `2026-04-14 > 2026-04-14` is false.
+
+**Changes made:**
+
+1. **`.github/workflows/release.yml`** — Replaced date-based changelog extraction with git diff-based comparison:
+   - Fetch changelog content at previous tag using `git show`
+   - Parse entries from both previous and current versions
+   - Include only entries present in current but not in previous (set difference)
+   - Handles same-day releases, backdated entries, and first releases correctly
+
+**Rationale:** Date-based comparison assumes each release happens on a different day and that changelog entry dates match when they were added. Git diff comparison is authoritative — it shows exactly what changed between tags regardless of entry dates.
+
+---
+
 ## 2026-04-14: Rename design-brand-asset to sdlc-design-brand-asset
 
 **Origin:** User request for naming consistency.

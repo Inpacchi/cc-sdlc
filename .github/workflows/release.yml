@@ -67,49 +67,59 @@ jobs:
           PREV_TAG="${{ steps.prev_tag.outputs.tag }}"
           CURRENT_TAG="${GITHUB_REF_NAME}"
 
-          # Get date of the previous tag (or commit SHA for first release)
-          PREV_DATE=$(git log -1 --format=%ci "$PREV_TAG" | cut -d' ' -f1)
+          echo "Extracting changelog entries added since $PREV_TAG"
 
-          echo "Extracting changelog entries after $PREV_DATE (tag: $PREV_TAG)"
-
-          # Extract entries from the changelog between prev tag date and now
-          # Each entry starts with "## YYYY-MM-DD:" and ends before the next "---"
+          # Use git diff to find entries added between tags (handles same-day releases)
           NOTES=$(python3 << PYEOF
           import sys
           import re
-          from datetime import datetime
+          import subprocess
 
-          prev_date = "$PREV_DATE"
+          prev_tag = "$PREV_TAG"
 
+          # Get the changelog content at the previous tag
+          try:
+              prev_content = subprocess.check_output(
+                  ["git", "show", f"{prev_tag}:process/sdlc_changelog.md"],
+                  stderr=subprocess.DEVNULL,
+                  text=True
+              )
+          except subprocess.CalledProcessError:
+              prev_content = ""  # First release or file didn't exist
+
+          # Get current changelog content
           with open("process/sdlc_changelog.md", "r") as f:
-              content = f.read()
+              current_content = f.read()
 
-          # Split into entries by the --- separator
-          blocks = re.split(r'\n---\n', content)
+          # Parse entries from both versions
+          def parse_entries(content):
+              blocks = re.split(r'\n---\n', content)
+              entries = {}
+              for block in blocks:
+                  match = re.match(r'\s*## (\d{4}-\d{2}-\d{2}):\s*(.*)', block.strip())
+                  if match:
+                      date = match.group(1)
+                      title = match.group(2).strip()
+                      key = f"{date}: {title}"
+                      entries[key] = (date, title, block.strip())
+              return entries
 
-          entries = []
-          for block in blocks:
-              # Match entry headers like "## 2026-04-13: Title"
-              match = re.match(r'\s*## (\d{4}-\d{2}-\d{2}):\s*(.*)', block.strip())
-              if not match:
-                  continue
+          prev_entries = parse_entries(prev_content)
+          current_entries = parse_entries(current_content)
 
-              entry_date = match.group(1)
-              title = match.group(2).strip()
+          # Find new entries (in current but not in previous)
+          new_keys = set(current_entries.keys()) - set(prev_entries.keys())
+          new_entries = [current_entries[k] for k in new_keys]
 
-              # Include entries newer than the previous tag date
-              if entry_date > prev_date:
-                  entries.append((entry_date, title, block.strip()))
-
-          if not entries:
+          if not new_entries:
               print("No changelog entries found for this release period.")
               sys.exit(0)
 
           # Sort newest first
-          entries.sort(key=lambda e: e[0], reverse=True)
+          new_entries.sort(key=lambda e: e[0], reverse=True)
 
           # Build release notes — summarized
-          for date, title, body in entries:
+          for date, title, body in new_entries:
               print(f"### {date}: {title}\n")
 
               # Extract the "Changes made" section for a concise summary
