@@ -76,7 +76,7 @@ jobs:
 
           # Extract entries from the changelog between prev tag date and now
           # Each entry starts with "## YYYY-MM-DD:" and ends before the next "---"
-          NOTES=$(python3 << 'PYEOF'
+          NOTES=$(python3 << PYEOF
           import sys
           import re
           from datetime import datetime
@@ -148,8 +148,6 @@ jobs:
           tag_name: ${{ github.ref_name }}
           name: "${{ github.ref_name }} — ${{ steps.codename.outputs.name }}"
           body: |
-            # ${{ github.ref_name }} — ${{ steps.codename.outputs.name }}
-
             ${{ steps.changelog.outputs.notes }}
 
             ---
