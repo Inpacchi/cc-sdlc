@@ -34,6 +34,59 @@ Each entry contains:
 
 ---
 
+## 2026-04-14: Rename design-brand-asset to sdlc-design-brand-asset
+
+**Origin:** User request for naming consistency.
+
+**What happened:** Skill was named `design-brand-asset` but other SDLC skills use the `sdlc-` prefix for namespace consistency.
+
+**Changes made:**
+
+1. **`skills/design-brand-asset/`** → **`skills/sdlc-design-brand-asset/`** — Renamed directory
+2. **`skills/sdlc-design-brand-asset/SKILL.md`** — Updated `name` field in frontmatter
+3. **`skeleton/manifest.json`** — Updated skill path reference
+
+**Rationale:** Consistent `sdlc-` prefix makes skill discovery easier and groups SDLC skills together in alphabetical listings.
+
+---
+
+## 2026-04-14: Make AI Prompts Conditional in sdlc-design-brand-asset Skill
+
+**Origin:** User feedback that skill implied AI generation was always needed.
+
+**What happened:** The skill treated AI image prompts as a required step, but most brand assets use simple solid colors or gradients that can be specified directly in CSS syntax.
+
+**Changes made:**
+
+1. **`skills/sdlc-design-brand-asset/SKILL.md`** — Made AI prompt step conditional:
+   - Added "Skip this step if..." guidance for solid, gradient, and transparent backgrounds
+   - Listed when AI prompts ARE needed (textures, photos, illustrations, complex compositions)
+   - Added background type examples with CSS syntax (solid hex, linear-gradient, radial-gradient)
+   - Updated red flag to clarify AI prompts are only needed for complex backgrounds
+
+**Rationale:** Most brand assets (favicons, logos, OG images) use solid colors or simple gradients. Forcing AI prompt generation for these wastes time and implies unnecessary complexity.
+
+---
+
+## 2026-04-14: Add ASCII Mockups to sdlc-design-brand-asset Skill
+
+**Origin:** User request to improve visual specification output.
+
+**What happened:** The sdlc-design-brand-asset skill produced detailed specs with pixel values and positioning but lacked a visual representation of the layout. Users had to mentally construct the layout from text-based specs.
+
+**Changes made:**
+
+1. **`skills/sdlc-design-brand-asset/SKILL.md`** — Added ASCII mockup step to workflow between brand context gathering and spec generation. Includes:
+   - Mockup conventions (box-drawing characters, dimension labels, element naming)
+   - Four example mockups (OG image, favicon, social avatar, combined lockup)
+   - Guidelines for creating effective mockups
+   - Updated specification template to include Layout section with ASCII mockup
+   - New red flags warning against skipping mockups or omitting dimensions
+
+**Rationale:** ASCII mockups let users validate layout and composition visually before investing time in implementation. The mockup serves as both a communication tool (user can see what the spec describes) and a verification step (catch positioning errors before they reach design tools).
+
+---
+
 ## 2026-04-14: Complete [sdlc-root] Variable Replacement Across All Skills
 
 **Origin:** Continuation of Neuroloom path-awareness migration — background audit revealed ~146 remaining hardcoded `ops/sdlc/` references across skills, agents, knowledge files, playbooks, and templates.
@@ -123,7 +176,7 @@ Each entry contains:
 
 ---
 
-## 2026-04-13: Add design-brand-asset Skill
+## 2026-04-13: Add sdlc-design-brand-asset Skill
 
 **Origin:** Endless Galaxy Studios project — needed a repeatable workflow for generating brand asset specifications.
 
@@ -131,8 +184,8 @@ Each entry contains:
 
 **Changes made:**
 
-1. **`skills/design-brand-asset/SKILL.md`** — NEW. Generates detailed visual asset specs with canvas dimensions, element positioning, color hex values, typography, AI image prompts, and export checklists. Covers logomarks, favicons, OG images, social avatars, and PWA icons.
-2. **`skeleton/manifest.json`** — Added `design-brand-asset/SKILL.md`.
+1. **`skills/sdlc-design-brand-asset/SKILL.md`** — NEW. Generates detailed visual asset specs with canvas dimensions, element positioning, color hex values, typography, AI image prompts, and export checklists. Covers logomarks, favicons, OG images, social avatars, and PWA icons.
+2. **`skeleton/manifest.json`** — Added `sdlc-design-brand-asset/SKILL.md`.
 
 **Rationale:** Brand asset specs are generic across projects — every project with a web presence needs favicons, OG images, and social avatars with exact dimensions and consistent branding.
 
