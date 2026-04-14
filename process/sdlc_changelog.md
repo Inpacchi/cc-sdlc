@@ -34,6 +34,20 @@ Each entry contains:
 
 ---
 
+## 2026-04-14: Fix YAML Parse Error in agent-context-map.yaml
+
+**Origin:** Migration to neuroloom-sdlc-plugin failed with "YAML parse error — the [sdlc-root] placeholder conflicted with YAML array syntax."
+
+**What happened:** The `[sdlc-root]` placeholder used throughout the agent-context-map.yaml file was being interpreted as YAML inline array syntax. In YAML, `[foo]` denotes a single-element array, so `- [sdlc-root]/knowledge/...` was parsed as an array containing `sdlc-root`, followed by invalid text.
+
+**Changes made:**
+
+1. **`knowledge/agent-context-map.yaml`** — Quoted all path values containing the `[sdlc-root]` placeholder (e.g., `"[sdlc-root]/knowledge/architecture/..."`) to ensure they're treated as literal strings rather than array syntax.
+
+**Rationale:** This was a latent bug that would cause any migration or ingestion process to fail when parsing the agent-context-map. Quoting the strings is the standard YAML approach for escaping special characters.
+
+---
+
 ## 2026-04-14: Fix Release Workflow for Same-Day Releases
 
 **Origin:** v1.1.1 release showed "No changelog entries found" despite having 5 new changelog entries.
