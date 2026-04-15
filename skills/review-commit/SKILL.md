@@ -102,5 +102,5 @@ Do NOT fix anything in this command. Do NOT offer partial fix options. The revie
 
 ## Integration
 - **Feeds into:** `sdlc-review-fix` (if findings need fixing)
-- **Siblings:** `sdlc-review-diff` (same lenses, targets working tree), `sdlc-review-team` (same lenses, adds inter-agent debate)
+- **Siblings:** `sdlc-review-diff` (same lenses, targets working tree), `sdlc-team-review-fix` (same lenses + inter-agent debate + persistent team fix lifecycle)
 - **Shared reference:** Agent selection and lenses live in `[sdlc-root]/process/agent-selection.md`

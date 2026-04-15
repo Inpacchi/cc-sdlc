@@ -1,0 +1,337 @@
+---
+name: sdlc-team-review-fix
+description: "Unified team-powered review and fix lifecycle. Domain agents review any target (commit, diff, files, directory), debate findings organically with an architect mediator, then fix all findings using persistent teammates -- no fresh agent spawning. Loops review-fix rounds until clean within one persistent team.\nTriggers on \"team review\", \"deep review\", \"review and fix with team\", \"/team-review-fix\", \"team review this commit\", \"team review these files\".\nDo NOT use for quick reviews -- use sdlc-review-diff or sdlc-review-commit. Do NOT use without CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1."
+---
+
+# Team Review & Fix
+
+Review any target with a persistent agent team, resolve conflicts through organic debate with an architect mediator, and fix all findings using the same team. No fresh agent spawning between phases. The team stays alive through all rounds and is cleaned up at the end.
+
+**Cost:** 3-6x more tokens than `review-diff` + `review-fix`. Use when finding accuracy and fix quality matter more than speed — complex changes, security-critical code, architectural decisions, cross-domain work.
+
+**Argument:** `$ARGUMENTS` (optional — commit ref, file paths, directory, or description of what to review)
+
+## Steps
+
+### Step 0: Environment Gate
+
+Check that agent teams are enabled:
+
+```bash
+echo $CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS
+```
+
+If not set to `1`, tell the user and stop:
+
+> Agent teams require the experimental feature flag. Set `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` in your environment and restart Claude Code.
+
+### Step 1: Resolve Review Target
+
+Parse the `$ARGUMENTS` to determine what to review:
+
+| Argument | Target | How to Gather |
+|----------|--------|---------------|
+| No argument | Uncommitted changes | `git diff HEAD` (staged + unstaged) |
+| Commit ref (e.g., `HEAD`, `abc1234`) | That commit | `git show {ref}` |
+| Commit range (e.g., `abc..def`) | Range diff | `git diff {range}` |
+| File path(s) | Those files in full | Read each file |
+| Directory | All source files in directory | Read all non-binary, non-generated files |
+| Description | User-described scope | Identify files from description, confirm with user |
+
+Validate the target has reviewable content. If empty, tell the user and stop.
+
+For uncommitted changes, also run `git status -s` to check for untracked files. Warn about untracked source files as in `review-diff`.
+
+### Step 2: Select Teammates
+
+Follow the agent selection process in `[sdlc-root]/process/agent-selection.md`:
+
+1. Always add `code-reviewer`
+2. Add Tier 1 agents based on file paths in the target
+3. Read target content for Tier 2 triggers
+4. Note WHY each Tier 2 agent is included or excluded
+
+**Determine REVIEWER teammates** — domain agents who will review through their lenses.
+
+**Fixers are NOT spawned yet.** Which fixers are needed depends on what the review finds. Spawning fixers upfront wastes tokens on idle teammates that may never be needed (e.g., if the review finds no issues, or findings cluster in one domain). Fixers are identified and spawned in Step 6a after the review converges.
+
+**Validate each reviewer agent type has required tools:** Bash, Read, Grep minimum. If an agent definition restricts tools below this threshold, warn and either adjust or exclude with explanation. This prevents silent failures (audit: accessibility-auditor spawned as read-only, couldn't run git show, failed silently).
+
+Output a dispatch checklist with cost estimate:
+
+```
+Team review-fix: {target description}
+Files in scope: N
+
+REVIEWERS:
+- [ ] reviewer-code-reviewer (always)
+- [ ] reviewer-frontend-developer (touches React components)
+- [ ] reviewer-performance-engineer (new store selectors)
+
+MEDIATOR:
+- [ ] architect-software-architect (mediator + master list builder)
+
+FIXERS: determined after review converges (Step 6a)
+
+Not dispatching:
+- software-architect (as reviewer) -- follows existing pattern, no new abstractions
+- ui-ux-designer -- logic-only changes, no visual modifications
+
+Estimated cost: ~{N} review teammates x target size = {estimate} tokens
+```
+
+### Step 3: Create Team, Spawn Reviewers + Architect
+
+Create the agent team. The main session is the team lead — it manages lifecycle mechanics only (create, spawn, message routing, shutdown, cleanup). The lead does NOT make review judgments, does NOT classify findings, does NOT assign fixes. That is the architect's job.
+
+**Spawn order matters:**
+
+1. **Architect FIRST** — `architect-software-architect`. It needs to be listening before reviewers start sending findings. The architect receives:
+   - Target content (diff, files, or commit)
+   - The architect prompt template from `[sdlc-root]/process/debate-protocol.md`
+   - Instruction to build the master findings list progressively as findings arrive
+   - Reference to `[sdlc-root]/process/team-communication-protocol.md` for message format
+   - Reference to `[sdlc-root]/process/finding-classification.md` for classification rules (no PLAN classification in this skill)
+
+2. **All REVIEWERS in parallel** — each reviewer receives:
+   - Target content
+   - Review lenses from `[sdlc-root]/process/agent-selection.md` section Lenses (all lenses apply)
+   - Relevant knowledge context from `[sdlc-root]/knowledge/agent-context-map.yaml` for their role
+   - Instructions to send findings as FINDING messages (per `team-communication-protocol.md`) to the architect AND domain-relevant reviewers
+   - The message envelope format
+
+**Fixers are NOT spawned here.** They are spawned on-demand in Step 6a after the review converges and FIX findings are identified. This avoids wasting tokens on idle teammates when no fixes are needed or when findings cluster in fewer domains than anticipated.
+
+Name all teammates with role prefix: `architect-{name}`, `reviewer-{name}`, `fixer-{name}`.
+
+### Step 4: PHASE 1 — Review + Organic Debate
+
+All reviewers work in parallel, reviewing the target through their domain lenses.
+
+When a reviewer finds an issue:
+1. Send FINDING message to the architect AND reviewers whose domain overlaps (direct messages, not broadcast to all)
+2. Other reviewers who receive the finding can:
+   - **CHALLENGE** with counter-evidence (direct message to finder + architect)
+   - **Agree** — confirms severity, increases confidence
+   - **Ignore** — outside their domain, no response required
+3. The architect receives every finding and every challenge/agreement
+4. The architect creates a task for the finding via TaskCreate with structured metadata:
+   - If no challenges: status "confirmed", task pending
+   - If challenged: architect reads both positions, breaks the tie immediately
+   - If multiple reviewers independently find the same thing: merge, cite all, high confidence
+
+Positive findings (things done well) are tagged and preserved but excluded from the fix pipeline.
+
+**Convergence:** The architect signals "review complete" when:
+- All reviewers have gone idle (TeammateIdle notifications)
+- All outstanding challenges have been resolved
+- The master findings list in the shared task list is stable
+
+The architect classifies each finding: **FIX / INVESTIGATE / DECIDE / PRE-EXISTING** (per `[sdlc-root]/process/finding-classification.md` — no PLAN classification in this skill).
+
+Present DECIDE items to user via AskUserQuestion. Block until answered.
+
+### Step 5: Architect Presents Findings Summary
+
+The lead requests the findings summary from the architect and outputs:
+
+```markdown
+## Team Review: {target description}
+
+{N} files reviewed | {N} reviewers | {N} findings
+
+### Findings
+
+| # | Task ID | Finding | Reviewer(s) | Severity | Category | Classification |
+|---|---------|---------|-------------|----------|----------|----------------|
+| 1 | 3 | specific finding | reviewer-code-reviewer | major | correctness | FIX |
+| 2 | 5 | ... | reviewer-security-engineer, reviewer-code-reviewer | critical | security | FIX |
+
+### Debate Summary
+
+- {N} findings total, {N} challenged, {N} resolved by architect, {N} escalated to DECIDE
+- [For each resolved challenge: one-line summary with rationale]
+
+### Positive Findings
+
+- [Things done well, preserved from reviewer feedback]
+```
+
+This is the handoff point from review to fix.
+
+### Step 6: PHASE 2 — Collaborative Fix
+
+Fixers and reviewers work together in real-time. Fixers implement while reviewers steer and validate continuously. This eliminates discrete review-fix rounds and produces already-reviewed code.
+
+#### 6a. Determine and Spawn Fixers, Then Assign Fixes
+
+**Spawn fixers now** — not before. The architect analyzes the confirmed FIX findings to determine which fixer domains are actually needed. Only spawn fixers for domains that have findings to fix.
+
+For each required fixer domain:
+1. Spawn `fixer-{name}` as a new teammate with role prefix
+2. Validate required tools (Bash, Read, Grep, Edit minimum for fixers)
+3. Each fixer receives: target content for reference, the message envelope format, cross-domain knowledge files (per `[sdlc-root]/knowledge/agent-context-map.yaml`) relevant to their domain
+
+**When multiple reviewers found the same issue:** The architect assigns the fix to ONE fixer (the most relevant domain), but records ALL reviewers who found it in the task metadata (`found_by` field). The fixer sends FIX_COMPLETE to ALL reviewers who found the issue — each reviewer who surfaced the finding validates the fix from their domain perspective.
+
+The architect then assigns FIX findings to fixer teammates via FIX_REQUEST messages. Each fixer receives:
+- Task ID, description, file, line, evidence from review
+- The list of all reviewers who found the issue (for FIX_COMPLETE routing)
+- Cross-domain knowledge files from the finding agent(s) when fixer differs from finder (per `[sdlc-root]/knowledge/agent-context-map.yaml`)
+- **Library verification instructions** (when the fix involves external library APIs): verify API usage via Context7 (`mcp__context7__resolve-library-id` then `mcp__context7__query-docs`) before writing the fix
+
+The architect sets task owner to fixer name, status to in_progress. All independent fixers are dispatched in parallel.
+
+**Cross-fixer coordination (critical):** Before assigning, the architect checks task metadata for file overlap. If two fixers need the same file, sequence them via task dependencies — fixer B waits for fixer A to complete.
+
+#### 6b. Collaborative Loop (per fixer)
+
+For each finding the fixer works on:
+
+1. Fixer reads the code, plans the fix
+2. **If fixer disagrees** with the finding — CHALLENGE to the reviewer who found it
+   - Reviewer responds with evidence (one exchange)
+   - If unresolved — ESCALATION to architect who breaks the tie
+3. Fixer implements the fix
+4. Fixer sends FIX_COMPLETE to ALL reviewers listed in the task's `found_by` field
+   - Message includes: what changed, which files, rationale
+   - Each reviewer validates from their domain perspective (e.g., code-reviewer checks correctness, security-engineer checks the fix doesn't introduce a new vulnerability)
+5. **Reviewers validate in real-time**
+   - If all agree the fix is good — architect marks task as completed
+   - If needs adjustment — reviewer sends STEER with specific guidance
+   - Fixer adjusts, sends another FIX_COMPLETE
+   - If fixer and reviewer disagree on fix approach — ESCALATION to architect
+6. Fixer can REVIEW_REQUEST to any other reviewer for cross-domain input
+   - e.g., fixer asks performance-engineer "will this fix impact render perf?"
+
+#### 6c. Convergence
+
+- Each finding converges individually (fixer + reviewer agree = resolved)
+- No global "re-review round" — findings resolve as they're fixed
+- Architect monitors task list: when all FIX tasks show "completed" — done
+- **3-strike rule:** if a fixer and reviewer cycle 3 times on the same finding without converging, architect breaks it. If still stuck — escalate to user via AskUserQuestion
+
+#### 6d. Cross-Fixer Coordination
+
+- Architect MUST check task metadata for file overlap before assigning fixes
+- If two fixers need the same file — architect sequences them via task dependencies (task B depends on task A completing)
+- Fixer A finishes and sends FIX_COMPLETE — architect assigns fixer B with instruction to read the CURRENT file state
+- Fixers can SendMessage each other for coordination ("I'm changing the import structure in this file, heads up")
+- If a fixer discovers they need to touch a file owned by another fixer — message the architect, who coordinates the sequencing
+
+### Step 6e: Verification Gate
+
+After all findings are resolved, run verification per `[sdlc-root]/process/review-fix-loop.md` Step 0:
+
+1. **Tests** — run the test suite
+2. **Type checking** — run the type checker if applicable
+3. **Linter** — run linter if configured
+4. **SAST** — run security scanning if configured
+
+Output the verification summary:
+
+```
+Verification gate:
+- Tests: (pass/fail status)
+- Types: (pass/fail status)
+- Lint: (pass/fail status)
+- SAST: (pass/fail status)
+```
+
+If verification fails — architect assigns failures to relevant fixers. Loop until verification passes.
+
+This is a single pass — the collaborative fix phase already produced reviewer-validated code, so this gate catches only integration-level issues (type errors from cross-file changes, test regressions, etc.).
+
+### Step 7: Final Report
+
+```markdown
+## Team Review-Fix Report: {target description}
+
+### Protocol Compliance
+
+| Step | Status |
+|------|--------|
+| Environment gate | Executed |
+| Target resolution | Executed |
+| Teammate selection + validation | Executed |
+| Team creation | Executed |
+| Phase 1: Review + debate | Executed |
+| Findings summary | Executed |
+| Phase 2: Collaborative fix | Executed |
+| Verification gate | Executed |
+| Team shutdown | Pending |
+
+### Finding Summary
+
+| Metric | Count |
+|--------|-------|
+| Total findings | N |
+| Challenged | N |
+| Resolved by architect | N |
+| Fixed | N |
+| Escalated to user | N |
+
+### Positive Findings
+
+- [Things done well, from reviewer feedback]
+
+### Worker Agent Reviews
+
+Key feedback incorporated:
+- [reviewer-name] specific, concrete feedback that was incorporated
+- [fixer-name] specific implementation approach that worked well
+
+### Final Task List State
+
+| Task ID | Finding | Owner | Status |
+|---------|---------|-------|--------|
+| 3 | Missing group class | fixer-frontend-developer | completed |
+| 5 | XSS in user input | fixer-backend-developer | completed |
+```
+
+### Step 8: Graceful Team Shutdown + Cleanup
+
+Per Claude Code docs: "Always use the lead to clean up. Teammates should not run cleanup." And: TeamDelete "checks for active teammates and fails if any are still running, so shut them down first."
+
+**Shutdown sequence:**
+
+1. Lead sends shutdown request to each teammate individually
+   - Teammates can reject with explanation — handle rejections
+2. Wait for all teammates to confirm shutdown
+   - Note: "teammates finish their current request or tool call before shutting down, which can take time"
+3. Only after ALL teammates are shut down — TeamDelete
+4. TeamDelete removes team config and task list automatically
+5. Offer to commit changes:
+
+> All fixes applied, verification passing, team cleaned up. Want me to commit these changes?
+
+Do NOT commit automatically — wait for the user to confirm.
+
+## Red Flags
+
+| Thought | Reality |
+|---------|---------|
+| "The diff is small, use review-diff instead" | Small diffs are fine for team-review-fix if the changes are high-stakes |
+| "Skip debate, agents agree" | The architect decides if debate is needed. Let the protocol run. |
+| "Agent teams aren't enabled, I'll simulate with subagents" | No. Subagent dispatch is `review-diff` + `review-fix`. This skill requires real agent teams for inter-agent communication. |
+| "Just fix it myself instead of dispatching a fixer" | Manager rule. Fixers fix. You orchestrate. |
+| "Spawn a fresh agent for this fix" | Use the existing fixer teammate via SendMessage. That's the whole point of persistent teammates. |
+| "Spawn all fixers upfront so they're ready" | Fixers spawn in Step 6a after review converges. Spawning upfront wastes tokens on idle teammates that may never be needed. |
+| "One reviewer found nothing, shut them down early" | They may be needed to validate fixes or provide cross-domain input during the fix phase. Keep all teammates alive until Step 8. |
+| "Too many teammates, this is expensive" | The skill surfaces cost estimates in Step 2. The user decides whether to proceed. No artificial cap. |
+| "Reviewer and fixer keep disagreeing, add more rounds" | 3-strike rule. Architect breaks it, then escalate to user. Don't let it loop. |
+| "Skip verification, the reviewers already validated" | Reviewers validate individual fixes. Verification catches integration-level issues (type errors from cross-file changes, test regressions). Both are required. |
+
+## Integration
+
+- **Depends on:** `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` environment variable
+- **Does NOT replace:** `sdlc-review-diff`, `sdlc-review-commit`, `sdlc-review-fix` — those remain as lighter-weight subagent alternatives
+- **Replaces:** `sdlc-review-team` (unified review+fix lifecycle within a single agent team)
+- **Shared references:**
+  - Agent selection and lenses: `[sdlc-root]/process/agent-selection.md`
+  - Debate protocol: `[sdlc-root]/process/debate-protocol.md`
+  - Communication protocol: `[sdlc-root]/process/team-communication-protocol.md`
+  - Finding classification: `[sdlc-root]/process/finding-classification.md`
+  - Review-fix loop (verification gate): `[sdlc-root]/process/review-fix-loop.md`
+  - Manager rule: `[sdlc-root]/process/manager-rule.md`
+  - Agent knowledge context: `[sdlc-root]/knowledge/agent-context-map.yaml`

@@ -1,96 +1,116 @@
 # Multi-Agent Debate Protocol
 
-Defines how the `review-team` skill resolves conflicting findings between domain agents. Grounded in multi-agent debate research — citations at the end.
+Defines how team-based review skills resolve conflicting findings between domain agents. Grounded in multi-agent debate research — citations at the end.
+
+This protocol uses the **organic broadcast + architect tiebreaker** model. There are no formal debate rounds. Reviewers broadcast findings, challenge or agree organically, and the architect breaks ties in real-time. For message format and envelope structure, see `[sdlc-root]/process/team-communication-protocol.md`.
 
 ## Design Principles
 
 1. **Independent review is the primary value driver.** Most gains attributed to debate are actually attributable to ensembling — agents reviewing independently without seeing each other's work (Du et al. 2023, "Should We Be Going MAD?" ICLR Blog 2025).
 2. **Debate resolves conflicts, not consensus.** The goal is not agreement — it's evidence-based resolution of contradictions.
-3. **Fewer rounds is better.** Additional rounds beyond 2-3 decrease performance through conformity pressure and problem drift (FREE-MAD, "Voting or Consensus?" ACL 2025).
-4. **Judge-managed adaptive breaking outperforms fixed rounds.** The lead decides when evidence is sufficient, rather than always running a fixed number of rounds (Liang et al. EMNLP 2024).
+3. **Judge-managed adaptive breaking outperforms fixed rounds.** The architect decides when evidence is sufficient, rather than running a fixed number of rounds (Liang et al. EMNLP 2024).
+4. **Organic convergence over structured rounds.** No Round 1/Round 2 structure. Reviewers challenge or agree naturally. The architect breaks ties immediately when they arise. This converges faster and avoids the conformity pressure that accumulates over multiple forced rounds.
 
-## Protocol Phases
+## Review Phase — Broadcast and Converge
 
-### Phase 1 — Independent Review
+Reviewers work independently but send findings to the architect AND to reviewers whose domain overlaps (direct messages, not broadcast). Claude Code docs warn "broadcast: use sparingly, as costs scale with team size." Direct messages to relevant reviewers + architect avoids inflating every teammate's context with every finding. The architect can broadcast selectively when cross-domain input is needed.
 
-All teammates review the diff in parallel with **no inter-agent communication**. This preserves confirmation-bias prevention — each agent forms an independent opinion before seeing others' findings.
+When a reviewer finds an issue:
+1. Send the finding (FINDING message) to the architect AND domain-relevant reviewers
+2. Other reviewers who receive the finding can:
+   - **CHALLENGE** it with counter-evidence (direct message to finder + architect)
+   - **Agree** — confirms severity, increases confidence
+   - **Ignore** — outside their domain, no response required
+3. The architect receives every finding and every challenge/agreement
+4. The architect creates a task for the finding via TaskCreate (see `team-communication-protocol.md` for task schema)
 
-Each teammate posts findings as task completions with these required fields:
-- `file` — path and line range
-- `finding` — what the issue is
-- `severity` — critical / major / minor
-- `category` — overengineering / type-safety / security / contract / DRY / architecture / correctness
-- `evidence` — specific code or guarantee that supports the finding
-- `recommendation` — what should change
+This preserves the independent-review value (research: most gains from ensembling, ICLR Blog 2025) while enabling organic conflict resolution.
 
-### Phase 2 — Conflict Detection
+## Architect as Real-Time Tiebreaker
 
-The software-architect subagent scans all Phase 1 findings for conflicts:
+When two reviewers disagree (CHALLENGE exchange), the architect reads both positions and breaks the tie immediately:
 
-| Conflict type | Detection rule |
-|---------------|---------------|
-| Contradictory assessment | Same file+line range, opposite conclusions (e.g., "remove this" vs "this is correct") |
-| Severity disagreement | Same issue identified by multiple agents, different severity ratings |
-| Contradictory recommendation | Different agents recommend incompatible changes to the same code |
+| Situation | Architect Action |
+|-----------|-----------------|
+| Evidence clearly favors one side | Resolve in favor of the supported position, cite evidence |
+| Both sides have merit | Merge into a nuanced finding that captures both concerns |
+| Both sides speculative | Classify as INVESTIGATE or DECIDE (user resolves) |
+| Same finding, different severity | Calibrate — use higher severity, note the disagreement |
 
-Non-conflicting findings pass through directly to synthesis.
-
-### Phase 3 — Round 1: Targeted Exchange
-
-For each detected conflict, the lead creates debate tasks for the conflicting agents:
-
-- Each agent receives: the other agent's finding + evidence
-- Each agent posts **one response**: agree, disagree with evidence, or propose compromise
-- Responses must cite specific code, type guarantees, or framework behavior — not general reasoning
-
-### Phase 4 — Lead Judgment (Adaptive Break)
-
-The software-architect subagent reads both Round 1 positions for each conflict:
-
-- **If evidence clearly resolves the conflict** → mark as resolved, use the supported finding (early termination)
-- **If not resolvable from Round 1 evidence** → formulate a specific question for Round 2, explaining what evidence would resolve it
-
-This is the adaptive break point. Research shows judge-managed adaptive breaking outperforms fixed-round approaches (Liang et al. EMNLP 2024).
-
-### Phase 5 — Round 2: Conditional Rebuttal
-
-Only fires for conflicts not resolved in Round 1. For each:
-
-- Each conflicting agent gets: the lead's specific question + the other agent's Round 1 response
-- Each posts **one response** — no further rounds
-
-### Phase 6 — Escalation
-
-If a conflict remains unresolved after Round 2:
-
-- Classify the finding as `DECIDE` — user must resolve
-- Present both positions with their evidence
-- Do NOT pick a winner without evidence — that's conformity, not judgment
+**Research basis:** "Judge-managed adaptive breaking outperforms fixed-round approaches" (Liang et al. EMNLP 2024). The architect's judgment is final for reviewer-reviewer disputes. If the architect is genuinely uncertain — DECIDE classification (user resolves).
 
 ## Anti-Conformity Safeguard
 
-When an agent changes position between rounds (flips from "this is a bug" to "actually it's fine", or vice versa), the lead must:
+The architect tracks which reviewers originally held which positions. If a reviewer flips position after seeing a challenge, the architect:
 
-1. Flag the flip explicitly in the synthesis report
-2. Evaluate whether the original position had merit
-3. If the flip looks like social pressure rather than genuine evidence-based reconsideration, retain the original finding with a note
+1. Notes the flip explicitly
+2. Evaluates whether the original position had merit
+3. If the flip looks like social pressure rather than genuine evidence-based reconsideration, retains the original finding with a note
 
-Research: LLMs exhibit conformity bias — initially correct agents update toward incorrect majorities under social pressure (FREE-MAD, arXiv:2509.11035).
+**Research:** LLMs exhibit conformity bias — initially correct agents update toward incorrect majorities under social pressure (FREE-MAD, arXiv:2509.11035).
 
-## Synthesis Rules
+## Deduplication (Architect, Continuous)
 
-After debate completes, the architect produces the final report:
+The architect deduplicates as findings arrive:
 
-| Situation | Synthesis rule |
-|-----------|---------------|
-| Same finding from multiple agents | One finding, cite all agents (higher confidence) |
-| Severity disagreement (resolved) | Use the converged severity |
-| Severity disagreement (unresolved) | Use higher severity, note the disagreement |
-| Contradictory assessment (resolved) | Use the finding supported by evidence |
-| Contradictory assessment (unresolved) | Present both with `DECIDE` classification |
-| Agent flipped position | Note the flip, evaluate if original had merit |
+| Situation | Dedup Rule |
+|-----------|-----------|
+| Multiple reviewers find the same issue | Merge into one finding, cite all agents, mark high confidence |
+| Same file+line, different categories | Separate findings — different concerns deserve separate tracking |
+| Overlapping findings with different scopes | Merge if root cause is the same; keep separate if different fixes needed |
 
-The output format matches `review-diff` and `review-commit` findings tables so that `review-fix` works unchanged.
+## Fix Phase — Fixer-Reviewer-Architect Collaboration
+
+During the fix phase, debate continues organically between fixers and reviewers:
+
+1. **Fixer disagrees with a finding** — CHALLENGE to the reviewer who found it
+   - Reviewer responds with evidence (one exchange)
+   - If unresolved — ESCALATION to architect who breaks the tie
+2. **Fixer requests validation** — REVIEW_REQUEST to a reviewer
+   - Reviewer steers with guidance (STEER messages)
+3. **Architect monitors** — receives all FIX_COMPLETE and resolution confirmations, maintains the shared task list
+
+## Convergence Criteria
+
+### Review Phase Ends When:
+- All reviewers idle (TeammateIdle notifications)
+- All outstanding challenges resolved by architect
+- The shared task list is stable (no new findings arriving)
+
+### Fix Phase Ends When:
+- All FIX findings in the shared task list show "completed" (reviewer-validated)
+
+### 3-Strike Rule:
+- If a fixer and reviewer cycle 3 times on the same finding without converging
+- Architect breaks the tie
+- If still stuck — escalate to user via AskUserQuestion
+
+## Architect Prompt Template
+
+```
+You are the team's software architect, serving as mediator and master list builder.
+
+DURING REVIEW:
+- Receive all FINDING messages from reviewers
+- Create a task for each finding via TaskCreate with metadata (severity, file, line, found_by, classification)
+- When you see CHALLENGE messages between reviewers:
+  - Read both positions
+  - Break the tie immediately -- cite specific evidence
+  - Update the task metadata with your resolution rationale
+- Merge duplicate findings (same file+line), cite all agents
+- Track position flips (conformity bias safeguard)
+- When all reviewers are idle and all challenges resolved:
+  - Classify each finding: FIX / INVESTIGATE / DECIDE / PRE-EXISTING
+  - Present DECIDE items to the lead for user escalation
+  - Signal "review complete"
+
+DURING FIX:
+- Assign FIX findings to fixer teammates (FIX_REQUEST)
+- Receive ESCALATION messages from fixer-reviewer disagreements -- break ties
+- Monitor FIX_COMPLETE and reviewer confirmations -- mark tasks completed via TaskUpdate
+- Sequence same-file fixes via task dependencies (addBlockedBy)
+- Check TaskList periodically -- when all FIX tasks show "completed" -> signal "fix complete"
+```
 
 ## Research Citations
 
@@ -104,4 +124,8 @@ These citations document why specific design choices were made. They are include
 
 4. **FREE-MAD (2025)** — arXiv:2509.11035. Demonstrated conformity bias in LLM debate: initially correct agents update toward incorrect majorities. Introduced the anti-conformity safeguard pattern.
 
-5. **"Voting or Consensus? A Study of Multi-LLM Agent Debate Strategies" (2025)** — ACL 2025. Key finding: additional debate rounds beyond 2-3 often decrease performance by causing problem drift or error propagation through conformity pressure. Validates the 2-round maximum.
+5. **"Voting or Consensus? A Study of Multi-LLM Agent Debate Strategies" (2025)** — ACL 2025. Key finding: additional debate rounds beyond 2-3 often decrease performance by causing problem drift or error propagation through conformity pressure.
+
+6. **"Can LLM Agents Really Debate?" (2025)** — arXiv:2511.07784. Analyzed actual debate dynamics in multi-agent LLM systems.
+
+7. **S2-MAD (2025)** — arXiv:2502.04790. Structured approaches to multi-agent debate with improved convergence properties.

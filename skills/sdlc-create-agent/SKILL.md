@@ -161,7 +161,7 @@ Most agents are multiple types. A `db-engineer` is a reviewer (catches schema is
    - File-match triggers ("if the diff touches...")
    - What it covers (domain-specific review concerns)
    - Example: `` - `db-engineer` — if the diff touches migration files, ORM models, or schema definitions. Covers migration safety, index strategy, and query patterns. ``
-   - This single entry covers all three review skills (`review-diff`, `review-commit`, `review-team`)
+   - This single entry covers all review skills (`review-diff`, `review-commit`, `team-review-fix`)
 
 2. **`sdlc-plan` agent table** — Add a row with:
    - Agent name and domain description
@@ -209,7 +209,7 @@ Dispatch the `sdlc-reviewer` subagent on the created agent file. Present its fin
 ## Integration
 
 - **Feeds into:** The created agent becomes available for dispatch by orchestration skills
-- **Modifies:** `agent-selection.md` (Tier 1 reviewers — covers review-diff, review-commit, review-team), `sdlc-plan` (agent table + infra triggers), `sdlc-lite-plan` (infra triggers) — see Step 6
+- **Modifies:** `agent-selection.md` (Tier 1 reviewers — covers review-diff, review-commit, team-review-fix), `sdlc-plan` (agent table + infra triggers), `sdlc-lite-plan` (infra triggers) — see Step 6
 - **Uses:** `AGENT_TEMPLATE.md` (structural reference), `agent-context-map.yaml` (knowledge wiring), `AGENT_SUGGESTIONS.md` (reusable patterns), `sdlc-reviewer` (quality gate), existing agents (conflict checking)
 - **Complements:** `sdlc-develop-skill` (skills vs agents), `sdlc-review` (review existing agents)
 - **Does NOT replace:** Direct editing of existing agents (this creates new ones only)

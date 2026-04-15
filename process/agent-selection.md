@@ -1,6 +1,6 @@
 # Agent Selection & Lenses
 
-Shared reference for all skills that dispatch domain agents by file scope (`review-diff`, `review-commit`, `review-team`, `sdlc-tests-create`, `sdlc-plan`, `sdlc-create-agent`, `sdlc-initialize`). Defines which domain agents to dispatch and which analytical lenses they apply. Each skill specifies which lenses are relevant to its context — see the Lenses section.
+Shared reference for all skills that dispatch domain agents by file scope (`review-diff`, `review-commit`, `team-review-fix`, `sdlc-tests-create`, `sdlc-plan`, `sdlc-create-agent`, `sdlc-initialize`). Defines which domain agents to dispatch and which analytical lenses they apply. Each skill specifies which lenses are relevant to its context — see the Lenses section.
 
 ## Agent Selection
 
@@ -84,7 +84,7 @@ Lenses are the perspectives agents apply when analyzing code. Each consuming ski
 
 | Skill Context | Applicable Lenses |
 |--------------|-------------------|
-| Code review (`review-commit`, `review-diff`, `review-team`) | All lenses |
+| Code review (`review-commit`, `review-diff`, `team-review-fix`) | All lenses |
 | Test gap analysis (`sdlc-tests-create`) | Coverage, security at boundaries, contract safety, performance, data integrity, standard |
 | Agent/skill creation (`sdlc-create-agent`, `sdlc-initialize`) | Standard only |
 

@@ -102,4 +102,4 @@ Do NOT commit automatically — wait for the user to confirm.
 
 ## Integration
 - **Depends on:** `sdlc-review-commit` or `sdlc-review-diff` (must run first to produce findings)
-- **Sibling:** `sdlc-lite-execute` (similar review-fix loop pattern)
+- **Siblings:** `sdlc-lite-execute` (similar review-fix loop pattern), `sdlc-team-review-fix` (team-based review-fix with persistent teammates across rounds — use for complex or cross-domain work)

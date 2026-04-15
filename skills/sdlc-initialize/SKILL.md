@@ -408,7 +408,7 @@ Present the proposed roster to CD via `AskUserQuestion`:
 - Template compliance (AGENT_TEMPLATE.md structure)
 
 **Mandatory agents (create these regardless of project size):**
-1. **`software-architect`** — dispatched by both review and planning skills, mediates debate in `review-team`, seeds disciplines and knowledge in later initialization phases, and reviews every other agent's plan output. Create first so it's available for dispatch throughout initialization.
+1. **`software-architect`** — dispatched by both review and planning skills, mediates debate in `team-review-fix`, seeds disciplines and knowledge in later initialization phases, and reviews every other agent's plan output. Create first so it's available for dispatch throughout initialization.
 2. **`code-reviewer`** — always dispatched in every review skill (Tier 1, unconditional). Without it, no review skill produces findings. This is the one agent that reviews every diff regardless of what changed.
 
 If CD's proposed roster omits either of these, add them and explain why. These are not optional.

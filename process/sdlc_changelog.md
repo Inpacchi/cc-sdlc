@@ -34,6 +34,36 @@ Each entry contains:
 
 ---
 
+## 2026-04-14: Add Unified Team Review-Fix Skill and Communication Protocols
+
+**Origin:** Real-world audit (2026-04-14, Endless Galaxy Studios) exposed critical gaps in the review-team + review-fix workflow: debate protocol never executed, review-fix spawned 17 fresh agents instead of reusing teammates (63% of total token cost), team cleanup failed.
+
+**What happened:** The existing review workflow used separate skills (`review-team` for review, `review-fix` for fixes) with subagents — isolated contexts with no inter-agent communication. The handoff between skills lost all team context, forcing fresh agent spawns. The debate protocol existed on paper but was never executed because the architect did solo synthesis instead of mediating real-time debate.
+
+**Changes made:**
+
+1. **`skills/team-review-fix/SKILL.md`** — New unified skill that reviews any target (commit, diff, files, directory), runs organic debate with an architect mediator, and fixes all findings using persistent teammates. Eliminates fresh agent spawning between review and fix phases. Includes environment gate, flexible target resolution, reviewer/fixer separation, collaborative fix model, verification gate, protocol compliance checklist, and graceful team shutdown.
+
+2. **`process/team-communication-protocol.md`** — New process doc defining the inter-agent communication protocol for team skills. Hybrid message envelope format (structured routing fields + natural language body), 9 message types (FINDING, CHALLENGE, FIX_REQUEST, FIX_COMPLETE, REVIEW_REQUEST, CLARIFICATION, STEER, ESCALATION, STATUS), findings registry using built-in task list, fixer-reviewer collaborative protocol, cross-fixer coordination rules, and escalation path. Reusable by future team-based skills.
+
+3. **`process/debate-protocol.md`** — Rewritten from formal round-based protocol to organic broadcast + architect tiebreaker model. No formal debate rounds — reviewers broadcast findings, challenge or agree naturally, architect breaks ties in real-time. Includes architect prompt template (prevents audit failure where mediator did solo synthesis), anti-conformity safeguard, continuous deduplication, and convergence criteria. References `team-communication-protocol.md` for message format.
+
+4. **`process/agent-selection.md`** — Added `team-review-fix` to the list of consuming skills and lenses applicability table.
+
+5. **`skills/review-diff/SKILL.md`** — Updated Integration section: replaced `sdlc-review-team` sibling with `sdlc-team-review-fix`.
+
+6. **`skills/review-commit/SKILL.md`** — Updated Integration section: replaced `sdlc-review-team` sibling with `sdlc-team-review-fix`.
+
+7. **`skills/review-fix/SKILL.md`** — Updated Integration section: added `sdlc-team-review-fix` as sibling for team-based review-fix with persistent teammates.
+
+8. **`skeleton/manifest.json`** — Added `skills/team-review-fix/SKILL.md` to skills, `process/team-communication-protocol.md` to process.
+
+9. **`CLAUDE-SDLC.md`** — Added `/sdlc-team-review-fix` command row to SDLC Commands table.
+
+**Rationale:** The unified skill addresses all audit findings: persistent teammates eliminate the 63% cost overhead from fresh spawning, the architect-as-teammate model ensures debate actually executes (it can't be skipped when the architect is receiving findings in real-time), collaborative fix eliminates discrete re-review rounds, and explicit shutdown sequence prevents cleanup failures. The communication and debate protocols are extracted as reusable process docs for future team-based skills.
+
+---
+
 ## 2026-04-14: Add Multi-Layer Gradient Template to Brand Asset Skill
 
 **Origin:** User feedback during asset spec generation — gradient positions were specified as percentages instead of pixel coordinates.

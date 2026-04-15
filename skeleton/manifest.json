@@ -69,7 +69,8 @@
       "process/incident_response.md",
       "process/project-section-markers.md",
       "process/agent-selection.md",
-      "process/debate-protocol.md"
+      "process/debate-protocol.md",
+      "process/team-communication-protocol.md"
     ],
     "templates": [
       "templates/spec_template.md",
@@ -194,7 +195,7 @@
       "skills/sdlc-review/SKILL.md",
       "skills/enrich-agent/SKILL.md",
       "skills/research-external/SKILL.md",
-      "skills/review-team/SKILL.md"
+      "skills/team-review-fix/SKILL.md"
     ],
     "agents": [
       "agents/AGENT_TEMPLATE.md",

@@ -175,7 +175,7 @@ Rules:
 | `/sdlc-review-diff` | Review staged or unstaged diff for quality, correctness, and convention compliance. Invokes `sdlc-review-diff` skill |
 | `/sdlc-review-fix` | Review-fix loop — review code, present findings, fix approved items. Invokes `sdlc-review-fix` skill |
 | `/sdlc-review-commit` | Review a specific commit or commit range for quality and convention compliance. Invokes `sdlc-review-commit` skill |
-| `/sdlc-review-team` | Team-powered review with inter-agent debate — agents challenge each other's findings before reporting. Requires `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1`. Invokes `sdlc-review-team` skill |
+| `/sdlc-team-review-fix` | Unified team review + fix lifecycle — reviews any target (commit, diff, files, directory), debates findings with architect mediator, fixes with persistent teammates. Eliminates fresh agent spawning between phases. Requires `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1`. Invokes `sdlc-team-review-fix` skill |
 | `/sdlc-design-consult` | Consult domain design agents on UX, visual design, or interaction patterns. Invokes `sdlc-design-consult` skill |
 | `/sdlc-research-external` | Research external knowledge sources (blogs, talks, papers) and curate tiered reference docs. Invokes `sdlc-research-external` skill |
 
