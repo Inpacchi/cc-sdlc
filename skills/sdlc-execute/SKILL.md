@@ -407,6 +407,7 @@ When the deliverable is complete, the "Let's organize the chronicles" command mo
 | "The plan is committed, this is just a small follow-up" | Manager Rule applies for the full session. Dispatch the domain agent. |
 | "The user asked about the server code — I'll just fix it while I'm here" | Domain crossing. Dispatch the relevant domain agent for that scope. Read domain boundaries in agent definitions. |
 | "I'll commit the code now and the docs separately" | Documentation artifacts (result docs, catalog updates, discipline entries, archive moves) ship in the same commit as the work they describe. Separate doc commits fragment the history and break bisectability. |
+| "I know how this library works" | Verify external library APIs via Context7 before writing integration code. |
 
 ## Integration
 

@@ -292,7 +292,7 @@ The Manager Rule remains in effect per `[sdlc-root]/process/manager-rule.md` —
 | "Only one domain is involved" | Most tasks touch 2+ domains. Check again. |
 | "I'll write the plan mode content from memory" | Follow step 5 exactly: Read the file with the Read tool, then paste the full Read output into EnterPlanMode. Working from memory produces summaries. |
 | "The plan is done, let me just quickly fix this other thing" | Manager Rule applies for the full session. Dispatch the domain agent. |
-| "I know how this library works" | Never assume library APIs. Context7 lookup is mandatory for external libs — agents have made critical mistakes assuming hooks/methods exist when they don't. |
+| "I know how this library works" | Verify external library APIs via Context7. Never assume. |
 
 ## Integration
 

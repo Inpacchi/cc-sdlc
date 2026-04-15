@@ -505,7 +505,7 @@ Not every invocation needs a deliverable ID. For ad hoc work (bug fixes, small t
 | "I'll just add the structural elements myself — the agent wrote the content" | There is no structural/content distinction. Missing sections (phase dependencies, file list, agents, domain agent reviews) go back to the writing agent. Re-dispatch. |
 | "The plan is done, let me just quickly fix this other thing" | Manager Rule applies for the full session. Dispatch the domain agent. |
 | "While we're here, I'll also update the server code" | Domain crossing. Dispatch the relevant domain agent for that scope. |
-| "I know how this library works" | Never assume library APIs. Context7 lookup is mandatory for external libs — agents have made critical mistakes assuming hooks/methods exist when they don't. |
+| "I know how this library works" | Verify external library APIs via Context7. Never assume. |
 
 ### Session Handoff
 

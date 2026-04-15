@@ -34,7 +34,7 @@ Each entry contains:
 
 ---
 
-## 2026-04-15: Mandatory Context7 Library Verification During Planning
+## 2026-04-15: Mandatory Context7 Library Verification
 
 **Origin:** Post-execution analysis — frontend-engineer agent made critical API assumptions about `@react-sigma/core` hooks (`useSetSettings`, `useRegisterEvents`) that were wrong.
 
@@ -42,11 +42,15 @@ Each entry contains:
 
 **Changes made:**
 
-1. **`skills/sdlc-plan/SKILL.md`** — Changed "Library verification" section to "Library verification (MANDATORY when external libraries are involved)" with explicit 5-step verification protocol: resolve library ID, query docs with specific patterns (hooks, API, props), check installed version, extract concrete details, pass to writing agent. Added "Why this is mandatory" explanation. Added Red Flags entry: "I know how this library works" → Context7 lookup required.
+1. **`skills/sdlc-plan/SKILL.md`** — Changed "Library verification" to "Library verification (MANDATORY when external libraries are involved)" with 5-step protocol. Added Red Flags entry.
 
-2. **`skills/sdlc-lite-plan/SKILL.md`** — Same changes as above. Context7 verification is now mandatory before dispatching the plan-writing agent when external libraries are involved.
+2. **`skills/sdlc-lite-plan/SKILL.md`** — Same changes. Context7 verification mandatory before dispatching the plan-writing agent.
 
-**Rationale:** Context7 lookups take seconds. Wrong API assumptions cost hours. Making verification mandatory (not recommended) ensures agents never plan around APIs that don't exist.
+3. **`skills/sdlc-execute/SKILL.md`** — Added Red Flags entry for execution-time Context7 verification.
+
+4. **`skills/sdlc-lite-execute/SKILL.md`** — Same Red Flags entry.
+
+**Rationale:** Context7 lookups take seconds. Wrong API assumptions cost hours.
 
 ---
 
