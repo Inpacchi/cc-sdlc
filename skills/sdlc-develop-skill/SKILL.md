@@ -66,7 +66,7 @@ The description MUST include:
 - Explicit trigger phrases (`Triggers on "phrase1", "phrase2", ...`)
 - Anti-triggers (`Do NOT use for X — use Y.`)
 
-**Activation framing rule:** Use imperative/mandatory language in descriptions and trigger phrases. Advisory framing ("Best practices for X", "Guidance on X") causes agents to skip the skill — empirically measured at ~10% activation rate. Mandatory framing ("Rules that MUST be followed when working on X", "Required steps for X") achieves 57-83% activation. The description is the primary signal agents use to decide whether to invoke the skill — treat it as a trigger, not a summary. (Evidence: Tessl controlled experiment, 30 trials per configuration — `knowledge/coding/context-engineering-patterns.yaml`, activation_engineering section.)
+**Activation framing rule:** Use imperative/mandatory language in descriptions and trigger phrases. Advisory framing ("Best practices for X", "Guidance on X") causes agents to skip the skill — empirically measured at ~10% activation rate. Mandatory framing ("Rules that MUST be followed when working on X", "Required steps for X") achieves 57-83% activation. The description is the primary signal agents use to decide whether to invoke the skill — treat it as a trigger, not a summary. (Evidence: Tessl controlled experiment, 30 trials per configuration — `[sdlc-root]/knowledge/coding/context-engineering-patterns.yaml`, activation_engineering section.)
 
 Template:
 
@@ -139,7 +139,7 @@ Include universal red flags relevant to the skill type:
 - Orchestration: "I'll implement this myself instead of dispatching" / "The agent has context from earlier"
 - All types: "I'll skip the changelog update" / "This skill doesn't need anti-triggers"
 
-**AVOID example warning:** If the skill includes "don't do this" anti-pattern examples, frame them carefully. Tessl found that AVOID examples in skills caused regressions — the agent followed the bad example rather than the instruction. Always pair anti-patterns with the correct pattern immediately after: "DO NOT do this: [bad]. Instead do this: [good]." Never show an anti-pattern without its replacement. (Evidence: Tessl Skill-Optimizer, hooks.md regression in database-plugin-architecture scenario — `knowledge/testing/ai-generated-code-verification.yaml`, eval_contamination section.)
+**AVOID example warning:** If the skill includes "don't do this" anti-pattern examples, frame them carefully. Tessl found that AVOID examples in skills caused regressions — the agent followed the bad example rather than the instruction. Always pair anti-patterns with the correct pattern immediately after: "DO NOT do this: [bad]. Instead do this: [good]." Never show an anti-pattern without its replacement. (Evidence: Tessl Skill-Optimizer, hooks.md regression in database-plugin-architecture scenario — `[sdlc-root]/knowledge/testing/ai-generated-code-verification.yaml`, eval_contamination section.)
 
 ### 7. Integration Section
 
@@ -161,7 +161,7 @@ Generate:
 1. Write the skill file to `skills/{name}/SKILL.md`
 2. Add `"skills/{name}/SKILL.md"` to `skeleton/manifest.json` → `source_files.skills`
 3. Add a command row to `CLAUDE-SDLC.md` if the skill is user-invokable
-4. Add a changelog entry to `process/sdlc_changelog.md`
+4. Add a changelog entry to `[sdlc-root]/process/sdlc_changelog.md`
 
 ### 9. Quality Gate
 

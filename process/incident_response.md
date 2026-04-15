@@ -55,7 +55,7 @@ Assign severity using the table above. When uncertain, **classify higher** — i
 
 ### 4. Investigate
 
-Follow the debugging methodology in `knowledge/architecture/debugging-methodology.yaml`:
+Follow the debugging methodology in `[sdlc-root]/knowledge/architecture/debugging-methodology.yaml`:
 
 1. **Reproduce** — Confirm the symptom. Get a consistent reproduction.
 2. **Isolate** — Narrow the blast radius. What changed? When did it start? What's the scope?
@@ -94,7 +94,7 @@ Follow the debugging methodology in `knowledge/architecture/debugging-methodolog
 
 ### Postmortem Template
 
-Use `templates/postmortem_template.md` for the document structure.
+Use `[sdlc-root]/templates/postmortem_template.md` for the document structure.
 
 ### Connecting Incidents to the Deliverable Lifecycle
 

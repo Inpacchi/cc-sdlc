@@ -35,6 +35,7 @@ See `plugins/README.md` for details and `plugins/*-setup.md` for installation in
 - The `skeleton/manifest.json` is the source of truth for what gets installed — keep it in sync
 - CLAUDE-SDLC.md is the drop-in that target projects add to their CLAUDE.md — it must be self-contained
 - **Changelog rule:** When you change any process file (skills, agents, process docs, CLAUDE-SDLC.md, disciplines, knowledge), update `process/sdlc_changelog.md` **immediately in the same step** — not as a follow-up. If the user has to ask for the changelog update, it was already too late.
+- **Path variable rule:** Skills reference SDLC directories using `[sdlc-root]` (e.g., `[sdlc-root]/knowledge/`, `[sdlc-root]/disciplines/`), never bare paths like `knowledge/` or `disciplines/`. The `[sdlc-root]` placeholder resolves to the project's installed location (typically `ops/sdlc/`). Exception: `sdlc-migrate` may use bare paths when documenting cc-sdlc source structure or in mapping tables showing source → target.
 - **Consistency check rule:** After completing any batch of changes to this repo, run the following checks **before presenting the final summary to the user**. Do not wait to be asked.
 
 ### Commit Convention
@@ -75,5 +76,11 @@ python3 -c "import json; json.load(open('skeleton/manifest.json'))"
 - `sdlc-migrate` handles new files in its migration strategy (§2.1 for direct copy, §3.3 for context-map wiring)
 
 **4. Agent installation paths** — Framework subagents in `agents/` install to `.claude/agents/` (not `ops/sdlc/agents/`). Verify `sdlc-initialize` Phase 1 copies them correctly.
+
+**5. Hard-coded path scan** — Grep skills for bare SDLC paths that should use `[sdlc-root]`:
+```bash
+grep -r '`\(knowledge\|disciplines\|playbooks\|process\|templates\)/[^R\[\*]' skills/
+```
+Ignore hits in `sdlc-migrate` (source path documentation) and example output blocks. All other references to these directories should use `[sdlc-root]/...`.
 
 If any check fails, fix it before committing. Do not present the summary until all checks pass.

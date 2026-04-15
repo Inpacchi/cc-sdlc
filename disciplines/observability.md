@@ -50,7 +50,7 @@ Each pillar answers different questions. Logs answer "what happened?" Metrics an
 | **INFO** | Significant business events | User created, payment processed, deployment completed |
 | **DEBUG** | Developer-useful detail, off in production | SQL queries, cache hits/misses, intermediate calculation values |
 
-- **Never log PII at INFO or above.** Debug logs may include PII in development but must be stripped in production. See `knowledge/architecture/security-review-taxonomy.yaml` Domain 6 (Data Privacy).
+- **Never log PII at INFO or above.** Debug logs may include PII in development but must be stripped in production. See `[sdlc-root]/knowledge/architecture/security-review-taxonomy.yaml` Domain 6 (Data Privacy).
 - **Never log secrets at any level.** Tokens, passwords, API keys — redact before logging.
 - **Include context, not just the event.** Bad: `"Payment failed"`. Good: `{"event": "payment_failed", "user_id": "u_123", "amount": 4999, "currency": "usd", "error": "card_declined", "provider": "stripe"}`.
 

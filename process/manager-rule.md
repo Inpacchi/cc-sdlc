@@ -30,7 +30,7 @@ The single most important behavioral principle in the SDLC framework. Every skil
 The rule applies to **code files and domain content**. The manager may directly edit:
 
 - Process documentation (Worker Agent Reviews section, dependency table metadata, date stamps, mechanical count updates)
-- Discipline parking lot entries (per `process/discipline_capture.md`)
+- Discipline parking lot entries (per `[sdlc-root]/process/discipline_capture.md`)
 - Catalog entries (`docs/_index.md`)
 - WORDING-classified spec revisions (typos, phrasing — not meaning changes)
 

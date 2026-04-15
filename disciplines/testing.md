@@ -1,7 +1,7 @@
 # Testing Discipline
 
-**Status**: Active — codified in `process/overview.md` (Validation phase) and `process/deliverable_lifecycle.md` (Validated/Deployed states)
-**Knowledge store**: `knowledge/testing/` (cross-project), project `docs/testing/knowledge/` (project-specific)
+**Status**: Active — codified in `[sdlc-root]/process/overview.md` (Validation phase) and `[sdlc-root]/process/deliverable_lifecycle.md` (Validated/Deployed states)
+**Knowledge store**: `[sdlc-root]/knowledge/testing/` (cross-project), project `docs/testing/knowledge/` (project-specific)
 **Domain agent**: `.claude/agents/sdet.md` — dispatched for E2E test writing, Playwright suites, WebSocket flow tests, test architecture, and flake diagnosis
 
 ## Summary
@@ -10,7 +10,7 @@ Hybrid browser testing approach combining an AI-assisted browser tool for SDLC-a
 
 ## Testing Paradigm — Code Structure & Test Type Selection
 
-See `knowledge/testing/testing-paradigm.yaml` for the full treatment. Key principles:
+See `[sdlc-root]/knowledge/testing/testing-paradigm.yaml` for the full treatment. Key principles:
 
 **Functional Core, Imperative Shell.** Separate I/O from logic. Pure functions (the core) are unit tested with no mocks. I/O wrappers (the shell) are integration tested against real systems. If you need a mock, the code is structured wrong.
 
@@ -83,4 +83,4 @@ This rule exists because of a real failure mode: a test agent declared a feature
 
 - **Eval contamination masks real weaknesses.** [NEEDS VALIDATION] Tessl discovered that auto-generated evaluation scenarios that included inline file content (CONTRIBUTING.md, AI_POLICY.md) produced 93% baseline scores. Reducing task descriptions to single-sentence prompts with no breadcrumbs dropped the baseline to 15%. The critical test: "Does the agent search for signals nobody highlighted?" — not "Does the agent follow rules when given explicitly?" When designing evals for framework skills, ensure the eval simulates real-world discovery conditions, not open-book conditions. (Source: Tessl "Our AI Is the Bright Kid with No Manners Part 2" — controlled evaluation across 4 demo repos, 7 scenarios)
 
-- **Behavioral compliance is distinct from functional correctness.** [NEEDS VALIDATION] AI agents can produce correct code while failing 85% of behavioral requirements (contribution guidelines, changelog updates, AI disclosure, DCO sign-offs). Traditional test suites only check functional correctness. A separate behavioral compliance evaluation is needed for agent-assisted workflows — especially in OSS contribution, code review, and any context with process rules beyond "does the code work." Promoted to knowledge: `knowledge/testing/ai-generated-code-verification.yaml` (behavioral_compliance section). (Source: Tessl "Our AI Is the Bright Kid with No Manners Part 1" — 15% behavioral compliance despite correct code)
+- **Behavioral compliance is distinct from functional correctness.** [NEEDS VALIDATION] AI agents can produce correct code while failing 85% of behavioral requirements (contribution guidelines, changelog updates, AI disclosure, DCO sign-offs). Traditional test suites only check functional correctness. A separate behavioral compliance evaluation is needed for agent-assisted workflows — especially in OSS contribution, code review, and any context with process rules beyond "does the code work." Promoted to knowledge: `[sdlc-root]/knowledge/testing/ai-generated-code-verification.yaml` (behavioral_compliance section). (Source: Tessl "Our AI Is the Bright Kid with No Manners Part 1" — 15% behavioral compliance despite correct code)

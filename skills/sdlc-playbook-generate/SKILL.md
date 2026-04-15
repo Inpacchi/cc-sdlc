@@ -32,7 +32,7 @@ Signs this skill is appropriate:
 - A session involved corrections mid-stream that indicate missing process knowledge
 
 Signs this skill is NOT appropriate:
-- Writing a playbook from scratch without session data → write directly using `playbooks/example-playbook.md` as template
+- Writing a playbook from scratch without session data → write directly using `[sdlc-root]/playbooks/example-playbook.md` as template
 - Importing knowledge from external content → `sdlc-ingest`
 - Resuming an incomplete session → `sdlc-resume`
 

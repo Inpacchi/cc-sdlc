@@ -1,7 +1,7 @@
 # Design Discipline
 
 **Status**: Active — UX modeling capability
-**Knowledge store**: `knowledge/design/` (cross-project)
+**Knowledge store**: `[sdlc-root]/knowledge/design/` (cross-project)
 
 ## Scope
 
@@ -21,7 +21,7 @@ The primary active capability in this discipline. When a feature scope has been 
 
 ### Key Principle: Start From Existing State
 
-The agent always examines current routes, components, navigation, and patterns before proposing anything. This prevents designs that are incongruent with the existing app. The methodology in `knowledge/design/ux-modeling-methodology.yaml` codifies this as Phase 1.
+The agent always examines current routes, components, navigation, and patterns before proposing anything. This prevents designs that are incongruent with the existing app. The methodology in `[sdlc-root]/knowledge/design/ux-modeling-methodology.yaml` codifies this as Phase 1.
 
 ### Output Formats
 
@@ -37,10 +37,10 @@ The agent selects the appropriate format(s) based on what's being modeled:
 
 ### How to Use
 
-An agent follows the methodology in `knowledge/design/ux-modeling-methodology.yaml`:
+An agent follows the methodology in `[sdlc-root]/knowledge/design/ux-modeling-methodology.yaml`:
 1. **Context** — read existing routes, nav, components, and the feature scope
 2. **Analysis** — determine what needs modeling (new pages, changed nav, new interactions)
-3. **Production** — generate artifacts using conventions from `knowledge/design/ascii-conventions.yaml`
+3. **Production** — generate artifacts using conventions from `[sdlc-root]/knowledge/design/ascii-conventions.yaml`
 4. **Review** — present artifacts, call out key decisions, iterate with the product owner
 
 ### Skill Trajectory
@@ -68,10 +68,10 @@ Normal SDLC: spec → plan → implement
 
 ### Seeded Insights
 
-- **Accessibility and testability are the same problem.** Promoted → `knowledge/design/accessibility-testability-principles.yaml` (unified_concern section) + `knowledge/testing/gotchas.yaml` (color-only-status-indicators entry)
+- **Accessibility and testability are the same problem.** Promoted → `[sdlc-root]/knowledge/design/accessibility-testability-principles.yaml` (unified_concern section) + `[sdlc-root]/knowledge/testing/gotchas.yaml` (color-only-status-indicators entry)
 
 - **Advanced components as product differentiators.** [NEEDS VALIDATION] Complex UI components (Gantt charts, flowcharts, custom widgets, rich data visualizations) are what make apps look purposeful. The shared component library is a design asset, not just a code asset. Test automation strategies for these components protect design investment.
 
-- **Never convey meaning through color alone.** Promoted → `knowledge/design/accessibility-testability-principles.yaml` (color_meaning_rule section) + `knowledge/testing/gotchas.yaml` (color-only-status-indicators entry)
+- **Never convey meaning through color alone.** Promoted → `[sdlc-root]/knowledge/design/accessibility-testability-principles.yaml` (color_meaning_rule section) + `[sdlc-root]/knowledge/testing/gotchas.yaml` (color-only-status-indicators entry)
 
 - **Visual verification requires computed style checks.** [NEEDS VALIDATION] DOM correctness does not equal visual correctness. Design should ensure that visual states have programmatic equivalents (aria attributes, data attributes) that can be verified without pixel comparison.

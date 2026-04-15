@@ -135,7 +135,7 @@ When the user approves specific improvements:
 - **New skills** — offer to invoke `/sdlc-develop-skill`
 - **Knowledge candidates** — remind user to run `/sdlc-ingest` with the identified content
 
-Update `process/sdlc_changelog.md` for any process changes applied.
+Update `[sdlc-root]/process/sdlc_changelog.md` for any process changes applied.
 
 ## Red Flags
 

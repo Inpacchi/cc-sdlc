@@ -179,7 +179,7 @@ When the team discovers process improvements, gaps, or new conventions during re
 **Trigger:** Say **"Let's update the SDLC"**
 
 CC will:
-- Read the current SDLC changelog at `process/sdlc_changelog.md`
+- Read the current SDLC changelog at `[sdlc-root]/process/sdlc_changelog.md`
 - Discuss the proposed addition or change
 - Update the relevant canonical files
 - Append to the changelog with date, description, and rationale **immediately after making the change** — do not defer to a later step or session
@@ -189,7 +189,7 @@ CC will:
 
 The changelog serves as a living record of how the process evolves through use. Not every change needs a formal proposal — often the best improvements emerge from noticing friction during real work.
 
-See `process/sdlc_changelog.md` for the change history.
+See `[sdlc-root]/process/sdlc_changelog.md` for the change history.
 
 ---
 

@@ -138,7 +138,7 @@ If no domain-specific knowledge files exist yet, map only the communication prot
 1. Write the agent file to `.claude/agents/{agent-name}.md` (in the target project) or `agents/{agent-name}.md` (in cc-sdlc source)
 2. Update `[sdlc-root]/knowledge/agent-context-map.yaml` with the mapping
 3. Add to `agents/AGENT_SUGGESTIONS.md` if reusable across projects
-4. Add a changelog entry to `process/sdlc_changelog.md`
+4. Add a changelog entry to `[sdlc-root]/process/sdlc_changelog.md`
 
 ### 6. Wire Into Dispatching Skills
 

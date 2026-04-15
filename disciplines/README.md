@@ -7,7 +7,7 @@ This framework is a toolbox of available capabilities, not a prescribed sequence
 Both RUP and SAFe included "tailor the methodology" as a core principle, but their ecosystems made the full prescription the path of least resistance. We learn from that mistake. Nothing here is mandatory overhead. Disciplines, knowledge stores, spec formats, knowledge layers — they exist *when you need them* and stay out of the way when you don't.
 
 **Guidelines:**
-- Vibe coding is valid. Exploratory and creative work benefits from minimal process. The ad hoc accommodations in `process/overview.md` exist for exactly this reason.
+- Vibe coding is valid. Exploratory and creative work benefits from minimal process. The ad hoc accommodations in `[sdlc-root]/process/overview.md` exist for exactly this reason.
 - Use the discipline that helps. Ignore the ones that don't. A quick prototype doesn't need Layer 0 risk analysis.
 - Add process only when its absence caused a problem. "We should have written a spec" is the right trigger, not "the process says we must write a spec."
 - Each discipline should deliver value immediately when invoked, not require setup, ceremony, or prerequisite steps.
@@ -15,7 +15,7 @@ Both RUP and SAFe included "tailor the methodology" as a core principle, but the
 
 ## The Key Distinction: Disciplines vs Phases
 
-Our SDLC process (`process/overview.md`) describes **phases** — the temporal stages work moves through:
+Our SDLC process (`[sdlc-root]/process/overview.md`) describes **phases** — the temporal stages work moves through:
 
 ```
 Idea → Spec → Planning → Implementation → Result → Chronicle
@@ -116,12 +116,12 @@ A new discipline is warranted when **all three** conditions are met:
 
 A new discipline starts at Level 1 (Initial) and requires exactly:
 
-1. **Discipline file** — `disciplines/<name>.md` with:
+1. **Discipline file** — `[sdlc-root]/disciplines/<name>.md` with:
    - Status line (`Parking lot — [brief description]`)
    - Scope section (what capability this discipline covers)
    - Parking lot section (empty, ready for entries)
 
-2. **Tracker entry** — add a row to the Process Maturity Tracker in `disciplines/process-improvement.md` at Level 1
+2. **Tracker entry** — add a row to the Process Maturity Tracker in `[sdlc-root]/disciplines/process-improvement.md` at Level 1
 
 3. **Manifest entry** — add the file path to `skeleton/manifest.json` under `source_files.disciplines`
 

@@ -1,7 +1,7 @@
 # Data Modeling Discipline
 
 **Status**: Parking lot — bootstrapping with Len Silverston's Universal Data Model patterns
-**Knowledge store**: `knowledge/data-modeling/` (cross-project)
+**Knowledge store**: `[sdlc-root]/knowledge/data-modeling/` (cross-project)
 
 ## Scope
 

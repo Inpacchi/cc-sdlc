@@ -84,7 +84,7 @@ The discipline has documented, reusable knowledge. Methodology exists, patterns 
 
 - **The self-improving loop generalizes.** [NEEDS VALIDATION] A layered knowledge store with a capture-accumulate-feed-forward cycle applies to every discipline. Design knowledge, architecture knowledge, BA knowledge all benefit from the same structure. Consider a generic "discipline knowledge store" template.
 
-- **Cross-discipline remediation flow.** Promoted → `knowledge/architecture/knowledge-management-methodology.yaml` (cross_discipline_remediation section)
+- **Cross-discipline remediation flow.** Promoted → `[sdlc-root]/knowledge/architecture/knowledge-management-methodology.yaml` (cross_discipline_remediation section)
 
 - **Disciplines-as-skills orchestration.** [DEFERRED] When individual discipline skills exist, the SDLC becomes an orchestrator that invokes discipline skills at appropriate phases with appropriate intensity. *Reason: future vision, no discipline skills exist yet.*
 

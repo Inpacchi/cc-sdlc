@@ -1,7 +1,7 @@
 # Product Research Discipline
 
 **Status**: Active — competitive analysis capability
-**Knowledge store**: `knowledge/product-research/` (cross-project)
+**Knowledge store**: `[sdlc-root]/knowledge/product-research/` (cross-project)
 
 ## Scope
 
@@ -27,9 +27,9 @@ The primary active capability in this discipline. When the SDLC identifies a fea
 
 ### How to Use
 
-An agent follows the methodology in `knowledge/product-research/competitive-analysis-methodology.yaml`:
+An agent follows the methodology in `[sdlc-root]/knowledge/product-research/competitive-analysis-methodology.yaml`:
 1. **Discovery** — identify 3-5 competitors via web search
-2. **Dimensions** — load starter dimensions from `knowledge/product-research/dimension-catalog.yaml`, refine based on what competitors actually offer
+2. **Dimensions** — load starter dimensions from `[sdlc-root]/knowledge/product-research/dimension-catalog.yaml`, refine based on what competitors actually offer
 3. **Research** — gather data per competitor per dimension from official docs
 4. **Synthesis** — build the comparison matrix and detail cards
 5. **Scoping** — generate questions that help the product owner define scope

@@ -149,7 +149,7 @@ When agent results return, curate into a reference doc:
 
 Append entries to the provenance log to create a prepared handoff for `sdlc-ingest`:
 
-1. Read `knowledge/provenance_log.md` (or target project's `[sdlc-root]/knowledge/provenance_log.md`) to determine the next `prov-YYYY-MM-DD-NNN` ID
+1. Read `[sdlc-root]/knowledge/provenance_log.md` to determine the next `prov-YYYY-MM-DD-NNN` ID
 2. Append one entry per researched source with:
    - `status: pending-review`
    - `source-type: reference-doc`
@@ -197,7 +197,7 @@ Present a summary to the user:
 ## Integration
 
 - **Depends on:** A research/reference directory in the project, project domain knowledge (from agent definitions, knowledge stores, or user input)
-- **Feeds into:** `sdlc-ingest` (when the team wants to extract rules from discovered articles into SDLC knowledge stores). The provenance log (`knowledge/provenance_log.md`) is the prepared handoff mechanism — research creates `pending-review` entries, the user approves them to `approved-for-ingest`, and `sdlc-ingest` can consume approved entries directly via "ingest from provenance"
+- **Feeds into:** `sdlc-ingest` (when the team wants to extract rules from discovered articles into SDLC knowledge stores). The provenance log (`[sdlc-root]/knowledge/provenance_log.md`) is the prepared handoff mechanism — research creates `pending-review` entries, the user approves them to `approved-for-ingest`, and `sdlc-ingest` can consume approved entries directly via "ingest from provenance"
 - **Uses:** `research-analyst` agent (primary), `general-purpose` agent (doc writing), WebFetch, WebSearch
 - **Complements:** `sdlc-ingest` (this discovers, ingest absorbs), `sdlc-idea` (research may spark ideas)
 - **Does NOT replace:** `sdlc-ingest` (that extracts rules into knowledge stores; this catalogs external articles), direct WebSearch (for specific one-off questions)

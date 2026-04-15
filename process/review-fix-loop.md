@@ -88,7 +88,7 @@ Review round N results:
 
 ## Step C: Triage + Fix
 
-Classify each finding using the finding classification protocol per `process/finding-classification.md`.
+Classify each finding using the finding classification protocol per `[sdlc-root]/process/finding-classification.md`.
 
 **Security finding calibration:** Agent-based security review has a measured ~85% false positive rate (Semgrep 2025 study). Security agent findings that are not corroborated by tool output (Step 0 SAST results) should be scrutinized more carefully than findings from code-reviewer or architect agents. If a security finding seems plausible but uncertain, classify it as INVESTIGATE rather than FIX — verify it with a targeted tool scan or manual inspection before committing a fix that may be unnecessary.
 

@@ -18,7 +18,7 @@ System design, component boundaries, integration patterns, technology choices, c
 
 **How to use the output:** Map each effort tier back to the competitive analysis scoping questions. This gives the product owner cost-aware information to adjust scope decisions.
 
-**Knowledge store:** `knowledge/architecture/` (see inventory below)
+**Knowledge store:** `[sdlc-root]/knowledge/architecture/` (see inventory below)
 
 **Pipeline position:**
 ```
@@ -59,8 +59,8 @@ spec → plan → implement
 
 ### Seeded Insights
 
-- **Layer 0 (upstream SDLC context) is an architectural function.** Promoted → `knowledge/architecture/domain-boundary-gotchas.yaml` (architect-feeds-testing-risk-areas entry)
+- **Layer 0 (upstream SDLC context) is an architectural function.** Promoted → `[sdlc-root]/knowledge/architecture/domain-boundary-gotchas.yaml` (architect-feeds-testing-risk-areas entry)
 
-- **Two-tier knowledge architecture.** Promoted → `knowledge/architecture/knowledge-management-methodology.yaml` (two_tier_architecture section)
+- **Two-tier knowledge architecture.** Promoted → `[sdlc-root]/knowledge/architecture/knowledge-management-methodology.yaml` (two_tier_architecture section)
 
-- **Token economics as an architectural constraint.** Promoted → `knowledge/architecture/token-economics.yaml`
+- **Token economics as an architectural constraint.** Promoted → `[sdlc-root]/knowledge/architecture/token-economics.yaml`
