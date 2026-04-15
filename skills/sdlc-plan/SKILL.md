@@ -228,19 +228,13 @@ The primary domain agent writes the core spec. Other relevant agents contribute 
 
 **Research integration:** If the spec requires research into external services, APIs, competitors, or technologies — use WebSearch for web research grounded in project context (CLAUDE.md). Incorporate findings into the spec's Design section.
 
-**Library verification (MANDATORY when external libraries are involved):** When the spec involves external libraries or frameworks, you MUST verify API capabilities via Context7 BEFORE dispatching the spec-writing agent. This closes knowledge gaps that cause agents to assume wrong APIs.
+**Library verification (MANDATORY when external libraries are involved):** You MUST verify API capabilities via Context7 BEFORE dispatching the spec-writing agent.
 
-1. **Resolve library ID:** `mcp__context7__resolve-library-id` for each external library being integrated
-2. **Query docs:** `mcp__context7__query-docs` with specific queries:
-   - "hooks" / "React hooks" — if React library
-   - "API" / "methods" / "functions" — for core APIs
-   - "props" / "configuration" / "options" — for component props
-   - Usage patterns for the specific integration scenario
-3. **Check installed version:** Read `package.json` / lock files — version-specific behavior matters
-4. **Extract concrete details:** Hook names, function signatures, required props, initialization patterns
-5. **Pass to writing agent:** Include verified API details in the dispatch prompt so the spec is grounded in real library capabilities, not training-data assumptions
-
-**Why this is mandatory:** Agents have made critical assumptions about library APIs (e.g., assuming hooks like `useSetSettings` exist when they don't). Context7 lookups take seconds and prevent multi-hour debugging sessions caused by wrong API assumptions.
+1. **Resolve library ID:** `mcp__context7__resolve-library-id` for each external library
+2. **Query docs:** `mcp__context7__query-docs` — hooks, APIs, props, usage patterns
+3. **Check installed version:** Read `package.json` / lock files
+4. **Extract concrete details:** Hook names, signatures, required props, patterns
+5. **Pass to writing agent:** Include verified API details in dispatch prompt
 
 **Spec-time knowledge filtering (opt-in):** When dispatching agents for spec writing, filter their knowledge context to spec-relevant files only — if the project has configured spec-relevance tagging. For each agent being dispatched:
 1. Look up the agent's mapped files in `[sdlc-root]/knowledge/agent-context-map.yaml`

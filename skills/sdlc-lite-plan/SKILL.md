@@ -94,19 +94,13 @@ This ID will be used in the plan filename (`dNN_{slug}_plan.md`).
 
 Dispatch prompts must pass through all relevant context — outcomes, constraints, and any implementation guidance that would help the agent succeed. Never narrate readiness ("Ready to dispatch") and wait for user confirmation. Dispatch immediately when context is ready.
 
-**Library verification (MANDATORY when external libraries are involved):** When the plan involves external libraries or frameworks, you MUST verify API capabilities via Context7 BEFORE dispatching the plan-writing agent. This closes knowledge gaps that cause agents to assume wrong APIs.
+**Library verification (MANDATORY when external libraries are involved):** You MUST verify API capabilities via Context7 BEFORE dispatching the plan-writing agent.
 
-1. **Resolve library ID:** `mcp__context7__resolve-library-id` for each external library being integrated
-2. **Query docs:** `mcp__context7__query-docs` with specific queries:
-   - "hooks" / "React hooks" — if React library
-   - "API" / "methods" / "functions" — for core APIs
-   - "props" / "configuration" / "options" — for component props
-   - Usage patterns for the specific integration scenario
-3. **Check installed version:** Read `package.json` / lock files — version-specific behavior matters
-4. **Extract concrete details:** Hook names, function signatures, required props, initialization patterns
-5. **Pass to writing agent:** Include verified API details in the dispatch prompt so the plan is grounded in real library capabilities, not training-data assumptions
-
-**Why this is mandatory:** Agents have made critical assumptions about library APIs (e.g., assuming hooks like `useSetSettings` exist when they don't). Context7 lookups take seconds and prevent multi-hour debugging sessions caused by wrong API assumptions.
+1. **Resolve library ID:** `mcp__context7__resolve-library-id` for each external library
+2. **Query docs:** `mcp__context7__query-docs` — hooks, APIs, props, usage patterns
+3. **Check installed version:** Read `package.json` / lock files
+4. **Extract concrete details:** Hook names, signatures, required props, patterns
+5. **Pass to writing agent:** Include verified API details in dispatch prompt
 
 ### 1. Identify Relevant Worker Domain Agents
 

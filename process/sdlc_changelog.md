@@ -31,6 +31,23 @@ Each entry contains:
 
 **Rationale:** [Why this improves the process — the insight that led to the change]
 ```
+
+---
+
+## 2026-04-15: Mandatory Context7 Library Verification During Planning
+
+**Origin:** Post-execution analysis — frontend-engineer agent made critical API assumptions about `@react-sigma/core` hooks (`useSetSettings`, `useRegisterEvents`) that were wrong.
+
+**What happened:** During planning, the agent assumed library hooks existed based on training data rather than verifying against actual library documentation. This MISSING_KNOWLEDGE gap caused multi-hour debugging sessions when the assumed APIs didn't exist.
+
+**Changes made:**
+
+1. **`skills/sdlc-plan/SKILL.md`** — Changed "Library verification" section to "Library verification (MANDATORY when external libraries are involved)" with explicit 5-step verification protocol: resolve library ID, query docs with specific patterns (hooks, API, props), check installed version, extract concrete details, pass to writing agent. Added "Why this is mandatory" explanation. Added Red Flags entry: "I know how this library works" → Context7 lookup required.
+
+2. **`skills/sdlc-lite-plan/SKILL.md`** — Same changes as above. Context7 verification is now mandatory before dispatching the plan-writing agent when external libraries are involved.
+
+**Rationale:** Context7 lookups take seconds. Wrong API assumptions cost hours. Making verification mandatory (not recommended) ensures agents never plan around APIs that don't exist.
+
 ---
 
 ## 2026-04-15: Move SDLC Commands Table to Separate Reference Doc
