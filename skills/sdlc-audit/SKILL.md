@@ -71,7 +71,7 @@ Dispatch the `sdlc-compliance-auditor` subagent to perform the 9-dimension scan.
 3. **Untracked work detection** — git commits without deliverable tracking
 4. **Knowledge freshness** — CLAUDE.md, agent memories, docs current
 5. **Process health indicators** — tracked vs untracked ratio, archive freshness, changelog coverage
-6. **Knowledge layer health** — disciplines, knowledge stores, triage status, wiring, context map, playbooks, usage, staleness by age, cross-file contradictions, coverage gaps
+6. **Knowledge layer health** — disciplines, knowledge stores, triage status, wiring, context map, playbooks, usage, staleness by age, cross-file contradictions, coverage gaps, orphaned knowledge pruning
 7. **Migration integrity** — manifest version, file completeness, content-merge correctness
 8. **Agent memory pattern mining** — recurring findings worth promoting
 9. **Recommendation follow-through** — previous audit recommendations acted on?
@@ -86,9 +86,15 @@ Produce audit artifact at `docs/current_work/audits/sdlc_audit_YYYY-MM-DD.md` us
 
 ### 3. Triage
 
-After presenting the audit report, if any parking lot entries are promotion candidates (from Dimensions 6c and 8), run an interactive triage session. See `references/compliance-methodology.md` step 11 for the full workflow.
+After presenting the audit report, run an interactive triage session if there are:
+- **Promotion candidates** (from Dimensions 6c and 8) — parking lot entries or agent memories worth promoting to knowledge stores
+- **Prune candidates** (from Dimension 6k) — orphaned knowledge files not wired to any agent
 
-The triage phase presents candidates grouped by discipline and asks CD to decide on each: promote to knowledge store, defer (with reason), or leave as-is. Promotions are applied immediately — the audit creates or updates the target knowledge store file and marks the parking lot entry as `Promoted → [target file]`.
+See `references/compliance-methodology.md` step 11 for the full workflow.
+
+**Promotion triage:** Present candidates grouped by discipline. CD decides: promote to knowledge store, defer (with reason), or skip. Promotions apply immediately.
+
+**Prune triage:** Present orphaned knowledge files grouped by severity. CD decides: prune (delete), wire (add to agent mappings), or keep (leave unwired). Wiring uses the same flow as sdlc-ingest step 6 — present candidate agents, update `agent-context-map.yaml`.
 
 ### 4. Fix
 

@@ -54,7 +54,7 @@ Signs this skill is NOT appropriate:
 ## Workflow
 
 ```
-SURVEY → SCOPE → EXTRACT → STRUCTURE → PLACE → PROVENANCE → REPORT → CHANGELOG
+SURVEY → SCOPE → EXTRACT → STRUCTURE → PLACE → WIRE → PROVENANCE → REPORT → CHANGELOG
 ```
 
 The flow is sequential. Each step must complete before the next begins. The user confirms scope (step 2) before extraction begins.
@@ -65,7 +65,7 @@ The flow is sequential. Each step must complete before the next begins. The user
 
 If the user says "ingest from provenance", "ingest approved research", or similar:
 
-1. Read `knowledge/provenance_log.md` (or target project's `[sdlc-root]/knowledge/provenance_log.md`)
+1. Read `[sdlc-root]/knowledge/provenance_log.md`
 2. Filter for entries with `status: approved-for-ingest`
 3. Present matching entries for the user to select
 4. For each selected entry, read the reference doc at the `source` path to get article URLs
@@ -171,7 +171,7 @@ Each rule should include:
 - **Guideline/Anti-pattern entries** — specifics of what to do or not do
 
 **If the discipline doesn't have YAML conventions yet:**
-Follow the general pattern from `knowledge/architecture/*.yaml` or `knowledge/testing/*.yaml`:
+Follow the general pattern from `[sdlc-root]/knowledge/architecture/*.yaml` or `[sdlc-root]/knowledge/testing/*.yaml`:
 ```yaml
 rule_id: XX
 name: rule-name
@@ -185,19 +185,7 @@ source: source-file-identifier
 spec_relevant: false
 ```
 
-**`spec_relevant` tagging:** All newly created knowledge files must include `spec_relevant: false` as a top-level field. This is the safe default — the project team can override to `true` for stores that inform spec writing (see `knowledge/README.md` § "spec_relevant Field"). When appending rules to existing files, preserve the file's existing `spec_relevant` value — do not change it.
-
-**Migration protection (mandatory):** Wrap all newly added YAML rules in `PROJECT-SECTION` markers so they survive framework migrations (see `[sdlc-root]/process/project-section-markers.md` for the full convention):
-
-```yaml
-# PROJECT-SECTION-START: ingest-YYYY-MM-DD-discipline
-- rule_id: XX
-  name: rule-name
-  ...
-# PROJECT-SECTION-END: ingest-YYYY-MM-DD-discipline
-```
-
-Use the ingestion date and target discipline as the label (e.g., `ingest-2026-04-07-coding`). This tells `sdlc-migrate` that the content is project-specific and must be preserved when upstream knowledge files are direct-copied.
+**`spec_relevant` tagging:** All newly created knowledge files must include `spec_relevant: false` as a top-level field. This is the safe default — the project team can override to `true` for stores that inform spec writing (see `[sdlc-root]/knowledge/README.md` § "spec_relevant Field"). When appending rules to existing files, preserve the file's existing `spec_relevant` value — do not change it.
 
 **Project-specific application notes (optional):**
 If the user provided project context in step 2, add application notes to rules where the generic rule maps to specific product surfaces, components, or patterns. These are informational — they help agents apply generic rules in context.
@@ -215,33 +203,84 @@ Route each output to its correct destination:
 
 **Parking lot entry format:**
 
-Wrap new parking lot entries in `PROJECT-SECTION` markers so they survive framework migrations:
-
 ```
-<!-- PROJECT-SECTION-START: ingest-YYYY-MM-DD-discipline -->
 ### [Category Name] ([date], source: [source description])
 
 *Bulk import from [source characterization]. Rules promoted to knowledge store; parking lot entries below are principles that need validation against [project]'s specific context before full adoption.*
 
 - **[Insight title].** [NEEDS VALIDATION] [Description]. *[Project relevance note if applicable].* (Source: `[source-file-id]`)
-<!-- PROJECT-SECTION-END: ingest-YYYY-MM-DD-discipline -->
 ```
 
 **Knowledge file placement:**
 - Write new YAML files or append to existing ones
 - Update the knowledge store's `README.md` to list new files
 - If new files are created, add them to the README's structure listing and "Knowledge Categories" table
-- If ingested knowledge is likely spec-relevant (domain models, design principles, product methodology), note it in the report (Step 7) so the project team can evaluate whether to set `spec_relevant: true`
+- If ingested knowledge is likely spec-relevant (domain models, design principles, product methodology), note it in the report (Step 8) so the project team can evaluate whether to set `spec_relevant: true`
 
 **Playbook updates:**
 - If a related playbook exists, check whether new rules should be added to its checklist
 - If enough rules cluster around a specific task type to warrant a new playbook, note it in the report but do not auto-create — propose the playbook structure for CD approval
 
-### 6. Provenance
+### 6. Wire to Agents
+
+Connect newly created knowledge files to relevant agents via `agent-context-map.yaml`. This prevents orphaned knowledge that never reaches the agents that need it.
+
+**Step 6.1 — Identify candidate agents:**
+
+Read `[sdlc-root]/knowledge/agent-context-map.yaml` and identify agents whose mappings include:
+- Files from the same discipline (e.g., `[sdlc-root]/knowledge/<discipline>/`)
+- Related disciplines that share concerns (e.g., `frontend-developer` and `ui-ux-designer` both touch design knowledge)
+
+**Step 6.2 — Present wiring options:**
+
+For each new knowledge file created in PLACE, present the candidate agents:
+
+```
+WIRE
+New file: knowledge/design/interaction-animation.yaml
+───────────────────────────────────────────────────────
+Agents currently consuming design/ knowledge:
+  [✓] ui-ux-designer       (5 design files mapped)
+  [✓] frontend-developer   (3 design files mapped)
+  [ ] accessibility-auditor (2 design files mapped)
+
+Add to selected agents? (y/n/select)
+```
+
+Default selection: agents with 3+ files from the same discipline. The user can accept defaults, deselect, or add additional agents.
+
+**Step 6.3 — Update agent-context-map.yaml:**
+
+For each selected agent, append the new knowledge file path to its mapping:
+
+```yaml
+mappings:
+  ui-ux-designer:
+    - "[sdlc-root]/knowledge/design/ux-modeling-methodology.yaml"
+    - "[sdlc-root]/knowledge/design/component-patterns.yaml"
+    - "[sdlc-root]/knowledge/design/interaction-animation.yaml"
+```
+
+No PROJECT-SECTION markers needed — agent-context-map.yaml is a project-specific file, not a framework file that gets overwritten during migrations.
+
+**Step 6.4 — Track wiring for report:**
+
+Record which agents received new mappings:
+- Agent name
+- Files added
+- Pre-existing file count for that discipline
+
+This feeds into the REPORT step.
+
+**Skip conditions:**
+- If no new knowledge files were created (only parking lot entries), skip WIRE entirely
+- If the target discipline has no mapped agents in agent-context-map.yaml, note it in the report as a gap
+
+### 7. Provenance
 
 Record the ingestion in the provenance log:
 
-1. Read `knowledge/provenance_log.md` (or target project's `[sdlc-root]/knowledge/provenance_log.md`) to determine the next `prov-YYYY-MM-DD-NNN` ID
+1. Read `[sdlc-root]/knowledge/provenance_log.md` to determine the next `prov-YYYY-MM-DD-NNN` ID
 2. **If consuming an `approved-for-ingest` entry** (from-provenance mode): update that entry's status to `ingested` and populate the ingestion fields (`files-created`, `files-updated`, `rule-count`, `ingested-by: sdlc-ingest`)
 3. **Otherwise** (normal mode): append a new entry with:
    - `status: ingested`
@@ -254,7 +293,7 @@ Record the ingestion in the provenance log:
    - `ingested-by: sdlc-ingest`
    - `notes`: source characterization from SURVEY
 
-### 7. Report
+### 8. Report
 
 Present a structured summary of what was ingested:
 
@@ -270,6 +309,12 @@ KNOWLEDGE FILES
   Created: [list of new YAML files with rule count]
   Updated: [list of existing files with new rule count]
   Total new rules: [count]
+
+AGENT WIRING
+  Files wired: [count] new knowledge files
+  Agents updated: [list of agent names with files added]
+  Skipped agents: [agents offered but declined] | none
+  Unmapped discipline: [if no agents map to this discipline] | n/a
 
 PARKING LOT
   New entries: [count] ([count] NEEDS VALIDATION)
@@ -296,7 +341,7 @@ SPEC RELEVANCE
   Potentially spec-relevant: [list files that may warrant override to true, with rationale]
 ```
 
-### 8. Changelog Update
+### 9. Changelog Update
 
 Update `[sdlc-root]/process/sdlc_changelog.md` with the ingestion event:
 
@@ -309,10 +354,11 @@ Update `[sdlc-root]/process/sdlc_changelog.md` with the ingestion event:
 
 **Changes made:**
 
-1. **`knowledge/[discipline]/[file].yaml`** — [created/updated] with [count] new rules ([ID range])
-2. **`disciplines/[name].md`** — [count] new parking lot entries added
-3. **`knowledge/[discipline]/README.md`** — updated structure listing
-[4. **`playbooks/[name].md`** — updated checklist with [count] new items (if applicable)]
+1. **`[sdlc-root]/knowledge/[discipline]/[file].yaml`** — [created/updated] with [count] new rules ([ID range])
+2. **`[sdlc-root]/knowledge/agent-context-map.yaml`** — wired [count] files to [list of agents]
+3. **`[sdlc-root]/disciplines/[name].md`** — [count] new parking lot entries added
+4. **`[sdlc-root]/knowledge/[discipline]/README.md`** — updated structure listing
+[5. **`[sdlc-root]/playbooks/[name].md`** — updated checklist with [count] new items (if applicable)]
 
 **Rationale:** External knowledge accelerates discipline maturity beyond organic capture. Source material was [quality assessment] — [brief justification for the import].
 ```
@@ -331,11 +377,13 @@ Update `[sdlc-root]/process/sdlc_changelog.md` with the ingestion event:
 | "This content spans 5 disciplines" | Pick the primary discipline. Secondary captures go to adjacent parking lots. Don't try to populate 5 knowledge stores in one session. |
 | "I'll read all 50 files in detail" | Use shallow mode for large collections. Theme saturation means diminishing returns after ~15-20 files in most domains. |
 | "I'll create new YAML conventions for this discipline" | Follow existing conventions in the target knowledge store. If none exist, follow the patterns from the most mature stores (architecture, testing). |
+| "I'll skip wiring since I created the files" | WIRE is mandatory. Unwired knowledge is orphaned knowledge — agents won't see it. |
+| "I'll wire to all agents" | Wire to agents that already consume the discipline. Adding unrelated files to agents creates noise. |
 
 ## Integration
 
-- **Feeds into:** discipline parking lot triage, knowledge store maturation, playbook creation
-- **Uses:** file reading, existing knowledge stores (for deduplication), discipline files (for parking lot placement)
+- **Feeds into:** discipline parking lot triage, knowledge store maturation, playbook creation, agent knowledge context
+- **Uses:** file reading, existing knowledge stores (for deduplication), discipline files (for parking lot placement), `agent-context-map.yaml` (for wiring)
 - **Complements:** discipline capture protocol (organic, per-session) — this skill handles bulk external import
 - **Does NOT replace:** organic discipline capture. Work-session insights still flow through the capture protocol in skills like sdlc-execute and sdlc-idea. Ingestion accelerates knowledge store population from curated external sources.
-- **Downstream:** after ingestion, `/sdlc-audit` can assess freshness and coverage of the new knowledge entries during its regular compliance audit cycle
+- **Downstream:** after ingestion, `/sdlc-audit` can assess freshness and coverage of the new knowledge entries during its regular compliance audit cycle. Wired knowledge becomes available to agents immediately.

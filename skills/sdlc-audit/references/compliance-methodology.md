@@ -209,6 +209,56 @@ Identify areas where the knowledge layer has structural gaps.
 
 4. **Discipline-to-knowledge store alignment** — disciplines at Level 2+ in the Process Maturity Tracker should have a corresponding knowledge store directory. Flag Level 2+ disciplines without stores. Severity: **Warning**.
 
+### 6k. Orphaned Knowledge Pruning
+
+Identify knowledge files that exist but are not wired to any agent, then assess whether they should be pruned, wired, or kept.
+
+**Step 6k.1 — Identify orphans:**
+
+List all YAML files in `[sdlc-root]/knowledge/*/` directories. For each file, check if it appears in any agent's mapping in `agent-context-map.yaml`. Files with no agent references are orphan candidates.
+
+Exclude from orphan detection:
+- `agent-context-map.yaml` itself
+- `README.md` files
+- `provenance_log.md`
+
+**Step 6k.2 — Assess orphan severity:**
+
+For each orphan, gather signals:
+
+| Signal | Indicates | Severity |
+|--------|-----------|----------|
+| No provenance entry + no git activity in 90 days | Likely stale, safe to prune | High |
+| Has provenance entry but no agent wiring | Created but forgot to wire | Medium |
+| Recently modified (< 30 days) but unwired | Active work, wiring oversight | Medium |
+| Part of a discipline with no agents yet | Discipline maturity gap, not a prune candidate | Info |
+
+**Step 6k.3 — Build prune candidate list:**
+
+For each orphan, record:
+- File path
+- Last modified date (git blame)
+- Provenance status (has entry / no entry)
+- Discipline
+- Severity rating from 6k.2
+- Candidate agents (agents that already consume from the same discipline)
+
+**Output during report (not triage):**
+
+```
+ORPHANED KNOWLEDGE FILES
+  High priority (no provenance, inactive):
+    - knowledge/architecture/legacy-patterns.yaml (last modified: 2025-10-15)
+    
+  Medium priority (unwired but active):
+    - knowledge/design/interaction-animation.yaml (ingested 2026-04-15, never wired)
+    
+  Info (discipline gap):
+    - knowledge/legal/compliance-rules.yaml (no agents map to legal/ yet)
+```
+
+Prune candidates are surfaced in step 11 (triage) alongside promotion candidates. See "Prune Triage" section below.
+
 ## Dimension 7: Migration Integrity
 
 - **7a. Manifest version:** Read `.sdlc-manifest.json`, compare `source_version` against current cc-sdlc. If >10 commits or >30 days behind, recommend migration.
@@ -305,10 +355,59 @@ For each: (P)romote, (D)efer, (S)kip
 Promoted: N | Deferred: N | Skipped: N
 ```
 
+### Prune Triage (Orphaned Knowledge)
+
+After promotion triage, present orphaned knowledge files identified in §6k for pruning decisions.
+
+**11e. Present prune candidates grouped by severity.** Use `AskUserQuestion`:
+
+```
+PRUNE TRIAGE: Orphaned Knowledge Files — N candidates
+
+HIGH PRIORITY (no provenance, inactive >90 days):
+
+1. knowledge/architecture/legacy-patterns.yaml
+   Last modified: 2025-10-15 (182 days ago)
+   Provenance: none
+   Discipline: architecture (5 agents mapped)
+   → (P)rune | (W)ire to agents | (K)eep
+
+MEDIUM PRIORITY (unwired but active):
+
+2. knowledge/design/interaction-animation.yaml
+   Last modified: 2026-04-15 (today)
+   Provenance: prov-2026-04-15-001 (ingest)
+   Discipline: design (3 agents mapped)
+   Candidate agents: ui-ux-designer, frontend-developer, accessibility-auditor
+   → (P)rune | (W)ire to agents | (K)eep
+
+For each: (P)rune, (W)ire, (K)eep
+```
+
+**11f. Apply prune decisions.**
+
+- **Prune:** Delete the knowledge file. Remove any provenance entry that references it. Log the deletion in the audit artifact.
+- **Wire:** Run the wiring flow from sdlc-ingest step 6 — present candidate agents, let CD select, update `agent-context-map.yaml`.
+- **Keep:** Leave unchanged. Optionally add a note in provenance log explaining why the file is intentionally unwired (e.g., "reference only, not for agent consumption").
+
+**11g. Report prune results.** Append to the audit artifact:
+
+```markdown
+### Prune Results
+| # | File | Decision | Action Taken |
+|---|------|----------|--------------|
+| 1 | knowledge/architecture/legacy-patterns.yaml | Pruned | Deleted |
+| 2 | knowledge/design/interaction-animation.yaml | Wired | Added to ui-ux-designer, frontend-developer |
+| 3 | knowledge/legal/compliance-rules.yaml | Kept | No agents map to legal/ yet |
+
+Pruned: N | Wired: N | Kept: N
+```
+
 ### When to Skip Triage
 
-- **No candidates:** If steps 6 and 8 found no promotion candidates, skip step 11 entirely. Do not force a triage session.
+- **No candidates:** If steps 6 and 8 found no promotion candidates AND §6k found no prune candidates, skip step 11 entirely. Do not force a triage session.
 - **User declines:** If CD says "skip triage" or "not now," respect that. Note "Triage deferred by CD" in the audit artifact.
+- **Prune-only:** If there are prune candidates but no promotion candidates, still run the prune triage portion of step 11.
 
 ## Report Format
 
@@ -366,6 +465,9 @@ Promoted: N | Deferred: N | Skipped: N
 #### Coverage Gaps (6j)
 [promotable entries without stores, unreferenced knowledge files, empty agent mappings]
 
+#### Orphaned Knowledge (6k)
+[files not wired to any agent — high/medium/info priority, prune candidates for triage]
+
 ### Migration Integrity
 - Manifest version: [hash] ([age] behind)
 - Framework completeness: N/N files
@@ -388,6 +490,13 @@ Promoted: N | Deferred: N | Skipped: N
 [triage outcomes — omit section if no candidates or triage skipped]
 
 Promoted: N | Deferred: N | Skipped: N
+
+### Prune Results
+| # | File | Decision | Action Taken |
+|---|------|----------|--------------|
+[prune outcomes — omit section if no orphans or prune triage skipped]
+
+Pruned: N | Wired: N | Kept: N
 
 ### Recommendations
 [prioritized action items]
