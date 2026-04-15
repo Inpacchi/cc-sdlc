@@ -228,7 +228,19 @@ The primary domain agent writes the core spec. Other relevant agents contribute 
 
 **Research integration:** If the spec requires research into external services, APIs, competitors, or technologies — use WebSearch for web research grounded in project context (CLAUDE.md). Incorporate findings into the spec's Design section.
 
-**Library verification:** When the spec involves external libraries or frameworks, verify API capabilities and constraints via Context7 (`mcp__context7__resolve-library-id` → `mcp__context7__query-docs`) before finalizing requirements. Check the project's actual dependency versions (package.json, lock files) — version-specific behavior matters. Pass verified API details to the spec-writing agent so requirements are grounded in real library capabilities, not training-data assumptions.
+**Library verification (MANDATORY when external libraries are involved):** When the spec involves external libraries or frameworks, you MUST verify API capabilities via Context7 BEFORE dispatching the spec-writing agent. This closes knowledge gaps that cause agents to assume wrong APIs.
+
+1. **Resolve library ID:** `mcp__context7__resolve-library-id` for each external library being integrated
+2. **Query docs:** `mcp__context7__query-docs` with specific queries:
+   - "hooks" / "React hooks" — if React library
+   - "API" / "methods" / "functions" — for core APIs
+   - "props" / "configuration" / "options" — for component props
+   - Usage patterns for the specific integration scenario
+3. **Check installed version:** Read `package.json` / lock files — version-specific behavior matters
+4. **Extract concrete details:** Hook names, function signatures, required props, initialization patterns
+5. **Pass to writing agent:** Include verified API details in the dispatch prompt so the spec is grounded in real library capabilities, not training-data assumptions
+
+**Why this is mandatory:** Agents have made critical assumptions about library APIs (e.g., assuming hooks like `useSetSettings` exist when they don't). Context7 lookups take seconds and prevent multi-hour debugging sessions caused by wrong API assumptions.
 
 **Spec-time knowledge filtering (opt-in):** When dispatching agents for spec writing, filter their knowledge context to spec-relevant files only — if the project has configured spec-relevance tagging. For each agent being dispatched:
 1. Look up the agent's mapped files in `[sdlc-root]/knowledge/agent-context-map.yaml`
@@ -499,6 +511,7 @@ Not every invocation needs a deliverable ID. For ad hoc work (bug fixes, small t
 | "I'll just add the structural elements myself — the agent wrote the content" | There is no structural/content distinction. Missing sections (phase dependencies, file list, agents, domain agent reviews) go back to the writing agent. Re-dispatch. |
 | "The plan is done, let me just quickly fix this other thing" | Manager Rule applies for the full session. Dispatch the domain agent. |
 | "While we're here, I'll also update the server code" | Domain crossing. Dispatch the relevant domain agent for that scope. |
+| "I know how this library works" | Never assume library APIs. Context7 lookup is mandatory for external libs — agents have made critical mistakes assuming hooks/methods exist when they don't. |
 
 ### Session Handoff
 

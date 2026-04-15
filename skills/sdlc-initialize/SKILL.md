@@ -367,6 +367,15 @@ CC writes CLAUDE.md directly (agents don't exist yet). Use the spec as the sourc
 6. **Verification policy** — zero-assumption rule, Context7 for external libs, read code before asserting
 7. **Agent dispatch conventions** — agent-first, never self-implement, manager rule
 
+**Optional sections (detect and include if applicable):**
+
+8. **Data Pipeline Integrity** — include if the project has data pipelines, seed scripts, scrapers, ETL, or allowlists. Detection signals:
+   - Directories: `seeds/`, `scrapers/`, `etl/`, `pipelines/`, `data/`
+   - Files: `*seed*.{ts,js,py}`, `*scrape*.{ts,js,py}`, `*allowlist*`, `*blocklist*`
+   - Spec mentions: "seed", "scrape", "ETL", "pipeline", "ingest", "allowlist"
+   
+   If detected, read `templates/optional/data-pipeline-integrity.md` and append to CLAUDE.md. If uncertain, ask CD.
+
 **Gate:** Present the drafted CLAUDE.md to CD. Use `AskUserQuestion`: "CLAUDE.md is ready for review. Any changes before I save it?"
 
 ### Phase 3: Register D1 in the Catalog

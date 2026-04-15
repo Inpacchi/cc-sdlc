@@ -751,6 +751,14 @@ The project's `CLAUDE.md` contains CLAUDE-SDLC.md content — skill names, proce
 
 4. **New sections in CLAUDE-SDLC.md** — compare the project's CLAUDE.md SDLC sections against the current `CLAUDE-SDLC.md` source. If new sections were added (e.g., new workflow rules, new verification policies), they should be merged into the project's CLAUDE.md
 
+5. **Optional sections** — some SDLC sections are conditionally included based on project characteristics. Check if the project should have optional sections it doesn't currently have:
+
+   | Optional Section | Detection Signals | Template |
+   |-----------------|-------------------|----------|
+   | Data Pipeline Integrity | `seeds/`, `scrapers/`, `etl/`, `pipelines/` dirs; `*seed*.{ts,js,py}`, `*scrape*.{ts,js,py}` files; allowlist/blocklist files | `templates/optional/data-pipeline-integrity.md` |
+   
+   If signals are detected but the section is missing from the project's CLAUDE.md, ask CD whether to add it.
+
 **Gate rule:** If the project's CLAUDE.md references a renamed skill or removed path, fix it. Stale CLAUDE.md content causes silent process failures — Claude Code follows the instructions but they point nowhere.
 
 ### 4.4 Post-Migration Compliance Audit

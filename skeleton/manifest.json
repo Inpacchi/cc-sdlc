@@ -56,6 +56,7 @@
     "process": [
       "process/README.md",
       "process/overview.md",
+      "process/commands.md",
       "process/deliverable_lifecycle.md",
       "process/collaboration_model.md",
       "process/compliance_audit.md",
@@ -83,6 +84,9 @@
       "templates/sdlc_lite_plan_template.md",
       "templates/sdlc_lite_result_template.md",
       "templates/postmortem_template.md"
+    ],
+    "templates_optional": [
+      "templates/optional/data-pipeline-integrity.md"
     ],
     "examples": [
       "examples/spec_example.md",

@@ -94,7 +94,19 @@ This ID will be used in the plan filename (`dNN_{slug}_plan.md`).
 
 Dispatch prompts must pass through all relevant context — outcomes, constraints, and any implementation guidance that would help the agent succeed. Never narrate readiness ("Ready to dispatch") and wait for user confirmation. Dispatch immediately when context is ready.
 
-**Library verification:** When the plan involves external libraries or frameworks, verify API capabilities and constraints via Context7 (`mcp__context7__resolve-library-id` → `mcp__context7__query-docs`) before dispatching the plan-writing agent. Check the project's actual dependency versions (package.json, lock files). Pass verified API details to the writing agent so the plan's scope and acceptance criteria are grounded in real library capabilities, not training-data assumptions.
+**Library verification (MANDATORY when external libraries are involved):** When the plan involves external libraries or frameworks, you MUST verify API capabilities via Context7 BEFORE dispatching the plan-writing agent. This closes knowledge gaps that cause agents to assume wrong APIs.
+
+1. **Resolve library ID:** `mcp__context7__resolve-library-id` for each external library being integrated
+2. **Query docs:** `mcp__context7__query-docs` with specific queries:
+   - "hooks" / "React hooks" — if React library
+   - "API" / "methods" / "functions" — for core APIs
+   - "props" / "configuration" / "options" — for component props
+   - Usage patterns for the specific integration scenario
+3. **Check installed version:** Read `package.json` / lock files — version-specific behavior matters
+4. **Extract concrete details:** Hook names, function signatures, required props, initialization patterns
+5. **Pass to writing agent:** Include verified API details in the dispatch prompt so the plan is grounded in real library capabilities, not training-data assumptions
+
+**Why this is mandatory:** Agents have made critical assumptions about library APIs (e.g., assuming hooks like `useSetSettings` exist when they don't). Context7 lookups take seconds and prevent multi-hour debugging sessions caused by wrong API assumptions.
 
 ### 1. Identify Relevant Worker Domain Agents
 
@@ -286,6 +298,7 @@ The Manager Rule remains in effect per `[sdlc-root]/process/manager-rule.md` —
 | "Only one domain is involved" | Most tasks touch 2+ domains. Check again. |
 | "I'll write the plan mode content from memory" | Follow step 5 exactly: Read the file with the Read tool, then paste the full Read output into EnterPlanMode. Working from memory produces summaries. |
 | "The plan is done, let me just quickly fix this other thing" | Manager Rule applies for the full session. Dispatch the domain agent. |
+| "I know how this library works" | Never assume library APIs. Context7 lookup is mandatory for external libs — agents have made critical mistakes assuming hooks/methods exist when they don't. |
 
 ## Integration
 

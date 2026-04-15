@@ -68,6 +68,18 @@ Periodically move completed work to `docs/chronicle/`, organized by concept (dom
 
 ---
 
+## File Naming
+
+| Type | Pattern | Example |
+|------|---------|---------|
+| Spec | `dNN_name_spec.md` | `d1_auth_spec.md` |
+| Plan | `dNN_name_plan.md` | `d1_auth_plan.md` |
+| Result | `dNN_name_result.md` | `d1_auth_result.md` |
+| Complete | `dNN_name_COMPLETE.md` | `d1_auth_COMPLETE.md` |
+| Blocked | `dNN_name_BLOCKED.md` | `d1_auth_BLOCKED.md` |
+
+---
+
 ## Roles
 
 ### CD (Claude Director / Human)

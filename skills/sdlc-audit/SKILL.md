@@ -82,7 +82,31 @@ When fed a session or commits (not just current state):
 
 ### 2. Report
 
-Produce audit artifact at `docs/current_work/audits/sdlc_audit_YYYY-MM-DD.md` using the report format in `references/compliance-methodology.md`. Present findings to user in the standardized format from CLAUDE-SDLC.md (score/10, verdict, findings table).
+Produce audit artifact at `docs/current_work/audits/sdlc_audit_YYYY-MM-DD.md` using the report format in `references/compliance-methodology.md`. Present findings to user in this standardized format:
+
+```
+[Audit Type]: [Score]/10 — [Verdict]
+
+[Verdict Label]: [Pass/Fail/Partial]
+
+[1-2 sentence summary of what was checked and the outcome]
+
+Action Items
+
+| # | Severity | Finding | Action |
+|---|----------|---------|--------|
+| 1 | CRITICAL/WARNING/INFO | [concise finding] | [what to do] |
+| 2 | ... | ... | ... |
+```
+
+**Format rules:**
+- One-line header with score and verdict
+- Brief summary paragraph — no more than 2 sentences
+- All findings in a single table with Severity, Finding, and Action columns
+- Severity levels: CRITICAL, WARNING, INFO, Cosmetic
+- Action column says what to do (not just "see report") — e.g., "Fixed during audit", "Remove old directory", "Historical only, no risk"
+- No narrative between findings — the table IS the report
+- Offer to fix actionable items at the end
 
 ### 3. Triage
 

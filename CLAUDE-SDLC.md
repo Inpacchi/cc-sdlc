@@ -32,16 +32,6 @@ CC produces SDLC artifacts across two skills:
 - **Active work:** `docs/current_work/`
 - **Archived work:** `docs/chronicle/`
 
-### File Naming
-
-| Type | Pattern | Example |
-|------|---------|---------|
-| Spec | `dNN_name_spec.md` | `d1_auth_spec.md` |
-| Plan | `dNN_name_plan.md` | `d1_auth_plan.md` |
-| Result | `dNN_name_result.md` | `d1_auth_result.md` |
-| Complete | `dNN_name_COMPLETE.md` | `d1_auth_COMPLETE.md` |
-| Blocked | `dNN_name_BLOCKED.md` | `d1_auth_BLOCKED.md` |
-
 ### Three Tiers of Work
 
 | Tier | When | What Happens |
@@ -111,76 +101,12 @@ If you're in direct dispatch and ANY of these become true, stop and ask CD about
 
 **When starting any session:** Check `docs/current_work/` for in-progress deliverables before accepting new work.
 
-### The Failure Pattern (What Not To Do)
-
-This is the exact sequence that bypasses process incorrectly:
-
-1. User mentions improvements to a page or feature
-2. Claude Code explores the codebase and reads relevant files
-3. Claude Code identifies 4-6 files that need to change, new components needed, store interactions required
-4. **Claude Code begins writing code itself instead of dispatching agents**
-5. User has to interrupt: "should we make a plan?" or "use the agents"
-
-Step 4 is wrong. After step 3, the correct action is to surface the scope assessment and ask which tier to use — or if the user is already steering, state scope and start dispatching agents.
-
 ### Process Changelog
 When you make changes to SDLC process files (skills, agents, process docs, CLAUDE-SDLC.md, disciplines, knowledge), update the process changelog (`[sdlc-root]/process/sdlc_changelog.md`) **immediately after the change, in the same step**. Do not defer changelog updates to a later step, a separate commit, or a future session. Every process decision change — new rules, classification changes, workflow adjustments, guard additions — must have a changelog entry written before moving on to other work. The changelog captures *why* process changes were made — context that git log alone doesn't preserve. Don't backdate entries for changes made in prior sessions.
 
-### SDLC Auditing
-Run `/sdlc-audit` periodically (~every 2-4 weeks or at each version bump) for compliance checks, or `/sdlc-audit improve <session>` to extract process improvements from completed sessions. See `[sdlc-root]/process/compliance_audit.md`.
-
-**Presenting audit results:** Present results to CD in this standardized format:
-
-```
-[Audit Type]: [Score]/10 — [Verdict]
-
-[Verdict Label]: [Pass/Fail/Partial]
-
-[1-2 sentence summary of what was checked and the outcome]
-
-Action Items
-
-| # | Severity | Finding | Action |
-|---|----------|---------|--------|
-| 1 | CRITICAL/WARNING/INFO | [concise finding] | [what to do] |
-| 2 | ... | ... | ... |
-```
-
-Rules:
-- One-line header with score and verdict
-- Brief summary paragraph — no more than 2 sentences
-- All findings in a single table with Severity, Finding, and Action columns
-- Severity levels: CRITICAL, WARNING, INFO, Cosmetic
-- Action column says what to do (not just "see report") — e.g., "Fixed during audit", "Remove old directory", "Historical only, no risk"
-- No narrative between findings — the table IS the report
-- Offer to fix actionable items at the end
-
-### SDLC Commands
-
-| Command | Action |
-|---------|--------|
-| "Initialize SDLC in this project" | Invokes `sdlc-initialize` — detects greenfield vs retrofit, walks through full framework setup |
-| "Let's catalog our ad hoc work" | Invokes the `sdlc-reconcile` skill — reconciles untracked ad hoc commits back into the deliverable catalog |
-| "Let's organize the chronicles" | Archive completed deliverables from `current_work/` to `chronicle/`. See `[sdlc-root]/process/chronicle_organization.md` |
-| `/sdlc-audit` | Compliance audit — deliverable integrity, knowledge layer health, migration correctness. Invokes `sdlc-audit` skill |
-| `/sdlc-audit improve` | Improvement audit — analyze current session or past session/commits for process gaps. Invokes `sdlc-audit` skill |
-| "Let's update the SDLC" | Propose process improvement. See `[sdlc-root]/process/sdlc_changelog.md` |
-| "Migrate my SDLC framework" | Apply cc-sdlc upstream updates while preserving project customizations. Invokes `sdlc-migrate` skill |
-| "Ingest these transcripts/articles" | Bulk-import external knowledge into disciplines and knowledge stores. Invokes `sdlc-ingest` skill |
-| "Make a playbook from that session" | Analyze a previous session's conversation and git commits to generate a structured playbook. Invokes `sdlc-playbook-generate` skill |
-| `/sdlc-develop-skill` | Create or modify SDLC skills with convention enforcement, migration-aware wrapping, and quality gate. Invokes `sdlc-develop-skill` skill |
-| `/sdlc-create-agent` | Create a new domain agent with frontmatter validation and knowledge wiring. Invokes `sdlc-create-agent` skill |
-| `/sdlc-review` | Review a skill/agent for convention compliance, or analyze external sources for improvements. Invokes `sdlc-review` skill |
-| `/sdlc-enrich-agent` | Extract patterns from external sources and integrate them into an existing agent definition. Invokes `sdlc-enrich-agent` skill |
-| `/sdlc-review-diff` | Review staged or unstaged diff for quality, correctness, and convention compliance. Invokes `sdlc-review-diff` skill |
-| `/sdlc-review-fix` | Review-fix loop — review code, present findings, fix approved items. Invokes `sdlc-review-fix` skill |
-| `/sdlc-review-commit` | Review a specific commit or commit range for quality and convention compliance. Invokes `sdlc-review-commit` skill |
-| `/sdlc-team-review-fix` | Unified team review + fix lifecycle — reviews any target (commit, diff, files, directory), debates findings with architect mediator, fixes with persistent teammates. Eliminates fresh agent spawning between phases. Requires `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1`. Invokes `sdlc-team-review-fix` skill |
-| `/sdlc-design-consult` | Consult domain design agents on UX, visual design, or interaction patterns. Invokes `sdlc-design-consult` skill |
-| `/sdlc-research-external` | Research external knowledge sources (blogs, talks, papers) and curate tiered reference docs. Invokes `sdlc-research-external` skill |
-
 ### Key References
 - `[sdlc-root]/process/overview.md` — Full workflow
+- `[sdlc-root]/process/commands.md` — All SDLC commands and skills
 - `[sdlc-root]/templates/` — Document templates (spec, plan, result, concept index)
 - `docs/_index.md` — Deliverable catalog
 
@@ -231,18 +157,6 @@ When dispatching domain agents for phases that involve external library integrat
 **Why:** Conversational questions create pause points where the user has to type free-text responses like "do it", "yes", "continue", "go" to unblock execution. `AskUserQuestion` presents structured options, reduces friction, and makes the decision point explicit.
 
 **Exception:** Status updates, findings tables, and informational output are not questions — those are plain text.
-
----
-
-## Data Pipeline Integrity
-
-**Data pipelines must never contain hallucinated or assumed values.** Every value in a seed script, scraper constant, allowlist, or configuration must be traceable to an official source — a rules document, an API response, an existing codebase constant, or a user decision.
-
-**Required behavior:**
-1. **Read from the defined source.** If the plan names an external source (GitHub repo, API, rules document), fetch from it. Do not infer, guess, or generate plausible-sounding values.
-2. **Cross-reference codebase constants.** When the codebase already has values (e.g., adapter config, color maps), read those files and use the exact values — do not retype from memory.
-3. **When a value cannot be sourced, use `AskUserQuestion`.** If no official source exists for a data point and it cannot be derived from the codebase, stop and ask the user. Do not fill the gap with a plausible guess.
-4. **Coupled artifacts must read from each other.** When two files must agree (e.g., a consumer's allowlist must match a producer's canonical data), the later file must read the earlier file as its canonical reference — not independently derive the same values.
 
 ---
 
@@ -311,50 +225,3 @@ Every commit must include **all** artifacts produced during the work — not jus
 
 **Never split SDLC documentation into a separate follow-up commit.** The documentation is part of the work, not a chore after the work. If `git status` shows unstaged SDLC files after staging application code, something was missed.
 
----
-
-## Recommended Claude Code Settings
-
-Add these to your project's `.claude/settings.json` (create if it doesn't exist):
-
-```json
-{
-  "permissions": {
-    "allow": [
-      "Bash(git status)",
-      "Bash(git diff*)",
-      "Bash(git log*)",
-      "Bash(git add*)",
-      "Bash(git commit*)",
-      "mcp__context7__resolve-library-id",
-      "mcp__context7__query-docs",
-      "LSP"
-    ]
-  }
-}
-```
-
-**What these do:**
-- Pre-approve common git read operations so Claude Code can check status and history without prompting
-- Pre-approve git staging and commit so the commit skill runs without interruption
-- Pre-approve Context7 documentation lookups so verification happens without prompting (required by the Verification Policy)
-- Pre-approve LSP operations so code intelligence happens without prompting (highly recommended — see `[sdlc-root]/plugins/lsp-setup.md`)
-
-**Optional additions** (tailor to your project's build tooling):
-
-```json
-{
-  "permissions": {
-    "allow": [
-      "Bash(npm install)",
-      "Bash(npm run build*)",
-      "Bash(npm test*)",
-      "Bash(npx playwright test*)"
-    ]
-  }
-}
-```
-
-Adjust the build commands to match your package manager (`npm`, `pnpm`, `yarn`, `make`, etc.).
-
-See [Claude Code settings documentation](https://docs.anthropic.com/en/docs/claude-code/settings) for the full settings reference.

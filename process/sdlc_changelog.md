@@ -31,6 +31,39 @@ Each entry contains:
 
 **Rationale:** [Why this improves the process — the insight that led to the change]
 ```
+---
+
+## 2026-04-15: Move SDLC Commands Table to Separate Reference Doc
+
+**Origin:** Post-v1.0.0 audit — reviewed CLAUDE-SDLC.md content and recognized that slash commands are auto-discoverable via Claude Code's skill system.
+
+**What happened:** The SDLC Commands table in CLAUDE-SDLC.md was redundant for Claude (skills are loaded via system-reminder) and consumed context space. The table is useful for human reference but doesn't need to be in the CLAUDE.md drop-in.
+
+**Changes made:**
+
+1. **`process/commands.md`** — New file containing the full commands reference, organized by category (Workflow, Status & Navigation, Auditing, Knowledge & Content, Skill & Agent Development, Code Review, Design, Testing). Added all 5 previously missing commands (sdlc-status, sdlc-resume, sdlc-design-brand-asset, sdlc-tests-create, sdlc-tests-run).
+
+2. **`CLAUDE-SDLC.md`** — Removed multiple non-essential sections:
+   - SDLC Commands table (~28 lines) — moved to `process/commands.md`
+   - Recommended Claude Code Settings (~47 lines) — belongs in setup docs
+   - File Naming table (~10 lines) — moved to `process/overview.md`
+   - Audit result format (~25 lines) — moved to `sdlc-audit` skill
+   - "The Failure Pattern" example (~12 lines) — redundant, rules already stated
+   - Data Pipeline Integrity — removed entirely, now an optional section
+
+3. **`templates/optional/data-pipeline-integrity.md`** — New optional template for projects with data pipelines.
+
+4. **`skills/sdlc-initialize/SKILL.md`** — Phase 2 now detects data pipeline signals (seeds/, scrapers/, etl/ dirs; seed/scrape files) and conditionally includes the Data Pipeline Integrity section.
+
+5. **`skills/sdlc-migrate/SKILL.md`** — Section 4.3a check 5 now detects optional sections that should be added to projects that gained data pipelines since initialization.
+
+6. **`process/overview.md`** — Added File Naming table (relocated from CLAUDE-SDLC.md).
+
+7. **`skills/sdlc-audit/SKILL.md`** — Added audit result format template inline (relocated from CLAUDE-SDLC.md).
+
+8. **`skeleton/manifest.json`** — Added `process/commands.md` to process files, added `templates_optional` array with `data-pipeline-integrity.md`.
+
+**Rationale:** CLAUDE-SDLC.md should contain behavioral instructions, not reference material. Reference tables (commands, file naming, audit format) belong in the docs/skills that use them. Skills are auto-discoverable, so the commands table adds no value to Claude. Net reduction: ~120 lines from CLAUDE-SDLC.md.
 
 ---
 
