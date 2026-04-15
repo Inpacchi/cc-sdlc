@@ -103,7 +103,7 @@ Determine the file type from its location and content:
 
 When reviewing skills or agents that contain `PROJECT-SECTION-START` / `PROJECT-SECTION-END` markers:
 
-1. **Do not flag project-custom sections as convention violations.** Content inside markers is project-specific and may intentionally deviate from framework conventions (e.g., project-specific dispatcher table entries, ingested knowledge rules, discipline captures).
+1. **Do not flag project-custom sections as convention violations.** Content inside markers is project-specific and may intentionally deviate from framework conventions (e.g., project-specific dispatcher table entries in skills, custom skill phases, audit-applied fixes to process docs).
 2. **Verify markers are well-formed if present:**
    - Every `START` has a matching `END` with the same label
    - Labels are descriptive (not generic like "custom" or "changes")

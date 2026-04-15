@@ -469,7 +469,7 @@ For each created agent, confirm:
 2. A row exists in the `sdlc-plan` agent table
 3. An infra trigger row exists in `sdlc-plan` / `sdlc-lite-plan` (if the agent owns an infrastructure domain)
 
-If any agent is missing from a table it belongs in, add the entry now. All entries must be wrapped in `PROJECT-SECTION` markers per `ops/sdlc/process/project-section-markers.md`.
+If any agent is missing from a table it belongs in, add the entry now. These dispatcher table entries must be wrapped in `PROJECT-SECTION` markers per `ops/sdlc/process/project-section-markers.md` (they live in framework files that get overwritten on migration).
 
 ### Phase 5: Wire the Agent-Context Map
 
@@ -480,6 +480,8 @@ If any agent is missing from a table it belongs in, add the entry now. All entri
    - Remove mappings for roles that have no corresponding agent
    - Add mappings for project-specific agents not in the generic list
 4. Save the updated map
+
+No PROJECT-SECTION markers needed — `agent-context-map.yaml` is a project-specific file that is preserved entirely during migration.
 
 This is mechanical — the orchestrator does this directly. The agent filenames must match exactly for self-discovery to work.
 

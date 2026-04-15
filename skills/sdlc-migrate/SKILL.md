@@ -228,7 +228,7 @@ Group the changed cc-sdlc files by migration strategy:
 
 ## PROJECT-SECTION Marker Convention
 
-Read and follow `[sdlc-root]/process/project-section-markers.md` — the canonical definition of the marker convention. It defines the syntax (Markdown and YAML), label format, rules, and validation. All producing skills (`sdlc-ingest`, `sdlc-execute`, `sdlc-lite-execute`, `sdlc-create-agent`, `sdlc-develop-skill`, `sdlc-audit` improvement mode) reference that document.
+Read and follow `[sdlc-root]/process/project-section-markers.md` — the canonical definition of the marker convention. It defines the syntax (Markdown and YAML), label format, rules, and validation. Producing skills that add markers to process/skill files (`sdlc-create-agent`, `sdlc-develop-skill`, `sdlc-audit` improvement mode) reference that document. Note: markers are only for process docs and skill files — knowledge files, discipline files, and agent-context-map are project-specific and don't need markers.
 
 This migration skill is responsible for **consuming** markers: extracting, preserving, and re-injecting marked blocks during framework updates. Existing project content that lacks markers is detected by the deviation detection step (§2.1c).
 
@@ -500,7 +500,7 @@ Discipline files have:
 3. Preserve active questions
 4. Preserve project context sections (added by `sdlc-initialize` Phase 7)
 5. Add any new seeded insights from cc-sdlc that the project doesn't have — but do NOT overwrite triage markers on existing entries (the project may have triaged differently than the source repo)
-6. **Apply §2.1d content review to `PROJECT-SECTION` blocks.** Discipline files may contain marked blocks from `sdlc-ingest`, `sdlc-execute`, or `sdlc-lite-execute` discipline captures. Review each block against upstream changes before re-injection — discipline captures can become stale if upstream updated the relevant knowledge domain.
+6. **Preserve project parking lot entries.** Discipline parking lot entries are project-specific — they don't have PROJECT-SECTION markers because discipline files are not overwritten during migration. Simply preserve all entries with their triage markers.
 7. **Preserve the Process Maturity Tracker table as-is.** The tracker is delimited by `<!-- PROJECT-TRACKER-START -->` and `<!-- PROJECT-TRACKER-END -->` markers. Everything between these markers (including the table and last-updated note) reflects the project's assessed levels — never overwrite it. Update the framework sections *outside* the markers (level definitions, assessment procedure) to match cc-sdlc. If the downstream file lacks these markers, treat the entire `### Process Maturity Tracker` section through the next heading as project data and preserve it.
 
 ### 2.4 Content-Merge: Audit Skill
@@ -523,7 +523,7 @@ The `sdlc-audit` skill has framework audit methodology in `SKILL.md` and `refere
 
 **Quick checks (< 2 minutes):**
 
-1. **Tracker integrity** — read `disciplines/process-improvement.md` and verify:
+1. **Tracker integrity** — read `[sdlc-root]/disciplines/process-improvement.md` and verify:
    - `<!-- PROJECT-TRACKER-START -->` / `<!-- PROJECT-TRACKER-END -->` markers are present
    - The table between markers contains the project's levels (not the cc-sdlc source repo's levels)
    - Level definitions outside the markers were updated to match cc-sdlc
@@ -898,7 +898,7 @@ echo "$MANIFEST" > .sdlc-manifest.json
 | "I'll auto-fix all the downstream impact findings" | Present findings to the user. They choose what to apply — some findings may not suit the project's context. |
 | "This project uses file paths for knowledge access, same as cc-sdlc" | Check for Neuroloom integration first. Projects with `memory_search`/`memory_store` calls use MCP tools, not file paths. Preserve the integration pattern during content-merge — don't overwrite MCP calls with file references. |
 | "The SDLC is in `ops/sdlc/`" | Not always. Some projects use `.claude/sdlc/`. Detect the actual structure in pre-flight and use `[sdlc-root]` throughout. |
-| "PROJECT-SECTION markers mean this content is protected, just re-inject it" | Markers preserve content from being overwritten, but they don't prevent staleness. Review marked content against upstream changes (§2.1d) — a 6-month-old discipline capture may reference outdated patterns. |
+| "PROJECT-SECTION markers mean this content is protected, just re-inject it" | Markers preserve content from being overwritten, but they don't prevent staleness. Review marked content against upstream changes (§2.1d) — a 6-month-old custom skill phase may reference outdated patterns. |
 | "I'll skip the marker review for old blocks" | Old blocks are the most likely to be stale. The skip threshold is for recent blocks (< 7 days) that can't have drifted yet. |
 | "The user chose 'keep' last time, so keep all markers this time" | Each migration is a fresh review. Upstream may have changed differently this time. Don't cache decisions across migrations. |
 

@@ -1,19 +1,26 @@
 # PROJECT-SECTION Markers
 
-A convention for protecting project-specific content in framework files across migrations. Every skill that writes project-specific content into framework-owned files references this document.
+A convention for protecting project-specific content in **process and skill files** across migrations. Only applies to framework files that get overwritten during `sdlc-migrate`.
 
 ---
 
-## The Problem
+## When Markers Are Needed
 
-Multiple skills write project-specific content into framework files:
-- `sdlc-ingest` adds knowledge rules and parking lot entries
-- `sdlc-execute` / `sdlc-lite-execute` add discipline capture entries
-- `sdlc-create-agent` adds dispatcher table rows
-- `sdlc-develop-skill` (modify mode) adds project-specific phases or sections
-- `sdlc-audit` (improvement mode) applies project-specific fixes
+Markers are required when adding project-specific content to **process docs** or **skill files** — these are framework files that `sdlc-migrate` overwrites from upstream.
 
-When `sdlc-migrate` updates framework files from upstream, this project-specific content is destroyed unless explicitly marked for preservation.
+| File Type | Needs Markers | Reason |
+|-----------|---------------|--------|
+| Process docs (`[sdlc-root]/process/*.md`) | Yes | Overwritten during migration |
+| Skill files (`.claude/skills/*/SKILL.md`) | Yes | Overwritten during migration |
+| Knowledge YAML (`[sdlc-root]/knowledge/**/*.yaml`) | No | Project-specific, not overwritten |
+| Discipline parking lots (`[sdlc-root]/disciplines/*.md`) | No | Project-specific, not overwritten |
+| Agent-context-map (`[sdlc-root]/knowledge/agent-context-map.yaml`) | No | Project-specific, not overwritten |
+
+## Skills That Produce Marked Content
+
+- `sdlc-develop-skill` (modify mode) — adds project-specific phases to framework skills
+- `sdlc-audit` (improvement mode) — applies project-specific fixes to process docs
+- `sdlc-migrate` — wraps detected customizations during migration (deviation detection)
 
 ---
 
@@ -47,9 +54,6 @@ Labels must be descriptive and unique within the file. Use this pattern:
 
 | Origin | When | Example Label |
 |--------|------|---------------|
-| `ingest` | `sdlc-ingest` adds knowledge rules or parking lot entries | `ingest-2026-04-07-coding` |
-| `dNN-phaseN` | `sdlc-execute` / `sdlc-lite-execute` discipline capture | `d15-phase2-discipline-capture` |
-| `agent-wiring` | `sdlc-create-agent` adds dispatcher table entries | `agent-wiring-ba-agent` |
 | `modify` | `sdlc-develop-skill` modifies a framework skill | `modify-2026-04-07-custom-gate` |
 | `audit-improve` | `sdlc-audit` improvement mode applies a project-specific fix | `audit-improve-2026-04-07-env-check` |
 | `deviation` | `sdlc-migrate` wraps detected customizations during migration | `deviation-2026-04-07-build-commands` |

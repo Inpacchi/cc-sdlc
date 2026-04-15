@@ -199,10 +199,10 @@ When the user approves proposals:
 5. **Playbooks:** For updates to existing playbooks, edit directly and update `last_validated`. For new playbook proposals, note for `sdlc-playbook-generate` — don't auto-create.
 6. **Context map:** Add agent-to-knowledge mappings. Verify the mapped files exist.
 
-**Migration protection (mandatory):** When applying fixes to framework files, determine whether the fix is project-specific or a framework correction (see `[sdlc-root]/process/project-section-markers.md` for the full convention):
+**Migration protection:** When applying fixes to framework files (process docs and skills), determine whether the fix is project-specific or a framework correction (see `[sdlc-root]/process/project-section-markers.md` for the full convention):
 
 - **Framework correction** (e.g., fixing a typo in a framework-defined phase, correcting a gate condition) — apply directly, no markers needed. These should flow back upstream.
-- **Project-specific fix** (e.g., adding a project-specific phase to a skill, adding project-specific knowledge rules, adding agent wiring for a project-specific agent) — wrap in `PROJECT-SECTION` markers:
+- **Project-specific fix to process/skill files** (e.g., adding a project-specific phase to a skill) — wrap in `PROJECT-SECTION` markers:
 
 ```html
 <!-- PROJECT-SECTION-START: audit-improve-YYYY-MM-DD-description -->
@@ -210,6 +210,6 @@ When the user approves proposals:
 <!-- PROJECT-SECTION-END: audit-improve-YYYY-MM-DD-description -->
 ```
 
-This tells `sdlc-migrate` that the content is project-specific and must be preserved when upstream files are updated.
+**No markers needed for project-specific files:** Knowledge YAML files, discipline parking lot entries, and agent-context-map.yaml are project-owned — they're not overwritten during framework migrations, so no markers are required.
 
 **Always update `[sdlc-root]/process/sdlc_changelog.md`** for every process change. This is a hard rule — changelog entries are written in the same step as the change, not deferred.

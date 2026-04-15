@@ -34,6 +34,80 @@ Each entry contains:
 
 ---
 
+## 2026-04-15: Clarify PROJECT-SECTION Marker Scope
+
+**Origin:** User feedback during audit — PROJECT-SECTION markers were being added to project-specific files (knowledge YAML, discipline parking lots, agent-context-map) that don't need migration protection.
+
+**What happened:** The markers exist to protect project content in framework files that get overwritten during `sdlc-migrate`. But knowledge files, discipline files, and agent-context-map are project-owned — they're never overwritten by the framework, so markers are unnecessary and add noise.
+
+**Changes made:**
+
+1. **`process/project-section-markers.md`** — Rewrote the introduction to clarify markers only apply to process docs and skill files. Added "When Markers Are Needed" table showing which file types need markers (process/skills: yes; knowledge/disciplines/context-map: no). Removed `ingest`, `dNN-phaseN`, and `agent-wiring` origins from the label format table since those no longer apply.
+
+2. **`skills/sdlc-ingest/SKILL.md`** — Removed PROJECT-SECTION markers from: knowledge YAML rules (step 4), parking lot entries (step 5), agent-context-map wiring (step 6). Added clarifying note that agent-context-map is project-specific.
+
+3. **`skills/sdlc-execute/SKILL.md`** — Removed PROJECT-SECTION markers from discipline capture section.
+
+4. **`skills/sdlc-lite-execute/SKILL.md`** — Removed PROJECT-SECTION markers from discipline capture section.
+
+5. **`skills/sdlc-audit/references/compliance-methodology.md`** — Removed PROJECT-SECTION marker reference from prune triage Wire action. Removed "files within PROJECT-SECTION markers" from orphan detection exclusions.
+
+6. **`skills/sdlc-audit/references/improvement-methodology.md`** — Clarified that markers are only for process/skill files, not knowledge or agent-context-map. Added explicit note about project-specific files not needing markers.
+
+**Rationale:** Markers should be used sparingly — only where migration would actually destroy content. Adding markers to project-specific files creates false expectations and clutters the files without providing protection.
+
+---
+
+## 2026-04-15: Standardize Path References to Use [sdlc-root]
+
+**Origin:** Consistency audit — skills and process docs were using bare paths like `knowledge/` instead of `[sdlc-root]/knowledge/`, causing ambiguity about where files are located in target projects.
+
+**What happened:** The cc-sdlc framework installs to `ops/sdlc/` in target projects, with `[sdlc-root]` as the placeholder that resolves to this location. Many files were using bare paths without the placeholder, which works in the cc-sdlc source repo but is ambiguous when the files are installed elsewhere.
+
+**Changes made:**
+
+1. **`CLAUDE.md`** — Added "Path variable rule" explaining that skills must use `[sdlc-root]` for SDLC directories. Added consistency check #5 with grep command to catch hard-coded paths.
+
+2. **8 skills updated** — sdlc-review, sdlc-create-agent, sdlc-develop-skill, sdlc-create-skill, research-external, sdlc-playbook-generate, sdlc-migrate, sdlc-ingest
+
+3. **4 process docs updated** — incident_response.md, review-fix-loop.md, overview.md, manager-rule.md
+
+4. **10 discipline files updated** — All discipline files now use `[sdlc-root]` for knowledge store and process doc references
+
+**Rationale:** Consistent path references prevent confusion when skills run in target projects. The `[sdlc-root]` placeholder is the canonical way to reference SDLC directories.
+
+---
+
+## 2026-04-15: Add Orphaned Knowledge Pruning to sdlc-audit
+
+**Origin:** Extension of the WIRE step added to sdlc-ingest — need a corresponding audit check to catch knowledge files that were created but never wired to agents.
+
+**What happened:** Knowledge files can become orphaned in two ways: (1) created before the WIRE step existed, or (2) created manually without using sdlc-ingest. These files exist in the knowledge layer but no agent consumes them, making them invisible and potentially stale.
+
+**Changes made:**
+
+1. **`skills/sdlc-audit/references/compliance-methodology.md`** — Added Dimension 6k (Orphaned Knowledge Pruning) with three sub-steps: identify orphans by checking agent-context-map.yaml, assess severity based on provenance/activity signals, build prune candidate list. Added prune triage workflow (steps 11e-11g) with three options: Prune (delete), Wire (add to agents using sdlc-ingest step 6 flow), Keep (leave unwired with optional note). Updated report format with Orphaned Knowledge section and Prune Results table.
+
+2. **`skills/sdlc-audit/SKILL.md`** — Updated Dimension 6 summary to include orphaned knowledge pruning. Expanded triage section to cover both promotion and prune triage workflows.
+
+**Rationale:** The WIRE step in sdlc-ingest prevents future orphans, but doesn't address existing ones. The audit is the natural place to surface orphaned knowledge for cleanup decisions. By integrating prune triage into the existing interactive triage workflow, users can manage knowledge hygiene without a separate cleanup session.
+
+---
+
+## 2026-04-15: Add WIRE Step to sdlc-ingest for Agent Knowledge Wiring
+
+**Origin:** Analysis of ingest workflow gaps — knowledge files created without agent-context-map connections resulted in orphaned knowledge that agents couldn't access.
+
+**What happened:** The sdlc-ingest skill created knowledge files and placed them correctly, but stopped there. The agent-context-map.yaml was never updated, so agents that should consume the new knowledge never learned about it. This created a "forgot to wire it" failure mode where ingested knowledge existed but was invisible to the agents that needed it.
+
+**Changes made:**
+
+1. **`skills/sdlc-ingest/SKILL.md`** — Added new WIRE step (step 6) between PLACE and PROVENANCE. The step: (1) identifies agents that already consume knowledge from the target discipline, (2) presents them for selection with sensible defaults (agents with 3+ files from the discipline), (3) updates agent-context-map.yaml. Updated workflow diagram, REPORT section to include AGENT WIRING metrics, changelog template to include agent-context-map updates, Red Flags table with wiring anti-patterns, and Integration section to reflect the new dependency.
+
+**Rationale:** Knowledge wiring should happen at ingest time when the discipline context is fresh. The alternative (separate skill or manual step) creates friction and failure modes. By integrating WIRE into the ingest flow, orphaned knowledge becomes impossible — the skill won't complete until wiring decisions are made.
+
+---
+
 ## 2026-04-14: Add Unified Team Review-Fix Skill and Communication Protocols
 
 **Origin:** Real-world audit (2026-04-14, Endless Galaxy Studios) exposed critical gaps in the review-team + review-fix workflow: debate protocol never executed, review-fix spawned 17 fresh agents instead of reusing teammates (63% of total token cost), team cleanup failed.
