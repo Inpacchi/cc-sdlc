@@ -34,6 +34,20 @@ Each entry contains:
 
 ---
 
+## 2026-04-14: Add Multi-Layer Gradient Template to Brand Asset Skill
+
+**Origin:** User feedback during asset spec generation — gradient positions were specified as percentages instead of pixel coordinates.
+
+**What happened:** When specifying complex backgrounds with multiple gradient layers (base + glow effects), the skill output positions as percentages (e.g., "15% X, 70% Y"). This required manual conversion to pixel values based on canvas size, adding friction to the handoff.
+
+**Changes made:**
+
+1. **`skills/sdlc-design-brand-asset/SKILL.md`** — Added multi-layer gradient table template showing pixel coordinates (e.g., "180px X, 441px Y") with a note that values are relative to canvas size. Example uses 1200×630 (OG Image) as reference.
+
+**Rationale:** Pixel coordinates remove ambiguity and match how designers/tools actually position elements. The spec should be directly usable without requiring percentage-to-pixel math.
+
+---
+
 ## 2026-04-14: Fix YAML Parse Error in agent-context-map.yaml
 
 **Origin:** Migration to neuroloom-sdlc-plugin failed with "YAML parse error — the [sdlc-root] placeholder conflicted with YAML array syntax."

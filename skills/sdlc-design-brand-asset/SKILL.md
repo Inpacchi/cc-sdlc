@@ -189,6 +189,16 @@ For each asset, output a complete specification (following the ASCII mockup):
 - **Transparent:** `transparent` (for logos/icons with no background)
 - **AI-generated:** "See AI Prompt section" (only for complex/textured backgrounds)
 
+**Multi-layer gradients** — For backgrounds with multiple gradient layers (e.g., base + glow effects), use a table with pixel coordinates based on the canvas size:
+
+| Layer | Type | Position | Color | Spread |
+|-------|------|----------|-------|--------|
+| Base | Linear | Top → Bottom | #121216 → #1f0e07 | Full canvas |
+| Glow 1 | Radial ellipse | 180px X, 441px Y | #FF3FAF at 25% opacity | 420px radius |
+| Glow 2 | Radial ellipse | 1020px X, 347px Y | #FF865C at 30% opacity | 600px radius |
+
+*(Example for 1200×630 canvas. Always specify pixel coordinates, not percentages.)*
+
 #### Element Specifications
 
 For each element (logo, text, etc.), provide:
