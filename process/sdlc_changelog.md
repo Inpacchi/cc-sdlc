@@ -34,6 +34,21 @@ Each entry contains:
 
 ---
 
+## 2026-04-15: Centralize agent selection in sdlc-tests-run
+
+**Origin:** Review of `sdlc-tests-run` skill revealed hardcoded agent selection table duplicating logic from `agent-selection.yaml`.
+
+**What happened:** The skill had a hardcoded error-pattern → agent mapping table (e.g., "Real-time message not received → realtime-systems-engineer"). This duplicated the `infrastructure_domains` section in `process/agent-selection.yaml`, creating maintenance burden and inconsistency risk when agents are added or renamed.
+
+**Changes made:**
+
+1. **`process/agent-selection.yaml`** — Added `sdlc-tests-run` to `Used by:` header
+2. **`skills/sdlc-tests-run/SKILL.md`** — Replaced hardcoded agent table with reference to `[sdlc-root]/process/agent-selection.yaml`. Now instructs manager to: (1) check `infrastructure_domains` triggers, (2) fall back to `tiers.tier1` dispatch rules, (3) use `debug-specialist` for ambiguous failures.
+
+**Rationale:** Single source of truth for agent selection. When agents are added, renamed, or dispatch rules change, only `agent-selection.yaml` needs updating. Aligns `sdlc-tests-run` with the pattern used by 6+ other skills.
+
+---
+
 ## 2026-04-15: Extend guarded renames to agent names in dispatching skills
 
 **Origin:** NeuRoLoom migration renamed `frontend-engineer` → `frontend-developer` in `sdlc-review-commit` skill, but the project only has `frontend-engineer.md` — the renamed agent doesn't exist.

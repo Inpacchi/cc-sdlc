@@ -175,18 +175,11 @@ Failure Classification — Round {N}
 
 **Domain agent selection for APP-CODE failures:**
 
-| Error Pattern | Agent |
-|--------------|-------|
-| Real-time message not received/broadcast | realtime-systems-engineer |
-| API route returns error, middleware issue | backend-developer |
-| UI renders wrong state, component bug | frontend-developer |
-| Store/hook returns wrong data | frontend-developer |
-| Build failure in application code | build-engineer |
-| Performance regression (timeout due to slowness) | performance-engineer |
-| Auth flow broken in app code | frontend-developer |
-| Multiple packages involved, unclear root cause | debug-specialist |
+Consult `[sdlc-root]/process/agent-selection.yaml` to select the appropriate domain agent:
 
-If a failure is ambiguous, classify as APP-CODE and dispatch `debug-specialist` to diagnose first.
+1. **Check `infrastructure_domains`** — Match the failure pattern against each domain's `triggers`. If a trigger matches, dispatch that domain's `specialist`.
+2. **Fall back to `tiers.tier1`** — If no infrastructure domain matches, use the tier 1 agent whose `dispatch_when` or `covers` best fits the failure (e.g., API errors → backend-developer, UI state bugs → frontend-developer).
+3. **Ambiguous failures** — If the failure spans multiple packages or has unclear root cause, dispatch `debug-specialist` to diagnose first.
 
 ### 3. Dispatch Fixes
 
