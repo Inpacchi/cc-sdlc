@@ -126,7 +126,7 @@ Then enter the ideation loop. The principles here are borrowed from `sdlc-idea` 
 
 When enough is understood, draft a D1 spec. CC writes this directly (no agents exist yet).
 
-Use the spec template at `ops/sdlc/templates/spec_template.md` as the structural guide. For initialization, the spec must cover at minimum:
+Use the spec template from cc-sdlc source (`templates/spec_template.md`) as the structural guide. For initialization, the spec must cover at minimum:
 
 ```markdown
 # D1: [Project Name] — Spec
@@ -219,7 +219,6 @@ For each directory in manifest.directories:
 | Source Path | Target Path |
 |-------------|-------------|
 | `process/*` | `ops/sdlc/process/*` |
-| `templates/*` | `ops/sdlc/templates/*` |
 | `examples/*` | `ops/sdlc/examples/*` |
 | `disciplines/*` | `ops/sdlc/disciplines/*` |
 | `playbooks/*` | `ops/sdlc/playbooks/*` |
@@ -228,7 +227,10 @@ For each directory in manifest.directories:
 | `skills/**/*` | `.claude/skills/**/*` |
 | `agents/*` | `.claude/agents/*` |
 | `README.md` | `ops/sdlc/README.md` |
-| `CLAUDE-SDLC.md` | `ops/sdlc/CLAUDE-SDLC.md` |
+
+**Not installed to child projects:**
+- `templates/` — Templates are reference material in cc-sdlc source only. SDLC skills reference them when needed but child projects don't need local copies.
+- `CLAUDE-SDLC.md` — Content is merged directly into the project's `CLAUDE.md` during Phase 2. No separate file is created.
 
 **Skip existing files** — do not overwrite files that already exist. Track counts:
 - Files installed (new)
@@ -363,7 +365,7 @@ CC writes CLAUDE.md directly (agents don't exist yet). Use the spec as the sourc
 3. **Technology stack** — per-package if monorepo (from spec)
 4. **Coding standards** — per-language conventions
    - If multi-language: document the boundary conventions (e.g., snake_case API, camelCase frontend)
-5. **SDLC process section** — read `ops/sdlc/CLAUDE-SDLC.md` (installed by Phase 1) and copy the full content, adapted for this project
+5. **SDLC process section** — read `CLAUDE-SDLC.md` from cc-sdlc source and merge the full content into this section, adapted for this project
 6. **Verification policy** — zero-assumption rule, Context7 for external libs, read code before asserting
 7. **Agent dispatch conventions** — agent-first, never self-implement, manager rule
 
@@ -374,7 +376,7 @@ CC writes CLAUDE.md directly (agents don't exist yet). Use the spec as the sourc
    - Files: `*seed*.{ts,js,py}`, `*scrape*.{ts,js,py}`, `*allowlist*`, `*blocklist*`
    - Spec mentions: "seed", "scrape", "ETL", "pipeline", "ingest", "allowlist"
    
-   If detected, read `templates/optional/data-pipeline-integrity.md` and append to CLAUDE.md. If uncertain, ask CD.
+   If detected, read `templates/optional/data-pipeline-integrity.md` from cc-sdlc source and append to CLAUDE.md. If uncertain, ask CD.
 
 **Gate:** Present the drafted CLAUDE.md to CD. Use `AskUserQuestion`: "CLAUDE.md is ready for review. Any changes before I save it?"
 
@@ -463,7 +465,7 @@ Present deviations to CD. This prevents the neuroloom-bootstrap gap where spec-l
 
 ```
 DISPATCHER WIRING CHECK
-Agent                    | agent-selection.md | sdlc-plan agent table | sdlc-plan infra triggers
+Agent                    | agent-selection.yaml | sdlc-plan agent table | sdlc-plan infra triggers
 -------------------------|--------------------------|----------------------|------------------------
 software-architect       | Tier 2                   | yes                  | n/a
 frontend-developer       | Tier 1                   | yes                  | yes
@@ -474,7 +476,7 @@ sdet                     | Tier 1                   | yes                  | n/a
 ```
 
 For each created agent, confirm:
-1. A Tier 1 or Tier 2 entry exists in `ops/sdlc/process/agent-selection.md` (if the agent reviews code)
+1. A tier1 or tier2 entry exists in `ops/sdlc/process/agent-selection.yaml` (if the agent reviews code)
 2. A row exists in the `sdlc-plan` agent table
 3. An infra trigger row exists in `sdlc-plan` / `sdlc-lite-plan` (if the agent owns an infrastructure domain)
 
@@ -702,7 +704,7 @@ Agents:
 [ ] Spec-vs-roster reconciliation complete — all spec-listed roles created or deviation logged
 [ ] AGENT_TEMPLATE.md and AGENT_SUGGESTIONS.md present in .claude/agents/
 [ ] Framework subagents present in .claude/agents/: sdlc-reviewer.md, sdlc-compliance-auditor.md
-[ ] Dispatcher wiring: all agents in agent-selection.md, sdlc-plan agent table, infra triggers
+[ ] Dispatcher wiring: all agents in agent-selection.yaml, sdlc-plan agent table, infra triggers
 [ ] Context map: agent-context-map.yaml wired to actual agent filenames
 [ ] All knowledge files mapped in agent-context-map.yaml (no unmapped YAMLs)
 

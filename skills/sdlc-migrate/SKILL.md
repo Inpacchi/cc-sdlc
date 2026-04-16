@@ -99,11 +99,25 @@ Throughout this migration, apply these transformations when copying or merging c
 | `knowledge/` | `[sdlc-root]/knowledge/` |
 | `disciplines/` | `[sdlc-root]/disciplines/` |
 | `process/` | `[sdlc-root]/process/` |
-| `templates/` | `[sdlc-root]/templates/` |
 | `playbooks/` | `[sdlc-root]/playbooks/` |
 | `examples/` | `[sdlc-root]/examples/` |
 | `agents/` | `.claude/agents/` (always — Claude Code requires this location) |
 | `skills/` | `.claude/skills/` (always — Claude Code requires this location) |
+
+**Not installed to child projects:**
+- `templates/` — Templates are reference material in cc-sdlc source only. Child projects don't need copies.
+- `CLAUDE-SDLC.md` — Content is merged into the project's `CLAUDE.md` during initialization. No separate file is maintained.
+
+### Project-Specific Files (Never Overwrite)
+
+Some files in the cc-sdlc source are **templates** that become project-specific after initialization. These must NOT be direct-copied during migration:
+
+| File | Reason |
+|------|--------|
+| `process/agent-selection.yaml` | Project's agent roster and dispatch rules — contains project-specific agent names |
+| `knowledge/agent-context-map.yaml` | Project's agent-to-knowledge mappings — already protected in §3.3 |
+
+Framework files may contain canonical agent names (e.g., `frontend-developer`) in examples. These are illustrative — they don't affect dispatch behavior. The project's actual agents in `.claude/agents/` and `agent-context-map.yaml` define what gets dispatched.
 
 ### Neuroloom-Aware Content Transformation
 
@@ -219,10 +233,11 @@ Group the changed cc-sdlc files by migration strategy:
 | **Audit skill** | `skills/sdlc-audit/SKILL.md` + `references/` | Content-merge: update audit methodology, preserve project-specific additions |
 | **Knowledge YAMLs** | `knowledge/**/*.yaml` | Direct copy with `spec_relevant` preservation (§2.1b). Check for moved/deleted files (§2.1a) |
 | **Process docs** | `process/*.md` | Direct copy (framework-level) |
-| **Templates** | `templates/*.md` | Direct copy (framework-level) |
 | **Disciplines** | `disciplines/*.md` | Content-merge: update framework guidance, preserve project parking lot entries |
 | **Context map** | `knowledge/agent-context-map.yaml` | Never overwrite — project has its own agent names. Update paths for moved/deleted files (§3.3) |
 | **Project agents** | Project `.claude/agents/*.md` | Targeted section updates (see Phase 3) |
+| **CLAUDE-SDLC.md** | `CLAUDE-SDLC.md` | Content-merge into project's `CLAUDE.md` (§2.1e). No separate file. |
+| **Templates** | `templates/*.md` | Skip — not installed to child projects |
 
 ---
 
@@ -240,14 +255,17 @@ This migration skill is responsible for **consuming** markers: extracting, prese
 
 For files with no project customizations, copy directly from cc-sdlc to the project's `[sdlc-root]/` directory:
 
-- `process/*.md`
-- `templates/*.md`
+- `process/*.md` (framework process docs — `agent-selection.yaml` is NOT copied; it's project-specific, see "Project-Specific Files")
 - `knowledge/**/*.yaml` (but NOT `agent-context-map.yaml`) — **Neuroloom projects:** skip this; knowledge files are stored in the memory graph and updated via the Neuroloom plugin's migrate skill
-- `README.md`, `CLAUDE-SDLC.md`
+- `README.md` (to `[sdlc-root]/`)
 - `agents/AGENT_TEMPLATE.md`, `agents/AGENT_SUGGESTIONS.md` → `.claude/agents/` — **Neuroloom projects:** apply content-merge rules from "Neuroloom-Aware Content Transformation" section above; these files contain Knowledge Context patterns that differ between generic and Neuroloom projects
 - `agents/sdlc-reviewer.md`, `agents/sdlc-compliance-auditor.md` → `.claude/agents/` — **Neuroloom projects:** apply content-merge rules; these contain knowledge wiring validation patterns. (Framework subagents must be in `.claude/agents/` for Claude Code to dispatch them, not just `[sdlc-root]/agents/`)
 - `playbooks/*.md` (unless the project has written its own playbooks — check git blame)
 - `examples/*.md`
+
+**Not direct-copied:**
+- `templates/` — Templates are reference material in cc-sdlc source only. Child projects don't need copies; they were never used post-initialization.
+- `CLAUDE-SDLC.md` — See §2.1e for CLAUDE-SDLC.md handling (merge into CLAUDE.md, not a separate file).
 
 **All reads from the cc-sdlc source repo must use git commands** (e.g., `git -C [cc-sdlc-path] show HEAD:path/to/file`), not filesystem reads. This ensures you're reading committed state, not working tree.
 
@@ -402,6 +420,20 @@ Check the cc-sdlc changelog for files that were **deleted, moved, or renamed** s
 
 5. Log all removals and path fixes so the migration report (Phase 4.6) includes them.
 
+6. **Clean up legacy files no longer installed to child projects:**
+   
+   - **Templates directory:** If `[sdlc-root]/templates/` exists, remove it. Templates are reference material in cc-sdlc source only — they were never used by child projects after initialization.
+     ```bash
+     rm -rf [sdlc-root]/templates/
+     ```
+   
+   - **Standalone CLAUDE-SDLC.md:** If `[sdlc-root]/CLAUDE-SDLC.md` exists as a separate file, verify its content is already in `CLAUDE.md` (via §2.1e), then remove it:
+     ```bash
+     rm [sdlc-root]/CLAUDE-SDLC.md
+     ```
+   
+   Log any removals in the migration report.
+
 **Why this matters:** Without cleanup, downstream projects accumulate orphan files. Worse, if a file was moved (e.g., `knowledge/architecture/foo.yaml` → `knowledge/coding/foo.yaml`), agents mapped to the old path load a stale copy while the updated version sits unwired at the new path. Agent memories are a second source of path references that §3.3 (context map) doesn't cover — they must be scanned separately.
 
 ### 2.1b Preserve `spec_relevant` Overrides
@@ -462,6 +494,33 @@ Options:
 8. If option 3: skip this file, log in migration report
 
 **Why this matters:** Without deviation detection, `sdlc-migrate` silently destroys intentional project-specific changes. Users invest time customizing business suite content, discipline captures, and agent wiring — a migration that discards that work without warning erodes trust in the framework.
+
+### 2.1e CLAUDE-SDLC.md Merge
+
+**CLAUDE-SDLC.md is not maintained as a separate file in child projects.** Its content lives directly in the project's `CLAUDE.md`. During migration, update the SDLC sections in `CLAUDE.md` rather than copying a separate file.
+
+**Process:**
+
+1. **Read the upstream CLAUDE-SDLC.md** content via git:
+   ```bash
+   git -C [cc-sdlc-path] show HEAD:CLAUDE-SDLC.md
+   ```
+
+2. **Identify the SDLC section boundaries** in the project's `CLAUDE.md`:
+   - Look for markers like `# CC-SDLC` or the characteristic SDLC headings (`## SDLC Skills`, `## Knowledge Stores`, etc.)
+   - If the project uses `<!-- SDLC-START -->` / `<!-- SDLC-END -->` markers, use those as boundaries
+
+3. **Compare and update:**
+   - Diff the project's SDLC sections against the upstream CLAUDE-SDLC.md
+   - Apply framework updates (new skills, changed workflow rules, updated paths)
+   - Preserve project-specific customizations within the SDLC sections (custom agent names, project-specific instructions)
+
+4. **Clean up stale separate file:** If `[sdlc-root]/CLAUDE-SDLC.md` exists as a separate file (legacy from older installations), delete it after verifying its content is already in `CLAUDE.md`:
+   ```bash
+   rm [sdlc-root]/CLAUDE-SDLC.md
+   ```
+
+**Why this matters:** Maintaining CLAUDE-SDLC.md as a separate file creates confusion — users must remember to read two files, and updates to the separate file don't automatically propagate to what Claude Code actually sees. Merging into CLAUDE.md keeps everything in one place.
 
 ### 2.2 Content-Merge: Skills
 
@@ -832,12 +891,16 @@ echo "$MANIFEST" > .sdlc-manifest.json
 - Knowledge spec_relevant upstream upgrades: N [list files where upstream is now `true` — review recommended]
 - Knowledge files removed (moved/deleted in source): N [list old paths]
 - New agent roles added to context-map: N [list roles]
-- Process docs updated: N (direct copy)
+- Process docs updated: N (direct copy, excluding agent-selection.yaml)
 - Agent template updated: yes/no
 - Agents updated: N (Knowledge Context / Communication Protocol sections)
 - Agent-context-map paths updated: N (moved/removed file paths corrected)
 - Auditor updated: yes/no
-- CLAUDE-SDLC.md sections updated in CLAUDE.md: yes/no/not needed
+- CLAUDE-SDLC.md merged into CLAUDE.md: yes/no/not needed
+
+### Legacy Cleanup
+- Templates directory removed: yes/no/not present
+- Standalone CLAUDE-SDLC.md removed: yes/no/not present
 
 ### PROJECT-SECTION Content Review (§2.1d)
 - Marked blocks found: N
@@ -894,6 +957,7 @@ echo "$MANIFEST" > .sdlc-manifest.json
 |---------|---------|
 | "I'll just copy all files from cc-sdlc" | Content-merge exists for a reason — direct copy overwrites project customizations |
 | "The project's agent names match cc-sdlc's" | They almost never do. Always read the project's context-map, not the source's |
+| "I'll copy agent-selection.yaml with the other process files" | `agent-selection.yaml` is project-specific — it contains the project's agent roster, not the framework's. Never overwrite it. |
 | "I'll skip the changelog review" | Breaking changes and new capabilities need user input before applying |
 | "The tracker levels look right, I'll overwrite them" | The source repo's tracker reflects the source repo's levels, not this project's |
 | "I'll rephrase the framework sections to be clearer" | Verbatim rule. Copy exactly from cc-sdlc. Do not rephrase. |
