@@ -72,7 +72,7 @@ implementations:
 
 ## Relationship to Testing Knowledge
 
-Same structural philosophy as `knowledge/testing/`:
+Same structural philosophy as `[sdlc-root]/knowledge/testing/`:
 - Cross-project knowledge lives here
 - Project-specific adaptations live in each project's docs
 - Knowledge accumulates across engagements

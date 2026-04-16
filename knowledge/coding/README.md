@@ -20,10 +20,10 @@ knowledge/coding/
 
 ## Relationship to Other Knowledge Stores
 
-- **`knowledge/testing/testing-paradigm.yaml`** — the testing-side view of the same principles (test type selection, regression-first). Coding principles are the *code structure* side; testing principles are the *test strategy* side.
-- **`knowledge/architecture/`** — architectural decisions that affect code structure (component boundaries, domain separation)
+- **`[sdlc-root]/knowledge/testing/testing-paradigm.yaml`** — the testing-side view of the same principles (test type selection, regression-first). Coding principles are the *code structure* side; testing principles are the *test strategy* side.
+- **`[sdlc-root]/knowledge/architecture/`** — architectural decisions that affect code structure (component boundaries, domain separation)
 
 ## Maintenance
 
 - Updated when code review sessions reveal new structural anti-patterns worth generalizing
-- Entries promoted from `disciplines/coding.md` parking lot after validation through real use
+- Entries promoted from `[sdlc-root]/disciplines/coding.md` parking lot after validation through real use

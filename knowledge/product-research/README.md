@@ -24,7 +24,7 @@ knowledge/product-research/
 
 ## Relationship to Other Knowledge Stores
 
-Same structural philosophy as `knowledge/data-modeling/` and `knowledge/testing/`:
+Same structural philosophy as `[sdlc-root]/knowledge/data-modeling/` and `[sdlc-root]/knowledge/testing/`:
 - Cross-project knowledge lives here
 - Project-specific competitive research lives in the project's docs
 - Knowledge accumulates across engagements — dimensions discovered for one project's Gantt research benefit the next project's Gantt evaluation

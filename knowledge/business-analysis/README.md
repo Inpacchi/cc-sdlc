@@ -19,11 +19,11 @@ knowledge/business-analysis/
 
 ## Relationship to Other Knowledge Stores
 
-- **`knowledge/testing/testing-paradigm.yaml`** — the testing-side view of boundary case discovery (test data design surfaces domain questions)
-- **`knowledge/coding/code-quality-principles.yaml`** — the cross-discipline flow pattern (testability gaps flowing back from testing to coding)
-- **`knowledge/architecture/knowledge-management-methodology.yaml`** — the generalized cross-discipline remediation flow
+- **`[sdlc-root]/knowledge/testing/testing-paradigm.yaml`** — the testing-side view of boundary case discovery (test data design surfaces domain questions)
+- **`[sdlc-root]/knowledge/coding/code-quality-principles.yaml`** — the cross-discipline flow pattern (testability gaps flowing back from testing to coding)
+- **`[sdlc-root]/knowledge/architecture/knowledge-management-methodology.yaml`** — the generalized cross-discipline remediation flow
 
 ## Maintenance
 
 - Updated when spec reviews or test sessions reveal new patterns of missing requirements
-- Entries promoted from `disciplines/business-analysis.md` parking lot after validation through real use
+- Entries promoted from `[sdlc-root]/disciplines/business-analysis.md` parking lot after validation through real use

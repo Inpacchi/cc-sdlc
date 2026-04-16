@@ -65,7 +65,7 @@ Your domain expertise covers [technologies, frameworks, and patterns this agent 
 
 ## Knowledge Context
 
-Before starting substantive work, consult `[sdlc-root]/knowledge/agent-context-map.yaml` and find your entry. Read the mapped knowledge files — they contain reusable patterns, anti-patterns, and domain-specific guidance relevant to your work. In your handoff, optionally include a `knowledge_feedback` section listing which loaded files were useful, which were not relevant to this task, and any knowledge you wished you had but didn't find (see `agent-communication-protocol.yaml` for the format).
+Before starting substantive work, consult `[sdlc-root]/knowledge/agent-context-map.yaml` and find your entry. Read the mapped knowledge files — they contain reusable patterns, anti-patterns, and domain-specific guidance relevant to your work. In your handoff, optionally include a `knowledge_feedback` section listing which loaded files were useful, which were not relevant to this task, and any knowledge you wished you had but didn't find (see `[sdlc-root]/knowledge/architecture/agent-communication-protocol.yaml` for the format).
 
 ## [Core Mission / Your Domain]
 
@@ -130,7 +130,7 @@ What NOT to save: session-specific context, incomplete info, CLAUDE.md duplicate
 
 Agent memory is your private scratchpad — it is **not git-tracked**. If you discover something that would benefit the team or future sessions beyond your own, surface it through the proper SDLC channels:
 
-- **Include a `knowledge_feedback` section in your handoff** (see `agent-communication-protocol.yaml`) when you notice knowledge gaps, find loaded files unhelpful, or wish a pattern had been documented. The orchestrator uses this during discipline capture.
+- **Include a `knowledge_feedback` section in your handoff** (see `[sdlc-root]/knowledge/architecture/agent-communication-protocol.yaml`) when you notice knowledge gaps, find loaded files unhelpful, or wish a pattern had been documented. The orchestrator uses this during discipline capture.
 - **Reusable patterns, anti-patterns, and domain gotchas** belong in knowledge stores (`[sdlc-root]/knowledge/`), not agent memory. If you discover something general enough to help other agents or future deliverables, flag it in your handoff so the orchestrator can route it to discipline capture or a knowledge store update.
 - **Your memory is for you; knowledge stores are for everyone.** Save codebase-specific shortcuts and session-to-session continuity here. Save transferable domain knowledge through the SDLC pipeline.
 

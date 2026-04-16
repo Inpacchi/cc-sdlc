@@ -27,9 +27,9 @@ Other disciplines (business-analysis, deployment, process-improvement) will add 
 
 ## How This Gets Used
 
-1. **Agent self-lookup** — `agent-context-map.yaml` maps each domain agent to the knowledge files it should read before working. Agents consult this map themselves via a `## Knowledge Context` section in their definition, ensuring they load domain knowledge regardless of how they're dispatched (via skill or directly).
+1. **Agent self-lookup** — `[sdlc-root]/knowledge/agent-context-map.yaml` maps each domain agent to the knowledge files it should read before working. Agents consult this map themselves via a `## Knowledge Context` section in their definition, ensuring they load domain knowledge regardless of how they're dispatched (via skill or directly).
 2. **Cross-domain injection** — When skills dispatch an agent into a context outside its domain, the skill consults the map for the *other* domain's agent and injects those knowledge files. Skills do NOT redundantly inject an agent's own domain knowledge.
-3. **Discipline overviews** — `disciplines/*.md` reference knowledge files for deep methodology details.
+3. **Discipline overviews** — `[sdlc-root]/disciplines/*.md` reference knowledge files for deep methodology details.
 4. **Project-specific knowledge** lives in each project's docs (e.g., project `docs/testing/knowledge/`).
 
 Cross-project knowledge accumulates here; project-specific knowledge stays local.
@@ -205,7 +205,7 @@ project_applicability:
 
 - `keep` — Always retain this file regardless of project type. Used for cc-sdlc infrastructure files (agent protocols, debugging, testing paradigm) and universal methodologies.
 - `customize` — The file's structure is useful but its content is stack-specific. During initialization, the agent rewrites the content for the project's actual stack (e.g., swap Playwright CLI patterns for Cypress patterns).
-- `remove` — The file is not applicable. Delete it from the project's knowledge directory and remove its entry from `agent-context-map.yaml`.
+- `remove` — The file is not applicable. Delete it from the project's knowledge directory and remove its entry from `[sdlc-root]/knowledge/agent-context-map.yaml`.
 
 **During initialization:** `sdlc-initialize` Phase 6a reads every knowledge file's `project_applicability`, compares against the D1 spec, and presents a table to CD with keep/customize/remove recommendations. CD confirms or overrides before any files are deleted.
 
@@ -213,10 +213,10 @@ project_applicability:
 
 After installing cc-sdlc into a project, the agent-context-map references **generic role names** (e.g., `sdet`, `architect`, `backend-developer`). These must be updated to match your project's actual agent filenames.
 
-### Step 1: Update `agent-context-map.yaml`
+### Step 1: Update `[sdlc-root]/knowledge/agent-context-map.yaml`
 
 1. List your project's agents: `ls .claude/agents/*.md`
-2. For each mapping entry in `agent-context-map.yaml`:
+2. For each mapping entry in `[sdlc-root]/knowledge/agent-context-map.yaml`:
    - Rename generic roles to your agent names (e.g., `architect` → `software-architect`)
    - Remove mappings for roles you don't have
    - Add entries for project-specific agents not in the generic template
@@ -240,7 +240,7 @@ Key files that reference `sdet` (your testing agent name will differ):
 
 ### Step 3: Update discipline references
 
-Check `disciplines/*.md` for agent file paths and update to match:
+Check `[sdlc-root]/disciplines/*.md` for agent file paths and update to match:
 
 ```bash
 grep -r '\.claude/agents/' disciplines/
@@ -259,17 +259,17 @@ done
 
 ## Adding a Knowledge Store for a Discipline
 
-A knowledge store is created when a discipline reaches Level 2 (Managed) — meaning its parking lot has validated, promotable entries. See `disciplines/README.md` § "Creating a New Discipline" for the full lifecycle.
+A knowledge store is created when a discipline reaches Level 2 (Managed) — meaning its parking lot has validated, promotable entries. See `[sdlc-root]/disciplines/README.md` § "Creating a New Discipline" for the full lifecycle.
 
-**Prerequisites:** The discipline file (`disciplines/<name>.md`) must already exist with triaged parking lot entries marked `[READY TO PROMOTE]`.
+**Prerequisites:** The discipline file (`[sdlc-root]/disciplines/<name>.md`) must already exist with triaged parking lot entries marked `[READY TO PROMOTE]`.
 
 **Steps:**
 
-1. Create `knowledge/<discipline-name>/` with a `README.md` describing the store's purpose, structure, and relationships
+1. Create `[sdlc-root]/knowledge/<discipline-name>/` with a `README.md` describing the store's purpose, structure, and relationships
 2. Promote `[READY TO PROMOTE]` entries from the parking lot to structured YAML files
 3. Mark promoted parking lot entries with `Promoted → [target file]`
-4. Update `agent-context-map.yaml` — wire the new knowledge files to relevant agent roles
+4. Update `[sdlc-root]/knowledge/agent-context-map.yaml` — wire the new knowledge files to relevant agent roles
 5. Update the discipline file's status from "Parking lot" to "Active" and add a knowledge store reference
-6. Update the Process Maturity Tracker in `disciplines/process-improvement.md` — upgrade to Level 2
+6. Update the Process Maturity Tracker in `[sdlc-root]/disciplines/process-improvement.md` — upgrade to Level 2
 7. Add the directory and files to `skeleton/manifest.json`
 8. Update this README's structure listing

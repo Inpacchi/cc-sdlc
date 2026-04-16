@@ -48,9 +48,9 @@ spec → plan → implement
 
 ## Relationship to Other Knowledge Stores
 
-- **`knowledge/product-research/`** — produces the competitive scope that feeds into assessment
-- **`knowledge/design/`** — consumes the assessment output to model realistic UX
-- **`knowledge/data-modeling/`** — UDM patterns inform what data layer capabilities to expect
+- **`[sdlc-root]/knowledge/product-research/`** — produces the competitive scope that feeds into assessment
+- **`[sdlc-root]/knowledge/design/`** — consumes the assessment output to model realistic UX
+- **`[sdlc-root]/knowledge/data-modeling/`** — UDM patterns inform what data layer capabilities to expect
 
 ## Skill Trajectory
 

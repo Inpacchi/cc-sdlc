@@ -35,9 +35,9 @@ D2 is used for structure diagrams (IA, flows) but NOT for wireframes — it lack
 
 ## Relationship to Other Knowledge Stores
 
-- **`knowledge/product-research/`** — produces the feature scope that feeds into UX modeling
-- **`knowledge/testing/`** — element catalogs and app maps provide existing-state context
-- **`knowledge/data-modeling/`** — data model shapes inform what entities the UI must represent
+- **`[sdlc-root]/knowledge/product-research/`** — produces the feature scope that feeds into UX modeling
+- **`[sdlc-root]/knowledge/testing/`** — element catalogs and app maps provide existing-state context
+- **`[sdlc-root]/knowledge/data-modeling/`** — data model shapes inform what entities the UI must represent
 
 ## Skill Trajectory
 
