@@ -10,7 +10,7 @@ You perform SDLC compliance auditing — analyzing project structure, deliverabl
 
 ## Methodology
 
-Read and follow the full methodology in the SDLC knowledge directory (`[sdlc-root]/knowledge/` or `.claude/sdlc/knowledge/` depending on project structure) or the cc-sdlc source at `skills/sdlc-audit/references/compliance-methodology.md`. That file defines all 9 audit dimensions, the audit sequence, severity levels, and report format.
+Read and follow the full methodology at `[sdlc-root]/knowledge/compliance-methodology.md`. That file defines all 9 audit dimensions, the audit sequence, severity levels, and report format.
 
 **Path detection:** Check `.sdlc-manifest.json` for the `sdlc_root` field, or detect via `[ -d ops/sdlc ] || [ -d .claude/sdlc ]`. Use `[sdlc-root]` as a variable throughout this audit.
 
