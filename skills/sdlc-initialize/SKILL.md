@@ -229,6 +229,8 @@ For each directory in manifest.directories:
 | `agents/*` | `.claude/agents/*` |
 | `README.md` | `ops/sdlc/README.md` |
 
+**Safe file extraction:** When copying from a git clone (e.g., `/tmp/cc-sdlc-bootstrap`), read each source file's content and verify it's non-empty before writing to the target. Never use shell redirection like `git show HEAD:<path> > file` — this truncates the target before git show runs, leaving empty files if the command fails. Use the Read tool to get content, verify it, then Write.
+
 **Not installed to child projects:**
 - `templates/optional/` — Conditional CLAUDE.md appendices (e.g., `data-pipeline-integrity.md`). Read from cc-sdlc source during Phase 2 when needed, not installed.
 - `CLAUDE-SDLC.md` — Content is merged directly into the project's `CLAUDE.md` during Phase 2. No separate file is created.

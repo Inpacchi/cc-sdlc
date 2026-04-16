@@ -34,6 +34,39 @@ Each entry contains:
 
 ---
 
+## 2026-04-15: Safe File Extraction Pattern
+
+**Origin:** Bug discovered during neuroloom migration — 8 knowledge README files were emptied.
+
+**What happened:** The `sdlc-migrate` skill documented using `git show HEAD:<path> > file` to extract files from the cc-sdlc source. This pattern is unsafe: shell redirection truncates the target file *before* `git show` runs. If `git show` fails for any reason (clone cleaned up, path doesn't exist, permission error), the target file is left empty — destroying the project's content. During a real migration, this silently wiped 8 project README files.
+
+**Changes made:**
+
+1. **`skills/sdlc-migrate/SKILL.md`** — Removed unsafe `git show > file` pattern from Source Repo Access Rule
+2. **`skills/sdlc-migrate/SKILL.md`** — Added "Safe File Extraction (CRITICAL)" subsection with safe alternatives: capture to variable first, verify non-empty, then write
+3. **`skills/sdlc-migrate/SKILL.md`** — Added red flag entry: "I'll use `git show HEAD:path > file` to extract"
+4. **`skills/sdlc-initialize/SKILL.md`** — Added safe file extraction note to Phase 1b copy instructions
+
+**Rationale:** A single silent git show failure can destroy dozens of project files. The fix ensures content is verified before overwriting. The pattern applies to any skill that extracts files from a git source.
+
+---
+
+## 2026-04-15: Protect Provenance Log During Migration
+
+**Origin:** User feedback — provenance log should be treated like agent-context-map.yaml, not overwritten.
+
+**What happened:** The `knowledge/provenance_log.md` file accumulates project-specific records (ingestion entries, research handoffs) in an append-only format. Overwriting it during migration would lose all project provenance history.
+
+**Changes made:**
+
+1. **`skills/sdlc-migrate/SKILL.md`** — Added `knowledge/provenance_log.md` to "Project-Specific Files (Never Overwrite)" table with reason: "Project's knowledge provenance records — append-only log of ingestions and research handoffs"
+2. **`skills/sdlc-migrate/SKILL.md`** — Added provenance log row to strategy summary table: "Never overwrite — project's append-only ingestion/research records"
+3. **`skills/sdlc-migrate/SKILL.md`** — Updated direct-copy section to explicitly exclude `knowledge/provenance_log.md` alongside `agent-context-map.yaml`
+
+**Rationale:** Like agent-context-map.yaml and sdlc_changelog.md, the provenance log contains project-specific accumulated data that must be preserved across framework migrations. The pattern is: framework files are updated, project-specific accumulated logs are preserved.
+
+---
+
 ## 2026-04-15: Restore Templates Installation (Fix Overly Broad Exclusion)
 
 **Origin:** User correction — only `templates/optional/` should be source-only, not all templates.

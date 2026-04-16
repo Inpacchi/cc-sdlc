@@ -22,10 +22,36 @@ Apply cc-sdlc upstream updates to a project while preserving project-specific cu
 
 - Read a file: `git -C [cc-sdlc-path] show HEAD:<path>`
 - List files: `git -C [cc-sdlc-path] ls-tree -r --name-only HEAD`
-- Extract a file to the project: `git -C [cc-sdlc-path] show HEAD:<path> > [project-path]/[sdlc-root]/<path>`
 - Diff since version: `git -C [cc-sdlc-path] diff [source_version]..HEAD`
 
 Never use `cat`, `cp`, `ls`, or direct file reads against `[cc-sdlc-path]`. The source repo may have uncommitted work in progress.
+
+### Safe File Extraction (CRITICAL)
+
+**Never use direct shell redirection** to extract files: `git show HEAD:<path> > file` is UNSAFE because shell redirection truncates the target file *before* `git show` runs. If `git show` fails for any reason (path doesn't exist, clone was cleaned up, permission error), the target file is left empty — destroying the project's content.
+
+**Safe pattern — verify before overwriting:**
+```bash
+# Extract to temp, verify content exists, then move
+CONTENT=$(git -C [cc-sdlc-path] show HEAD:<path> 2>/dev/null) || {
+  echo "ERROR: git show failed for <path> — file NOT overwritten"
+  return 1  # or continue to next file
+}
+if [ -z "$CONTENT" ]; then
+  echo "ERROR: <path> has empty content in source — file NOT overwritten"
+  return 1
+fi
+echo "$CONTENT" > [project-path]/[target]
+```
+
+**Alternative — use git archive for batch extraction:**
+```bash
+# Extract specific files to a temp directory, then move
+git -C [cc-sdlc-path] archive HEAD:<dir> | tar -x -C /tmp/extract/
+# Verify each file before copying to project
+```
+
+**Why this matters:** During migration, a single silent `git show` failure can destroy dozens of project files. The neuroloom migration bug (2026-04-15) emptied 8 knowledge READMEs because `git show` produced no output after the temp clone was cleaned up — the shell redirect created empty files over the project's content.
 
 ## Pre-Flight Check
 
@@ -117,6 +143,7 @@ Some files in the cc-sdlc source are **templates** that become project-specific 
 |------|--------|
 | `process/agent-selection.yaml` | Project's agent roster and dispatch rules — contains project-specific agent names |
 | `knowledge/agent-context-map.yaml` | Project's agent-to-knowledge mappings — already protected in §3.3 |
+| `knowledge/provenance_log.md` | Project's knowledge provenance records — append-only log of ingestions and research handoffs |
 
 Framework files may contain canonical agent names (e.g., `frontend-developer`) in examples. These are illustrative — they don't affect dispatch behavior. The project's actual agents in `.claude/agents/` and `agent-context-map.yaml` define what gets dispatched.
 
@@ -236,6 +263,7 @@ Group the changed cc-sdlc files by migration strategy:
 | **Process docs** | `process/*.md` | Direct copy (framework-level) |
 | **Disciplines** | `disciplines/*.md` | Content-merge: update framework guidance, preserve project parking lot entries |
 | **Context map** | `knowledge/agent-context-map.yaml` | Never overwrite — project has its own agent names. Update paths for moved/deleted files (§3.3) |
+| **Provenance log** | `knowledge/provenance_log.md` | Never overwrite — project's append-only ingestion/research records |
 | **Project agents** | Project `.claude/agents/*.md` | Targeted section updates (see Phase 3) |
 | **CLAUDE-SDLC.md** | `CLAUDE-SDLC.md` | Content-merge into project's `CLAUDE.md` (§2.1e). No separate file. |
 | **Templates** | `templates/*.md` | Direct copy (framework-level). Skip `templates/optional/` (source-only). |
@@ -258,6 +286,7 @@ For files with no project customizations, copy directly from cc-sdlc to the proj
 
 - `process/*.md` (framework process docs — `agent-selection.yaml` is NOT copied; it's project-specific, see "Project-Specific Files")
 - `knowledge/**/*.yaml` (but NOT `agent-context-map.yaml`) — **Neuroloom projects:** skip this; knowledge files are stored in the memory graph and updated via the Neuroloom plugin's migrate skill
+- `knowledge/README.md` (to `[sdlc-root]/knowledge/`) — NOT `knowledge/provenance_log.md`; that's project-specific (see "Project-Specific Files")
 - `README.md` (to `[sdlc-root]/`)
 - `agents/AGENT_TEMPLATE.md`, `agents/AGENT_SUGGESTIONS.md` → `.claude/agents/` — **Neuroloom projects:** apply content-merge rules from "Neuroloom-Aware Content Transformation" section above; these files contain Knowledge Context patterns that differ between generic and Neuroloom projects
 - `agents/sdlc-reviewer.md`, `agents/sdlc-compliance-auditor.md` → `.claude/agents/` — **Neuroloom projects:** apply content-merge rules; these contain knowledge wiring validation patterns. (Framework subagents must be in `.claude/agents/` for Claude Code to dispatch them, not just `[sdlc-root]/agents/`)
@@ -961,6 +990,7 @@ echo "$MANIFEST" > .sdlc-manifest.json
 | "I'll remove this agent mapping that cc-sdlc doesn't have" | Project-specific mappings are intentional. Never remove them. |
 | "No files were deleted, so §2.1a doesn't apply" | Always check. Moved files appear as add+delete pairs, not renames. |
 | "I'll just read the file from the cc-sdlc directory" | Use `git -C [path] show HEAD:file` — never raw filesystem reads. The repo may have uncommitted WIP. |
+| "I'll use `git show HEAD:path > file` to extract" | UNSAFE. Shell redirect truncates the target before git show runs. If git show fails, the target becomes an empty file. See "Safe File Extraction" in Source Repo Access Rule. |
 | "New knowledge files are installed, so the project benefits automatically" | Knowledge in [sdlc-root]/ is available but not applied until skills and agents are updated to use it. §3.4 closes this gap. |
 | "This file has no PROJECT-SECTION markers, so I'll just overwrite it" | Run deviation detection (§2.1c) first — the project may have customized framework content that should be wrapped in markers before overwriting. |
 | "I'll rename all skill references to match upstream" | Guarded renames (§4.3a) — only rename if the target skill exists in the project. Renaming to a nonexistent skill causes silent process failures. |
