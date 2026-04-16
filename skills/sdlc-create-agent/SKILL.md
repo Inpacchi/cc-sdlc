@@ -6,7 +6,7 @@ description: >
   tools list, color, memory setting), body scaffolding (scope, knowledge context,
   communication protocol, core principles, workflow, anti-rationalization table,
   self-verification checklist, persistent memory section), agent-context-map update,
-  registration, and wiring into dispatching skills (agent-selection.yaml for all review skills,
+  registration, and wiring into dispatching skills ([sdlc-root]/process/agent-selection.yaml for all review skills,
   sdlc-plan, sdlc-lite-plan). Dispatches sdlc-reviewer for quality gate.
   Triggers on "create a new agent", "new agent", "add an agent", "scaffold an agent",
   "I need an agent for", "make an agent", "/sdlc-create-agent".
@@ -184,7 +184,7 @@ Most agents are multiple types. A `db-engineer` is a reviewer (catches schema is
    This covers infrastructure checks in `sdlc-plan` and `sdlc-lite-plan`
 
 **Migration protection:**
-- `agent-selection.yaml` — NO markers needed. This file is project-specific and never overwritten during migration.
+- `[sdlc-root]/process/agent-selection.yaml` — NO markers needed. This file is project-specific and never overwritten during migration.
 - `sdlc-plan` agent table — YES, wrap additions in `PROJECT-SECTION` markers (framework file that gets overwritten):
 
 ```markdown
