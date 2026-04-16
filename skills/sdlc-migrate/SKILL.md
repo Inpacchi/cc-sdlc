@@ -259,7 +259,7 @@ Group the changed cc-sdlc files by migration strategy:
 | **Agent template** | `agents/AGENT_TEMPLATE.md` | Direct copy (no project customizations) |
 | **Agent suggestions** | `agents/AGENT_SUGGESTIONS.md` | Direct copy (no project customizations) |
 | **Audit skill** | `skills/sdlc-audit/SKILL.md` + `references/` | Content-merge: update audit methodology, preserve project-specific additions |
-| **Knowledge YAMLs** | `knowledge/**/*.yaml` | Direct copy with `spec_relevant` preservation (§2.1b). Check for moved/deleted files (§2.1a) |
+| **Knowledge YAMLs** | `knowledge/**/*.yaml` | Key-level merge: add new upstream keys, preserve project additions (§2.1b). Check for moved/deleted files (§2.1a) |
 | **Process docs** | `process/*.md` | Direct copy (framework-level) |
 | **Disciplines** | `disciplines/*.md` | Content-merge: update framework guidance, preserve project parking lot entries |
 | **Context map** | `knowledge/agent-context-map.yaml` | Never overwrite — project has its own agent names. Update paths for moved/deleted files (§3.3) |
@@ -462,20 +462,43 @@ Check the cc-sdlc changelog for files that were **deleted, moved, or renamed** s
 
 **Why this matters:** Without cleanup, downstream projects accumulate orphan files. Worse, if a file was moved (e.g., `knowledge/architecture/foo.yaml` → `knowledge/coding/foo.yaml`), agents mapped to the old path load a stale copy while the updated version sits unwired at the new path. Agent memories are a second source of path references that §3.3 (context map) doesn't cover — they must be scanned separately.
 
-### 2.1b Preserve `spec_relevant` Overrides
+### 2.1b Knowledge YAML Key-Level Merge
 
-Knowledge YAML files are direct-copied from upstream (§2.1), but the project may have overridden `spec_relevant: false` → `spec_relevant: true` for project-specific reasons. This single-field merge preserves those overrides.
+Knowledge YAML files contain domain patterns that projects naturally extend with project-specific additions. Unlike framework logic files, knowledge is additive — projects add their own patterns alongside upstream patterns. Direct-copy would destroy these additions.
 
-**Process for each knowledge YAML being copied:**
+**Merge strategy:**
 
-1. **Before overwriting**, read the project's current file and extract its `spec_relevant` value. If the file doesn't exist yet (new upstream file), skip — it will be copied with the upstream default.
-2. **Copy the upstream file** (overwriting the project's version — all other content is framework-owned).
-3. **Restore project override:** If the project's file had `spec_relevant: true` and the upstream file has `spec_relevant: false`, restore the project's `true` in the newly copied file.
-4. **Surface upstream upgrades:** If the upstream file has `spec_relevant: true` and the project's file had `spec_relevant: false`, do NOT auto-adopt. Instead, flag it in the migration report:
+- **New upstream keys** → add to project file
+- **Existing project keys** → preserve project version (may be intentionally customized)
+- **Project-only keys** → preserved automatically (no markers needed)
+- **`spec_relevant` field** → special handling (see below)
+
+**Process for each knowledge YAML:**
+
+1. **New file (doesn't exist in project):** Copy from upstream as-is.
+
+2. **Existing file:** Perform key-level merge:
    ```
-   Knowledge spec_relevant upstream upgrade: [file] — upstream now marks as spec-relevant. Review whether to adopt.
+   For each top-level key in upstream:
+     If key doesn't exist in project → add it
+     If key exists in project → keep project version, flag if upstream differs
+   Project-only keys → keep (these are project additions)
    ```
-   This ensures the project team is aware of upstream's signal without silently overriding their explicit `false`.
+
+3. **`spec_relevant` handling:**
+   - Project `true` + upstream `false` → keep project's `true` (project override)
+   - Project `false` + upstream `true` → keep project's `false`, flag for review:
+     ```
+     Knowledge spec_relevant upstream upgrade: [file] — upstream now marks as spec-relevant. Review whether to adopt.
+     ```
+   - Missing in project → copy from upstream
+
+4. **Flag merge conflicts** in migration report when upstream updated a key the project also has:
+   ```
+   Knowledge merge conflicts (review recommended):
+   - [file]: upstream updated `[key]`, project version kept
+   ```
+   This ensures projects are aware of upstream improvements without silently overwriting their customizations.
 
 **First migration introducing `spec_relevant`:** If no knowledge file in the project has `spec_relevant` at all (the field didn't exist before this migration), all files will receive `spec_relevant: false` from upstream. After Phase 4 completes, prompt CD to review which stores should be tagged `true` for this project — same walkthrough as `sdlc-initialize` Phase 6d:
 
@@ -483,6 +506,8 @@ Knowledge YAML files are direct-copied from upstream (§2.1), but the project ma
 2. Mark commonly spec-relevant stores with `*` (see `knowledge/README.md` § "spec_relevant Field" for examples)
 3. CD selects which to tag `true`; update the files
 4. If CD skips, all files stay `false` and `sdlc-plan` filtering remains dormant (backward compatible)
+
+**Why merge-only:** Knowledge YAMLs capture domain patterns — both framework patterns (upstream) and project-specific patterns (local additions like custom enum mappings, project conventions, incident learnings). Direct-copy destroys project knowledge; key-level merge preserves both sources.
 
 ### 2.1c Deviation Detection
 
@@ -912,8 +937,10 @@ echo "$MANIFEST" > .sdlc-manifest.json
 - Agent memory gitignored: yes/already present
 - Previously tracked agent memories unstaged: yes/no/not applicable
 - Skills updated: N (framework sections merged, project customizations preserved)
-- Knowledge files added/updated: N (direct copy with spec_relevant preservation)
-- Knowledge spec_relevant overrides preserved: N [list files where project `true` was restored]
+- Knowledge files added: N [list new files from upstream]
+- Knowledge files merged: N (new upstream keys added, project additions preserved)
+- Knowledge merge conflicts: N [list files where upstream updated a key the project also has — review recommended]
+- Knowledge spec_relevant overrides preserved: N [list files where project `true` was kept]
 - Knowledge spec_relevant upstream upgrades: N [list files where upstream is now `true` — review recommended]
 - Knowledge files removed (moved/deleted in source): N [list old paths]
 - New agent roles added to context-map: N [list roles]
@@ -944,7 +971,8 @@ echo "$MANIFEST" > .sdlc-manifest.json
 - Process Maturity Tracker (project-assessed levels, not source repo levels)
 - Agent-context-map agent names and project-specific mappings
 - Project agent domain content (scope, principles, workflow, anti-rationalization)
-- Knowledge file `spec_relevant` project overrides (true values restored after upstream copy)
+- Knowledge file project additions (project-specific keys preserved via key-level merge)
+- Knowledge file `spec_relevant` project overrides (true values preserved)
 
 ### Downstream Impact Analysis (§3.4)
 - Skills scanned: N

@@ -34,6 +34,39 @@ Each entry contains:
 
 ---
 
+## 2026-04-15: Fix bare path references in sdlc-create-agent
+
+**Origin:** Manual review of skill files for path convention compliance.
+
+**What happened:** The `sdlc-create-agent` skill had two bare references to `agent-selection.yaml` instead of using the `[sdlc-root]/process/agent-selection.yaml` convention.
+
+**Changes made:**
+
+1. **`skills/sdlc-create-agent/SKILL.md`** — Fixed frontmatter description: `agent-selection.yaml` → `[sdlc-root]/process/agent-selection.yaml`
+2. **`skills/sdlc-create-agent/SKILL.md`** — Fixed migration protection section: same bare path correction
+
+**Rationale:** All SDLC paths in installed skills must use `[sdlc-root]` prefix so they resolve correctly in target projects where the SDLC content lives under `ops/sdlc/`.
+
+---
+
+## 2026-04-15: Knowledge YAML Key-Level Merge
+
+**Origin:** User feedback — migration destroyed project-specific additions to knowledge YAML files.
+
+**What happened:** During neuroloom migration, the `shared_enum_constants` section that had been added to `code-quality-principles.yaml` was wiped. The project had added project-specific domain patterns (enum-to-color mappings learned from a planning session) to a knowledge file, but the "direct copy" strategy overwrote the entire file with upstream content. Only `spec_relevant` was being preserved, not other project additions.
+
+**Changes made:**
+
+1. **`skills/sdlc-migrate/SKILL.md`** — Changed §2.1b from "Preserve `spec_relevant` Overrides" to "Knowledge YAML Key-Level Merge"
+2. **`skills/sdlc-migrate/SKILL.md`** — New merge strategy: add new upstream keys, preserve all existing project keys (including project-only additions)
+3. **`skills/sdlc-migrate/SKILL.md`** — Updated quick reference table to show "Key-level merge" instead of "Direct copy"
+4. **`skills/sdlc-migrate/SKILL.md`** — Updated migration report format to show merge conflicts (when upstream updated a key the project also has)
+5. **`skills/sdlc-migrate/SKILL.md`** — Updated "Preserved" section to explicitly list knowledge file project additions
+
+**Rationale:** Knowledge YAMLs contain domain patterns that projects naturally extend with project-specific learnings. Direct-copy destroys project knowledge; key-level merge preserves both framework patterns and project additions. When upstream updates a key the project also has, the project version is kept and flagged for review — conservative but safe.
+
+---
+
 ## 2026-04-15: Safe File Extraction Pattern
 
 **Origin:** Bug discovered during neuroloom migration — 8 knowledge README files were emptied.
