@@ -34,6 +34,28 @@ Each entry contains:
 
 ---
 
+## 2026-04-15: Restore Templates Installation (Fix Overly Broad Exclusion)
+
+**Origin:** User correction — only `templates/optional/` should be source-only, not all templates.
+
+**What happened:** The earlier "Remove Templates and CLAUDE-SDLC.md from Child Project Installation" change was overly broad. It excluded all templates from being installed to child projects, but multiple skills reference `[sdlc-root]/templates/*.md`:
+- `sdlc-plan` → `spec_template.md`, `planning_template.md`
+- `sdlc-lite-plan` → `sdlc_lite_plan_template.md`
+- `sdlc-lite-execute` → `sdlc_lite_result_template.md`
+- `incident_response.md` → `postmortem_template.md`
+
+Only `templates/optional/` (conditional CLAUDE.md appendices like `data-pipeline-integrity.md`) should be source-only.
+
+**Changes made:**
+
+1. **`skills/sdlc-initialize/SKILL.md`** — Added `templates/*.md` back to source→target mapping. Changed "Not installed" section to only mention `templates/optional/`.
+2. **`skills/sdlc-migrate/SKILL.md`** — Added `templates/*.md` to path transformation table. Changed migration strategy table from "Skip" to "Direct copy (excluding templates/optional/)". Added templates to direct copy list. Removed templates directory removal from legacy cleanup. Updated migration report to track template updates.
+3. **`skeleton/manifest.json`** — Renamed `templates_source_only` back to `templates` (these ARE installed). Updated comments to clarify only `templates/optional/` is source-only.
+
+**Rationale:** Templates are required at runtime by skills in child projects. Only the `optional/` subdirectory (conditional CLAUDE.md appendices) should be source-only since those are read during initialization and appended to CLAUDE.md, not referenced by skills post-init.
+
+---
+
 ## 2026-04-15: Remove Templates and CLAUDE-SDLC.md from Child Project Installation
 
 **Origin:** User request — templates and CLAUDE-SDLC.md don't need to be installed to child projects.
@@ -46,7 +68,7 @@ Each entry contains:
 2. **`skills/sdlc-initialize/SKILL.md`** — Removed templates and CLAUDE-SDLC.md from source→target mapping table. Updated template references to read from cc-sdlc source instead of installed path. Added "Not installed to child projects" section explaining why.
 3. **`skeleton/manifest.json`** — Removed `ops/sdlc/templates` from directories list. Renamed `templates` and `templates_optional` to `templates_source_only` and `templates_optional_source_only` with explanatory comment. Removed `CLAUDE-SDLC.md` from `top_level` array with comment explaining the change.
 
-**Rationale:** Templates are reference material — skills read them when needed but child projects don't need local copies. CLAUDE-SDLC.md content belongs in the project's CLAUDE.md (single source of truth), not as a separate file that users must remember to consult. This reduces file clutter and eliminates the confusion of having SDLC instructions in two places.
+**Rationale:** ~~Templates are reference material — skills read them when needed but child projects don't need local copies.~~ **CORRECTION:** This was wrong — templates ARE needed in child projects. See "Restore Templates Installation" entry above. The CLAUDE-SDLC.md merge logic remains correct.
 
 ---
 

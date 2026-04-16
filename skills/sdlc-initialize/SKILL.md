@@ -219,6 +219,7 @@ For each directory in manifest.directories:
 | Source Path | Target Path |
 |-------------|-------------|
 | `process/*` | `ops/sdlc/process/*` |
+| `templates/*.md` | `ops/sdlc/templates/*.md` |
 | `examples/*` | `ops/sdlc/examples/*` |
 | `disciplines/*` | `ops/sdlc/disciplines/*` |
 | `playbooks/*` | `ops/sdlc/playbooks/*` |
@@ -229,7 +230,7 @@ For each directory in manifest.directories:
 | `README.md` | `ops/sdlc/README.md` |
 
 **Not installed to child projects:**
-- `templates/` — Templates are reference material in cc-sdlc source only. SDLC skills reference them when needed but child projects don't need local copies.
+- `templates/optional/` — Conditional CLAUDE.md appendices (e.g., `data-pipeline-integrity.md`). Read from cc-sdlc source during Phase 2 when needed, not installed.
 - `CLAUDE-SDLC.md` — Content is merged directly into the project's `CLAUDE.md` during Phase 2. No separate file is created.
 
 **Skip existing files** — do not overwrite files that already exist. Track counts:

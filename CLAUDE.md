@@ -9,7 +9,7 @@ This is the **source repository** for the cc-sdlc framework. It contains SDLC sk
 | `skills/` | SDLC skill definitions (installed to target's `.claude/skills/`) |
 | `agents/` | Agent definitions (installed to target's `.claude/agents/`) |
 | `process/` | Workflow documentation (installed to target's `ops/sdlc/process/`) |
-| `templates/` | Document templates (source-only — skills read from cc-sdlc when needed, not installed to targets) |
+| `templates/` | Document templates (installed to target's `ops/sdlc/templates/`; `optional/` subdirectory is source-only) |
 | `knowledge/` | Domain knowledge stores (installed to target's `ops/sdlc/knowledge/`) |
 | `disciplines/` | Discipline parking lots (installed to target's `ops/sdlc/disciplines/`) |
 | `plugins/` | Required/optional plugin setup guides (installed to target's `ops/sdlc/plugins/`) |

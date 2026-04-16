@@ -99,13 +99,14 @@ Throughout this migration, apply these transformations when copying or merging c
 | `knowledge/` | `[sdlc-root]/knowledge/` |
 | `disciplines/` | `[sdlc-root]/disciplines/` |
 | `process/` | `[sdlc-root]/process/` |
+| `templates/*.md` | `[sdlc-root]/templates/*.md` |
 | `playbooks/` | `[sdlc-root]/playbooks/` |
 | `examples/` | `[sdlc-root]/examples/` |
 | `agents/` | `.claude/agents/` (always — Claude Code requires this location) |
 | `skills/` | `.claude/skills/` (always — Claude Code requires this location) |
 
 **Not installed to child projects:**
-- `templates/` — Templates are reference material in cc-sdlc source only. Child projects don't need copies.
+- `templates/optional/` — Conditional CLAUDE.md appendices (e.g., `data-pipeline-integrity.md`). Read from cc-sdlc source during initialization when needed, not installed.
 - `CLAUDE-SDLC.md` — Content is merged into the project's `CLAUDE.md` during initialization. No separate file is maintained.
 
 ### Project-Specific Files (Never Overwrite)
@@ -237,7 +238,7 @@ Group the changed cc-sdlc files by migration strategy:
 | **Context map** | `knowledge/agent-context-map.yaml` | Never overwrite — project has its own agent names. Update paths for moved/deleted files (§3.3) |
 | **Project agents** | Project `.claude/agents/*.md` | Targeted section updates (see Phase 3) |
 | **CLAUDE-SDLC.md** | `CLAUDE-SDLC.md` | Content-merge into project's `CLAUDE.md` (§2.1e). No separate file. |
-| **Templates** | `templates/*.md` | Skip — not installed to child projects |
+| **Templates** | `templates/*.md` | Direct copy (framework-level). Skip `templates/optional/` (source-only). |
 
 ---
 
@@ -262,9 +263,10 @@ For files with no project customizations, copy directly from cc-sdlc to the proj
 - `agents/sdlc-reviewer.md`, `agents/sdlc-compliance-auditor.md` → `.claude/agents/` — **Neuroloom projects:** apply content-merge rules; these contain knowledge wiring validation patterns. (Framework subagents must be in `.claude/agents/` for Claude Code to dispatch them, not just `[sdlc-root]/agents/`)
 - `playbooks/*.md` (unless the project has written its own playbooks — check git blame)
 - `examples/*.md`
+- `templates/*.md` (to `[sdlc-root]/templates/`)
 
 **Not direct-copied:**
-- `templates/` — Templates are reference material in cc-sdlc source only. Child projects don't need copies; they were never used post-initialization.
+- `templates/optional/` — Conditional CLAUDE.md appendices. Read from cc-sdlc source during initialization when needed, not installed.
 - `CLAUDE-SDLC.md` — See §2.1e for CLAUDE-SDLC.md handling (merge into CLAUDE.md, not a separate file).
 
 **All reads from the cc-sdlc source repo must use git commands** (e.g., `git -C [cc-sdlc-path] show HEAD:path/to/file`), not filesystem reads. This ensures you're reading committed state, not working tree.
@@ -421,11 +423,6 @@ Check the cc-sdlc changelog for files that were **deleted, moved, or renamed** s
 5. Log all removals and path fixes so the migration report (Phase 4.6) includes them.
 
 6. **Clean up legacy files no longer installed to child projects:**
-   
-   - **Templates directory:** If `[sdlc-root]/templates/` exists, remove it. Templates are reference material in cc-sdlc source only — they were never used by child projects after initialization.
-     ```bash
-     rm -rf [sdlc-root]/templates/
-     ```
    
    - **Standalone CLAUDE-SDLC.md:** If `[sdlc-root]/CLAUDE-SDLC.md` exists as a separate file, verify its content is already in `CLAUDE.md` (via §2.1e), then remove it:
      ```bash
@@ -892,6 +889,7 @@ echo "$MANIFEST" > .sdlc-manifest.json
 - Knowledge files removed (moved/deleted in source): N [list old paths]
 - New agent roles added to context-map: N [list roles]
 - Process docs updated: N (direct copy, excluding agent-selection.yaml)
+- Templates updated: N (direct copy, excluding templates/optional/)
 - Agent template updated: yes/no
 - Agents updated: N (Knowledge Context / Communication Protocol sections)
 - Agent-context-map paths updated: N (moved/removed file paths corrected)
@@ -899,7 +897,6 @@ echo "$MANIFEST" > .sdlc-manifest.json
 - CLAUDE-SDLC.md merged into CLAUDE.md: yes/no/not needed
 
 ### Legacy Cleanup
-- Templates directory removed: yes/no/not present
 - Standalone CLAUDE-SDLC.md removed: yes/no/not present
 
 ### PROJECT-SECTION Content Review (§2.1d)

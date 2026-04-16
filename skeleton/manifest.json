@@ -32,7 +32,8 @@
     "ops/sdlc/knowledge/design",
     "ops/sdlc/knowledge/product-research",
     "ops/sdlc/knowledge/testing",
-    "ops/sdlc/playbooks"
+    "ops/sdlc/playbooks",
+    "ops/sdlc/templates"
   ],
   "seed_files": {
     "_comment": "Files to create on bootstrap. Empty strings create empty files with .gitkeep.",
@@ -51,7 +52,7 @@
     "top_level": [
       "README.md"
     ],
-    "_not_installed_comment": "templates/ and CLAUDE-SDLC.md are source-only — not installed to child projects. Templates are reference material; CLAUDE-SDLC.md content is merged into the project's CLAUDE.md during initialization.",
+    "_not_installed_comment": "templates/optional/ and CLAUDE-SDLC.md are source-only — not installed to child projects. Optional templates are conditional CLAUDE.md appendices; CLAUDE-SDLC.md content is merged into the project's CLAUDE.md during initialization.",
     "process": [
       "process/README.md",
       "process/overview.md",
@@ -73,7 +74,7 @@
       "process/debate-protocol.md",
       "process/team-communication-protocol.md"
     ],
-    "templates_source_only": [
+    "templates": [
       "templates/spec_template.md",
       "templates/planning_template.md",
       "templates/result_template.md",
@@ -85,7 +86,7 @@
       "templates/sdlc_lite_result_template.md",
       "templates/postmortem_template.md"
     ],
-    "_templates_note": "Templates are reference material in cc-sdlc source only. Skills read them when needed but child projects don't need local copies.",
+    "_templates_note": "templates/*.md are installed to child projects. templates/optional/ is source-only (conditional CLAUDE.md appendices read during initialization).",
     "templates_optional_source_only": [
       "templates/optional/data-pipeline-integrity.md"
     ],
