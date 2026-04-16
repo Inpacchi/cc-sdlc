@@ -118,7 +118,7 @@ See `references/compliance-methodology.md` step 11 for the full workflow.
 
 **Promotion triage:** Present candidates grouped by discipline. CD decides: promote to knowledge store, defer (with reason), or skip. Promotions apply immediately.
 
-**Prune triage:** Present orphaned knowledge files grouped by severity. CD decides: prune (delete), wire (add to agent mappings), or keep (leave unwired). Wiring uses the same flow as sdlc-ingest step 6 — present candidate agents, update `agent-context-map.yaml`.
+**Prune triage:** Present orphaned knowledge files grouped by severity. CD decides: prune (delete), wire (add to agent mappings), or keep (leave unwired). Wiring uses the same flow as sdlc-ingest step 6 — present candidate agents, update `[sdlc-root]/knowledge/agent-context-map.yaml`.
 
 ### 4. Fix
 

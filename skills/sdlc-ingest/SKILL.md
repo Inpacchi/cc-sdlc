@@ -223,7 +223,7 @@ Route each output to its correct destination:
 
 ### 6. Wire to Agents
 
-Connect newly created knowledge files to relevant agents via `agent-context-map.yaml`. This prevents orphaned knowledge that never reaches the agents that need it.
+Connect newly created knowledge files to relevant agents via `[sdlc-root]/knowledge/agent-context-map.yaml`. This prevents orphaned knowledge that never reaches the agents that need it.
 
 **Step 6.1 — Identify candidate agents:**
 
@@ -383,7 +383,7 @@ Update `[sdlc-root]/process/sdlc_changelog.md` with the ingestion event:
 ## Integration
 
 - **Feeds into:** discipline parking lot triage, knowledge store maturation, playbook creation, agent knowledge context
-- **Uses:** file reading, existing knowledge stores (for deduplication), discipline files (for parking lot placement), `agent-context-map.yaml` (for wiring)
+- **Uses:** file reading, existing knowledge stores (for deduplication), discipline files (for parking lot placement), `[sdlc-root]/knowledge/agent-context-map.yaml` (for wiring)
 - **Complements:** discipline capture protocol (organic, per-session) — this skill handles bulk external import
 - **Does NOT replace:** organic discipline capture. Work-session insights still flow through the capture protocol in skills like sdlc-execute and sdlc-idea. Ingestion accelerates knowledge store population from curated external sources.
 - **Downstream:** after ingestion, `/sdlc-audit` can assess freshness and coverage of the new knowledge entries during its regular compliance audit cycle. Wired knowledge becomes available to agents immediately.

@@ -117,10 +117,10 @@ Coverage Map:
 
 ### Which agents to dispatch
 
-Use `[sdlc-root]/process/agent-selection.md` to identify which agents to dispatch and which lenses apply. For test gap analysis, agents apply the **coverage**, **security at boundaries**, **contract safety**, **performance**, **data integrity**, and **standard** lenses — not the overengineering or type safety lenses (those are review-only). See the lens applicability table in `agent-selection.md`.
+Use `[sdlc-root]/process/agent-selection.yaml` to identify which agents to dispatch. For lenses, see `[sdlc-root]/process/review-lenses.md` — test gap analysis uses the **coverage**, **security at boundaries**, **contract safety**, **performance**, **data integrity**, and **standard** lenses (not overengineering or type safety — those are review-only).
 
 - If a plan exists: read the `agents:` frontmatter list as the starting set
-- If no plan exists (commit or unstaged scope): match changed files against the Tier 1 agent selection rules in `agent-selection.md`
+- If no plan exists (commit or unstaged scope): match changed files against the Tier 1 agent selection rules in `agent-selection.yaml`
 - Add agents if the Coverage Map reveals domains not in the initial set
 
 **Dispatch every agent identified — not a subset.** Each agent reviews the coverage map and reports gaps from their domain perspective. Output a checklist before dispatching:
@@ -247,7 +247,7 @@ If compilation check fails, re-dispatch SDET with the error output. Do not fix t
 
 ## Integration
 
-- **Depends on:** `[sdlc-root]/process/agent-selection.md` (agent identification), `[sdlc-root]/knowledge/agent-context-map.yaml` (cross-domain knowledge injection), `[sdlc-root]/knowledge/testing/testing-paradigm.yaml` (SDET dispatch guidelines)
+- **Depends on:** `[sdlc-root]/process/agent-selection.yaml` (agent identification), `[sdlc-root]/process/review-lenses.md` (lens definitions), `[sdlc-root]/knowledge/agent-context-map.yaml` (cross-domain knowledge injection), `[sdlc-root]/knowledge/testing/testing-paradigm.yaml` (SDET dispatch guidelines)
 - **Feeds into:** `sdlc-tests-run` (receives the created tests and runs the red-green fix cycle)
 - **Uses:** Domain agents (Step 2 gap analysis), SDET agent (Step 3 implementation), `[sdlc-root]/process/manager-rule.md`, `[sdlc-root]/process/collaboration_model.md`
 - **Complements:** `sdlc-execute` / `sdlc-lite-execute` (invoke after execution to generate tests for the deliverable)

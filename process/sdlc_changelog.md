@@ -34,6 +34,128 @@ Each entry contains:
 
 ---
 
+## 2026-04-15: Remove Templates and CLAUDE-SDLC.md from Child Project Installation
+
+**Origin:** User request — templates and CLAUDE-SDLC.md don't need to be installed to child projects.
+
+**What happened:** Templates were being copied to `ops/sdlc/templates/` in child projects but were never used post-initialization — skills reference them from cc-sdlc source when needed. Similarly, `CLAUDE-SDLC.md` was being installed as a separate file, but its content should be merged directly into the project's `CLAUDE.md` during initialization, not maintained as a separate file.
+
+**Changes made:**
+
+1. **`skills/sdlc-migrate/SKILL.md`** — Removed templates from path transformation table and direct copy list. Added §2.1e for CLAUDE-SDLC.md merge handling. Added legacy cleanup step (§2.1a step 6) to remove old templates directories and standalone CLAUDE-SDLC.md files. Updated migration report with legacy cleanup section.
+2. **`skills/sdlc-initialize/SKILL.md`** — Removed templates and CLAUDE-SDLC.md from source→target mapping table. Updated template references to read from cc-sdlc source instead of installed path. Added "Not installed to child projects" section explaining why.
+3. **`skeleton/manifest.json`** — Removed `ops/sdlc/templates` from directories list. Renamed `templates` and `templates_optional` to `templates_source_only` and `templates_optional_source_only` with explanatory comment. Removed `CLAUDE-SDLC.md` from `top_level` array with comment explaining the change.
+
+**Rationale:** Templates are reference material — skills read them when needed but child projects don't need local copies. CLAUDE-SDLC.md content belongs in the project's CLAUDE.md (single source of truth), not as a separate file that users must remember to consult. This reduces file clutter and eliminates the confusion of having SDLC instructions in two places.
+
+---
+
+## 2026-04-15: Consolidate Agent Selection into YAML with Infrastructure Domains
+
+**Origin:** Architecture improvement — agent dispatch rules and infrastructure triggers should be structured YAML, review lenses are prose documentation.
+
+**What happened:** `agent-selection.md` combined multiple concerns that are better separated: (1) structured agent dispatch rules (which agents to dispatch based on file scope), (2) infrastructure domain triggers (which specialists to add during planning), and (3) prose documentation about review lenses. Additionally, `sdlc-plan` and `sdlc-lite-plan` had duplicate infrastructure trigger tables that should be centralized.
+
+**Changes made:**
+
+1. **`process/agent-selection.yaml`** — NEW. Structured agent dispatch rules: `tiers.tier1` (domain agents), `tiers.tier2` (structural agents), `tiers.personal` (fallback agents), and `infrastructure_domains` (planning triggers → specialists). Each agent has `dispatch_when`, `skip_when`, `covers`, and `note` fields. Each infrastructure domain has `triggers` and `specialist`.
+2. **`process/review-lenses.md`** — NEW. Review lens definitions extracted from agent-selection.md.
+3. **`process/agent-selection.md`** — DELETED. Split into the two files above.
+4. **`skeleton/manifest.json`** — Replaced `process/agent-selection.md` with `process/agent-selection.yaml` and `process/review-lenses.md`.
+5. **`skills/sdlc-migrate/SKILL.md`** — Updated "Project-Specific Files" section to reference `agent-selection.yaml`.
+6. **`skills/review-diff/SKILL.md`**, **`skills/review-commit/SKILL.md`**, **`skills/team-review-fix/SKILL.md`** — Updated references: dispatch rules → `agent-selection.yaml`, lenses → `review-lenses.md`.
+7. **`skills/sdlc-plan/SKILL.md`** — Replaced inline infrastructure trigger table with reference to `agent-selection.yaml` § `infrastructure_domains`.
+8. **`skills/sdlc-lite-plan/SKILL.md`** — Same as above.
+9. **`skills/sdlc-create-agent/SKILL.md`** — Updated Step 6: tier1 and infrastructure_domains both go in `agent-selection.yaml`; only `sdlc-plan` agent table needs PROJECT-SECTION markers.
+10. **`skills/sdlc-initialize/SKILL.md`**, **`skills/sdlc-tests-create/SKILL.md`** — Updated references to `agent-selection.yaml`.
+
+**Rationale:** Single source of truth for "which agent handles what" — both file-based dispatch (review) and task-based dispatch (planning). YAML is parseable and validates structure. `agent-selection.yaml` is project-specific so it's never overwritten during migration.
+
+---
+
+## 2026-04-15: Consolidate Skill Creation into sdlc-develop-skill
+
+**Origin:** Architecture clarification — `sdlc-create-skill` was redundant (just the CREATE mode of `sdlc-develop-skill`).
+
+**What happened:** Two issues fixed: (1) `sdlc-create-skill` and `sdlc-develop-skill` were redundant — the former was just CREATE mode of the latter. (2) Both skills referenced cc-sdlc source paths that don't exist in target projects.
+
+**Changes made:**
+
+1. **`skills/sdlc-create-skill/`** — Deleted. Consolidated into `sdlc-develop-skill`.
+2. **`skills/sdlc-develop-skill/SKILL.md`** — Added `/sdlc-create-skill` as trigger alias. Rewrote for target projects: scan `.claude/skills/` for conflicts, write to `.claude/skills/{name}/SKILL.md`, removed manifest.json and CLAUDE-SDLC.md registration.
+3. **`skeleton/manifest.json`** — Removed `skills/sdlc-create-skill/SKILL.md` entry.
+4. **`CLAUDE.md`** — Added "Skill/Agent Location Convention" section documenting the distinction between `skills/`/`agents/` (project skills, installed to target) and `.claude/skills/`/`.claude/agents/` (framework development, cc-sdlc source only)
+5. **`skills/sdlc-create-agent/SKILL.md`** — Updated template reference to `.claude/agents/AGENT_TEMPLATE.md`, removed `agents/AGENT_SUGGESTIONS.md` step
+6. **`agents/sdlc-reviewer.md`** — Simplified Detection section to use only `.claude/skills/` and `.claude/agents/` paths
+7. **`skills/sdlc-review/SKILL.md`** — Simplified agent/skill scanning to use only `.claude/` paths
+8. **`skills/sdlc-audit/references/compliance-methodology.md`** — Fixed file completeness check to fetch manifest from cc-sdlc source repo
+9. **`process/compliance_audit.md`** — Fixed checklist to clarify manifest is fetched from source repo
+10. **`disciplines/README.md`** — Added "(cc-sdlc framework developers only)" note to manifest entry instruction
+11. **`skills/sdlc-review/SKILL.md`** — Fixed analyze report template to use `.claude/agents/` and `.claude/skills/` paths
+
+**Rationale:** One skill for skill development (create + modify). Project skills must reference paths that exist in target projects.
+
+---
+
+## 2026-04-15: Exclude agent-selection.md from sdlc-migrate Direct Copy
+
+**Origin:** User report — running `/sdlc-migrate` on a project using `frontend-engineer` overwrote references to `frontend-developer`.
+
+**What happened:** The `process/agent-selection.md` file was included in the direct-copy list (`process/*.md`), but it contains the project's agent roster and dispatch rules — project-specific content that shouldn't be overwritten.
+
+**Changes made:**
+
+1. **`skills/sdlc-migrate/SKILL.md`** — Added "Project-Specific Files (Never Overwrite)" section to Path Transformation Rules — lists `agent-selection.md` and `agent-context-map.yaml` as never-overwrite files
+2. **`skills/sdlc-migrate/SKILL.md`** — Updated §2.1 Direct Copy Files — explicitly excludes `agent-selection.md` from `process/*.md` glob
+3. **`skills/sdlc-migrate/SKILL.md`** — Added Red Flag: "I'll copy all process/*.md files" → `agent-selection.md` is project-specific
+4. **`skills/sdlc-migrate/SKILL.md`** — Updated §4.6 migration report to note process docs exclude agent-selection.md
+
+**Rationale:** `agent-selection.md` defines the project's agent roster and dispatch rules using the project's agent names. It's a template at install time that becomes project-owned. Framework files with canonical agent names in examples (like `team-communication-protocol.md`) are illustrative and don't affect dispatch — those can be safely updated.
+
+---
+
+## 2026-04-15: Standardize [sdlc-root] for All SDLC Path References
+
+**Origin:** Code review — many installed files used bare paths for knowledge files and SDLC directories instead of `[sdlc-root]`.
+
+**What happened:** Multiple installed files referenced knowledge files (like `agent-context-map.yaml`, `agent-communication-protocol.yaml`) and SDLC directories using bare paths. Since these files are installed to target projects, they should use `[sdlc-root]/` consistently.
+
+**Changes made:**
+
+1. **`knowledge/coding/README.md`** — Updated cross-references to use `[sdlc-root]/knowledge/...`, `[sdlc-root]/disciplines/...`
+2. **`knowledge/business-analysis/README.md`** — Same updates
+3. **`knowledge/architecture/README.md`** — Same updates
+4. **`knowledge/design/README.md`** — Same updates
+5. **`knowledge/product-research/README.md`** — Same updates
+6. **`knowledge/data-modeling/README.md`** — Same updates
+7. **`knowledge/README.md`** — Updated all `agent-context-map.yaml` refs to `[sdlc-root]/knowledge/agent-context-map.yaml`, discipline refs to `[sdlc-root]/disciplines/...`
+8. **`agents/sdlc-reviewer.md`** — Updated changelog check, knowledge context, and communication protocol refs to use `[sdlc-root]/...`
+9. **`agents/AGENT_TEMPLATE.md`** — Updated `agent-communication-protocol.yaml` refs to `[sdlc-root]/knowledge/architecture/agent-communication-protocol.yaml`
+10. **`skills/sdlc-audit/references/compliance-methodology.md`** — Updated all `agent-context-map.yaml` refs to `[sdlc-root]/knowledge/agent-context-map.yaml`
+11. **`skills/sdlc-ingest/SKILL.md`** — Updated `agent-context-map.yaml` refs to `[sdlc-root]/knowledge/agent-context-map.yaml`
+12. **`skills/sdlc-audit/SKILL.md`** — Updated `agent-context-map.yaml` ref to `[sdlc-root]/knowledge/agent-context-map.yaml`
+13. **`skills/sdlc-create-agent/SKILL.md`** — Updated `agent-context-map.yaml` ref, template refs, and `agent-selection.yaml` ref
+14. **`process/discipline_capture.md`** — Updated `agent-communication-protocol.yaml` ref to `[sdlc-root]/knowledge/architecture/agent-communication-protocol.yaml`
+15. **`CLAUDE.md`** — Expanded Path variable rule to explicitly include specific files (not just directories), added examples like `agent-context-map.yaml` and `sdlc_changelog.md`, added `sdlc-initialize` to the exception list. Updated Hard-coded path scan to also search `agents/` directory and include `plugins/` in the grep pattern.
+
+**Rationale:** The `[sdlc-root]` placeholder resolves to the project's SDLC installation path (`ops/sdlc/` or `.claude/sdlc/`). Bare paths like `agent-context-map.yaml` are ambiguous in target projects.
+
+---
+
+## 2026-04-15: Simplify Path References in sdlc-compliance-auditor
+
+**Origin:** Code review — redundant fallback path in methodology section.
+
+**What happened:** The methodology section listed multiple path alternatives including `.claude/sdlc/knowledge/` and the cc-sdlc source path. Both were redundant — this agent runs in target projects where `[sdlc-root]` always resolves correctly.
+
+**Changes made:**
+
+1. **`agents/sdlc-compliance-auditor.md`** — Simplified methodology path to just `[sdlc-root]/knowledge/compliance-methodology.md`, removing the `.claude/sdlc/knowledge/` fallback and cc-sdlc source path reference.
+
+**Rationale:** The agent's path detection logic already handles resolution. The cc-sdlc source path is irrelevant since the agent only runs in target projects.
+
+---
+
 ## 2026-04-15: Mandatory Context7 Library Verification
 
 **Origin:** Post-execution analysis — frontend-engineer agent made critical API assumptions about `@react-sigma/core` hooks (`useSetSettings`, `useRegisterEvents`) that were wrong.

@@ -18,8 +18,7 @@
     "ops",
     "ops/sdlc",
     "ops/sdlc/process",
-    "ops/sdlc/templates",
-    "ops/sdlc/examples",
+        "ops/sdlc/examples",
     "ops/sdlc/disciplines",
     "ops/sdlc/knowledge",
     "ops/sdlc/knowledge/architecture",
@@ -50,9 +49,9 @@
   "source_files": {
     "_comment": "Canonical list of all files installed by sdlc-initialize. Each path is relative to the cc-sdlc source root. Used for completeness validation.",
     "top_level": [
-      "README.md",
-      "CLAUDE-SDLC.md"
+      "README.md"
     ],
+    "_not_installed_comment": "templates/ and CLAUDE-SDLC.md are source-only — not installed to child projects. Templates are reference material; CLAUDE-SDLC.md content is merged into the project's CLAUDE.md during initialization.",
     "process": [
       "process/README.md",
       "process/overview.md",
@@ -69,11 +68,12 @@
       "process/finding-classification.md",
       "process/incident_response.md",
       "process/project-section-markers.md",
-      "process/agent-selection.md",
+      "process/agent-selection.yaml",
+      "process/review-lenses.md",
       "process/debate-protocol.md",
       "process/team-communication-protocol.md"
     ],
-    "templates": [
+    "templates_source_only": [
       "templates/spec_template.md",
       "templates/planning_template.md",
       "templates/result_template.md",
@@ -85,7 +85,8 @@
       "templates/sdlc_lite_result_template.md",
       "templates/postmortem_template.md"
     ],
-    "templates_optional": [
+    "_templates_note": "Templates are reference material in cc-sdlc source only. Skills read them when needed but child projects don't need local copies.",
+    "templates_optional_source_only": [
       "templates/optional/data-pipeline-integrity.md"
     ],
     "examples": [
@@ -195,7 +196,6 @@
       "skills/sdlc-audit/references/session-reading.md",
       "skills/sdlc-develop-skill/SKILL.md",
       "skills/sdlc-create-agent/SKILL.md",
-      "skills/sdlc-create-skill/SKILL.md",
       "skills/sdlc-review/SKILL.md",
       "skills/enrich-agent/SKILL.md",
       "skills/research-external/SKILL.md",
