@@ -119,7 +119,7 @@ Check each discipline file:
 ### 6d. Knowledge-to-Skill Wiring
 
 Two ownership tiers:
-1. **Agent-owned (domain):** Agent definitions include Knowledge Context section directing them to `agent-context-map.yaml`
+1. **Agent-owned (domain):** Agent definitions include Knowledge Context section directing them to `[sdlc-root]/knowledge/agent-context-map.yaml`
 2. **Skill-owned (cross-domain):** Skills inject knowledge from other agents' mappings when dispatching into cross-domain contexts
 
 **Check:** agent definitions have self-lookup sections, skills don't redundantly inject same-agent knowledge, cross-domain injection exists where needed.
@@ -203,9 +203,9 @@ Identify areas where the knowledge layer has structural gaps.
 
 1. **Disciplines with promotable entries but no knowledge store** — discipline parking lot has `[READY TO PROMOTE]` entries but no corresponding `[sdlc-root]/knowledge/<discipline>/` directory. Severity: **Warning** (actionable — promotion is blocked).
 
-2. **Knowledge files not referenced by any agent** — extends 6e (agent context map integrity). Any YAML file in `[sdlc-root]/knowledge/` not listed in any agent's mapping in `agent-context-map.yaml`. Severity: **Warning** (the knowledge exists but no agent consumes it).
+2. **Knowledge files not referenced by any agent** — extends 6e (agent context map integrity). Any YAML file in `[sdlc-root]/knowledge/` not listed in any agent's mapping in `[sdlc-root]/knowledge/agent-context-map.yaml`. Severity: **Warning** (the knowledge exists but no agent consumes it).
 
-3. **Agents with empty knowledge mappings** — agents listed in `agent-context-map.yaml` with an empty file list, or agents in `.claude/agents/` not present in the context map at all. Severity: **Info** (possibly intentional for simple utility agents).
+3. **Agents with empty knowledge mappings** — agents listed in `[sdlc-root]/knowledge/agent-context-map.yaml` with an empty file list, or agents in `.claude/agents/` not present in the context map at all. Severity: **Info** (possibly intentional for simple utility agents).
 
 4. **Discipline-to-knowledge store alignment** — disciplines at Level 2+ in the Process Maturity Tracker should have a corresponding knowledge store directory. Flag Level 2+ disciplines without stores. Severity: **Warning**.
 
@@ -215,10 +215,10 @@ Identify knowledge files that exist but are not wired to any agent, then assess 
 
 **Step 6k.1 — Identify orphans:**
 
-List all YAML files in `[sdlc-root]/knowledge/*/` directories. For each file, check if it appears in any agent's mapping in `agent-context-map.yaml`. Files with no agent references are orphan candidates.
+List all YAML files in `[sdlc-root]/knowledge/*/` directories. For each file, check if it appears in any agent's mapping in `[sdlc-root]/knowledge/agent-context-map.yaml`. Files with no agent references are orphan candidates.
 
 Exclude from orphan detection:
-- `agent-context-map.yaml` itself
+- `[sdlc-root]/knowledge/agent-context-map.yaml` itself
 - `README.md` files
 - `provenance_log.md`
 
@@ -262,7 +262,7 @@ Prune candidates are surfaced in step 11 (triage) alongside promotion candidates
 ## Dimension 7: Migration Integrity
 
 - **7a. Manifest version:** Read `.sdlc-manifest.json`, compare `source_version` against current cc-sdlc. If >10 commits or >30 days behind, recommend migration.
-- **7b. File completeness:** Compare installed files against `skeleton/manifest.json` source_files lists.
+- **7b. File completeness:** Fetch `skeleton/manifest.json` from cc-sdlc source (use the repo URL from `.sdlc-manifest.json`), compare installed files against its `source_files` lists.
 - **7c. Content-merge:** Verify framework sections current while project customizations preserved (skill gates, discipline entries, agent context map names).
 - **7d. Removed features:** Search skills/agents for references to deprecated/removed framework features.
 
@@ -387,7 +387,7 @@ For each: (P)rune, (W)ire, (K)eep
 **11f. Apply prune decisions.**
 
 - **Prune:** Delete the knowledge file. Remove any provenance entry that references it. Log the deletion in the audit artifact.
-- **Wire:** Run the wiring flow from sdlc-ingest step 6 — present candidate agents, let CD select, update `agent-context-map.yaml`.
+- **Wire:** Run the wiring flow from sdlc-ingest step 6 — present candidate agents, let CD select, update `[sdlc-root]/knowledge/agent-context-map.yaml`.
 - **Keep:** Leave unchanged. Optionally add a note in provenance log explaining why the file is intentionally unwired (e.g., "reference only, not for agent consumption").
 
 **11g. Report prune results.** Append to the audit artifact:

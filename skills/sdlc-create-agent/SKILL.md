@@ -6,7 +6,7 @@ description: >
   tools list, color, memory setting), body scaffolding (scope, knowledge context,
   communication protocol, core principles, workflow, anti-rationalization table,
   self-verification checklist, persistent memory section), agent-context-map update,
-  registration, and wiring into dispatching skills (agent-selection.md for all review skills,
+  registration, and wiring into dispatching skills (agent-selection.yaml for all review skills,
   sdlc-plan, sdlc-lite-plan). Dispatches sdlc-reviewer for quality gate.
   Triggers on "create a new agent", "new agent", "add an agent", "scaffold an agent",
   "I need an agent for", "make an agent", "/sdlc-create-agent".
@@ -22,7 +22,7 @@ Create a new domain agent that follows cc-sdlc conventions. Scaffold the complet
 
 ## Reference
 
-Read `agents/AGENT_TEMPLATE.md` before proceeding — it is the canonical structural pattern with full frontmatter reference.
+Read `.claude/agents/AGENT_TEMPLATE.md` before proceeding — it is the canonical structural pattern with full frontmatter reference.
 
 ## Steps
 
@@ -135,10 +135,9 @@ If no domain-specific knowledge files exist yet, map only the communication prot
 
 ### 5. Write and Register
 
-1. Write the agent file to `.claude/agents/{agent-name}.md` (in the target project) or `agents/{agent-name}.md` (in cc-sdlc source)
+1. Write the agent file to `.claude/agents/{agent-name}.md`
 2. Update `[sdlc-root]/knowledge/agent-context-map.yaml` with the mapping
-3. Add to `agents/AGENT_SUGGESTIONS.md` if reusable across projects
-4. Add a changelog entry to `[sdlc-root]/process/sdlc_changelog.md`
+3. Add a changelog entry to `[sdlc-root]/process/sdlc_changelog.md`
 
 ### 6. Wire Into Dispatching Skills
 
@@ -148,34 +147,49 @@ New agents are useless if the skills that select agents don't know about them. D
 
 | Role type | Description | Files to update |
 |-----------|-------------|-----------------|
-| **Reviewer** | Reviews code for domain-specific issues | `[sdlc-root]/process/agent-selection.md` Tier 1 |
+| **Reviewer** | Reviews code for domain-specific issues | `[sdlc-root]/process/agent-selection.yaml` § `tiers.tier1` |
 | **Builder/Planner** | Implements or plans work in a domain | `sdlc-plan` agent table |
-| **Infrastructure specialist** | Owns a specific infrastructure domain | `sdlc-plan` infra trigger table, `sdlc-lite-plan` infra trigger table |
+| **Infrastructure specialist** | Owns a specific infrastructure domain | `[sdlc-root]/process/agent-selection.yaml` § `infrastructure_domains` |
 
 Most agents are multiple types. A `db-engineer` is a reviewer (catches schema issues in diffs), a builder (plans migration work), AND an infrastructure specialist (owns the database domain). Apply all that fit.
 
 **For each applicable role:**
 
-1. **`[sdlc-root]/process/agent-selection.md` Tier 1 entry** — Add a bullet with:
-   - Agent name (backtick-quoted)
-   - File-match triggers ("if the diff touches...")
-   - What it covers (domain-specific review concerns)
-   - Example: `` - `db-engineer` — if the diff touches migration files, ORM models, or schema definitions. Covers migration safety, index strategy, and query patterns. ``
-   - This single entry covers all review skills (`review-diff`, `review-commit`, `team-review-fix`)
+1. **`[sdlc-root]/process/agent-selection.yaml` tier1 entry** — Add under `tiers.tier1`:
+   ```yaml
+   db-engineer:
+     dispatch_when:
+       - migration files
+       - ORM models
+       - schema definitions
+     covers:
+       - migration safety
+       - index strategy
+       - query patterns
+   ```
+   This single entry covers all review skills (`review-diff`, `review-commit`, `team-review-fix`)
 
 2. **`sdlc-plan` agent table** — Add a row with:
    - Agent name and domain description
    - Example: `` | `db-engineer` | Database schema, migrations, query optimization, index strategy | ``
 
-3. **`sdlc-plan` / `sdlc-lite-plan` infrastructure trigger table** — Add a row with:
-   - Domain name, trigger conditions (phrased as questions), and specialist agent
-   - Example: `` | Database/storage | Adds/modifies schema, migrations, indexes, or query patterns? | `db-engineer` | ``
+3. **`[sdlc-root]/process/agent-selection.yaml` infrastructure_domains entry** — Add under `infrastructure_domains`:
+   ```yaml
+   database-storage:
+     triggers:
+       - Adds/modifies schema, migrations, or indexes?
+       - Changes query patterns or storage paths?
+     specialist: db-engineer
+   ```
+   This covers infrastructure checks in `sdlc-plan` and `sdlc-lite-plan`
 
-**Migration protection (mandatory):** Wrap all project-specific additions to dispatcher skill tables in `PROJECT-SECTION` markers so they survive framework migrations (see `[sdlc-root]/process/project-section-markers.md` for the full convention):
+**Migration protection:**
+- `agent-selection.yaml` — NO markers needed. This file is project-specific and never overwritten during migration.
+- `sdlc-plan` agent table — YES, wrap additions in `PROJECT-SECTION` markers (framework file that gets overwritten):
 
 ```markdown
 <!-- PROJECT-SECTION-START: agent-wiring-{agent-name} -->
-- `{agent-name}` — if the diff touches {domain files}. Covers {domain concerns}.
+| `{agent-name}` | {domain description} |
 <!-- PROJECT-SECTION-END: agent-wiring-{agent-name} -->
 ```
 
@@ -209,7 +223,7 @@ Dispatch the `sdlc-reviewer` subagent on the created agent file. Present its fin
 ## Integration
 
 - **Feeds into:** The created agent becomes available for dispatch by orchestration skills
-- **Modifies:** `agent-selection.md` (Tier 1 reviewers — covers review-diff, review-commit, team-review-fix), `sdlc-plan` (agent table + infra triggers), `sdlc-lite-plan` (infra triggers) — see Step 6
-- **Uses:** `AGENT_TEMPLATE.md` (structural reference), `agent-context-map.yaml` (knowledge wiring), `AGENT_SUGGESTIONS.md` (reusable patterns), `sdlc-reviewer` (quality gate), existing agents (conflict checking)
+- **Modifies:** `[sdlc-root]/process/agent-selection.yaml` (tier1 reviewers + infrastructure_domains), `sdlc-plan` (agent table) — see Step 6
+- **Uses:** `.claude/agents/AGENT_TEMPLATE.md` (structural reference), `[sdlc-root]/knowledge/agent-context-map.yaml` (knowledge wiring), `.claude/agents/AGENT_SUGGESTIONS.md` (reusable patterns), `sdlc-reviewer` (quality gate), existing agents (conflict checking)
 - **Complements:** `sdlc-develop-skill` (skills vs agents), `sdlc-review` (review existing agents)
 - **Does NOT replace:** Direct editing of existing agents (this creates new ones only)

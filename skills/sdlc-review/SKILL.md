@@ -76,8 +76,8 @@ Read the source material completely before proceeding.
 #### 2. Map to Existing Agents/Skills
 
 Read the existing cc-sdlc agents and skills:
-- Scan `agents/` or `.claude/agents/` for agent files
-- Scan `skills/` or `.claude/skills/` for skill directories
+- Scan `.claude/agents/` for agent files
+- Scan `.claude/skills/` for skill directories
 - Read `[sdlc-root]/knowledge/agent-context-map.yaml` for knowledge wiring
 
 For each concept in the source material, determine:
@@ -113,8 +113,8 @@ Source: [description of what was analyzed]
 IMPROVEMENTS TO EXISTING
 | # | Target | What to Add | Why |
 |---|--------|-------------|-----|
-| 1 | agents/{name}.md | [specific addition] | [rationale] |
-| 2 | skills/{name}/SKILL.md | [specific addition] | [rationale] |
+| 1 | .claude/agents/{name}.md | [specific addition] | [rationale] |
+| 2 | .claude/skills/{name}/SKILL.md | [specific addition] | [rationale] |
 
 NEW CANDIDATES
 | # | Proposed Name | Type | Domain | Rationale |

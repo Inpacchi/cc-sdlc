@@ -11,29 +11,29 @@ You review SDLC skill and agent files against cc-sdlc conventions. You produce s
 ## Detection
 
 Determine the file type from its location and content:
-- **Skill**: Located in `skills/*/SKILL.md` or `.claude/skills/*/SKILL.md`. Has `name:` and `description:` frontmatter without `model:`, `tools:`, or `color:`.
-- **Agent**: Located in `agents/*.md` or `.claude/agents/*.md`. Has `name:`, `description:`, `model:`, `tools:`, and `color:` frontmatter.
+- **Skill**: Located in `.claude/skills/*/SKILL.md`. Has `name:` and `description:` frontmatter without `model:`, `tools:`, or `color:`.
+- **Agent**: Located in `.claude/agents/*.md`. Has `name:`, `description:`, `model:`, `tools:`, and `color:` frontmatter.
 
 ## Shared Checks (both skills and agents)
 
 ### Frontmatter
 - [ ] `name:` field exists and matches `lowercase-with-hyphens` format (3-50 chars, starts/ends alphanumeric)
 - [ ] `description:` field exists and is non-empty
-- [ ] Name does not conflict with other skills/agents (read `skeleton/manifest.json` for skills, scan `agents/` or `.claude/agents/` for agents)
+- [ ] Name does not conflict with other skills/agents (scan `.claude/skills/` for skills, `.claude/agents/` for agents)
 
 ### Naming
 - [ ] Name uses verb-first pattern where applicable (e.g., `sdlc-review-commit` not `commit-review`)
 - [ ] Name is descriptive (not generic like "helper" or "util")
 
 ### Changelog
-- [ ] A changelog entry exists in `process/sdlc_changelog.md` or `[sdlc-root]/process/sdlc_changelog.md` mentioning this file (check recent entries only — may not exist for pre-existing files)
+- [ ] A changelog entry exists in `[sdlc-root]/process/sdlc_changelog.md` mentioning this file (check recent entries — may not exist for pre-existing files)
 
 ### Collaboration Model
-- [ ] Orchestration skills (skills that dispatch agents) reference `[sdlc-root]/process/collaboration_model.md` (or `process/collaboration_model.md` in cc-sdlc source)
+- [ ] Orchestration skills (skills that dispatch agents) reference `[sdlc-root]/process/collaboration_model.md`
 - [ ] Orchestration skills that use `AskUserQuestion` link to the collaboration model's Tool Rule (utility skills that use `AskUserQuestion` for a single gate do not need to reference the full collaboration model)
 
 ### Deliverable Lifecycle
-- [ ] Skills that create or transition deliverables reference `[sdlc-root]/process/deliverable_lifecycle.md` (or `process/deliverable_lifecycle.md` in cc-sdlc source)
+- [ ] Skills that create or transition deliverables reference `[sdlc-root]/process/deliverable_lifecycle.md`
 - [ ] Status markers in skill output match the defined states (Draft, Ready, In Progress, Validated, Deployed, Complete, Archived)
 
 ## Skill-Specific Checks
@@ -81,8 +81,8 @@ Determine the file type from its location and content:
 
 ### Required Sections
 - [ ] Scope statement exists (what the agent owns, what it does NOT touch)
-- [ ] Knowledge Context section references `agent-context-map.yaml`
-- [ ] Communication Protocol section references `agent-communication-protocol.yaml`
+- [ ] Knowledge Context section references `[sdlc-root]/knowledge/agent-context-map.yaml`
+- [ ] Communication Protocol section references `[sdlc-root]/knowledge/agent-communication-protocol.yaml`
 - [ ] Core Principles section with 2+ concern areas
 - [ ] Workflow section with 3+ numbered steps
 - [ ] Anti-Rationalization Table with `| Thought | Reality |` format and 5+ entries
@@ -96,8 +96,8 @@ Determine the file type from its location and content:
 - [ ] "Surfacing Learnings to the SDLC" subsection exists
 
 ### Knowledge Wiring
-- [ ] Agent has an entry in `[sdlc-root]/knowledge/agent-context-map.yaml` (or `knowledge/agent-context-map.yaml` in cc-sdlc source)
-- [ ] At minimum, `agent-communication-protocol.yaml` is mapped
+- [ ] Agent has an entry in `[sdlc-root]/knowledge/agent-context-map.yaml`
+- [ ] At minimum, `[sdlc-root]/knowledge/architecture/agent-communication-protocol.yaml` is mapped
 
 ## PROJECT-SECTION Marker Handling
 

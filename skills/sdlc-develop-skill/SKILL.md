@@ -1,18 +1,17 @@
 ---
 name: sdlc-develop-skill
 description: >
-  Create or modify SDLC skills following cc-sdlc conventions. Two modes: CREATE mode walks through
-  purpose definition, skill type selection (orchestration, utility, exploration, domain-specific),
-  frontmatter generation with trigger phrases and anti-triggers, type-appropriate body scaffolding,
-  Red Flags table, Integration section, and registration in manifest.json and CLAUDE-SDLC.md.
-  MODIFY mode reads an existing skill, identifies changes, auto-wraps custom content in
-  PROJECT-SECTION markers, and warns if changes target framework sections that will be overwritten
-  on next migration. Enforces single-line YAML descriptions, verb-first naming, manager-rule
-  references for agent-dispatching skills, and mandatory sections. Dispatches sdlc-reviewer for
-  quality gate.
+  Create or modify project skills following cc-sdlc conventions. Two modes: CREATE mode walks
+  through purpose definition, skill type selection (orchestration, utility, exploration,
+  domain-specific), frontmatter generation with trigger phrases and anti-triggers, type-appropriate
+  body scaffolding, Red Flags table, and Integration section. MODIFY mode reads an existing skill,
+  identifies changes, auto-wraps custom content in PROJECT-SECTION markers, and warns if changes
+  target framework sections that will be overwritten on next migration. Enforces single-line YAML
+  descriptions, verb-first naming, manager-rule references for agent-dispatching skills, and
+  mandatory sections. Dispatches sdlc-reviewer for quality gate.
   Triggers on "create a new skill", "new skill", "add a skill", "scaffold a skill",
   "I need a skill for", "make a skill", "modify a skill", "update a skill", "customize a skill",
-  "/sdlc-develop-skill".
+  "/sdlc-develop-skill", "/sdlc-create-skill".
   Do NOT use for creating agents — use sdlc-create-agent.
 ---
 
@@ -55,7 +54,7 @@ Generate a name following conventions:
 - Verb-first preferred (e.g., `sdlc-review-commit`, not `commit-review`)
 - Must not conflict with existing skills
 
-Read `skeleton/manifest.json` → `source_files.skills` to list existing skill names. Present the proposed name and confirm.
+Scan `.claude/skills/` to list existing skill names. Present the proposed name and confirm no conflicts.
 
 ### 3. Frontmatter Generation
 
@@ -156,12 +155,11 @@ Generate:
 - **DRY notes:** [if this skill overlaps with existing skills, document the boundary]
 ```
 
-### 8. Write and Register
+### 8. Write
 
-1. Write the skill file to `skills/{name}/SKILL.md`
-2. Add `"skills/{name}/SKILL.md"` to `skeleton/manifest.json` → `source_files.skills`
-3. Add a command row to `CLAUDE-SDLC.md` if the skill is user-invokable
-4. Add a changelog entry to `[sdlc-root]/process/sdlc_changelog.md`
+1. Write the skill file to `.claude/skills/{name}/SKILL.md`
+2. If the skill needs reference files, create `.claude/skills/{name}/references/` and add them
+3. Add a changelog entry to `[sdlc-root]/process/sdlc_changelog.md`
 
 ### 9. Quality Gate
 
@@ -227,7 +225,6 @@ Dispatch the `sdlc-reviewer` subagent on the modified skill file. Present its fi
 | "Red flags are optional for utility skills" | Every skill type needs a Red Flags table. No exceptions. |
 | "I'll skip the Integration section — this skill is standalone" | No skill is standalone. Every skill feeds into or complements others. |
 | "The name should describe the noun first" | Verb-first naming: `sdlc-review-commit`, not `commit-review`. |
-| "I'll register it later" | Registration (manifest, CLAUDE-SDLC.md, changelog) happens in the same step as creation. |
 | "This orchestration skill doesn't need the Manager Rule" | If it dispatches agents, it MUST reference manager-rule.md. |
 | "I'll write the skill directly without this scaffolding" | Hand-written skills skip convention validation. Use this skill. |
 | "SKILL.md can be as long as needed" | Target 1,500-3,000 words for SKILL.md body. Move detailed content to references/. |
@@ -236,7 +233,7 @@ Dispatch the `sdlc-reviewer` subagent on the modified skill file. Present its fi
 
 ## Integration
 
-- **Feeds into:** The created/modified skill becomes part of the SDLC skill library
-- **Uses:** `skeleton/manifest.json` (registration), `CLAUDE-SDLC.md` (command table), `sdlc-reviewer` (quality gate), existing skills (as reference patterns)
+- **Feeds into:** The created/modified skill becomes part of the project's skill library
+- **Uses:** `sdlc-reviewer` (quality gate), existing skills in `.claude/skills/` (as reference patterns)
 - **Complements:** `sdlc-create-agent` (agents vs skills), `sdlc-review` (review existing skills)
 - **Does NOT replace:** Direct editing of project-owned skills (this adds convention enforcement and migration protection)

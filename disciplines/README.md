@@ -123,7 +123,7 @@ A new discipline starts at Level 1 (Initial) and requires exactly:
 
 2. **Tracker entry** — add a row to the Process Maturity Tracker in `[sdlc-root]/disciplines/process-improvement.md` at Level 1
 
-3. **Manifest entry** — add the file path to `skeleton/manifest.json` under `source_files.disciplines`
+3. **Manifest entry** — *(cc-sdlc framework developers only)* add the file path to `skeleton/manifest.json` under `source_files.disciplines`
 
 4. **Hump chart row** — add the discipline to the intensity chart in this README (estimate where it peaks across phases)
 

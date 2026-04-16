@@ -18,10 +18,9 @@ A compliance audit compares a project's current documentation structure and prac
 
 | Area | What to Check | Standard |
 |------|---------------|----------|
-| CLAUDE.md | Has SDLC compliance section and commands table | `~/src/ops/sdlc/skeleton/CLAUDE.md` |
+| CLAUDE.md | Has SDLC compliance section and commands table | SDLC content from `CLAUDE-SDLC.md` merged in |
 | CLAUDE.md references | All file paths point to existing files | No broken links |
 | `_index.md` coverage | Every concept chronicle has an index | 100% coverage |
-| Templates | Project has all SDLC templates | 5 templates from `~/src/ops/sdlc/templates/` |
 | current_work hygiene | No completed deliverables lingering | Specs/results archived after chronicle org |
 | Directory structure | Standard directories exist | `current_work/{specs,planning,results,issues}` |
 | Concept registry | Chronicle organization guide is current | All concepts listed |
@@ -101,7 +100,7 @@ For each gap found, classify:
 
 ### Phase 3: Create Proposal
 
-Write a compliance proposal using the template at `~/src/ops/sdlc/templates/compliance_audit_template.md`.
+Write a compliance proposal using the template from cc-sdlc source (`templates/compliance_audit_template.md`).
 
 **Key sections:**
 - Summary table of all gaps with severity
@@ -174,7 +173,7 @@ Use this as a quick pass/fail checklist:
 - [ ] Standard directory structure exists
 - [ ] Concept registry (if maintained) is up to date
 - [ ] `.sdlc-manifest.json` exists and `source_version` is current
-- [ ] All framework files from manifest's `source_files` are present
+- [ ] All framework files from cc-sdlc source manifest are present (fetch `skeleton/manifest.json` from source repo)
 - [ ] No stale references to removed framework features in skills or agents
 
 ---
