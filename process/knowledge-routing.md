@@ -1,0 +1,136 @@
+# Knowledge Routing
+
+## Purpose
+
+Domain agents start each session without accumulated context. They don't know which patterns apply to their domain, which pitfalls to avoid, or which methodology the project has converged on. If knowledge files exist but aren't wired into the dispatch path, agents will either rediscover that knowledge the hard way or make decisions inconsistent with prior work. Knowledge routing solves this by giving the framework a systematic way to ensure agents receive the right files at the right time — not through ad-hoc prompt construction, but through a maintained map that skills consult before dispatching.
+
+---
+
+## How It Works
+
+### The context map
+
+All routing is governed by a single file: `[sdlc-root]/knowledge/agent-context-map.yaml`. It contains one top-level key, `mappings:`, whose value is an object. Each key in that object is an agent name. Each value is a list of file paths — the knowledge files that agent should read before starting domain work.
+
+```yaml
+mappings:
+  architect:
+    - "[sdlc-root]/knowledge/architecture/backend-capability-assessment.yaml"
+    - "[sdlc-root]/knowledge/architecture/technology-patterns.yaml"
+    ...
+  backend-developer:
+    - "[sdlc-root]/knowledge/coding/code-quality-principles.yaml"
+    ...
+```
+
+The files in each list are project knowledge stores: YAML files containing reusable patterns, known anti-patterns, methodology entries, and domain gotchas. A `technology-patterns.yaml` file might contain decisions about which libraries the project uses and why. A `domain-boundary-gotchas.yaml` might list known pitfalls at the seams between subsystems. A `testing-paradigm.yaml` might define what constitutes an acceptable test in this project. These files are not documentation for humans to browse — they are context payloads that agents consume.
+
+### The agent-side contract
+
+Every agent built on this framework carries a `## Knowledge Context` section in its system prompt. The canonical instruction, taken verbatim from `agents/AGENT_TEMPLATE.md`, is:
+
+> Before starting substantive work, consult `[sdlc-root]/knowledge/agent-context-map.yaml` and find your entry. Read the mapped knowledge files — they contain reusable patterns, anti-patterns, and domain-specific guidance relevant to your work.
+
+This means every agent is responsible for finding its own name in the map and reading the listed files before proceeding. No special tooling or injection is required — the agent reads the map, reads the files, and then starts its domain work with that context in scope.
+
+### The dispatch-time contract
+
+Skills that dispatch agents carry a parallel responsibility. Before dispatching, the skill consults the map and includes the agent's mapped file paths in the dispatch prompt, typically as a prefixed instruction:
+
+> Before implementing, read [paths] for relevant patterns.
+
+This covers cases where an agent's access to the map file cannot be assumed — for example, when an agent is invoked in a restricted tool environment or when the dispatch prompt is the primary vehicle for context. Including the paths directly in the dispatch is a belt-and-suspenders measure: the agent would find them via the map anyway, but the skill makes them explicit.
+
+**Cross-domain injection:** When an agent works in a context outside its primary domain, skills may inject knowledge files from *other* agents' mappings. For example, when dispatching an SDET to write tests for a feature, `sdlc-tests-create` looks up the agents who built that feature and includes their domain knowledge in the SDET's dispatch prompt. This ensures the tester understands the implementation's patterns and constraints without having to rediscover them. Skills use judgment here — cross-domain injection applies when genuinely crossing boundaries, not for routine single-domain work.
+
+### Concrete example
+
+The `architect` agent has one of the larger mappings in the current map. A three-entry excerpt:
+
+```yaml
+architect:
+  - "[sdlc-root]/knowledge/architecture/backend-capability-assessment.yaml"
+  - "[sdlc-root]/knowledge/architecture/technology-patterns.yaml"
+  - "[sdlc-root]/knowledge/architecture/pipeline-design-patterns.yaml"
+```
+
+`backend-capability-assessment.yaml` gives the architect a current-state read on what the backend can and cannot do, so design proposals stay grounded. `technology-patterns.yaml` captures which libraries and patterns the project has converged on, preventing re-litigation of settled decisions. `pipeline-design-patterns.yaml` documents how data pipelines are structured in this project. All three files narrow the solution space before the architect writes a line of design prose.
+
+---
+
+## Map Structure Reference
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `mappings` | object | Top-level key. Contains one entry per registered agent. |
+| Agent name key | string | Matches the agent's `.md` filename without the extension (e.g., `architect` for `architect.md`). |
+| File path list | array of strings | Ordered list of paths to knowledge files. Paths are relative to the project root. Files are read in list order. |
+
+Minimal valid structure:
+
+```yaml
+mappings:
+  my-agent:
+    - "[sdlc-root]/knowledge/architecture/agent-communication-protocol.yaml"
+```
+
+---
+
+## Adding a New Agent
+
+1. **Create the agent definition file** at `.claude/agents/[agent-name].md`. The agent name must use lowercase letters and hyphens only (e.g., `data-pipeline-engineer`).
+
+2. **Add an entry to `agent-context-map.yaml`** under `mappings:`. The key must match the filename without the `.md` extension exactly — a mismatch means the agent's `## Knowledge Context` lookup fails silently.
+
+3. **List knowledge file paths** that are relevant to the agent's domain. Consider including `[sdlc-root]/knowledge/architecture/agent-communication-protocol.yaml` for agents that emit structured handoffs (see Shared Knowledge below). Add domain-specific files as they exist or are created.
+
+4. **Verify the entry** by reading the agent's system prompt instructions and confirming that the file paths in the map actually exist on disk. An agent that tries to read a non-existent path will waste context window on an error.
+
+   ```bash
+   # Quick check: confirm each path exists (replace [sdlc-root] with actual path)
+   sdlc_root="ops/sdlc"  # or detect from .sdlc-manifest.json
+   for f in $(grep -A 20 'my-new-agent:' "$sdlc_root/knowledge/agent-context-map.yaml" | grep '^\s*-' | sed 's/.*"\[sdlc-root\]//' | sed 's/".*//' ); do
+     resolved="$sdlc_root$f"
+     [ -f "$resolved" ] && echo "OK: $resolved" || echo "MISSING: $resolved"
+   done
+   ```
+
+5. **Add the `## Knowledge Context` section** to the agent's system prompt if using the template — it is already present in `AGENT_TEMPLATE.md`. Confirm the wording matches the canonical text.
+
+---
+
+## Adding Knowledge to an Existing Agent
+
+Open `agent-context-map.yaml`, find the agent's entry under `mappings:`, and append the new file path to its list. No other changes are required — the agent will read the file on its next dispatch.
+
+**Order matters.** Files are read in list order. Place broadly applicable files (shared patterns, communication protocol) earlier in the list and narrowly applicable files (domain-specific gotchas, subsystem-specific patterns) later. This way, if context limits force an agent to stop reading early, the most general knowledge survives.
+
+Do not add files that belong to another domain without considering the signal-to-noise ratio. An agent loaded with marginally relevant context takes longer to orient and may draw on patterns that don't apply. Prefer focused lists over exhaustive ones.
+
+---
+
+## Shared Knowledge
+
+`[sdlc-root]/knowledge/architecture/agent-communication-protocol.yaml` appears in most domain agents' mappings. The communication protocol defines how agents structure their output, emit progress updates, and format handoffs. Agents that emit structured handoffs should include this file; utility agents with simpler output patterns may omit it.
+
+This reflects a general principle: cross-cutting knowledge goes in each relevant agent's list explicitly. There is no "include all" directive, no wildcard, and no inheritance. Explicit lists are load-bearing — they make the knowledge contract for each agent visible and auditable at a glance.
+
+If you add a new knowledge file that should apply to multiple agents (e.g., a project-wide conventions file), you must add it to each agent's list manually. That friction is a feature: it forces a decision about whether the file genuinely applies to each agent, rather than defaulting to broad injection.
+
+---
+
+## Alternative: Memory-Based Routing
+
+Neuroloom projects use `memory_search` with `sdlc:knowledge` tags instead of `agent-context-map.yaml`. See the Neuroloom plugin's knowledge routing documentation for details.
+
+---
+
+## Limitations
+
+**Linear scaling with knowledge volume.** Each agent reads its full file list on every dispatch. As the number of knowledge files grows, so does the context consumed before an agent starts its actual work. There is no lazy loading, no relevance scoring, and no file-level caching across dispatches. For agents with large mappings (e.g., `architect` has 10+ files), this is a real cost.
+
+**Manual map maintenance.** Adding an agent, renaming a knowledge file, or reorganizing the knowledge directory requires a manual update to `agent-context-map.yaml`. There is no automation to detect drift between the map and the filesystem. A renamed file that isn't updated in the map will cause a silent read failure at dispatch time.
+
+**No conditional routing.** Every file in an agent's list is loaded on every dispatch, regardless of what the task actually requires. A `backend-developer` dispatched to fix a one-line bug still loads all backend knowledge files. Task-aware routing — selecting a subset of files based on task type or involved paths — is not supported by the current flat-list structure.
+
+A tag-based alternative (where knowledge files carry tags and agents declare which tags they need) would address the last two limitations. That approach would allow richer routing logic and make map maintenance more resilient to file reorganization. No such mechanism exists in the current framework; this is a known area for future development.

@@ -34,6 +34,21 @@ Each entry contains:
 
 ---
 
+## 2026-04-16: Add knowledge routing process documentation
+
+**Origin:** User added `process/knowledge-routing.md` and requested completeness audit.
+
+**What happened:** A new process document was added to explain how the knowledge wiring system works. Audit revealed several accuracy issues and missing concepts. Fixes applied to align documentation with actual system behavior.
+
+**Changes made:**
+
+1. **`process/knowledge-routing.md`** — Fixed path formats from `ops/sdlc/` to `[sdlc-root]/` throughout. Updated agent names to match actual map entries (`architect`, `backend-developer`). Qualified "every agent" claim for shared knowledge. Added template location (`agents/AGENT_TEMPLATE.md`). Added brief Neuroloom alternative note. Expanded dispatch-time contract to cover cross-domain injection.
+2. **`skeleton/manifest.json`** — Added `process/knowledge-routing.md` to process section.
+
+**Rationale:** Process documentation must accurately reflect the system it describes. The original draft had good conceptual coverage but used incorrect path formats and agent names that would confuse readers. The added sections cover the full knowledge lifecycle (not just the map structure) and integrate with other SDLC mechanisms (compliance audit, Neuroloom alternative).
+
+---
+
 ## 2026-04-15: Remove redundant knowledge_feedback instruction from agent template
 
 **Origin:** Code review of `AGENT_TEMPLATE.md` identified duplicate instruction.

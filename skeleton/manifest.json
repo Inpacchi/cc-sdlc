@@ -72,7 +72,8 @@
       "process/agent-selection.yaml",
       "process/review-lenses.md",
       "process/debate-protocol.md",
-      "process/team-communication-protocol.md"
+      "process/team-communication-protocol.md",
+      "process/knowledge-routing.md"
     ],
     "templates": [
       "templates/spec_template.md",
