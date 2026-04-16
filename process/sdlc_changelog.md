@@ -34,6 +34,20 @@ Each entry contains:
 
 ---
 
+## 2026-04-15: Remove redundant knowledge_feedback instruction from agent template
+
+**Origin:** Code review of `AGENT_TEMPLATE.md` identified duplicate instruction.
+
+**What happened:** The `knowledge_feedback` handoff instruction appeared in both Knowledge Context and Surfacing Learnings sections — same content, same YAML reference, slightly different framing (optional vs imperative).
+
+**Changes made:**
+
+1. **`agents/AGENT_TEMPLATE.md`** — Removed `knowledge_feedback` clause from Knowledge Context section. Surfacing Learnings remains the single source of truth for handoff feedback format.
+
+**Rationale:** Knowledge Context is about *input* (read your mapped files before working). Surfacing Learnings is about *output* (how to report discoveries after working). The feedback instruction belongs only in the output section.
+
+---
+
 ## 2026-04-15: Centralize agent selection in sdlc-tests-run
 
 **Origin:** Review of `sdlc-tests-run` skill revealed hardcoded agent selection table duplicating logic from `agent-selection.yaml`.
