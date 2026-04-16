@@ -1,0 +1,318 @@
+# Agent Selection Rules
+# Defines which agents to dispatch based on file scope and work characteristics.
+# Used by: review-diff, review-commit, team-review-fix, sdlc-tests-create, sdlc-plan, sdlc-create-agent, sdlc-initialize
+#
+# Project-specific: Customize agent names and dispatch triggers for your stack.
+# Use /sdlc-create-agent to add new agents.
+
+tiers:
+  # Tier 1: Domain Agents — dispatch when work involves their domain
+  tier1:
+    code-reviewer:
+      dispatch: always
+      description: Covers overengineering, DRY, correctness, and codebase conventions
+
+    frontend-developer:
+      dispatch_when:
+        - frontend source files
+      covers:
+        - component patterns
+        - state management
+        - component decomposition
+        - memo boundaries
+
+    backend-developer:
+      dispatch_when:
+        - backend source files
+      covers:
+        - API patterns
+        - server conventions
+        - route structure
+        - schema design
+
+    performance-engineer:
+      dispatch_when:
+        - components
+        - state stores
+        - memoization
+        - search queries
+        - database queries
+      covers:
+        - re-render chains
+        - selector patterns
+        - query efficiency
+        - bundle impact
+      note: Do NOT skip because frontend-developer is also dispatched — they cover different concerns
+
+    data-architect:
+      dispatch_when:
+        - database migrations
+        - models
+        - indexes
+        - database queries
+        - schema-affecting code
+      covers:
+        - schema design
+        - migration safety
+        - index strategy
+        - query optimization
+
+    ui-ux-designer:
+      dispatch_when:
+        - UI components with visual/interaction changes
+      skip_when:
+        - logic-only refactors
+      covers:
+        - layout
+        - interaction patterns
+        - design system adherence
+        - accessibility
+        - UX
+
+    security-engineer:
+      dispatch_when:
+        - auth
+        - API key handling
+        - secrets
+        - access control
+        - user input processing
+      covers:
+        - auth patterns
+        - input validation
+        - secrets management
+        - access control
+
+    sdet:
+      dispatch_when:
+        - test files
+        - test config
+        - test fixtures
+        - test utilities
+        - API contract changes
+        - route path changes
+        - component selector changes
+      covers:
+        - test quality
+        - flake prevention
+        - deterministic assertions
+        - test architecture
+
+    build-engineer:
+      dispatch_when:
+        - tsconfig*.json
+        - vite.config.*
+        - workspace config
+        - package.json
+        - CI workflow files
+        - deploy config
+      covers:
+        - dependency management
+        - build pipeline
+        - package boundaries
+
+    accessibility-auditor:
+      dispatch_when:
+        - interactive UI components with visual/interaction changes
+        - new buttons, modals, drawers, filter controls
+        - icon-only controls
+        - components using aria-* attributes
+        - focus management
+      skip_when:
+        - logic-only refactors
+        - backend changes
+
+    domain-integration-engineer:
+      dispatch_when:
+        - domain adapter files
+        - domain models
+        - codecs
+        - domain-specific logic
+
+    realtime-systems-engineer:
+      dispatch_when:
+        - real-time event handling
+        - WebSocket code
+        - pub/sub logic
+        - real-time state feed subscribers
+
+    data-engineer:
+      dispatch_when:
+        - data pipelines
+        - ETL
+        - background processing
+        - scrapers
+        - batch jobs
+
+    ml-engineer:
+      dispatch_when:
+        - model configuration
+        - training scripts
+        - evaluation benchmark runners
+        - inference pipelines
+
+    devops-engineer:
+      dispatch_when:
+        - Dockerfile
+        - docker-compose
+        - deployment config
+        - health check scripts
+        - CI/CD workflows
+        - environment variable configuration
+
+    systems-engineer:
+      dispatch_when:
+        - inter-service communication
+        - worker coordination
+        - cross-service communication patterns
+
+    payment-engineer:
+      dispatch_when:
+        - payment integration
+        - billing models
+        - subscription services
+        - webhook handlers
+        - checkout endpoints
+
+    legal-advisor:
+      dispatch_when:
+        - privacy policies
+        - terms of service
+        - cookie consent
+        - licensing decisions
+        - regulatory compliance documentation (GDPR, CCPA, HIPAA)
+
+    security-auditor:
+      dispatch_when:
+        - security assessments
+        - vulnerability analysis
+        - threat modeling
+        - DevSecOps review
+        - compliance control implementations (SOC 2, PCI DSS, ISO 27001, OWASP)
+      note: Does NOT implement fixes (that's security-engineer)
+
+  # Tier 2: Structural Agents — dispatch only when warranted
+  tier2:
+    software-architect:
+      dispatch_when:
+        - introduces new directory boundaries or moves files between directories
+        - creates new abstraction layers (context providers, store patterns, shared hooks)
+        - changes how packages depend on each other
+        - introduces a pattern that doesn't exist elsewhere in the codebase
+        - modifies a domain adapter interface or registry
+      skip_when:
+        - routine additions that follow existing patterns
+        - store selectors
+        - style changes
+        - bug fixes
+        - work where code-reviewer and frontend/backend-developer already cover architecture
+
+    refactor-engineer:
+      dispatch_when:
+        - moves files between directories or renames exports with consumer updates
+        - extracts new shared modules, hooks, or utilities from inline code
+        - converts between state management patterns
+        - restructures domain adapter abstraction boundaries
+        - performs significant code reorganization beyond renaming
+      skip_when:
+        - new feature additions
+        - bug fixes
+        - style changes
+        - changes that add code without restructuring existing code
+
+  # Personal-Level Agents — fallback for work beyond project-scoped expertise
+  personal:
+    prompt-engineer:
+      use_case: LLM prompt design, optimization, and evaluation for production systems
+    refactoring-specialist:
+      use_case: Restructuring complex or duplicated code while preserving behavior
+    search-specialist:
+      use_case: Advanced search strategies, query optimization, targeted info retrieval
+    seo-specialist:
+      use_case: Technical SEO audits, keyword strategy, search rankings improvement
+    competitive-analyst:
+      use_case: Competitor analysis, benchmarking, competitive positioning strategy
+    market-researcher:
+      use_case: Market analysis, consumer behavior, opportunity sizing, market entry
+    research-analyst:
+      use_case: Multi-source research synthesis, trend identification, detailed reporting
+    trend-analyst:
+      use_case: Emerging patterns, industry shift prediction, future scenario planning
+
+# Infrastructure Domains — for planning, ensure specialist coverage
+# Ask each domain's trigger questions about the TASK (not files).
+# If any trigger is true, add the specialist to the plan.
+#
+# Why this matters:
+# 1. Generalist masking: A backend-developer covers a package with WebSocket code,
+#    but lacks the domain depth of realtime-systems-engineer.
+# 2. Absence masking: Removing an auth guard doesn't touch specialist code,
+#    so file-based scanning misses it. Trigger questions catch this.
+
+infrastructure_domains:
+  realtime-websocket:
+    triggers:
+      - Modifies WebSocket handlers, fan-out, or connection lifecycle?
+      - Changes pub/sub patterns or real-time state feeds?
+    specialist: realtime-systems-engineer
+
+  database-storage:
+    triggers:
+      - Adds/modifies schema, queries, or indexes?
+      - Changes security rules or storage paths?
+    specialist: data-architect
+
+  payments:
+    triggers:
+      - Touches billing, pricing, or payment state?
+      - Modifies revenue infrastructure or checkout flow?
+    specialist: payment-engineer
+
+  ml-ai:
+    triggers:
+      - Adds/modifies inference or model pipelines?
+      - Changes embeddings or ML data processing?
+    specialist: ml-engineer  # or ml-architect for design decisions
+
+  streaming-broadcast:
+    triggers:
+      - Modifies streaming state or broadcast components?
+      - Changes media integration?
+    specialist: realtime-systems-engineer
+
+  auth-security:
+    triggers:
+      - Introduces unauthenticated endpoints or removes auth guards?
+      - Exposes new public attack surface?
+      - Changes token handling or access control?
+    specialist: security-engineer
+
+  build-ci:
+    triggers:
+      - Changes build config, monorepo deps, or CI pipeline?
+      - Modifies package boundaries?
+    specialist: build-engineer
+
+  data-pipelines:
+    triggers:
+      - Adds/modifies scrapers, sync functions, or ETL?
+      - Changes background processing or batch jobs?
+    specialist: data-engineer
+
+  search:
+    triggers:
+      - Changes indexes, filter config, or search infrastructure?
+    specialist: null  # project-specific — add your search specialist
+
+  accessibility:
+    triggers:
+      - Adds new interactive controls or modifies UI components?
+      - Introduces icon-only buttons or changes color/contrast?
+      - Adds components with image backgrounds?
+    specialist: accessibility-auditor
+
+# Selection Process:
+# 1. Always add code-reviewer
+# 2. Add Tier 1 agents based on which domains the work touches
+# 3. Assess whether any Tier 2 triggers apply based on the nature of the work
+# 4. For each Tier 2 agent, briefly note WHY it's included or excluded
+# 5. For planning: check infrastructure_domains triggers and add specialists

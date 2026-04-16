@@ -124,22 +124,7 @@ Agents to add: [list or none]
 Updated agent list: [final list]
 ```
 
-**Infrastructure domain trigger conditions** — check each domain by asking its trigger questions, not by scanning file names:
-
-| Domain | Trigger conditions (if ANY is true, list the domain) | Specialist |
-|--------|------------------------------------------------------|------------|
-| Real-time/WebSocket | Modifies WebSocket handlers, fan-out, connection lifecycle, or pub/sub patterns? | `realtime-systems-engineer` |
-| Database/storage | Adds/modifies schema, queries, indexes, security rules, or storage paths? | `data-architect` |
-| Payments | Touches billing, pricing, payment state, or revenue infrastructure? | `payment-engineer` |
-| ML/AI | Adds/modifies inference, model pipelines, embeddings, or ML data processing? | `ml-architect` / `ml-engineer` |
-| Streaming/broadcast | Modifies streaming state, broadcast components, or media integration? | `realtime-systems-engineer` |
-| Auth/security | Introduces unauthenticated endpoints, removes auth guards, exposes new public attack surface, changes token handling, or modifies access control? | `security-engineer` |
-| Build/CI | Changes build config, monorepo deps, CI pipeline, or package boundaries? | `build-engineer` |
-| Data pipelines | Adds/modifies scrapers, sync functions, ETL, or background processing? | `data-engineer` |
-| Search | Changes indexes, filter config, or search infrastructure? | (project-specific — check your agent table) |
-| Accessibility | Adds new interactive controls, modifies existing UI components, introduces icon-only buttons, changes color/contrast, or adds components with image backgrounds? | `accessibility-auditor` |
-
-*Customize for your project's infrastructure domains.*
+**Infrastructure domain trigger conditions** — read `[sdlc-root]/process/agent-selection.yaml` § `infrastructure_domains`. For each domain, ask its trigger questions about the task. If any trigger is true, add the specialist.
 
 **CHRONICLE-CONTEXT** — after agent selection, scan `docs/chronicle/` for related concepts:
 

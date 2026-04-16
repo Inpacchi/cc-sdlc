@@ -44,7 +44,7 @@ For uncommitted changes, also run `git status -s` to check for untracked files. 
 
 ### Step 2: Select Teammates
 
-Follow the agent selection process in `[sdlc-root]/process/agent-selection.md`:
+Follow `[sdlc-root]/process/agent-selection.yaml` for dispatch rules:
 
 1. Always add `code-reviewer`
 2. Add Tier 1 agents based on file paths in the target
@@ -95,7 +95,7 @@ Create the agent team. The main session is the team lead — it manages lifecycl
 
 2. **All REVIEWERS in parallel** — each reviewer receives:
    - Target content
-   - Review lenses from `[sdlc-root]/process/agent-selection.md` section Lenses (all lenses apply)
+   - Review lenses from `[sdlc-root]/process/review-lenses.md` (all lenses apply)
    - Relevant knowledge context from `[sdlc-root]/knowledge/agent-context-map.yaml` for their role
    - Instructions to send findings as FINDING messages (per `team-communication-protocol.md`) to the architect AND domain-relevant reviewers
    - The message envelope format
@@ -328,7 +328,8 @@ Do NOT commit automatically — wait for the user to confirm.
 - **Does NOT replace:** `sdlc-review-diff`, `sdlc-review-commit`, `sdlc-review-fix` — those remain as lighter-weight subagent alternatives
 - **Replaces:** `sdlc-review-team` (unified review+fix lifecycle within a single agent team)
 - **Shared references:**
-  - Agent selection and lenses: `[sdlc-root]/process/agent-selection.md`
+  - Agent selection: `[sdlc-root]/process/agent-selection.yaml`
+  - Review lenses: `[sdlc-root]/process/review-lenses.md`
   - Debate protocol: `[sdlc-root]/process/debate-protocol.md`
   - Communication protocol: `[sdlc-root]/process/team-communication-protocol.md`
   - Finding classification: `[sdlc-root]/process/finding-classification.md`

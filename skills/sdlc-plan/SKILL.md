@@ -132,9 +132,9 @@ digraph planning {
 
 ### Agent Source
 
-Use `[sdlc-root]/process/agent-selection.md` as the canonical agent-to-domain mapping. The Tier 1 table lists every project-level agent and its file-scope triggers. For planning, read the trigger descriptions as domain coverage — if a phase touches files that would trigger an agent in review, that agent should be assigned to that phase.
+Use `[sdlc-root]/process/agent-selection.yaml` as the canonical agent-to-domain mapping. The Tier 1 section lists every project-level agent and its dispatch triggers. For planning, read the trigger descriptions as domain coverage — if a phase touches files that would trigger an agent in review, that agent should be assigned to that phase.
 
-**Project agents:** `.claude/agents/` (project root) — listed in `agent-selection.md` Tier 1
+**Project agents:** `.claude/agents/` (project root) — listed in `agent-selection.yaml` tier1
 **Personal agents:** `~/.claude/agents/` — fallback for tasks extending beyond project-scoped expertise (prompt-engineer, refactoring-specialist, research-analyst, competitive-analyst, market-researcher, trend-analyst, etc.)
 
 ### Selection Rule
@@ -293,22 +293,7 @@ Agents to remove: [list or none — only if a domain is no longer touched]
 Updated agent list: [final list]
 ```
 
-**Infrastructure domain trigger conditions** — check each domain by asking its trigger questions, not by scanning file names:
-
-| Domain | Trigger conditions (if ANY is true, list the domain) | Specialist |
-|--------|------------------------------------------------------|------------|
-| Real-time/WebSocket | Modifies WebSocket handlers, fan-out, connection lifecycle, or pub/sub patterns? | `realtime-systems-engineer` |
-| Database/storage | Adds/modifies schema, queries, indexes, security rules, or storage paths? | `data-architect` |
-| Payments | Touches billing, pricing, payment state, or revenue infrastructure? | `payment-engineer` |
-| ML/AI | Adds/modifies inference, model pipelines, embeddings, or ML data processing? | `ml-architect` / `ml-engineer` |
-| Streaming/broadcast | Modifies streaming state, broadcast components, or media integration? | `realtime-systems-engineer` |
-| Auth/security | Introduces unauthenticated endpoints, removes auth guards, exposes new public attack surface, changes token handling, or modifies access control? | `security-engineer` |
-| Build/CI | Changes build config, monorepo deps, CI pipeline, or package boundaries? | `build-engineer` |
-| Data pipelines | Adds/modifies scrapers, sync functions, ETL, or background processing? | `data-engineer` |
-| Search | Changes indexes, filter config, or search infrastructure? | (project-specific — check your agent table) |
-| Accessibility | Adds new interactive controls, modifies existing UI components, introduces icon-only buttons, changes color/contrast, or adds components with image backgrounds? | `accessibility-auditor` |
-
-*Customize this table for your project's infrastructure domains. Remove domains that don't apply. Add project-specific domains (e.g., "Game integration", "Blockchain", "IoT") with their specialist agents.*
+**Infrastructure domain trigger conditions** — read `[sdlc-root]/process/agent-selection.yaml` § `infrastructure_domains`. For each domain, ask its trigger questions about the task (not files). If any trigger is true, add the specialist.
 
 The infrastructure check prevents two common failures:
 1. **Generalist masking:** A generalist (e.g., `backend-developer`) covers a package that contains specialist infrastructure (e.g., WebSocket fan-out owned by `realtime-systems-engineer`). Both live in the same package, but the generalist lacks domain depth.
