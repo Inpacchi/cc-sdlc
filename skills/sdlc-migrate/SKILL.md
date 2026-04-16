@@ -855,13 +855,25 @@ The project's `CLAUDE.md` contains CLAUDE-SDLC.md content — skill names, proce
       ```
    This prevents renaming references to skills that don't exist in the project, which causes silent process failures.
 
-2. **Process file paths** — verify paths like `[sdlc-root]/process/overview.md`, `[sdlc-root]/process/sdlc_changelog.md`, `[sdlc-root]/process/compliance_audit.md` still exist
+2. **Agent name references in dispatching skills (guarded renames)** — skills that dispatch subagents (`sdlc-review-commit`, `sdlc-review-diff`, `sdlc-review-fix`, `sdlc-execute`, `sdlc-lite-execute`, `sdlc-plan`, `sdlc-lite-plan`) contain agent names in their examples and dispatch logic. If the upstream cc-sdlc uses different agent names than the project (e.g., `frontend-developer` vs `frontend-engineer`), do NOT rename the project's references to match upstream.
 
-3. **Convention changes** — if the changelog (§1.2) flagged breaking convention changes (renamed concepts, changed workflow rules), check whether the project's CLAUDE.md still uses the old terminology
+   **Guarded rename rule for agents:** Before renaming any agent reference in a dispatching skill:
+   1. Build the project's actual agent inventory: `ls .claude/agents/`
+   2. Only rename if the target agent file exists in the project
+   3. If the target doesn't exist, keep the project's original agent name:
+      ```
+      GUARDED RENAME SKIPPED: [old-agent] → [new-agent] — target agent does not exist in project
+      ```
+   
+   **Why this matters:** Projects customize agent names to match their domain (`frontend-engineer` vs `frontend-developer`, `data-engineer` vs `analytics-engineer`). Renaming references to agents that don't exist causes silent dispatch failures — the skill tries to invoke a nonexistent agent.
 
-4. **New sections in CLAUDE-SDLC.md** — compare the project's CLAUDE.md SDLC sections against the current `CLAUDE-SDLC.md` source. If new sections were added (e.g., new workflow rules, new verification policies), they should be merged into the project's CLAUDE.md
+3. **Process file paths** — verify paths like `[sdlc-root]/process/overview.md`, `[sdlc-root]/process/sdlc_changelog.md`, `[sdlc-root]/process/compliance_audit.md` still exist
 
-5. **Optional sections** — some SDLC sections are conditionally included based on project characteristics. Check if the project should have optional sections it doesn't currently have:
+4. **Convention changes** — if the changelog (§1.2) flagged breaking convention changes (renamed concepts, changed workflow rules), check whether the project's CLAUDE.md still uses the old terminology
+
+5. **New sections in CLAUDE-SDLC.md** — compare the project's CLAUDE.md SDLC sections against the current `CLAUDE-SDLC.md` source. If new sections were added (e.g., new workflow rules, new verification policies), they should be merged into the project's CLAUDE.md
+
+6. **Optional sections** — some SDLC sections are conditionally included based on project characteristics. Check if the project should have optional sections it doesn't currently have:
 
    | Optional Section | Detection Signals | Template |
    |-----------------|-------------------|----------|
@@ -869,7 +881,7 @@ The project's `CLAUDE.md` contains CLAUDE-SDLC.md content — skill names, proce
    
    If signals are detected but the section is missing from the project's CLAUDE.md, ask CD whether to add it.
 
-**Gate rule:** If the project's CLAUDE.md references a renamed skill or removed path, fix it. Stale CLAUDE.md content causes silent process failures — Claude Code follows the instructions but they point nowhere.
+**Gate rule:** If the project's CLAUDE.md references a renamed skill or removed path, fix it. If dispatching skills reference nonexistent agents, keep the project's original agent names. Stale references cause silent process failures — Claude Code follows the instructions but they point nowhere.
 
 ### 4.4 Post-Migration Compliance Audit
 
@@ -1022,6 +1034,7 @@ echo "$MANIFEST" > .sdlc-manifest.json
 | "New knowledge files are installed, so the project benefits automatically" | Knowledge in [sdlc-root]/ is available but not applied until skills and agents are updated to use it. §3.4 closes this gap. |
 | "This file has no PROJECT-SECTION markers, so I'll just overwrite it" | Run deviation detection (§2.1c) first — the project may have customized framework content that should be wrapped in markers before overwriting. |
 | "I'll rename all skill references to match upstream" | Guarded renames (§4.3a) — only rename if the target skill exists in the project. Renaming to a nonexistent skill causes silent process failures. |
+| "I'll rename agent names in skills to match upstream" | Guarded renames (§4.3a) — only rename if the target agent exists in the project. Projects use different agent names (`frontend-engineer` vs `frontend-developer`). Renaming to a nonexistent agent causes silent dispatch failures. |
 | "I'll auto-fix all the downstream impact findings" | Present findings to the user. They choose what to apply — some findings may not suit the project's context. |
 | "This project uses file paths for knowledge access, same as cc-sdlc" | Check for Neuroloom integration first. Projects with `memory_search`/`memory_store` calls use MCP tools, not file paths. Preserve the integration pattern during content-merge — don't overwrite MCP calls with file references. |
 | "The SDLC is in `ops/sdlc/`" | Not always. Some projects use `.claude/sdlc/`. Detect the actual structure in pre-flight and use `[sdlc-root]` throughout. |

@@ -34,6 +34,22 @@ Each entry contains:
 
 ---
 
+## 2026-04-15: Extend guarded renames to agent names in dispatching skills
+
+**Origin:** NeuRoLoom migration renamed `frontend-engineer` → `frontend-developer` in `sdlc-review-commit` skill, but the project only has `frontend-engineer.md` — the renamed agent doesn't exist.
+
+**What happened:** The v1.1.4 guarded rename rule (2026-04-07) protected skill name references but not agent name references. Skills like `sdlc-review-commit`, `sdlc-review-diff`, and `sdlc-execute` dispatch agents by name in their examples and dispatch logic. When upstream cc-sdlc uses different agent names than the project (e.g., `frontend-developer` vs `frontend-engineer`), migration was incorrectly renaming project references to match upstream, causing silent dispatch failures.
+
+**Changes made:**
+
+1. **`skills/sdlc-migrate/SKILL.md`** — Added §4.3a item 2: "Agent name references in dispatching skills (guarded renames)". Same guarded rename pattern as skills: check `ls .claude/agents/`, only rename if target exists, log `GUARDED RENAME SKIPPED` otherwise.
+2. **`skills/sdlc-migrate/SKILL.md`** — Added Red Flag: "I'll rename agent names in skills to match upstream" with same guidance.
+3. **`skills/sdlc-migrate/SKILL.md`** — Updated gate rule to mention agent references alongside skill references.
+
+**Rationale:** Projects customize agent names to match their domain. The original v1.1.4 fix only covered skill names in CLAUDE.md — agent names in dispatching skills were unprotected. This extends the same guarded rename pattern to agent references.
+
+---
+
 ## 2026-04-15: Fix bare path references in sdlc-create-agent
 
 **Origin:** Manual review of skill files for path convention compliance.
