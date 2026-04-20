@@ -99,6 +99,36 @@ Create the agent team. The main session is the team lead — it manages lifecycl
    - Relevant knowledge context from `[sdlc-root]/knowledge/agent-context-map.yaml` for their role
    - Instructions to send findings as FINDING messages (per `team-communication-protocol.md`) to the architect AND domain-relevant reviewers
    - The message envelope format
+   - **Explicit routing instruction** (mandatory — audit 2026-04-17 showed 4/7 reviewers emitted findings as plain text instead):
+     ```
+     ROUTING (critical): Send each finding via the SendMessage tool with
+     to: "architect-software-architect". Plain-text output from your turns is
+     ONLY visible to the team-lead, NOT to the architect. If you emit a finding
+     as plain text, the architect will not create a task for it and it will be
+     lost. For every FINDING you produce, call SendMessage exactly once with:
+       to: "architect-software-architect"
+       summary: <short subject>
+       message: <envelope body with from/to/file/line/severity/category/body>
+     If you have no findings in your domain, SendMessage "standing by, no findings"
+     to the architect. Do not go idle silently.
+     ```
+   - **Read-only constraint** (mandatory — audit 2026-04-17 caught 2 reviewers editing files):
+     ```
+     CONSTRAINT: You are READ-ONLY during Phase 1. Do NOT call Edit, Write,
+     NotebookEdit, or any mutation tool on any repo file. Fixes happen in Phase 2
+     via dedicated fixer teammates spawned after review converges. If you spot a
+     trivial fix, resist — report it as a FINDING and let a fixer own it.
+     Violations will be reverted and re-queued for Phase 2.
+     ```
+   - **Retraction discipline** (mandatory — audit 2026-04-17 caught multiple stale-view retractions):
+     ```
+     RETRACTION DISCIPLINE: Before retracting a finding you previously submitted,
+     re-read the target file at CURRENT HEAD (not from memory or cached context).
+     The file state may differ from your initial read. If the finding no longer
+     applies at HEAD, state explicitly "Re-verified at HEAD; finding obsolete".
+     If the finding still applies, submit CHALLENGE with evidence instead of
+     retracting.
+     ```
 
 **Fixers are NOT spawned here.** They are spawned on-demand in Step 6a after the review converges and FIX findings are identified. This avoids wasting tokens on idle teammates when no fixes are needed or when findings cluster in fewer domains than anticipated.
 
@@ -119,11 +149,19 @@ When a reviewer finds an issue:
    - If no challenges: status "confirmed", task pending
    - If challenged: architect reads both positions, breaks the tie immediately
    - If multiple reviewers independently find the same thing: merge, cite all, high confidence
+5. **Architect ACKs each finding** — after TaskCreate, the architect sends an ACK message back to the finder containing the task ID. This gives reviewers confirmation their finding landed and gives the team-lead a way to detect routing failures.
 
 Positive findings (things done well) are tagged and preserved but excluded from the fix pipeline.
 
+**Fast-fail routing check (team-lead enforcement):** Before the architect signals "review complete", the team-lead verifies each reviewer has either:
+- At least one ACK'd finding from the architect, OR
+- An explicit "standing by, no findings" message to the architect
+
+If a reviewer went idle without any architect interaction, the team-lead prods that reviewer to re-emit findings via SendMessage. Do NOT allow the architect to signal convergence with silent reviewers — audit 2026-04-17 showed this caused premature convergence with ~40% of findings missing.
+
 **Convergence:** The architect signals "review complete" when:
 - All reviewers have gone idle (TeammateIdle notifications)
+- Every reviewer has at least one architect interaction (ACK'd finding or "no findings" message)
 - All outstanding challenges have been resolved
 - The master findings list in the shared task list is stable
 
@@ -170,7 +208,29 @@ Fixers and reviewers work together in real-time. Fixers implement while reviewer
 For each required fixer domain:
 1. Spawn `fixer-{name}` as a new teammate with role prefix
 2. Validate required tools (Bash, Read, Grep, Edit minimum for fixers)
-3. Each fixer receives: target content for reference, the message envelope format, cross-domain knowledge files (per `[sdlc-root]/knowledge/agent-context-map.yaml`) relevant to their domain
+3. Each fixer receives: target content for reference, the message envelope format, cross-domain knowledge files (per `[sdlc-root]/knowledge/agent-context-map.yaml`) relevant to their domain, and the **fixer discipline prompt** below:
+
+```
+TASK ID DISCIPLINE (mandatory — audit 2026-04-17 caught a fixer creating
+10 duplicate task IDs):
+Use the ORIGINAL task IDs from the architect's FIX_REQUEST. Do NOT call
+TaskCreate to "track your work" — the architect owns the master list.
+Update task status via TaskUpdate on the original task:
+  - in_progress when you start
+  - completed when FIX_COMPLETE is accepted by reviewers
+
+PRE-FIX_COMPLETE CHECKLIST (mandatory — audit 2026-04-17 caught a fixer
+shipping lint errors to the verification gate):
+Before sending FIX_COMPLETE, you MUST verify:
+  1. Tests that exercise the changed code pass (project test command)
+  2. Linter passes on files you touched (project lint command)
+  3. Type checker passes on files you touched (project typecheck command)
+If any fail, fix them BEFORE sending FIX_COMPLETE. Do not push cleanup
+work downstream to the verification gate.
+
+Include the verification commands and their output in your FIX_COMPLETE
+message body so reviewers can audit the pre-flight checks.
+```
 
 **When multiple reviewers found the same issue:** The architect assigns the fix to ONE fixer (the most relevant domain), but records ALL reviewers who found it in the task metadata (`found_by` field). The fixer sends FIX_COMPLETE to ALL reviewers who found the issue — each reviewer who surfaced the finding validates the fix from their domain perspective.
 
@@ -249,17 +309,29 @@ This is a single pass — the collaborative fix phase already produced reviewer-
 
 ### Protocol Compliance
 
-| Step | Status |
-|------|--------|
-| Environment gate | Executed |
-| Target resolution | Executed |
-| Teammate selection + validation | Executed |
-| Team creation | Executed |
-| Phase 1: Review + debate | Executed |
-| Findings summary | Executed |
-| Phase 2: Collaborative fix | Executed |
-| Verification gate | Executed |
-| Team shutdown | Pending |
+Status legend: ✓ clean | ~ required intervention | ! violation
+
+| Step | Status | Notes |
+|------|--------|-------|
+| Environment gate | ✓ | |
+| Target resolution | ✓ | |
+| Teammate selection + validation | ✓ | |
+| Team creation + architect-first spawn | ✓ | |
+| Inter-agent finding routing (reviewers use SendMessage, not plain text) | ✓/~/! | {note any reviewers who required re-emission prods} |
+| Reviewer read-only discipline (no Edit/Write in Phase 1) | ✓/! | {note any violations caught and reverted} |
+| Architect ACKs every finding | ✓ | |
+| Challenges resolved by architect (no premature convergence) | ✓ | {N challenges, N escalated} |
+| DECIDE items surfaced via AskUserQuestion | ✓ | {N items} |
+| Fixer spawn deferred until after review convergence | ✓ | |
+| Fixer task-ID discipline (no duplicate TaskCreate) | ✓/~ | {note any consolidations} |
+| Fixer pre-FIX_COMPLETE checklist (tests + lint + types) | ✓/~ | {note any issues caught by verification gate} |
+| Cross-fixer sequencing via addBlockedBy | ✓ | |
+| Reviewer real-time validation | ✓ | |
+| Verification gate (tests, typecheck, lint, SAST) | ✓ | |
+| Team shutdown (all teammates terminated) | Pending | |
+| TeamDelete success | Pending | |
+
+**Orchestration interventions:** {count}. If >5, flag as "high-friction" — investigate the protocol gap.
 
 ### Finding Summary
 
@@ -321,6 +393,11 @@ Do NOT commit automatically — wait for the user to confirm.
 | "Too many teammates, this is expensive" | The skill surfaces cost estimates in Step 2. The user decides whether to proceed. No artificial cap. |
 | "Reviewer and fixer keep disagreeing, add more rounds" | 3-strike rule. Architect breaks it, then escalate to user. Don't let it loop. |
 | "Skip verification, the reviewers already validated" | Reviewers validate individual fixes. Verification catches integration-level issues (type errors from cross-file changes, test regressions). Both are required. |
+| "Reviewer output looks like a finding, architect will pick it up" | No. Plain-text reviewer output is only visible to the team-lead. Reviewers MUST call SendMessage with `to: "architect-software-architect"`. If you see a reviewer emit a finding as plain text, prod them to re-emit via SendMessage. |
+| "Reviewer spotted a one-line fix, let them edit it" | No. Reviewers are read-only during Phase 1. Revert the edit and re-queue as a FINDING for Phase 2. Ratifying the edit normalizes the violation. |
+| "Fixer created new task IDs to track subtasks" | Architect owns the master task list. Fixers use TaskUpdate on the original task ID, not TaskCreate. Consolidate duplicates and send the fixer a process note. |
+| "Fixer said FIX_COMPLETE, just run verification" | Check that the fixer ran lint + typecheck + tests on touched files before FIX_COMPLETE. The pre-flight checklist prevents verification-gate ping-pong. |
+| "Architect signaled convergence, we're good" | Verify every reviewer has at least one architect interaction (ACK'd finding or "standing by"). Silent reviewers may have emitted findings as plain text that never reached the architect. |
 
 ## Integration
 

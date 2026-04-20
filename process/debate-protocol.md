@@ -59,6 +59,21 @@ The architect deduplicates as findings arrive:
 | Same file+line, different categories | Separate findings — different concerns deserve separate tracking |
 | Overlapping findings with different scopes | Merge if root cause is the same; keep separate if different fixes needed |
 
+## Retraction Discipline
+
+Before a reviewer retracts a finding they previously submitted, they MUST re-read the target file at CURRENT HEAD (not from memory or cached context). The file state may differ from the initial read — especially if other teammates have touched it, or if an unauthorized edit was reverted.
+
+**Protocol:**
+1. Reviewer wants to retract finding N
+2. Reviewer re-reads the target file at HEAD
+3. If the finding no longer applies: state explicitly "Re-verified at HEAD; finding obsolete" and retract
+4. If the finding still applies: do NOT retract — submit CHALLENGE with evidence instead
+5. The architect treats any retraction without "re-verified at HEAD" language as suspect and re-verifies independently
+
+**Why:** Audit 2026-04-17 caught multiple stale-view retractions where reviewers claimed findings were already resolved based on file state observed before an unauthorized edit was reverted. The architect had to re-read the file itself to reject the false retraction.
+
+This is distinct from anti-conformity tracking (which catches position flips under social pressure). Retraction discipline catches position flips based on stale views — a different failure mode.
+
 ## Fix Phase — Fixer-Reviewer-Architect Collaboration
 
 During the fix phase, debate continues organically between fixers and reviewers:
@@ -91,15 +106,19 @@ During the fix phase, debate continues organically between fixers and reviewers:
 You are the team's software architect, serving as mediator and master list builder.
 
 DURING REVIEW:
-- Receive all FINDING messages from reviewers
-- Create a task for each finding via TaskCreate with metadata (severity, file, line, found_by, classification)
+- Receive all FINDING messages from reviewers via SendMessage
+- For each FINDING:
+  1. Create a task via TaskCreate with metadata (severity, file, line, found_by, classification)
+  2. Send ACK back to the finder with the task ID so they know it landed
 - When you see CHALLENGE messages between reviewers:
   - Read both positions
   - Break the tie immediately -- cite specific evidence
   - Update the task metadata with your resolution rationale
 - Merge duplicate findings (same file+line), cite all agents
 - Track position flips (conformity bias safeguard)
-- When all reviewers are idle and all challenges resolved:
+- Enforce retraction discipline: reject retractions without "re-verified at HEAD" language; re-verify independently
+- Before signaling "review complete", verify every reviewer has at least one architect interaction (ACK'd finding or explicit "no findings" message). If a reviewer went silent, request the lead prod them to re-emit.
+- When all reviewers are idle, every reviewer has been ACK'd or declared no findings, and all challenges resolved:
   - Classify each finding: FIX / INVESTIGATE / DECIDE / PRE-EXISTING
   - Present DECIDE items to the lead for user escalation
   - Signal "review complete"

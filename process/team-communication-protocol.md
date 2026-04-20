@@ -12,7 +12,7 @@ All inter-agent messages use a hybrid format: structured routing fields for trac
 MESSAGE ENVELOPE:
 {
   type: FINDING | CHALLENGE | FIX_REQUEST | FIX_COMPLETE | REVIEW_REQUEST |
-        CLARIFICATION | ESCALATION | STATUS | STEER,
+        CLARIFICATION | ESCALATION | STATUS | STEER | ACK,
   from: "reviewer-security-engineer",
   to: "fixer-frontend-developer",
   task_id: "3",
@@ -24,6 +24,8 @@ MESSAGE ENVELOPE:
 ```
 
 **Enforcement:** Prompt-enforced (like MetaGPT), not schema-validated. Skill instructions tell agents to format messages this way. The structured fields (type, from, to, task_id) make communication auditable and traceable.
+
+**Transport requirement (critical):** All messages MUST be sent via the `SendMessage` tool call with a concrete `to` field naming the target teammate. Plain-text output from an agent's turn is ONLY visible to the team-lead — other teammates, including the mediator, do NOT see it. Audit 2026-04-17 found that 4 of 7 reviewers emitted findings as plain text, causing premature convergence with ~40% of findings missing from the master task list. Skill prompts must spell out the `SendMessage` tool call with the exact `to` destination, not just the envelope format.
 
 ## Message Types
 
@@ -38,6 +40,7 @@ MESSAGE ENVELOPE:
 | `STEER` | Reviewer | Fixer | Real-time guidance while fixer is implementing |
 | `ESCALATION` | Any | Mediator | Unresolved fixer-reviewer disagreement |
 | `STATUS` | Any | Lead | Progress update |
+| `ACK` | Mediator | Finder | Confirms a FINDING was received and tasked — includes task ID. Enables fast-fail detection of routing failures. |
 
 ## Findings Registry (Built-in Task List)
 
@@ -118,6 +121,26 @@ If a fixer and reviewer cycle 3 times on the same finding without converging:
 - If two fixers need the same file — mediator sequences them via task dependencies
 - Fixers can SendMessage each other for coordination ("I'm changing the import structure in this file, heads up")
 - If a fixer discovers they need to touch a file owned by another fixer — message the mediator, who coordinates the sequencing
+
+## Routing Failure Detection
+
+Because the transport requirement is prompt-enforced (not schema-validated), routing failures are possible: an agent emits a finding as plain text that never reaches its intended recipient. The ACK protocol plus a team-lead fast-fail check catches these early.
+
+**ACK flow:**
+1. Finder sends FINDING to mediator via SendMessage
+2. Mediator creates task via TaskCreate
+3. Mediator sends ACK back to finder with the task ID
+4. Finder sees its finding was tasked and can continue
+
+**Fast-fail check (team-lead responsibility):**
+
+Before the mediator signals convergence, the team-lead verifies each teammate has either:
+- At least one ACK'd finding from the mediator, OR
+- An explicit "standing by, no findings" message to the mediator
+
+If a teammate went idle without any mediator interaction, the team-lead prods the teammate to re-emit findings via SendMessage. Do NOT allow the mediator to signal convergence with silent teammates.
+
+**Why this matters:** Audit 2026-04-17 showed 4 of 7 reviewers emitted findings as plain text. The mediator's inbox was empty for those reviewers. Without the fast-fail check, convergence would have been declared with ~40% of findings missing.
 
 ## Escalation Path
 

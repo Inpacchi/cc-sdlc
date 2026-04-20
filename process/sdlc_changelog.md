@@ -34,6 +34,27 @@ Each entry contains:
 
 ---
 
+## 2026-04-17: Harden team-review-fix prompt layer (audit-driven)
+
+**Origin:** Team-review-fix audit 2026-04-17 (Neuroloom session, 5 commits, 11 teammates, 25 findings). The revised debate protocol worked — organic broadcast, architect tiebreaker, fixer reuse, clean shutdown all executed as designed. Failures were prompt-layer gaps: reviewer routing (4/7 emitted plain text), reviewer edits (2 violations), fixer duplicate task IDs, fixer lint skipped before FIX_COMPLETE.
+
+**What happened:** Audit identified 6 concrete prompt-layer failures that required intervention from the team-lead during the session. Root causes traced to instructions that showed format but did not spell out tool calls, constraints, or pre-flight checks.
+
+**Changes made:**
+
+1. **`skills/team-review-fix/SKILL.md`** —
+   - Step 3 reviewer spawn: added explicit SendMessage routing instruction, read-only constraint (no Edit/Write in Phase 1), and retraction discipline (re-read at HEAD before retracting)
+   - Step 4 Phase 1: added architect ACK step after each TaskCreate; added team-lead fast-fail check that verifies every reviewer has at least one architect interaction before allowing convergence
+   - Step 6a fixer spawn: added mandatory fixer discipline prompt covering task-ID discipline (use original IDs, TaskUpdate not TaskCreate) and pre-FIX_COMPLETE checklist (tests + lint + types on touched files)
+   - Step 7 final report: expanded protocol compliance table with legend (✓/~/!), new rows for routing, read-only, ACK, task-ID discipline, fixer pre-flight, and orchestration intervention count
+   - Red flags: added 5 new entries for plain-text findings, reviewer edits, duplicate task IDs, skipping fixer pre-flight, and silent reviewer convergence
+2. **`process/team-communication-protocol.md`** — Added `ACK` message type. Added "Transport requirement" callout on the message envelope: messages MUST be sent via SendMessage tool, not plain text. Added "Routing Failure Detection" section describing the ACK flow and team-lead fast-fail check.
+3. **`process/debate-protocol.md`** — Added "Retraction Discipline" section (re-read at HEAD before retracting; architect re-verifies suspicious retractions). Updated architect prompt template to include ACK step after TaskCreate, retraction-discipline enforcement, and pre-convergence routing verification.
+
+**Rationale:** The audit was a success story for the protocol design (debate ran, fixers reused, shutdown clean) but exposed that prompt-layer precision matters. Showing an envelope format is not the same as spelling out "call SendMessage with to: 'architect-software-architect'". The ACK protocol plus fast-fail check converts silent routing failures from a convergence-time discovery into an immediate catch. The fixer pre-flight checklist prevents verification-gate ping-pong.
+
+---
+
 ## 2026-04-16: Add knowledge routing process documentation
 
 **Origin:** User added `process/knowledge-routing.md` and requested completeness audit.
