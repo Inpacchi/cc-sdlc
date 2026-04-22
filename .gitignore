@@ -23,7 +23,14 @@ node_modules/
 # Test artifacts (from install simulations)
 /tmp/
 
-.claude/
+# Framework-dev tooling in .claude/ — broadly ignored, but track skills and agents
+# so they're shared with other cc-sdlc maintainers. Agent memory stays local.
+.claude/*
+!.claude/skills
+!.claude/skills/**
+!.claude/agents
+!.claude/agents/**
+.claude/**/.DS_Store
 
 docs/current_work/audits/
 
