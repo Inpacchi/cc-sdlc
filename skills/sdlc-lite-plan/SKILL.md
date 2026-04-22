@@ -45,20 +45,20 @@ digraph sdlc_lite_planning {
     rankdir=TB;
 
     "1. Identify relevant worker domain agents" [shape=box];
-    "2. Worker domain agents WRITE the plan" [shape=box];
+    "2. Worker domain agent WRITES and SAVES the plan file" [shape=box];
     "3. Review plan with ALL relevant\nworker domain agents" [shape=box];
-    "Incorporate feedback, revise plan" [shape=box];
+    "Re-dispatch writer to revise\nAND overwrite the plan file" [shape=box];
     "All worker agents clean?" [shape=diamond];
-    "4. Save plan to file" [shape=box];
+    "4. Verify plan file exists\n+ append Worker Agent Reviews" [shape=box];
     "5. Enter plan mode\n(triggers execution prompt)" [shape=doublecircle];
 
-    "1. Identify relevant worker domain agents" -> "2. Worker domain agents WRITE the plan";
-    "2. Worker domain agents WRITE the plan" -> "3. Review plan with ALL relevant\nworker domain agents";
+    "1. Identify relevant worker domain agents" -> "2. Worker domain agent WRITES and SAVES the plan file";
+    "2. Worker domain agent WRITES and SAVES the plan file" -> "3. Review plan with ALL relevant\nworker domain agents";
     "3. Review plan with ALL relevant\nworker domain agents" -> "All worker agents clean?";
-    "All worker agents clean?" -> "Incorporate feedback, revise plan" [label="no"];
-    "Incorporate feedback, revise plan" -> "3. Review plan with ALL relevant\nworker domain agents";
-    "All worker agents clean?" -> "4. Save plan to file" [label="yes"];
-    "4. Save plan to file" -> "5. Enter plan mode\n(triggers execution prompt)";
+    "All worker agents clean?" -> "Re-dispatch writer to revise\nAND overwrite the plan file" [label="no"];
+    "Re-dispatch writer to revise\nAND overwrite the plan file" -> "3. Review plan with ALL relevant\nworker domain agents";
+    "All worker agents clean?" -> "4. Verify plan file exists\n+ append Worker Agent Reviews" [label="yes"];
+    "4. Verify plan file exists\n+ append Worker Agent Reviews" -> "5. Enter plan mode\n(triggers execution prompt)";
 }
 ```
 
@@ -159,9 +159,11 @@ Key context loaded:
 Context included in agent dispatch: yes | no (none relevant)
 ```
 
-### 2. Worker Domain Agents Write the Plan
+### 2. Worker Domain Agents Write and Save the Plan
 
-The most relevant worker domain agent writes the plan. Other worker agents contribute to sections in their domain.
+The most relevant worker domain agent writes the plan **and saves it directly to the plan file path using the `Write` tool**. Other worker agents contribute to sections in their domain.
+
+**The writing worker agent — not the manager — owns the file write.** The dispatch prompt must instruct the agent to save the plan to `docs/current_work/sdlc-lite/dNN_{slug}_plan.md` (pass the exact path computed from the deliverable ID in step 0 and a snake_case slug derived from the plan title). The agent returns a short confirmation — not the plan body. If the agent returns the plan body instead of saving the file, re-dispatch with explicit instructions to use the `Write` tool.
 
 **Plan structure:** Use the template at `[sdlc-root]/templates/sdlc_lite_plan_template.md`. Read it before writing the plan.
 
@@ -174,7 +176,7 @@ The most relevant worker domain agent writes the plan. Other worker agents contr
 - **Maximum 4 phases.** If you need more, this probably warrants a deliverable — check with the user.
 - **Assign each phase** to the worker domain agent with the most relevant expertise.
 - **Approach comparison:** If the approach follows an existing codebase pattern, cite the precedent. Otherwise, briefly compare 2 approaches with tradeoffs and state which was selected.
-- **The writing agent must produce the complete plan.** Every section shown in the template above — scope, files, agents, phase dependencies table, phases, and post-execution review — must be present in the agent's output. If the returned plan is missing any template section, re-dispatch the writing agent to complete it. Do not fill in missing sections yourself.
+- **The writing agent must produce the complete plan.** Every section shown in the template above — scope, files, agents, phase dependencies table, phases, and post-execution review — must be present in the saved file. After the agent confirms the save, Read the file to verify. If the saved plan is missing any template section, re-dispatch the writing agent to complete it and re-save. Do not fill in missing sections yourself.
 
 ### 3. Worker Domain Agent Plan Review
 
@@ -201,14 +203,14 @@ If agents have findings, classify per `[sdlc-root]/process/finding-classificatio
 - DECIDE findings go to the user via `AskUserQuestion`
 - PRE-EXISTING findings require no action but must appear in the table
 
-If there are FIX findings, re-dispatch the worker domain agent who wrote the plan (from step 2) with only the FIX findings. That worker agent produces the revision. You do not write the revision. Output a dispatch checklist before re-dispatching:
+If there are FIX findings, re-dispatch the worker domain agent who wrote the plan (from step 2) with only the FIX findings. **That worker agent produces the revision AND overwrites the plan file** using the `Write` tool at the same path. You do not write the revision, and you do not save it. The re-dispatch prompt must pass the plan file path and explicitly instruct the agent to overwrite it — not return the body. Output a dispatch checklist before re-dispatching:
 
 ```
 Plan revision — dispatching:
-- [ ] [writing-agent-name]: incorporate N findings (K critical, M major)
+- [ ] [writing-agent-name]: incorporate N findings (K critical, M major), overwrite plan file
 ```
 
-**Every checkbox must have a corresponding agent dispatch. Count the checkboxes. Count the dispatches. They must match.** If you find yourself editing the plan directly instead of dispatching the writing worker agent, stop — that violates the Manager Rule.
+**Every checkbox must have a corresponding agent dispatch. Count the checkboxes. Count the dispatches. They must match.** If you find yourself editing the plan directly — or saving the agent's returned body yourself — stop. Both violate the Manager Rule.
 
 - **Re-review is mandatory if ANY of the following is true:** (1) any FIX finding in the classification table has Severity = `critical`, (2) the revised plan's Files list differs from the pre-revision Files list, or (3) a phase was added, removed, or its assigned agent changed. Otherwise — no FIX findings met these criteria — skip re-review. This check is mechanical: scan the Severity column and compare the before/after Files list. Do not reason about whether the revision "changed the approach."
 
@@ -216,7 +218,7 @@ Plan revision — dispatching:
 
 **Stopping condition:** All worker agents report no critical or major findings. Minor findings may be acknowledged without a fix.
 
-Once the stopping condition is met, append a **Worker Agent Reviews** section to the plan. **This section is mandatory — the plan is not complete without it, even when no worker agents found issues.**
+Once the stopping condition is met, collect the feedback that will become the Worker Agent Reviews section. You append this section to the plan file in step 4 — not here. The format specification and rules for that section are below.
 
 ```markdown
 ## Worker Agent Reviews
@@ -232,29 +234,27 @@ Key feedback incorporated:
 - Each bullet is specific and concrete — not generic praise
 - Omit worker agents that found no issues
 
-**Format check:** After appending the Worker Agent Reviews section, verify that every bullet begins with `[agent-name]` in square brackets. If any bullet is missing the bracket prefix, correct only the bracket prefix — do not rephrase the finding.
+**This section is mandatory — the plan is not complete without it, even when no worker agents found issues.**
 
 ### 3a. Discipline Capture
 
 Run the discipline capture protocol per `[sdlc-root]/process/discipline_capture.md`. Context format: `[DNN — planning]`. This includes structured gap detection (using the finding classification table and agent dispatch data from this session) followed by the freeform insight scan.
 
-### 4. Save Plan to File
+### 4. Verify Plan File and Append Worker Agent Reviews
 
-Save the reviewed plan (including Worker Agent Reviews) to:
+The plan file was saved by the writing worker agent in step 2 (and overwritten by the same agent during any revision in step 3). Your job here is to verify the file on disk, then append the Worker Agent Reviews section.
 
-```
-docs/current_work/sdlc-lite/dNN_{slug}_plan.md
-```
+1. **Verify the file exists** at `docs/current_work/sdlc-lite/dNN_{slug}_plan.md`. If it does not exist, the writing agent failed to save — re-dispatch per step 2. Do not create the file yourself.
+2. **Append the Worker Agent Reviews section** using the `Edit` tool, following the format and rules in step 3. This section is mechanical metadata (summary of review outcomes) and falls under the manager's allowed direct edits per `[sdlc-root]/process/manager-rule.md`. Do not modify any other part of the file — only append the new section at the end.
+3. **Format check:** After appending, verify that every bullet begins with `[agent-name]` in square brackets. If any bullet is missing the bracket prefix, correct only the bracket prefix — do not rephrase the finding.
 
-Where `NN` is the deliverable ID from step 0 and `{slug}` is a short snake_case name derived from the plan title (e.g., `d8_card_overlay_controls_plan.md`).
-
-Create the `docs/current_work/sdlc-lite/` directory if it doesn't exist.
+Where `NN` is the deliverable ID from step 0 and `{slug}` is a short snake_case name derived from the plan title (e.g., `d8_card_overlay_controls_plan.md`). The `docs/current_work/sdlc-lite/` directory is created by the writing agent on first save, not by the manager.
 
 ### 5. Enter Plan Mode
 
 Follow these sub-steps in exact order. Do not combine or skip any.
 
-**5a.** Use the `Read` tool to read the file saved in step 4 (`docs/current_work/sdlc-lite/dNN_{slug}_plan.md`). You need the tool output — do not work from memory.
+**5a.** Use the `Read` tool to read the plan file at `docs/current_work/sdlc-lite/dNN_{slug}_plan.md` (saved by the writing worker agent in step 2 and augmented with Worker Agent Reviews in step 4). You need the tool output — do not work from memory.
 
 **5b.** Use `EnterPlanMode`. The content you pass to `EnterPlanMode` must be the complete file contents returned by the `Read` tool in step 5a — pasted in full, start to finish. Do not transform, shorten, summarize, or rephrase the read output in any way. Copy-paste it.
 
@@ -285,6 +285,7 @@ The Manager Rule remains in effect per `[sdlc-root]/process/manager-rule.md` —
 |---------|---------|
 | "I'll write the plan myself" | Worker agents write. You manage. See Manager Rule. |
 | "I'll just incorporate this feedback myself" | Re-dispatch the writing worker agent with the findings. Manager Rule applies to revisions too. |
+| "I'll just save the agent's output myself with Write" | The writing worker agent saves. The manager only reads the file (step 5a) and appends the Worker Agent Reviews section (step 4). Saving the returned body yourself risks transcription drift and breaks the Manager Rule. If the agent returned the body instead of saving, re-dispatch it with explicit instructions to use the `Write` tool. |
 | "I'll just add the structural elements myself — the worker agent wrote the content" | There is no structural/content distinction. Missing sections (phase dependencies, file list, agents, worker agent reviews) go back to the writing worker agent. Re-dispatch. |
 | "Skip plan review, it's simple" | Simple plans still have cross-domain blind spots. |
 | "This needs 5+ phases" | That's a full SDLC deliverable. Check with the user. |

@@ -54,6 +54,23 @@ Each entry contains:
 
 ---
 
+## 2026-04-22: Writing agents save plan files directly (Manager Rule tightening)
+
+**Origin:** Downstream user reported that during a `/sdlc-lite-plan` revision loop, the manager wrote the plan file via the `Write` tool using the subagent's returned body. The manager's dispatch prompt even said "Do not save it yourself — the manager will save it." — matching the skill's documented flow, but violating the spirit of the Manager Rule (plan content is domain judgment, not process metadata, and transcribing it through the manager invites drift).
+
+**What happened:** Both `sdlc-lite-plan` and `sdlc-plan` split "produce the plan" (worker agent) from "save the plan" (manager). The manager's save step became a content-bearing file write on behalf of the subagent. This is structurally identical to the manager doing the revision itself — the Red Flags caught the revision case but not the save case.
+
+**Changes made:**
+
+1. **`skills/sdlc-lite-plan/SKILL.md`** — Step 2 now requires the writing worker agent to use the `Write` tool to save the plan directly to `docs/current_work/sdlc-lite/dNN_{slug}_plan.md`; the agent returns a short confirmation rather than the plan body. Step 3 revision flow: the re-dispatched writer overwrites the file at the same path. Step 4 retitled from "Save Plan to File" to "Verify Plan File and Append Worker Agent Reviews" — manager verifies existence and appends the reviews section (mechanical metadata, allowed per Manager Rule) but does not write the body. DOT graph updated. Step 5a reference updated. New Red Flags entry: "I'll just save the agent's output myself with Write".
+
+2. **`skills/sdlc-plan/SKILL.md`** — Step 4 updated: writing agent saves the plan file with `Write`; manager `Read`s the saved file to verify completeness. DOT graph node renamed to reflect the writer-saves semantic. Step 5 revision flow: re-dispatched writer overwrites the file. Step 5 reviews append explicitly scoped to manager's allowed `Edit` of mechanical metadata. Step 6a reference updated. New Red Flags entry added parallel to the lite-plan one.
+
+**Rationale:** The Manager Rule is about domain judgment, not just editing. A plan body contains phase structure, implementation guidance, and acceptance criteria — all domain judgment artifacts the worker agent produced. Transcribing that through the manager (even verbatim) creates an opportunity for silent drift (reformatting, section reordering, accidental truncation) and masks the actual boundary the rule is enforcing. Making the writer save its own output eliminates the transcription hop. The manager's only contact with the file becomes (a) appending the reviews summary — explicit mechanical metadata — and (b) reading the file for plan-mode handoff.
+
+
+---
+
 ## 2026-04-22: Compact table-based Pre-Dispatch format for sdlc-lite-plan and sdlc-plan [output-format]
 
 **Origin:** User feedback during a plan session — the stacked AGENT-RECONFIRM + CHRONICLE-CONTEXT output was readable but buried the actual decision (final agent list + context) inside three bullet lists repeating the same data in different framings (agent-with-rationale list, infrastructure → specialist coverage check, flat agent list). A follow-up pass flagged that a tautological `✓` column and a flat `Agents:` one-liner were adding noise without info.

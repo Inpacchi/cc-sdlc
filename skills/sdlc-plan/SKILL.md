@@ -116,7 +116,7 @@ digraph planning {
     "3b. SPEC-REVISION\nWORDING | SCOPE_CHANGE | PIVOT" [shape=box, style=bold, color=blue];
     "3c. AGENT-RECONFIRM\n(if SCOPE_CHANGE or PIVOT)" [shape=box, style=bold, color=blue];
     "3d. APPROACH-DECISION\n- Precedent or compare 2-3 approaches" [shape=box, style=bold, color=blue];
-    "4. Domain agents WRITE the PLAN\n-> docs/current_work/planning/dNN_name_plan.md" [shape=box];
+    "4. Domain agent WRITES and SAVES the PLAN\n-> docs/current_work/planning/dNN_name_plan.md" [shape=box];
     "5. AGENT-RECONFIRM\n+ Review plan with ALL agents" [shape=box, style=bold, color=blue];
     "Incorporate feedback, revise plan" [shape=box];
     "6. Prompt user to begin execution" [shape=doublecircle];
@@ -130,8 +130,8 @@ digraph planning {
     "3b. SPEC-REVISION\nWORDING | SCOPE_CHANGE | PIVOT" -> "3. CD (human) approves the spec" [label="WORDING\n(orchestrator fixes)"];
     "3c. AGENT-RECONFIRM\n(if SCOPE_CHANGE or PIVOT)" -> "2. Domain agents WRITE the SPEC\n-> docs/current_work/specs/dNN_name_spec.md";
     "3. CD (human) approves the spec" -> "3d. APPROACH-DECISION\n- Precedent or compare 2-3 approaches" [label="approved"];
-    "3d. APPROACH-DECISION\n- Precedent or compare 2-3 approaches" -> "4. Domain agents WRITE the PLAN\n-> docs/current_work/planning/dNN_name_plan.md";
-    "4. Domain agents WRITE the PLAN\n-> docs/current_work/planning/dNN_name_plan.md" -> "5. AGENT-RECONFIRM\n+ Review plan with ALL agents";
+    "3d. APPROACH-DECISION\n- Precedent or compare 2-3 approaches" -> "4. Domain agent WRITES and SAVES the PLAN\n-> docs/current_work/planning/dNN_name_plan.md";
+    "4. Domain agent WRITES and SAVES the PLAN\n-> docs/current_work/planning/dNN_name_plan.md" -> "5. AGENT-RECONFIRM\n+ Review plan with ALL agents";
     "5. AGENT-RECONFIRM\n+ Review plan with ALL agents" -> "Incorporate feedback, revise plan";
     "Incorporate feedback, revise plan" -> "6. Prompt user to begin execution";
 }
@@ -407,11 +407,13 @@ The plan MUST include:
 
 **Phase limit:** Plans are capped at 7 phases. If a plan reaches phase 8, **stop writing and split into sub-deliverables** (D1a, D1b) before continuing. Over-phased plans signal insufficient decomposition.
 
-**The writing agent must produce the complete plan.** Every section required by the template — package impact, phase dependencies table, phases with agent assignments, and post-execution review — must be present in the agent's output. If the returned plan is missing any template section, re-dispatch the writing agent to complete it. Do not fill in missing sections yourself.
+**The writing agent must produce the complete plan AND save it to disk.** The dispatch prompt must instruct the agent to use the `Write` tool to save the plan to `docs/current_work/planning/dNN_name_plan.md` (pass the exact path computed from the deliverable ID). The agent returns a short confirmation — not the plan body. If the agent returns the plan body instead of saving the file, re-dispatch with explicit instructions to use the `Write` tool. **The manager does not save the plan** — saving the agent's returned body yourself risks transcription drift and violates the Manager Rule.
 
-**After the writing agent returns the plan, verify completeness before proceeding to review.** Check that every phase has: (1) a clear outcome statement, (2) acceptance criteria, and (3) file scope. Implementation guidance beyond these is at the planning agent's discretion and should not be stripped. If a phase is missing outcome or acceptance criteria, re-dispatch the writing agent to add them.
+Every section required by the template — package impact, phase dependencies table, phases with agent assignments, and post-execution review — must be present in the saved file. If the saved plan is missing any template section, re-dispatch the writing agent to complete it. Do not fill in missing sections yourself.
 
-Save to: `docs/current_work/planning/dNN_name_plan.md`
+**After the writing agent confirms the save, Read the file to verify completeness before proceeding to review.** Check that every phase has: (1) a clear outcome statement, (2) acceptance criteria, and (3) file scope. Implementation guidance beyond these is at the planning agent's discretion and should not be stripped. If a phase is missing outcome or acceptance criteria, re-dispatch the writing agent to add them and re-save.
+
+Writer saves to: `docs/current_work/planning/dNN_name_plan.md`
 
 ### 5. Domain Agent Plan Review
 
@@ -461,14 +463,14 @@ If agents have findings, classify per `[sdlc-root]/process/finding-classificatio
 - DECIDE findings go to the user via `AskUserQuestion`
 - PRE-EXISTING findings require no action but must appear in the table
 
-**Incorporating findings:** If there are FIX findings, re-dispatch the domain agent who wrote the plan (from step 4) with only the FIX findings. That agent produces the revision. **You do not write the revision.** This is the Manager Rule — if you find yourself editing the plan directly instead of dispatching the writing agent, stop. Output a dispatch checklist before re-dispatching:
+**Incorporating findings:** If there are FIX findings, re-dispatch the domain agent who wrote the plan (from step 4) with only the FIX findings. **That agent produces the revision AND overwrites the plan file** using the `Write` tool at the same path. You do not write the revision, and you do not save it. The re-dispatch prompt must pass the plan file path and explicitly instruct the agent to overwrite the file — not return the body. Output a dispatch checklist before re-dispatching:
 
 ```
 Plan revision — dispatching:
-- [ ] [writing-agent-name]: incorporate N findings (K critical, M major)
+- [ ] [writing-agent-name]: incorporate N findings (K critical, M major), overwrite plan file
 ```
 
-**Every checkbox must have a corresponding agent dispatch. Count the checkboxes. Count the dispatches. They must match.** If you find yourself editing the plan directly instead of dispatching the writing agent, stop — that violates the Manager Rule.
+**Every checkbox must have a corresponding agent dispatch. Count the checkboxes. Count the dispatches. They must match.** If you find yourself editing the plan directly — or saving the agent's returned body yourself — stop. Both violate the Manager Rule.
 
 **Re-review criteria:** Re-review is mandatory if ANY of the following is true: (1) any FIX finding has Severity = `critical`, (2) the revised plan's file list differs from the pre-revision file list, or (3) a phase was added, removed, or its assigned agent changed. Otherwise — no FIX findings met these criteria — skip re-review. This check is mechanical: scan the Severity column and compare the before/after Files list. Do not reason about whether the revision "changed the approach."
 
@@ -476,7 +478,7 @@ Plan revision — dispatching:
 
 **Stopping condition:** All agents report no critical or major findings. Minor findings may be acknowledged without a fix — document the decision.
 
-Once the stopping condition is met, append a **Domain Agent Reviews** section to the plan. **This section is mandatory — the plan is not complete without it, even when no agents found issues.**
+Once the stopping condition is met, append a **Domain Agent Reviews** section to the plan file using the `Edit` tool. This section is mechanical metadata (summary of review outcomes) and falls under the manager's allowed direct edits per `[sdlc-root]/process/manager-rule.md`. Do not modify any other part of the file — only append the new section at the end. **This section is mandatory — the plan is not complete without it, even when no agents found issues.**
 
 ```markdown
 ## Domain Agent Reviews
@@ -504,7 +506,7 @@ The plan is reviewed and approved. Enter plan mode so the user gets the standard
 
 Follow these sub-steps in exact order. Do not combine or skip any.
 
-**6a.** Use the `Read` tool to read the plan file saved in step 4 (`docs/current_work/planning/dNN_name_plan.md`). You need the tool output — do not work from memory.
+**6a.** Use the `Read` tool to read the plan file at `docs/current_work/planning/dNN_name_plan.md` (saved by the writing agent in step 4 and augmented with Domain Agent Reviews in step 5). You need the tool output — do not work from memory.
 
 **6b.** Use `EnterPlanMode`. The content you pass to `EnterPlanMode` must be the complete file contents returned by the `Read` tool in step 6a — pasted in full, start to finish. Do not transform, shorten, summarize, or rephrase the read output in any way. Copy-paste it.
 
@@ -552,6 +554,7 @@ Not every invocation needs a deliverable ID. For ad hoc work (bug fixes, small t
 | "The agent list from step 1 still applies" | Run AGENT-RECONFIRM. Scope changes during spec revision or plan writing can introduce domains not in the original list. |
 | "Package coverage is enough, no infrastructure specialists needed" | Generalists mask specialists. Run the infrastructure trigger table — it takes 30 seconds and catches what package-level checks miss. |
 | "I'll incorporate the review findings myself, it's faster" | Re-dispatch the writing agent with the findings. Manager Rule applies to revisions too. |
+| "I'll just save the agent's output myself with Write" | The writing agent saves. The manager only reads the file (step 6a) and appends the Domain Agent Reviews section (step 5). Saving the returned body yourself risks transcription drift and breaks the Manager Rule. If the agent returned the body instead of saving, re-dispatch it with explicit instructions to use the `Write` tool. |
 | "I'll just add the structural elements myself — the agent wrote the content" | There is no structural/content distinction. Missing sections (phase dependencies, file list, agents, domain agent reviews) go back to the writing agent. Re-dispatch. |
 | "The plan is done, let me just quickly fix this other thing" | Manager Rule applies for the full session. Dispatch the domain agent. |
 | "While we're here, I'll also update the server code" | Domain crossing. Dispatch the relevant domain agent for that scope. |
