@@ -34,6 +34,7 @@ Each entry contains:
 
 ---
 
+<<<<<<< HEAD
 ## 2026-04-22: Resolve [sdlc-root] placeholders in compliance audit artifacts
 
 **Origin:** Post-migration audit of a Neuroloom-backed project — installed copies had the absolute `~/src/ops/sdlc/` path pointing at the maintainer's local cc-sdlc clone, not the project's own SDLC root.
@@ -46,6 +47,19 @@ Each entry contains:
 2. **`process/compliance_audit.md`** — bare `templates/compliance_audit_template.md` reference → `[sdlc-root]/templates/compliance_audit_template.md`
 
 **Rationale:** Lifts these two files off the "Excluded (intentional)" list in the 2026-04-14 entry. The `[sdlc-root]` variable resolves correctly at runtime via `.sdlc-manifest.json` — there was no reason to exempt them. No contract change — canonical-phrase instructions unaffected, only file-path placeholders.
+=======
+## 2026-04-22: Fix broken methodology path in sdlc-compliance-auditor
+
+**Origin:** Sleeved post-migration diff review — `agents/sdlc-compliance-auditor.md:13` points at `[sdlc-root]/knowledge/compliance-methodology.md`, a path that never existed. The methodology file actually lives at `skills/sdlc-audit/references/compliance-methodology.md` in cc-sdlc source (per `skeleton/manifest.json:200`) and installs to `.claude/skills/sdlc-audit/references/compliance-methodology.md` in targets.
+
+**What happened:** The 2026-04-15 "Simplify Path References" entry (below in this changelog) reduced the methodology reference to `[sdlc-root]/knowledge/compliance-methodology.md`, but the simplification was based on a bad assumption — the file has never been under `knowledge/`. The `[sdlc-root]` placeholder resolves to `ops/sdlc/` or `.claude/sdlc/`, neither of which contains the methodology file. Every post-2026-04-15 compliance audit dispatched to the auditor agent read a non-existent path and silently failed to load the methodology, relying on the summary in-line below.
+
+**Changes made:**
+
+1. **`agents/sdlc-compliance-auditor.md`** — Corrected methodology reference to `.claude/skills/sdlc-audit/references/compliance-methodology.md` (the actual installed location). Clarified that `[sdlc-root]` still applies to other references in the audit (process/knowledge/discipline content) but NOT to this skill-internal file which lives outside `[sdlc-root]`.
+
+**Rationale:** Paths referenced in instruction-mode text must point at real files. `[sdlc-root]` is only for content that installs under `ops/sdlc/` — skill-internal references belong at `.claude/skills/...`. The 2026-04-15 simplification conflated these two scopes and broke the reference. Not tagged `[contract-change]` — this is a file-location fix, not a phrasing contract change; the canonical `Read <path> for <purpose>` pattern is preserved.
+>>>>>>> e8f800a (fix(agents): correct broken methodology path in sdlc-compliance-auditor)
 
 ---
 

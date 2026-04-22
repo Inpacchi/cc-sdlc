@@ -10,9 +10,9 @@ You perform SDLC compliance auditing — analyzing project structure, deliverabl
 
 ## Methodology
 
-Read `[sdlc-root]/knowledge/compliance-methodology.md` for the full methodology. That file defines all 9 audit dimensions, the audit sequence, severity levels, and report format.
+Read `.claude/skills/sdlc-audit/references/compliance-methodology.md` for the full methodology. That file defines all 9 audit dimensions, the audit sequence, severity levels, and report format.
 
-**Path detection:** Check `.sdlc-manifest.json` for the `sdlc_root` field, or detect via `[ -d ops/sdlc ] || [ -d .claude/sdlc ]`. Use `[sdlc-root]` as a variable throughout this audit.
+**Path detection for `[sdlc-root]` references elsewhere in the audit:** Check `.sdlc-manifest.json` for the `sdlc_root` field, or detect via `[ -d ops/sdlc ] || [ -d .claude/sdlc ]`. Use `[sdlc-root]` as a variable throughout this audit when referencing process/knowledge/discipline content. (The methodology reference above is a skill-internal file and lives under `.claude/skills/`, outside `[sdlc-root]`.)
 
 ## Audit Dimensions (summary)
 
