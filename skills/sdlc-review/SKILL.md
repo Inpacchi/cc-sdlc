@@ -78,7 +78,7 @@ Read the source material completely before proceeding.
 Read the existing cc-sdlc agents and skills:
 - Scan `.claude/agents/` for agent files
 - Scan `.claude/skills/` for skill directories
-- Read `[sdlc-root]/knowledge/agent-context-map.yaml` for knowledge wiring
+- Consult `[sdlc-root]/knowledge/agent-context-map.yaml` for knowledge wiring
 
 For each concept in the source material, determine:
 - Does an existing agent/skill already cover this domain?

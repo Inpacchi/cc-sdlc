@@ -34,6 +34,33 @@ Each entry contains:
 
 ---
 
+## 2026-04-22: Standardize knowledge-layer phrasing + expand Pattern Mapping [contract-change]
+
+**Origin:** Post-migration audit of ~/Projects/sleeved (v1.1.1 → v1.2.0) found 57 untransformed `[sdlc-root]/knowledge/` references in the Neuroloom-installed files. Root cause: cc-sdlc source used at least 6 non-canonical active-instruction phrasings that the adapter plugin's 5-rule Pattern Mapping didn't match, so upstream content landed verbatim instead of being transformed to memory_search/memory_store calls.
+
+**Changes made:**
+
+1. **`skills/sdlc-ingest/SKILL.md`** — Standardized two variants:
+   - `Connect newly created knowledge files ... via [sdlc-root]/knowledge/agent-context-map.yaml` → `Update [sdlc-root]/knowledge/agent-context-map.yaml to wire newly created knowledge files ...`
+   - `Read [sdlc-root]/knowledge/agent-context-map.yaml and identify agents ...` → `Consult [sdlc-root]/knowledge/agent-context-map.yaml to identify agents ...`
+2. **`skills/sdlc-create-agent/SKILL.md`** — Standardized `Read [sdlc-root]/knowledge/agent-context-map.yaml. Add a new entry ...` → `Update [sdlc-root]/knowledge/agent-context-map.yaml to add a new entry ...`
+3. **`skills/sdlc-plan/SKILL.md`** — Standardized `Look up the agent's mapped files in [sdlc-root]/knowledge/agent-context-map.yaml` → `Consult [sdlc-root]/knowledge/agent-context-map.yaml for the agent's mapped files`
+4. **`skills/sdlc-review/SKILL.md`** — Standardized `Read [sdlc-root]/knowledge/agent-context-map.yaml for knowledge wiring` → `Consult [sdlc-root]/knowledge/agent-context-map.yaml for knowledge wiring`
+5. **`skills/sdlc-audit/references/compliance-methodology.md`** — Standardized `Agent definitions include Knowledge Context section directing them to [sdlc-root]/knowledge/agent-context-map.yaml` → `Agent definitions include Knowledge Context section instructing them to consult [sdlc-root]/knowledge/agent-context-map.yaml`
+6. **`process/knowledge-routing.md`** — Expanded the Phrasing Contract section:
+   - Standard Phrases table: added `Notes` column; added `Appending to discipline parking lots` row
+   - New "Forbidden Phrasings" table showing non-canonical variants and their canonical replacements
+   - New "Metadata Contexts" section explicitly listing reference types that are NOT under contract (Integration sections, tables, changelog entries, audit dimensions) — these use inline backticks and pass through adapter transformations untouched
+   - Clarified the instruction-vs-metadata distinguishing rule
+7. **`agents/sdlc-reviewer.md`** — Replaced vague Phrasing Contract checklist with explicit canonical-form allowlist (4 items) + forbidden-form blocklist (7 items). Each item has a concrete pattern and a canonical replacement, so reviewer findings are actionable.
+8. **`agents/sdlc-compliance-auditor.md`** — Expanded Phrasing Contract Validation (Dimension 7) with explicit grep patterns, severity mapping, and file-level exceptions. Auditor now catches the 5 forbidden instruction patterns, inline adapter conditionals, and adapter-specific tools in cc-sdlc source. Exempts `knowledge-routing.md`, `sdlc_changelog.md`, `sdlc-reviewer.md`, and this agent's own section from the scan.
+
+**Rationale:** Fewer phrasing variants in cc-sdlc means a smaller, more maintainable Pattern Mapping table in adapter plugins and fewer silent gaps where file-based references leak into adapter-backend projects. The Metadata Contexts section makes the contract's scope explicit — skill authors now know when a path reference is contract-governed vs. exempt.
+
+**Tagged `[contract-change]`:** Adapter plugin maintainers should pull this release and expand their Pattern Mapping tables to cover: `Update [sdlc-root]/knowledge/agent-context-map.yaml ...` variants, `Consult [sdlc-root]/knowledge/agent-context-map.yaml for ...` variants, the full AGENT_TEMPLATE Knowledge Context sentence, and `[sdlc-root]/knowledge/<domain>/` capture-target references.
+
+---
+
 ## 2026-04-21: Audit-driven fixes (compliance score 6.5 → remediation pass)
 
 **Origin:** `/audit` compliance run post-commit `a476feb`. Score 6.5/10 — NEEDS ATTENTION with 4 major + 5 minor findings.

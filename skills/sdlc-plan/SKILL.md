@@ -246,7 +246,7 @@ The primary domain agent writes the core spec. Other relevant agents contribute 
 5. **Pass to writing agent:** Include verified API details in dispatch prompt
 
 **Spec-time knowledge filtering (opt-in):** When dispatching agents for spec writing, filter their knowledge context to spec-relevant files only — if the project has configured spec-relevance tagging. For each agent being dispatched:
-1. Look up the agent's mapped files in `[sdlc-root]/knowledge/agent-context-map.yaml`
+1. Consult `[sdlc-root]/knowledge/agent-context-map.yaml` for the agent's mapped files
 2. Check whether **any** knowledge file in the project has `spec_relevant: true`. If none do, load ALL mapped files (the project hasn't configured spec-relevance yet — preserve current behavior).
 3. If at least one file is tagged `true`: read each mapped YAML file's top-level `spec_relevant` field. Include only files where `spec_relevant: true` — skip files where `spec_relevant: false` or the field is absent.
 4. The testing paradigm (`[sdlc-root]/knowledge/testing/testing-paradigm.yaml`) is ALWAYS included at spec time regardless of its `spec_relevant` tag — it is explicitly referenced for the Testing Strategy section below.

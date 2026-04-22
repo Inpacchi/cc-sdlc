@@ -119,7 +119,7 @@ Check each discipline file:
 ### 6d. Knowledge-to-Skill Wiring
 
 Two ownership tiers:
-1. **Agent-owned (domain):** Agent definitions include Knowledge Context section directing them to `[sdlc-root]/knowledge/agent-context-map.yaml`
+1. **Agent-owned (domain):** Agent definitions include Knowledge Context section instructing them to consult `[sdlc-root]/knowledge/agent-context-map.yaml`
 2. **Skill-owned (cross-domain):** Skills inject knowledge from other agents' mappings when dispatching into cross-domain contexts
 
 **Check:** agent definitions have self-lookup sections, skills don't redundantly inject same-agent knowledge, cross-domain injection exists where needed.

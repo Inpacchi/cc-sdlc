@@ -76,18 +76,40 @@ VERDICT: [COMPLIANT | NEEDS ATTENTION | NON-COMPLIANT]
 
 ## Phrasing Contract Validation (Dimension 7 sub-check)
 
-As part of migration integrity (Dimension 7), verify that skills and agents use the standard phrasings from `[sdlc-root]/process/knowledge-routing.md` § "Standard Phrases". These exact phrases enable adapter plugins (e.g., `neuroloom-sdlc-plugin`) to transform knowledge references reliably at install/migration time.
+As part of migration integrity (Dimension 7), verify that skills, agents, and process docs use the canonical phrasings from `[sdlc-root]/process/knowledge-routing.md` § "Standard Phrases" and avoid the forms listed in § "Forbidden Phrasings". These exact phrases enable adapter plugins (e.g., `neuroloom-sdlc-plugin`) to transform knowledge references reliably at install/migration time.
 
-1. **Scan all skill files** in `.claude/skills/*/SKILL.md` and agent files in `.claude/agents/*.md`
-2. **Check for deviation from standard phrases:**
-   - References to `agent-context-map.yaml` using non-standard verbs (e.g., "look at", "check" instead of `consult`)
-   - Inline adapter-specific conditionals (e.g., `(Neuroloom projects: use memory_search instead)`)
-   - Direct references to adapter-specific tools (`memory_search`, `memory_store`) in framework files
-3. **Flag deviations:**
-   - Non-standard phrasing for knowledge references → severity: major (breaks adapter transformers)
-   - Inline adapter conditionals → severity: major (should be handled by adapter, not core)
-   - Adapter-specific tools in framework files → severity: critical (wrong layer)
-4. **Exception:** Files already containing `memory_search(` or `memory_store(` patterns are adapter-transformed versions — skip these checks for those specific sections.
+1. **Scan cc-sdlc source files:**
+   - `skills/*/SKILL.md` and `skills/*/references/*.md`
+   - `agents/*.md`
+   - `process/*.md` (except `sdlc_changelog.md` and `knowledge-routing.md` — exempt per metadata exception)
+
+2. **Forbidden phrasing patterns (grep each; any hit is a finding):**
+   - `Read \`?\[sdlc-root\]/knowledge/agent-context-map` — should be `consult` or `update`
+   - `Look up [^.]+ in \`?\[sdlc-root\]/knowledge/agent-context-map` — should use `from` or `Consult ... for`
+   - `via \`?\[sdlc-root\]/knowledge/agent-context-map` — should be `update ...`
+   - `directing them to \`?\[sdlc-root\]/knowledge/agent-context-map` — should be `instructing them to consult ...`
+   - `Connect [^.]+ via.*agent-context-map` — should be `Update ... to wire ...`
+
+3. **Inline adapter conditionals (grep each; any hit is a finding):**
+   - `(Neuroloom projects:` — the phrasing contract forbids inline branching
+   - `(skip for Neuroloom`
+   - `(Neuroloom projects use`
+
+4. **Adapter-specific tools in cc-sdlc source (grep each; any hit is a finding):**
+   - `memory_search(` — adapter concern, not cc-sdlc
+   - `memory_store(`
+
+5. **Flag deviations:**
+   - Forbidden phrasing → severity: **major** (breaks adapter Pattern Mapping transformers)
+   - Inline adapter conditionals → severity: **major** (should be handled by adapter, not core)
+   - Adapter-specific tools → severity: **critical** (wrong layer — cc-sdlc must stay adapter-agnostic)
+
+6. **Exceptions (hits in these files are NOT findings):**
+   - `process/knowledge-routing.md` — the phrasing contract itself; lists canonical and forbidden phrases as documentation
+   - `process/sdlc_changelog.md` — changelog may quote phrases as metadata
+   - `agents/sdlc-reviewer.md` checklist items — quote canonical phrases as validation criteria
+   - `agents/sdlc-compliance-auditor.md` Phrasing Contract Validation section — this section itself lists the patterns to search for
+   - Fenced code blocks (```` ``` ````) inside the above files — documentation examples, not instructions
 
 ## PROJECT-SECTION Marker Validation (Dimension 7 sub-check)
 

@@ -129,19 +129,45 @@ This pattern (core stays pure, adapter transforms at boundaries) follows the Ter
 
 Skills and agents that reference the knowledge layer MUST use these exact phrases so adapter plugins can transform them reliably. Deviations break the transformer and cause silent routing failures in adapter-based projects.
 
-| Use Case | Required Phrasing |
-|----------|-------------------|
-| Looking up an agent's mapped knowledge files | `consult [sdlc-root]/knowledge/agent-context-map.yaml` |
-| Cross-domain knowledge injection during dispatch | `Consult [sdlc-root]/knowledge/agent-context-map.yaml for the [agent-name] entry and include relevant knowledge files in the dispatch prompt` |
-| Referencing the communication protocol | `Read [sdlc-root]/knowledge/architecture/agent-communication-protocol.yaml` |
-| Agent's Knowledge Context section (canonical, from `AGENT_TEMPLATE.md`) | `Before starting substantive work, consult [sdlc-root]/knowledge/agent-context-map.yaml and find your entry. Read the mapped knowledge files...` |
-| Reading domain knowledge stores | `Read [sdlc-root]/knowledge/<domain>/<file>.yaml` |
-| Wiring new files to agent mappings | `update [sdlc-root]/knowledge/agent-context-map.yaml` |
+| Use Case | Required Phrasing | Notes |
+|----------|-------------------|-------|
+| Looking up an agent's mapped knowledge files | `consult [sdlc-root]/knowledge/agent-context-map.yaml` | Lowercase unless at sentence start (`Consult ...`) |
+| Cross-domain knowledge injection during dispatch | `Consult [sdlc-root]/knowledge/agent-context-map.yaml for the [agent-name] entry and include relevant knowledge files in the dispatch prompt` | Standard dispatch-time form |
+| Agent's Knowledge Context section (canonical, from `AGENT_TEMPLATE.md`) | `Before starting substantive work, consult [sdlc-root]/knowledge/agent-context-map.yaml and find your entry. Read the mapped knowledge files...` | Full template |
+| Referencing the communication protocol | `Read [sdlc-root]/knowledge/architecture/agent-communication-protocol.yaml` | — |
+| Reading domain knowledge stores | `Read [sdlc-root]/knowledge/<domain>/<file>.yaml` | Use literal domain and file names |
+| Wiring new files to agent mappings | `update [sdlc-root]/knowledge/agent-context-map.yaml` | Use `update`, not "Read and add" or "Connect via" |
+| Appending to discipline parking lots | `Append to [sdlc-root]/disciplines/*.md` | For discipline capture instructions |
+
+### Forbidden Phrasings (rewrite to canonical)
+
+These phrasings are NOT canonical. Rewrite them to use one of the forms above. The adapter plugin's Pattern Mapping does not match these variants, so they leak file-based references into Neuroloom projects.
+
+| Forbidden | Canonical Replacement |
+|-----------|----------------------|
+| `Read [sdlc-root]/knowledge/agent-context-map.yaml` (as instruction, not as file-read metadata) | `consult [sdlc-root]/knowledge/agent-context-map.yaml` |
+| `Look up ... in [sdlc-root]/knowledge/agent-context-map.yaml` | `Consult [sdlc-root]/knowledge/agent-context-map.yaml for ...` |
+| `via [sdlc-root]/knowledge/agent-context-map.yaml` (as instruction) | `update [sdlc-root]/knowledge/agent-context-map.yaml` |
+| `directing them to [sdlc-root]/knowledge/agent-context-map.yaml` | `instructing them to consult [sdlc-root]/knowledge/agent-context-map.yaml` |
+| `Connect ... via [sdlc-root]/knowledge/agent-context-map.yaml` | `Update [sdlc-root]/knowledge/agent-context-map.yaml to wire ...` |
+
+### Metadata Contexts (not under contract)
+
+References that are **not runtime instructions to an agent** are exempt from the phrasing contract and will NOT be transformed by adapter plugins. These include:
+
+- Integration sections in skill/agent frontmatter (`**Uses:** [path]`, `**Depends on:** [path]`)
+- Tables listing file paths as data (file category tables, migration strategy tables)
+- Changelog entries describing what changed
+- Phrasing contract documentation itself (this doc, `sdlc-reviewer.md` checklist, `sdlc-compliance-auditor.md` validation criteria)
+- Audit dimension descriptions
+- Path examples in bulleted feature lists
+
+In these contexts, use inline-backticked paths (e.g., `` `[sdlc-root]/knowledge/agent-context-map.yaml` ``) and the adapter will leave them as-is. The distinguishing rule: if removing the reference would prevent an agent from completing its task at runtime, it's an instruction (contract-covered); if removing it only affects documentation readability, it's metadata (exempt).
 
 ### Non-Goals
 
 - **Don't scatter conditional branches** across skills. The adapter handles translation at install time — inline conditionals add noise without adding capability.
-- **Don't invent new phrasings** for the same operation. If a skill needs to look up an agent's mapped files, use the exact phrase from the table above.
+- **Don't invent new phrasings** for the same operation. If a skill needs to look up an agent's mapped files, use the exact phrase from the canonical table above.
 - **Don't directly reference adapter-specific tools** in cc-sdlc skills. Those are adapter concerns.
 
 ### When cc-sdlc Changes

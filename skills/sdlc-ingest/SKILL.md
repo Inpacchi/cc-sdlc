@@ -223,11 +223,11 @@ Route each output to its correct destination:
 
 ### 6. Wire to Agents
 
-Connect newly created knowledge files to relevant agents via `[sdlc-root]/knowledge/agent-context-map.yaml`. This prevents orphaned knowledge that never reaches the agents that need it.
+Update `[sdlc-root]/knowledge/agent-context-map.yaml` to wire newly created knowledge files to relevant agents. This prevents orphaned knowledge that never reaches the agents that need it.
 
 **Step 6.1 — Identify candidate agents:**
 
-Read `[sdlc-root]/knowledge/agent-context-map.yaml` and identify agents whose mappings include:
+Consult `[sdlc-root]/knowledge/agent-context-map.yaml` to identify agents whose mappings include:
 - Files from the same discipline (e.g., `[sdlc-root]/knowledge/<discipline>/`)
 - Related disciplines that share concerns (e.g., `frontend-developer` and `ui-ux-designer` both touch design knowledge)
 

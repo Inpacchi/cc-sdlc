@@ -70,11 +70,22 @@ Determine the file type from its location and content:
 - [ ] No duplicated content between SKILL.md and reference files
 
 ### Phrasing Contract (for skills referencing the knowledge layer)
-Skills that reference `[sdlc-root]/knowledge/agent-context-map.yaml` or `[sdlc-root]/knowledge/architecture/agent-communication-protocol.yaml` MUST use the standard phrasings from `[sdlc-root]/process/knowledge-routing.md` § "Standard Phrases". These exact phrases are required so adapter plugins (e.g., `neuroloom-sdlc-plugin`) can reliably transform knowledge access at install time.
-- [ ] Lookups use `consult [sdlc-root]/knowledge/agent-context-map.yaml` (not custom phrasings like "look at", "check", "read")
+Skills that reference the knowledge layer MUST use canonical phrasings from `[sdlc-root]/process/knowledge-routing.md` § "Standard Phrases" and must NOT use forms listed in § "Forbidden Phrasings". These exact phrases let adapter plugins (e.g., `neuroloom-sdlc-plugin`) transform knowledge access reliably at install time.
+
+**Canonical forms allowed:**
+- [ ] Lookups use `consult [sdlc-root]/knowledge/agent-context-map.yaml` or `Consult [sdlc-root]/knowledge/agent-context-map.yaml for ...`
+- [ ] Wiring instructions use `update [sdlc-root]/knowledge/agent-context-map.yaml` or `Update [sdlc-root]/knowledge/agent-context-map.yaml to ...`
 - [ ] Communication protocol references use `Read [sdlc-root]/knowledge/architecture/agent-communication-protocol.yaml`
-- [ ] No inline adapter-specific conditionals (e.g., `(Neuroloom projects: use memory_search instead)`) — adapter plugins handle translation
-- [ ] No direct references to adapter-specific tools (`memory_search`, `memory_store`) in cc-sdlc framework skills
+- [ ] Parking lot captures use `Append to [sdlc-root]/disciplines/*.md` or `Append each insight or GAP entry to the relevant [sdlc-root]/disciplines/*.md parking lot`
+
+**Forbidden forms (flag as findings):**
+- [ ] No `Read [sdlc-root]/knowledge/agent-context-map.yaml` (use `consult` or `update`)
+- [ ] No `Look up ... in [sdlc-root]/knowledge/agent-context-map.yaml` (use `from` or `Consult ... for`)
+- [ ] No `via [sdlc-root]/knowledge/agent-context-map.yaml` as instruction (use `update ... to wire ...`)
+- [ ] No `directing them to [sdlc-root]/knowledge/agent-context-map.yaml` (use `instructing them to consult ...`)
+- [ ] No `Connect ... via [sdlc-root]/knowledge/agent-context-map.yaml` (use `Update ... to wire ...`)
+- [ ] No inline adapter-specific conditionals like `(Neuroloom projects: use memory_search instead)` — adapter plugins handle translation
+- [ ] No direct references to adapter-specific tools (`memory_search(`, `memory_store(`) in cc-sdlc framework skills — those are adapter concerns
 
 ## Agent-Specific Checks
 

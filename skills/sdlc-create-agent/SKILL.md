@@ -123,7 +123,7 @@ Include the standard memory section from AGENT_TEMPLATE.md:
 
 ### 4. Agent Context Map Update
 
-Read `[sdlc-root]/knowledge/agent-context-map.yaml`. Add a new entry mapping the agent to relevant knowledge files:
+Update `[sdlc-root]/knowledge/agent-context-map.yaml` to add a new entry mapping the agent to relevant knowledge files:
 
 ```yaml
   {agent-name}:
