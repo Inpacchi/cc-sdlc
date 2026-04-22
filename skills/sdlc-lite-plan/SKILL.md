@@ -104,16 +104,43 @@ Dispatch prompts must pass through all relevant context — outcomes, constraint
 
 ### 1. Identify Relevant Worker Domain Agents
 
-List which agents are relevant and why. For recurring task types, consult `[sdlc-root]/playbooks/` for pre-seeded agent selection and reference implementations. When exploring existing patterns, use LSP (`goToDefinition`, `findReferences`, `goToImplementation`) for type-system and call-graph questions. Use Grep for string literals and non-TypeScript content.
+For recurring task types, consult `[sdlc-root]/playbooks/` for pre-seeded agent selection and reference implementations. When exploring existing patterns, use LSP (`goToDefinition`, `findReferences`, `goToImplementation`) for type-system and call-graph questions. Use Grep for string literals and non-TypeScript content.
+
+**Infrastructure domain trigger conditions** — read `[sdlc-root]/process/agent-selection.yaml` § `infrastructure_domains`. For each domain, ask its trigger questions about the task. If any trigger is true, add the specialist.
+
+**CHRONICLE-CONTEXT scan** — scan `docs/chronicle/` for concepts related by name or domain. For each related concept read its `_index.md`; if it references deliverables with relevant decisions or patterns, read those result docs and include the context when dispatching agents. This prevents re-inventing patterns established by prior deliverables.
+
+#### Pre-Dispatch block (compact form — default)
+
+Emit agent coverage and chronicle context as two tables. **Use this form on the happy path.**
 
 ```
-Relevant worker domain agents for this task:
-- frontend-developer: touches UI components and state management
-- ui-ux-designer: new UI element needs design review
-- code-reviewer: always included for implementation tasks
+**Agent coverage**
+
+| Domain                            | Specialist                       | Why |
+|-----------------------------------|----------------------------------|-----|
+| <domain>                          | <agent-name> ← writer            | <one-line rationale> |
+| <domain>                          | <agent-name>                     | <one-line rationale> |
+| implementation review             | code-reviewer                    | always included |
+
+**Prior context** — <N> entries
+
+| Source           | Ref    | Takeaway |
+|------------------|--------|----------|
+| <concept-name>   | D<NN>  | <1-line decision/pattern relevant to this task> |
 ```
 
-After listing agents, run the infrastructure coverage check:
+Mark the plan writer with `← writer` in the Specialist column. "Domain" covers both role (e.g. `implementation review`) and infrastructure domain (e.g. `plugin install / env bootstrap`). The Prior context table holds chronicle entries by default; downstream installations that also surface business decisions (DRs, product constraints) add them as rows with `Source = <DR name>`, `Ref = DR-<NN>`. If there are no entries, replace the table with a single line: `**Prior context:** none`.
+
+#### Fall back to verbose form if any trigger fires
+
+Fall back to the verbose AGENT-RECONFIRM + CHRONICLE-CONTEXT blocks below whenever any of these is true — the extra reasoning trail matters when the routine picks need justification:
+
+- **Coverage gap** — an infrastructure domain has no specialist, or `Agents to add` is non-empty
+- **Chronicle conflict** — a prior deliverable establishes a pattern that contradicts the current approach, or loaded context is load-bearing for approach selection (not just informational)
+- **Scope ambiguity** — unsure whether a trigger condition is met for some domain
+
+Verbose form (use when any trigger above fires):
 
 ```
 AGENT-RECONFIRM
@@ -124,15 +151,6 @@ Agents to add: [list or none]
 Updated agent list: [final list]
 ```
 
-**Infrastructure domain trigger conditions** — read `[sdlc-root]/process/agent-selection.yaml` § `infrastructure_domains`. For each domain, ask its trigger questions about the task. If any trigger is true, add the specialist.
-
-**CHRONICLE-CONTEXT** — after agent selection, scan `docs/chronicle/` for related concepts:
-
-1. List concept directories in `docs/chronicle/`
-2. For each concept that could be related, read its `_index.md`
-3. If the `_index.md` references deliverables with relevant decisions or patterns, read those result docs
-4. Include the relevant context when dispatching agents for plan writing
-
 ```
 CHRONICLE-CONTEXT
 Related concepts found: [list concept names or "none"]
@@ -140,8 +158,6 @@ Key context loaded:
 - [concept]: [1-line summary of relevant decision/pattern]
 Context included in agent dispatch: yes | no (none relevant)
 ```
-
-This prevents re-inventing patterns established by prior deliverables.
 
 ### 2. Worker Domain Agents Write the Plan
 

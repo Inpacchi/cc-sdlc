@@ -34,6 +34,28 @@ Each entry contains:
 
 ---
 
+## 2026-04-22: Compact table-based Pre-Dispatch format for sdlc-lite-plan and sdlc-plan [output-format]
+
+**Origin:** User feedback during a plan session — the stacked AGENT-RECONFIRM + CHRONICLE-CONTEXT output was readable but buried the actual decision (final agent list + context) inside three bullet lists repeating the same data in different framings (agent-with-rationale list, infrastructure → specialist coverage check, flat agent list). A follow-up pass flagged that a tautological `✓` column and a flat `Agents:` one-liner were adding noise without info.
+
+**What happened:** Both planning skills emitted verbose reasoning blocks (Infrastructure touched → Agents from list → Coverage check → Agents to add → Updated list) plus a separate CHRONICLE-CONTEXT block with identical structural bullets. On the happy path — coverage complete, no deltas from step 1, chronicle context loaded without conflict — this repeated the same answer three times with every line at the same visual weight.
+
+**Changes made:**
+
+1. **`skills/sdlc-lite-plan/SKILL.md`** — Step 1 now emits two compact tables on the happy path:
+   - **Agent coverage** table with columns `Domain | Specialist | Why` — the Specialist column doubles as the final agent list (no separate flat list); writer is marked with `← writer`; `Why` holds the rationale that previously lived in the initial bullet list. `Domain` covers both role (e.g. `implementation review`) and infrastructure domain (e.g. `plugin install / env bootstrap`).
+   - **Prior context** table with columns `Source | Ref | Takeaway`, or a one-line `**Prior context:** none` when empty. This unifies Chronicle entries (Source = concept, Ref = `D<NN>`) with any downstream business decisions (Source = DR name, Ref = `DR-<NN>`) into a single table rather than emitting Chronicle and Business as separate blocks.
+   - The initial "Relevant worker domain agents for this task" bullet list is removed — its content folds into the Why column of the coverage table.
+   - Fall-back triggers to the verbose AGENT-RECONFIRM + CHRONICLE-CONTEXT forms are preserved verbatim: coverage gap, chronicle conflict, scope ambiguity.
+
+2. **`skills/sdlc-plan/SKILL.md`** — §1 (CHRONICLE-CONTEXT), §3c (AGENT-RECONFIRM), and §5 (review AGENT-RECONFIRM) mirrored: Prior context table replaces the Chronicle bullet block; AGENT-RECONFIRM becomes a `Domain | Specialist | Why` table with a delta-from-step-1 one-liner. Tautological `✓` columns and flat `Final list:` one-liners are removed.
+
+3. **`process/sdlc_changelog.md`** — this entry.
+
+**Rationale:** Tables are dense and scannable — a two-column domain → specialist mapping fits the eye better than three parallel bullet lists. Folding rationale into a `Why` column eliminates the redundancy between the initial bullet list and the coverage table (previously the same agents appeared twice, once keyed by agent-with-rationale and once keyed by domain). The `✓` column was a tautology — in compact form every row is by construction covered (a missing specialist triggers the fall-back), so the column carried no information. Dropping the flat `Agents:` one-liner removes a third restatement of column 2. The verbose forms remain as fall-backs for audit and for dispatches where the reasoning trail is load-bearing.
+
+---
+
 ## 2026-04-22: Require adapter plugins declare supported_ccsdlc_version [adapter-contract]
 
 **Origin:** Session debugging a non-deterministic Stage 2.2a contract-change gate in `neuroloom-sdlc-plugin`. Two runs of the same `/sdlc-migrate` invocation against identical source/target versions produced different outcomes: one halted for manual review, the other silently auto-resolved with a free-form "pattern_mapping_already_updated" note (written by the LLM at runtime). Both interpretations were defensible given the gate's prose-based implementation; neither was reproducible.

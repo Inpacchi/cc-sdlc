@@ -218,6 +218,27 @@ The goal is to surface unknowns that would become expensive surprises during imp
 3. If the `_index.md` references deliverables with relevant decisions, patterns, or trade-offs, read those result docs
 4. Include the relevant context when dispatching agents for spec and plan writing
 
+This prevents re-discovering decisions already made. If a prior deliverable established a pattern (e.g., "REST in, WebSocket out" for demo state, array-based health configs), the spec and plan agents should know about it.
+
+Emit the result as a **Prior context** table on the happy path:
+
+```
+**Prior context** — <N> entries
+
+| Source           | Ref    | Takeaway |
+|------------------|--------|----------|
+| <concept-name>   | D<NN>  | <1-line decision/pattern from result doc> |
+```
+
+If there are no entries, replace the table with a single line: `**Prior context:** none`. The Prior context table holds chronicle entries by default; downstream installations that also surface business decisions (DRs, product constraints) add them as rows with `Source = <DR name>`, `Ref = DR-<NN>`.
+
+Fall back to the verbose form below when any of these is true:
+- Chronicle conflict — a prior deliverable establishes a pattern that contradicts the current approach
+- Loaded context is load-bearing for spec/approach selection (not just informational)
+- Takeaway for a concept does not fit a single line
+
+Verbose form (use when any trigger above fires):
+
 ```
 CHRONICLE-CONTEXT
 Related concepts found: [list concept names or "none"]
@@ -226,8 +247,6 @@ Key context loaded:
 - [concept]: [1-line summary]
 Context included in agent dispatch: yes | no (none relevant)
 ```
-
-This prevents re-discovering decisions already made. If a prior deliverable established a pattern (e.g., "REST in, WebSocket out" for demo state, array-based health configs), the spec and plan agents should know about it.
 
 ### 2. Domain Agents Write the Spec
 
@@ -288,7 +307,30 @@ Action:
 - **SCOPE_CHANGE**: Requirements added/removed, packages affected change, new constraints. Dispatch the relevant domain agent to revise. Run AGENT-RECONFIRM (see below) before re-presenting.
 - **PIVOT**: Fundamental direction change. Run AGENT-RECONFIRM, then dispatch agents to rewrite the spec from the revised agent list.
 
-**AGENT-RECONFIRM** — emit this block whenever scope changes (SCOPE_CHANGE, PIVOT, or before step 5). Two coverage dimensions are required: package coverage ensures every affected package has an agent; infrastructure coverage ensures every specialized infrastructure domain has its specialist (not just a generalist who happens to work in the same package).
+**AGENT-RECONFIRM** — emit whenever scope changes (SCOPE_CHANGE, PIVOT, or before step 5). Two coverage dimensions are required: package coverage ensures every affected package has an agent; infrastructure coverage ensures every specialized infrastructure domain has its specialist (not just a generalist who happens to work in the same package).
+
+**Compact form (default, happy path):**
+
+```
+**Agent coverage**
+
+| Domain                            | Specialist              | Why |
+|-----------------------------------|-------------------------|-----|
+| <package or infrastructure domain>| <agent-name>            | <one-line rationale> |
+| <package or infrastructure domain>| <agent-name>            | <one-line rationale> |
+
+- **Delta from step 1:** +<added> / −<removed> | unchanged
+```
+
+"Domain" covers both package ownership (e.g. `packages/ui`) and infrastructure domain (e.g. `realtime fan-out`). The Specialist column is the agent list in table form — no separate flat list needed.
+
+**Fall back to verbose form if any trigger fires:**
+- Coverage gap — a package or infrastructure domain has no specialist (`no specialist` in the table)
+- Agents added or removed vs step 1 (delta is non-empty)
+- Infrastructure check catches a domain not obvious from the package list (generalist-masking or absence-masking; see below)
+- Scope ambiguity — unsure whether a trigger condition is met for some domain
+
+Verbose form (use when any trigger above fires):
 
 ```
 AGENT-RECONFIRM
@@ -373,7 +415,21 @@ Save to: `docs/current_work/planning/dNN_name_plan.md`
 
 ### 5. Domain Agent Plan Review
 
-**AGENT-RECONFIRM** — emit this block before dispatching review agents:
+**AGENT-RECONFIRM** — emit before dispatching review agents. Use the compact / verbose form convention from §3c (compact table by default, fall back to verbose when a coverage gap, delta from step 1, generalist-masking risk, or scope ambiguity is detected).
+
+Compact form (default):
+
+```
+**Agent coverage (review)**
+
+| Domain                            | Specialist              | Why |
+|-----------------------------------|-------------------------|-----|
+| <package or infrastructure domain>| <agent-name>            | <one-line rationale> |
+
+- **Delta from step 1:** +<added> | unchanged
+```
+
+Verbose form (when a fall-back trigger fires):
 
 ```
 AGENT-RECONFIRM
