@@ -34,6 +34,26 @@ Each entry contains:
 
 ---
 
+## 2026-04-22: Compact table-based PRE-GATE / POST-GATE format for sdlc-execute and sdlc-lite-execute [output-format]
+
+**Origin:** User feedback during a live `/sdlc-lite-execute` run — the stacked PRE-GATE / POST-GATE blocks (Pattern search → Dependencies → File-conflict check → Data sources → Expected counts → Design Decisions → Agent, then build / planned / actual / deviations per phase) produced walls of mostly-routine text ("codebase only", "no overlap", "will be referenced by agent") and jammed the actually-interesting design decisions into semicolon-chained single lines, which then broke across terminal soft-wraps ("_codw orchestrator", "(org tudios)", "ru Phase 4."). POST-GATE mixed ✓ status, test counts, regressions, stub audits, and deviations into flowing prose so anomalies didn't pop.
+
+**What happened:** Both execute skills specified a verbose labeled-field block per phase. On the happy path — dependencies respected, codebase-only data source, no file overlap — the fields restated the phase plan's own content three or four times per phase. The labeled-field prose also made Design Decisions a single prose line with semicolon separators, which is the worst possible shape for terminal wrapping (no natural break points) and for readability (each decision fights the next for visual weight).
+
+**Changes made:**
+
+1. **`skills/sdlc-lite-execute/SKILL.md`** — §1 now emits a **Phase plan table** once at the start (columns: `# | Agent | Files | Depends | Parallel with`), then replaces the per-phase PRE-GATE labeled-field block with a compact `### Phase N — name (agent: X)` header + bulleted Design decisions + `Expected:` line. POST-GATE compacts to a one-line `✓ Phase N — X/Y tests · 0 regressions · 0 stubs · build: pass` with indented `⚠` caveats for anomalies that don't warrant the full verbose form.
+
+   Fall-back triggers to the verbose PRE-GATE / POST-GATE templates are listed inline and are mechanical: pattern-found / external-data / dependency re-check / triage ≠ BUILD / re-dispatch (PRE-GATE); build-fails / file-deviation / stubs-on-final-phase / phase-bleeding / re-dispatch / data-audit-mismatch (POST-GATE). The verbose templates are preserved verbatim; they're the fall-back, not removed. Added an explicit `Stubs:` field to the verbose POST-GATE so stub-audit results live in the gate block, not buried in prose.
+
+2. **`skills/sdlc-execute/SKILL.md`** — mirrored. Same Phase plan table, same compact PRE-GATE / POST-GATE, same fall-back triggers (plus `Triage ≠ BUILD` as a trigger since full execute includes the SKIP / REVISE_PLAN triage step that lite-execute omits).
+
+3. **`process/sdlc_changelog.md`** — this entry.
+
+**Rationale:** The happy path for execution is boring by design — the plan said what to build, the agent built it, build passes, no deviations. A compact status line lets the reviewer verify "yep, routine" at a glance; the verbose form reappears only when something's wrong. One-decision-per-bullet fixes the terminal-mangling problem at its source: long semicolon-chained lines wrap mid-word, bulleted lines break cleanly. Hoisting file-conflict and dependency info into a single upfront table eliminates per-phase re-narration of the same graph. The verbose forms remain the audit contract for non-routine execution — they're the fall-back, not replaced.
+
+---
+
 ## 2026-04-22: Compact table-based Pre-Dispatch format for sdlc-lite-plan and sdlc-plan [output-format]
 
 **Origin:** User feedback during a plan session — the stacked AGENT-RECONFIRM + CHRONICLE-CONTEXT output was readable but buried the actual decision (final agent list + context) inside three bullet lists repeating the same data in different framings (agent-with-rationale list, infrastructure → specialist coverage check, flat agent list). A follow-up pass flagged that a tautological `✓` column and a flat `Agents:` one-liner were adding noise without info.

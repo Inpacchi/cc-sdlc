@@ -99,9 +99,45 @@ If no plan file exists, stop:
 
 ### 1. Execute Phases
 
-Follow the plan's phase structure. For each phase:
+Follow the plan's phase structure.
 
-**PRE-GATE** — you cannot dispatch the phase agent until this block appears in your response:
+**Phase plan (emit once, before any dispatch):**
+
+Reprint the plan's phase structure as a single table. This is the reference every subsequent PRE-GATE points back to — file-conflict and dependency information live here, not in each per-phase block.
+
+```
+**Phase plan**
+
+| # | Agent       | Files                                 | Depends | Parallel with |
+|---|-------------|---------------------------------------|---------|---------------|
+| 1 | <agent>     | <path>, <path>                        | —       | <# or —>      |
+| 2 | <agent>     | <path>, <path>                        | 1       | —             |
+```
+
+If any file appears in more than one phase's row, those phases MUST run sequentially regardless of the plan's `Parallel with` column — mark the conflict in the table and explain in one line below. The Phase plan emission IS the file-conflict check; don't repeat it per phase unless a conflict was missed.
+
+For each phase:
+
+**PRE-GATE** — you cannot dispatch the phase agent until this block appears in your response. Use the compact form by default; fall back to verbose when a trigger fires.
+
+Compact form (happy path):
+
+```
+### Phase [N] — [phase name]  (agent: [agent-name])
+
+Design decisions:
+- [decision 1 — one per bullet, never semicolon-chained]
+- [decision 2]
+
+Expected: [counts from plan, or "none"]
+```
+
+Verbose form (use when any of these triggers fires):
+- **Pattern found** — codebase search surfaced a precedent that's actively shaping the implementation (cite the path)
+- **External data** — the phase reads from any source other than the codebase (URL, repo, API, document)
+- **Dependency re-check** — the Phase plan table needs amending (mid-execution re-sequencing, late-discovered conflict)
+- **Triage ≠ BUILD** — SKIP or REVISE_PLAN (stop and wait for user confirmation)
+- **Re-dispatch** — partial completion or stub fix within this same phase
 
 ```
 PRE-GATE Phase [N] — [phase name]
@@ -131,7 +167,40 @@ For independent phases, dispatch in parallel using multiple Agent tool calls in 
 
 **Cross-domain knowledge injection:** When a phase requires an agent to work in a context outside its primary domain, consult `[sdlc-root]/knowledge/agent-context-map.yaml` for the other domain's agent and include those knowledge files in the dispatch prompt. Use judgment — only inject when the agent is genuinely crossing into unfamiliar territory. Do not inject for routine single-domain work.
 
-**POST-GATE:**
+**POST-GATE** — use the compact form by default; fall back to verbose when any trigger fires.
+
+Compact form (happy path — all checks clean):
+
+```
+✓ Phase [N] — [X/Y tests pass] · [0 regressions] · [0 stubs] · build: pass
+```
+
+If something is not clean but doesn't warrant the full verbose form, indent caveats under the status line with `⚠`:
+
+```
+✓ Phase [N] — 6/6 new tests pass · 0 regressions · 0 stubs · build: pass
+  ⚠ 36 pre-existing failures in test_session_start.py (baseline — will be fixed by Phase 2 patch-target rename)
+```
+
+Verbose form (use when any of these triggers fires):
+- **Build fails** — any command from the project's CLAUDE.md returns non-zero
+- **File deviation** — agent modified files not listed in the plan for this phase
+- **Stubs found on final phase** — stub audit caught placeholder code that won't be filled by a later phase
+- **Phase bleeding** — agent covered scope belonging to a subsequent phase
+- **Re-dispatch needed** — partial completion requires a re-dispatch within this phase
+- **Data audit mismatch** — phase produced data artifacts and the count doesn't match the plan
+
+```
+POST-GATE Phase [N] — [phase name]
+Build: pass | fail (command: [build command] — see project CLAUDE.md)
+Planned files: [list from plan]
+Actual files: [list from git diff / agent report]
+Deviations: [none | list of extra files with reason — logged, included in result doc]
+Stubs: [none | list with file:line and disposition: deferred-to-phase-N | defect — re-dispatch pending]
+```
+
+The POST-GATE checks below still apply in both forms — only the output shape changes:
+
 - Verify build passes: `[build command]` — see project CLAUDE.md
 - **Stale diagnostic dismissal (anti-pattern):** Do not dismiss build warnings or diagnostics as "stale" or "LSP catching intermediate state." Every warning is potentially real. If a build tool reports an unused variable, type error, or import issue, dispatch the phase agent to verify and fix — do not reason the warning away yourself. Warnings dismissed as stale in one round reliably resurface as real findings in the next review round.
 - **File deviation check (mandatory):**
