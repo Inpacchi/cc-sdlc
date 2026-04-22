@@ -104,7 +104,7 @@ Create the agent team. The main session is the team lead — it manages lifecycl
 2. **All REVIEWERS in parallel** — each reviewer receives:
    - Target content
    - Review lenses from `[sdlc-root]/process/review-lenses.md` (all lenses apply)
-   - Relevant knowledge context from `[sdlc-root]/knowledge/agent-context-map.yaml` for their role
+   - Relevant knowledge context — consult `[sdlc-root]/knowledge/agent-context-map.yaml` for their role's mapped files and include them
    - Instructions to send findings as FINDING messages (per `team-communication-protocol.md`) to the architect AND domain-relevant reviewers
    - The message envelope format
    - **Explicit routing instruction** (mandatory — audit 2026-04-17 showed 4/7 reviewers emitted findings as plain text instead):
@@ -216,7 +216,7 @@ Fixers and reviewers work together in real-time. Fixers implement while reviewer
 For each required fixer domain:
 1. Spawn `fixer-{name}` as a new teammate with role prefix
 2. Validate required tools (Bash, Read, Grep, Edit minimum for fixers)
-3. Each fixer receives: target content for reference, the message envelope format, cross-domain knowledge files (per `[sdlc-root]/knowledge/agent-context-map.yaml`) relevant to their domain, and the **fixer discipline prompt** below:
+3. Each fixer receives: target content for reference, the message envelope format, cross-domain knowledge files relevant to their domain, and the **fixer discipline prompt** below. Consult `[sdlc-root]/knowledge/agent-context-map.yaml` for the fixer's mapped files.
 
 ```
 TASK ID DISCIPLINE (mandatory — audit 2026-04-17 caught a fixer creating
@@ -245,7 +245,7 @@ message body so reviewers can audit the pre-flight checks.
 The architect then assigns FIX findings to fixer teammates via FIX_REQUEST messages. Each fixer receives:
 - Task ID, description, file, line, evidence from review
 - The list of all reviewers who found the issue (for FIX_COMPLETE routing)
-- Cross-domain knowledge files from the finding agent(s) when fixer differs from finder (per `[sdlc-root]/knowledge/agent-context-map.yaml`)
+- Cross-domain knowledge files from the finding agent(s) when fixer differs from finder — consult `[sdlc-root]/knowledge/agent-context-map.yaml` for the finder's mapped files
 - **Library verification instructions** (when the fix involves external library APIs): verify API usage via Context7 (`mcp__context7__resolve-library-id` then `mcp__context7__query-docs`) before writing the fix
 
 The architect sets task owner to fixer name, status to in_progress. All independent fixers are dispatched in parallel.

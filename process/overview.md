@@ -42,7 +42,7 @@ A deliverable is not deployable until it passes validation. Validation follows t
 
 **Minimum bar:** Phases 1-4 must complete with all tests passing before proceeding to Deploy. Phase 5 applies to subsequent runs when existing tests break due to new changes.
 
-**Knowledge capture:** Each validation cycle updates project-specific testing knowledge. Cross-project knowledge updates go to your SDLC knowledge store (`[sdlc-root]/knowledge/testing/`).
+**Knowledge capture:** Each validation cycle updates project-specific testing knowledge. Cross-project knowledge updates append to `[sdlc-root]/knowledge/testing/`.
 
 **When to skip phases:** Ad hoc work (bug fixes, UI tweaks <30 min) may skip Phases 2-4 if Phase 1 (exploratory) provides sufficient confidence. Document the rationale in the result doc.
 

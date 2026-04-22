@@ -73,7 +73,7 @@ Before starting substantive work, consult `[sdlc-root]/knowledge/agent-context-m
 
 ## Communication Protocol
 
-Follow the canonical agent communication protocol defined in `[sdlc-root]/knowledge/architecture/agent-communication-protocol.yaml`. Emit structured JSON progress updates during longer tasks and complete every task with a structured handoff.
+Read `[sdlc-root]/knowledge/architecture/agent-communication-protocol.yaml` and follow the canonical agent communication protocol it defines. Emit structured JSON progress updates during longer tasks and complete every task with a structured handoff.
 
 [Domain]-specific handoff fields (in addition to the canonical modified files and follow-up):
 - **[Field]**: [What to include and why]
@@ -130,7 +130,7 @@ What NOT to save: session-specific context, incomplete info, CLAUDE.md duplicate
 
 Agent memory is your private scratchpad — it is **not git-tracked**. If you discover something that would benefit the team or future sessions beyond your own, surface it through the proper SDLC channels:
 
-- **Include a `knowledge_feedback` section in your handoff** (see `[sdlc-root]/knowledge/architecture/agent-communication-protocol.yaml`) when you notice knowledge gaps, find loaded files unhelpful, or wish a pattern had been documented. The orchestrator uses this during discipline capture.
+- **Include a `knowledge_feedback` section in your handoff** when you notice knowledge gaps, find loaded files unhelpful, or wish a pattern had been documented. The orchestrator uses this during discipline capture. Read `[sdlc-root]/knowledge/architecture/agent-communication-protocol.yaml` for the handoff schema.
 - **Reusable patterns, anti-patterns, and domain gotchas** belong in knowledge stores (`[sdlc-root]/knowledge/`), not agent memory. If you discover something general enough to help other agents or future deliverables, flag it in your handoff so the orchestrator can route it to discipline capture or a knowledge store update.
 - **Your memory is for you; knowledge stores are for everyone.** Save codebase-specific shortcuts and session-to-session continuity here. Save transferable domain knowledge through the SDLC pipeline.
 

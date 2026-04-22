@@ -126,7 +126,7 @@ Two ownership tiers:
 
 ### 6e. Agent Context Map Integrity
 
-Check `[sdlc-root]/knowledge/agent-context-map.yaml`:
+Consult `[sdlc-root]/knowledge/agent-context-map.yaml`:
 - All mapped file paths resolve to actual files
 - Knowledge YAML files not referenced by any agent (gaps)
 - Agents in skill tables without knowledge mapping
@@ -165,7 +165,7 @@ Read `[sdlc-root]/knowledge/provenance_log.md` for each knowledge file's last in
 
 **How to check:**
 1. List all knowledge YAML files across `[sdlc-root]/knowledge/`
-2. For each, search `[sdlc-root]/knowledge/provenance_log.md` for entries with matching `files-created` or `files-updated` paths
+2. For each, read `[sdlc-root]/knowledge/provenance_log.md` and find entries with matching `files-created` or `files-updated` paths
 3. Use the most recent matching entry's date as "last refreshed"
 4. If no entry exists, check git blame for the file's last substantive modification date as a fallback
 5. Compare against thresholds; only flag active disciplines at Warning level
@@ -215,7 +215,7 @@ Identify knowledge files that exist but are not wired to any agent, then assess 
 
 **Step 6k.1 — Identify orphans:**
 
-List all YAML files in `[sdlc-root]/knowledge/*/` directories. For each file, check if it appears in any agent's mapping in `[sdlc-root]/knowledge/agent-context-map.yaml`. Files with no agent references are orphan candidates.
+List all YAML files under `[sdlc-root]/knowledge/` domain directories. For each file, consult `[sdlc-root]/knowledge/agent-context-map.yaml` to check if it appears in any agent's mapping. Files with no agent references are orphan candidates.
 
 Exclude from orphan detection:
 - `[sdlc-root]/knowledge/agent-context-map.yaml` itself

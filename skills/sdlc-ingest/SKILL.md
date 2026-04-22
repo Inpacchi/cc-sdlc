@@ -171,7 +171,7 @@ Each rule should include:
 - **Guideline/Anti-pattern entries** — specifics of what to do or not do
 
 **If the discipline doesn't have YAML conventions yet:**
-Follow the general pattern from `[sdlc-root]/knowledge/architecture/*.yaml` or `[sdlc-root]/knowledge/testing/*.yaml`:
+Read `[sdlc-root]/knowledge/architecture/` or `[sdlc-root]/knowledge/testing/` YAML files and follow their general pattern:
 ```yaml
 rule_id: XX
 name: rule-name
@@ -185,7 +185,7 @@ source: source-file-identifier
 spec_relevant: false
 ```
 
-**`spec_relevant` tagging:** All newly created knowledge files must include `spec_relevant: false` as a top-level field. This is the safe default — the project team can override to `true` for stores that inform spec writing (see `[sdlc-root]/knowledge/README.md` § "spec_relevant Field"). When appending rules to existing files, preserve the file's existing `spec_relevant` value — do not change it.
+**`spec_relevant` tagging:** All newly created knowledge files must include `spec_relevant: false` as a top-level field. This is the safe default — the project team can override to `true` for stores that inform spec writing. Read `[sdlc-root]/knowledge/README.md` § "spec_relevant Field" for override criteria. When appending rules to existing files, preserve the file's existing `spec_relevant` value — do not change it.
 
 **Project-specific application notes (optional):**
 If the user provided project context in step 2, add application notes to rules where the generic rule maps to specific product surfaces, components, or patterns. These are informational — they help agents apply generic rules in context.

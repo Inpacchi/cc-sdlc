@@ -34,7 +34,7 @@
 
 ## Risk Areas
 
-[Concerns from architect notes, planning docs, prior test runs, or known gotchas. Each entry: what might go wrong, why, and what to probe. Reference relevant entries from `[sdlc-root]/knowledge/testing/gotchas.yaml`.]
+[Concerns from architect notes, planning docs, prior test runs, or known gotchas. Each entry: what might go wrong, why, and what to probe. Read `[sdlc-root]/knowledge/testing/gotchas.yaml` and reference relevant entries.]
 
 | Risk | Source | Gotcha ID | What to probe |
 |------|--------|-----------|---------------|

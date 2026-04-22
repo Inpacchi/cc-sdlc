@@ -150,7 +150,7 @@ For each failed test, classify the failure as **test-code** or **app-code** by a
 - Runtime errors in application code (console errors, unhandled rejections)
 - Auth flow broken — auth provider or guard component bug
 
-**Testability signal:** If a test failure requires adding a mock to fix, that's a **code structure issue**, not a test issue. The app code likely mixes I/O and logic. Classify as APP-CODE and dispatch the domain agent to separate I/O from logic (see `[sdlc-root]/knowledge/testing/testing-paradigm.yaml`). Do not tell SDET to add mocks to work around poorly structured app code.
+**Testability signal:** If a test failure requires adding a mock to fix, that's a **code structure issue**, not a test issue. The app code likely mixes I/O and logic. Classify as APP-CODE and dispatch the domain agent to separate I/O from logic. Read `[sdlc-root]/knowledge/testing/testing-paradigm.yaml` for the separation pattern. Do not tell SDET to add mocks to work around poorly structured app code.
 
 **Classification signals:**
 - Stack trace points to test files → likely test-code

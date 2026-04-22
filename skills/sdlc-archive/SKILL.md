@@ -172,7 +172,7 @@ Archival is a natural triage checkpoint for parking lot entries generated during
 
 #### 9a. Scan Related Parking Lot Entries
 
-For each deliverable being archived, scan `[sdlc-root]/disciplines/*.md` for parking lot entries tagged with that deliverable's ID (e.g., `[D05 — phase 2]`, `[D05 — planning]`).
+For each deliverable being archived, read `[sdlc-root]/disciplines/*.md` and find parking lot entries tagged with that deliverable's ID (e.g., `[D05 — phase 2]`, `[D05 — planning]`).
 
 For each idea brief being archived, scan for entries tagged with its context (e.g., `[idea: caching]`).
 

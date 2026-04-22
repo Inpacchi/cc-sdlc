@@ -14,7 +14,7 @@ Before the freeform scan, run these comparisons using data already in context. T
 
 For each agent dispatched in this session, compare what knowledge was available against the FIX findings the agent produced. Ask: could a knowledge file have prevented this finding?
 
-- **If `knowledge_feedback.loaded` is present** in the agent's handoff (see `[sdlc-root]/knowledge/architecture/agent-communication-protocol.yaml`), use it — this is the most accurate source of what the agent actually read.
+- **If `knowledge_feedback.loaded` is present** in the agent's handoff, use it — this is the most accurate source of what the agent actually read. Read `[sdlc-root]/knowledge/architecture/agent-communication-protocol.yaml` for the handoff schema.
 - **Otherwise**, look up the agent's mapped files from `[sdlc-root]/knowledge/agent-context-map.yaml`. If the lookup for multiple agents would exceed the time budget, skip this comparison and note "deferred to auditor."
 
 **What to detect:**

@@ -55,7 +55,7 @@ Assign severity using the table above. When uncertain, **classify higher** — i
 
 ### 4. Investigate
 
-Follow the debugging methodology in `[sdlc-root]/knowledge/architecture/debugging-methodology.yaml`:
+Read `[sdlc-root]/knowledge/architecture/debugging-methodology.yaml` and follow the debugging methodology it defines:
 
 1. **Reproduce** — Confirm the symptom. Get a consistent reproduction.
 2. **Isolate** — Narrow the blast radius. What changed? When did it start? What's the scope?

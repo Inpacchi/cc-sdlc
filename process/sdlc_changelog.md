@@ -34,6 +34,47 @@ Each entry contains:
 
 ---
 
+## 2026-04-22 (follow-on): Exhaustive phrasing standardization + adapter metadata transformation [contract-change]
+
+**Origin:** Post-migration audits of a Neuroloom-backed project (v1.1.1 → v1.2.0) across multiple runs surfaced ~18 additional non-canonical instruction phrasings plus a broader question about metadata references. This commit consolidates all the standardization + contract-expansion work that followed the initial 2026-04-22 pass.
+
+**Instruction-phrase standardizations (18 sites across 15 files):**
+
+- **`agents/AGENT_TEMPLATE.md`** (2) — parenthetical `(see X)` in knowledge_feedback → separate sentence; `Follow the canonical protocol defined in X` → `Read X and follow the protocol it defines`
+- **`agents/sdlc-compliance-auditor.md`** — `Read and follow the full methodology at X` → `Read X for the full methodology`
+- **`process/discipline_capture.md`** — parenthetical `(see X)` → separate `Read X for the handoff schema` sentence
+- **`process/incident_response.md`** — `Follow the debugging methodology in X` → `Read X and follow the debugging methodology it defines`
+- **`process/overview.md`** — `updates go to your SDLC knowledge store (X)` → `updates append to X`
+- **`skills/sdlc-archive/SKILL.md`** — `scan X for entries` → `read X and find entries`
+- **`skills/sdlc-audit/references/compliance-methodology.md`** (3) — `search X for entries`, `List all in X. For each file, check ... mapping in Y`, `Check X:` → canonical `read X and find`, `consult X`
+- **`skills/sdlc-idea/SKILL.md`** — `Check X for Y` → `Read relevant files under X for Y`
+- **`skills/sdlc-ingest/SKILL.md`** (2) — parenthetical `(see X § "Y")` → separate `Read X § "Y"`; `Follow the general pattern from X` → `Read X and follow the general pattern`
+- **`skills/sdlc-tests-create/SKILL.md`** — `Apply the testing paradigm from X` → `Read X and apply the testing paradigm it defines`
+- **`skills/sdlc-tests-run/SKILL.md`** — parenthetical `(see X)` in Testability signal → separate `Read X for the separation pattern`
+- **`skills/team-review-fix/SKILL.md`** (3) — `Relevant knowledge context from X for role` → `consult X for role's mapped files`; two parenthetical `(per X)` refs → separate sentences
+- **`templates/test_spec_template.md`** — `Reference relevant entries from X` → `Read X and reference relevant entries`
+
+**Anti-patterns eliminated:**
+- `(see X)` parentheticals — 5 instances
+- `(per X)` parentheticals — 2 instances
+- `Follow [doc] defined/in/from X` — 3 instances
+- `Check X for Y` / `Check X:` — 2 instances
+- `scan/search X for` — 2 instances
+- `Apply Y from X`, `Reference entries from X`, `go to store (X)` — 1 each
+
+**Contract expansion (`process/knowledge-routing.md`):**
+
+- **Forbidden Phrasings table** — grew from 5 rows to 9, adding `Read and follow the full methodology at X`, `Apply the [X] paradigm from Y`, `go to your SDLC knowledge store (X)`, parenthetical `(see X)` asides.
+- **Parenthetical rule** — new explicit statement: never put knowledge-file references inside parentheses when they're instructions; extract into a separate sentence.
+- **Metadata Contexts** — added `Parenthetical path labels in category descriptions` to the exemption list.
+- **New subsection "Adapter metadata transformation"** — documents that adapter plugins MAY transform metadata parentheticals/table-cells to backend-native equivalents (e.g., Neuroloom converts `([sdlc-root]/disciplines/*.md)` → `(memory graph, entries tagged sdlc:discipline:*)`). Lists paths that adapters should NOT transform even as metadata: `process/`, `templates/`, `playbooks/`, `agents/` (those exist on disk in all modes).
+
+**Rationale:** The initial 2026-04-22 pass standardized 6 instruction phrasings; this follow-on closes out the remaining ~18 variants across skills, agents, process docs, and templates. All standardizations use existing Standard Phrases (`Read X`, `Consult X`, `Append to X`, `update X`) — no new canonical phrases were introduced. The metadata-transformation contract addition is an optional adapter feature that lets Neuroloom plugins clean up dead file refs in installed projects without requiring cc-sdlc source changes. After this commit, cc-sdlc source is free of non-canonical instruction patterns; next sleeved migration should produce only metadata-exempt refs.
+
+**Tagged `[contract-change]`:** No new canonical phrases added. Adapter plugins benefit from better coverage automatically; those implementing metadata transformation gain the optional feature.
+
+---
+
 ## 2026-04-22: Standardize knowledge-layer phrasing + expand Pattern Mapping [contract-change]
 
 **Origin:** Post-migration audit of ~/Projects/sleeved (v1.1.1 → v1.2.0) found 57 untransformed `[sdlc-root]/knowledge/` references in the Neuroloom-installed files. Root cause: cc-sdlc source used at least 6 non-canonical active-instruction phrasings that the adapter plugin's 5-rule Pattern Mapping didn't match, so upstream content landed verbatim instead of being transformed to memory_search/memory_store calls.

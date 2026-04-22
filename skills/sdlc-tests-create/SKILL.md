@@ -198,7 +198,7 @@ IMPLEMENTATION INVENTORY:
 [paste from Step 1a]
 
 GUIDELINES:
-- Apply the testing paradigm from [sdlc-root]/knowledge/testing/testing-paradigm.yaml
+- Read `[sdlc-root]/knowledge/testing/testing-paradigm.yaml` and apply the testing paradigm it defines
 - PRIORITIZE integration and E2E tests that exercise real workflows end-to-end
 - Unit tests ONLY for pure functions with complex branching logic (state machines,
   classifiers, validators with multiple edge cases)

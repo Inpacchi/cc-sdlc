@@ -74,7 +74,7 @@ Before asking the user anything, search for relevant context:
 2. **Architectural constraints** — What patterns exist that this idea must work within? What boundaries exist (API layers, module boundaries, data flow)?
 3. **Related systems** — What adjacent code would this idea touch or depend on?
 4. **Chronicle context** — Scan `docs/chronicle/` for related concepts. Read `_index.md` for any that match. Prior deliverables may have explored adjacent territory.
-5. **Knowledge layer** — Check `[sdlc-root]/knowledge/` and `[sdlc-root]/disciplines/` for relevant domain knowledge, especially methodology files that define how the project approaches this domain.
+5. **Knowledge layer** — Read relevant files under `[sdlc-root]/knowledge/` and `[sdlc-root]/disciplines/` for domain knowledge, especially methodology files that define how the project approaches this domain.
 6. **Active work** — Check `docs/current_work/` for in-flight deliverables that might overlap or conflict.
 
 Use LSP (`goToDefinition`, `findReferences`, `hover`) for type-system questions. Use Grep for text patterns. Do NOT ask the user what you can discover by reading code.

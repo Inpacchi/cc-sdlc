@@ -150,10 +150,16 @@ These phrasings are NOT canonical. Rewrite them to use one of the forms above. T
 | `via [sdlc-root]/knowledge/agent-context-map.yaml` (as instruction) | `update [sdlc-root]/knowledge/agent-context-map.yaml` |
 | `directing them to [sdlc-root]/knowledge/agent-context-map.yaml` | `instructing them to consult [sdlc-root]/knowledge/agent-context-map.yaml` |
 | `Connect ... via [sdlc-root]/knowledge/agent-context-map.yaml` | `Update [sdlc-root]/knowledge/agent-context-map.yaml to wire ...` |
+| `Read and follow the full methodology at [sdlc-root]/knowledge/<file>` | `Read [sdlc-root]/knowledge/<file> for the full methodology` |
+| `Apply the [X] paradigm from [sdlc-root]/knowledge/<file>` | `Read [sdlc-root]/knowledge/<file> and apply the [X] paradigm` |
+| `go to your SDLC knowledge store ([sdlc-root]/knowledge/<domain>/)` | `append to [sdlc-root]/knowledge/<domain>/` |
+| `(see [sdlc-root]/knowledge/<file>)` parenthetical asides | Extract into its own sentence using canonical `Read [sdlc-root]/knowledge/<file>` |
 
-### Metadata Contexts (not under contract)
+**Parenthetical rule:** Never put knowledge-file references inside parentheses when they're instructions. Parentheticals read as asides even when the content is load-bearing, and the adapter's pattern matching skips parenthetical references. If the reference is instructional, pull it out of parentheses into its own sentence.
 
-References that are **not runtime instructions to an agent** are exempt from the phrasing contract and will NOT be transformed by adapter plugins. These include:
+### Metadata Contexts
+
+References that are **not runtime instructions to an agent** are exempt from the instruction-phrase contract rules. These include:
 
 - Integration sections in skill/agent frontmatter (`**Uses:** [path]`, `**Depends on:** [path]`)
 - Tables listing file paths as data (file category tables, migration strategy tables)
@@ -161,8 +167,26 @@ References that are **not runtime instructions to an agent** are exempt from the
 - Phrasing contract documentation itself (this doc, `sdlc-reviewer.md` checklist, `sdlc-compliance-auditor.md` validation criteria)
 - Audit dimension descriptions
 - Path examples in bulleted feature lists
+- Parenthetical path labels in category descriptions (`Discipline parking lot entries ([sdlc-root]/disciplines/*.md)`)
 
-In these contexts, use inline-backticked paths (e.g., `` `[sdlc-root]/knowledge/agent-context-map.yaml` ``) and the adapter will leave them as-is. The distinguishing rule: if removing the reference would prevent an agent from completing its task at runtime, it's an instruction (contract-covered); if removing it only affects documentation readability, it's metadata (exempt).
+In these contexts, use inline-backticked paths (e.g., `` `[sdlc-root]/knowledge/agent-context-map.yaml` ``). The distinguishing rule: if removing the reference would prevent an agent from completing its task at runtime, it's an instruction (contract-covered); if removing it only affects documentation readability, it's metadata.
+
+#### Adapter metadata transformation (Neuroloom and similar)
+
+Metadata references point at filesystem locations that exist in file-based cc-sdlc installations but **don't exist in adapter-backend projects** (e.g., `[sdlc-root]/disciplines/*.md` paths are invalid in Neuroloom where disciplines live in the memory graph). To avoid misleading Neuroloom users with dead file paths, adapter plugins MAY transform metadata references in parenthetical/table-cell contexts to their backend-native equivalent.
+
+For example, the Neuroloom plugin transforms:
+- `Discipline parking lot entries ([sdlc-root]/disciplines/*.md)` → `Discipline parking lot entries (memory graph, entries tagged sdlc:discipline:*)`
+- Table cells `| ... | [sdlc-root]/knowledge/**/*.yaml | ... |` → `| ... | memory graph (sdlc:knowledge tags) | ... |`
+
+Not all adapters need to do this — it's an adapter design choice. The contract doesn't require it; it just doesn't forbid it. If your adapter implements metadata transformation, document the rules in its Pattern Mapping table.
+
+**Metadata transformation is never applied to:**
+- `[sdlc-root]/process/` (process files exist on disk in all modes)
+- `[sdlc-root]/templates/` (templates exist on disk)
+- `[sdlc-root]/playbooks/` (playbooks exist on disk)
+- `[sdlc-root]/agents/` (agents are installed to `.claude/agents/`)
+- Fenced code blocks or backticked paths used as examples
 
 ### Non-Goals
 
