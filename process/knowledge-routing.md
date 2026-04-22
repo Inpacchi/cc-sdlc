@@ -198,6 +198,32 @@ Not all adapters need to do this — it's an adapter design choice. The contract
 
 If a change to cc-sdlc introduces a new knowledge-access pattern, the adapter plugin's migrate skill must be updated in parallel. Document the new phrase in the table above so the adapter maintainer can add a transformation rule. The commit message should tag the change with `[contract-change]` so adapter maintainers can filter for it.
 
+### Adapter Version Declaration (required)
+
+Every adapter plugin MUST declare which cc-sdlc version its Pattern Mapping and post-op audit have been verified against. This declaration is the single source of truth used by the adapter's migrate skill to decide whether `[contract-change]` entries in the migration range are safe to auto-resolve or require a deterministic halt.
+
+**Required field in plugin manifest** (`.claude-plugin/plugin.json` or equivalent):
+
+```json
+{
+  "name": "<adapter-plugin-name>",
+  "version": "<plugin-semver>",
+  "supported_ccsdlc_version": "<highest cc-sdlc version covered>"
+}
+```
+
+**Semantics:** `supported_ccsdlc_version` is the highest cc-sdlc version whose `[contract-change]` entries have been reviewed and reflected in the plugin's transformation rules and forbidden-phrase detection. The plugin maintainer bumps this field after verifying coverage — never before.
+
+**Migrate-skill obligation:** the adapter's migrate skill MUST use deterministic semver comparison at its contract-change gate. For each `[contract-change]` entry in the migration range, compare the entry's cc-sdlc version against the plugin's declared `supported_ccsdlc_version`:
+- `entry_version <= supported_ccsdlc_version` → the plugin declares support; auto-resolve and continue.
+- `entry_version > supported_ccsdlc_version` → halt deterministically with a message that identifies the uncovered entries and the current PSV.
+
+Prose-interpreted gates (where the LLM running the skill decides at runtime whether coverage is "probably fine") are explicitly forbidden. The determinism requirement exists because prose-interpreted gates are non-reproducible: the same migration run twice can halt once and silently pass the other. That defeats the purpose of the gate.
+
+**When bumping `supported_ccsdlc_version`:** review every `[contract-change]` entry in cc-sdlc's changelog between the previous PSV and the new PSV. Verify the adapter's transformation rules have handlers for each newly standardized phrase AND the adapter's post-op audit has detectors for each newly forbidden phrase. Bumping without verification defeats the entire gate — it converts a deterministic safety check into a rubber stamp.
+
+**First-time introduction:** this requirement was added to the contract mid-stream. Existing adapters (e.g., `neuroloom-sdlc-plugin` at 0.4.0+) must add the field on their next release. Adapters without the field MUST halt their own migrate gate — missing declaration is treated as "unsupported at any version."
+
 ---
 
 ## Limitations
