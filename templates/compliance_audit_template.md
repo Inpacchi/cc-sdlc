@@ -1,7 +1,7 @@
 # SDLC Compliance Audit — [Project Name]
 
 **Date:** YYYY-MM-DD
-**Audited against:** `~/src/ops/sdlc/` canonical framework
+**Audited against:** `[sdlc-root]/` canonical framework
 **Status:** Proposal — awaiting approval
 
 ---

@@ -100,7 +100,7 @@ For each gap found, classify:
 
 ### Phase 3: Create Proposal
 
-Write a compliance proposal using the template from cc-sdlc source (`templates/compliance_audit_template.md`).
+Write a compliance proposal using the template at `[sdlc-root]/templates/compliance_audit_template.md`.
 
 **Key sections:**
 - Summary table of all gaps with severity
