@@ -24,6 +24,8 @@ mappings:
     - "[sdlc-root]/knowledge/architecture/deployment-patterns.yaml"
     - "[sdlc-root]/knowledge/architecture/knowledge-management-methodology.yaml"
     - "[sdlc-root]/knowledge/architecture/token-economics.yaml"
+    - "[sdlc-root]/knowledge/architecture/observability-patterns.yaml"
+    - "[sdlc-root]/knowledge/architecture/performance-optimization-philosophy.yaml"
 
   # ── Data / Database ────────────────────────────────────────────────
   data-architect:
@@ -34,6 +36,7 @@ mappings:
     - "[sdlc-root]/knowledge/architecture/pipeline-design-patterns.yaml"
     - "[sdlc-root]/knowledge/architecture/agent-communication-protocol.yaml"
     - "[sdlc-root]/knowledge/architecture/database-optimization-methodology.yaml"
+    - "[sdlc-root]/knowledge/architecture/performance-optimization-philosophy.yaml"
 
   data-engineer:
     - "[sdlc-root]/knowledge/data-modeling/anti-patterns/common-modeling-mistakes.yaml"
@@ -43,6 +46,7 @@ mappings:
     - "[sdlc-root]/knowledge/architecture/pipeline-design-patterns.yaml"
     - "[sdlc-root]/knowledge/architecture/agent-communication-protocol.yaml"
     - "[sdlc-root]/knowledge/architecture/database-optimization-methodology.yaml"
+    - "[sdlc-root]/knowledge/architecture/performance-optimization-philosophy.yaml"
 
   # ── Frontend / Design ──────────────────────────────────────────────
   ui-ux-designer:
@@ -75,6 +79,8 @@ mappings:
     - "[sdlc-root]/knowledge/architecture/api-design-methodology.yaml"
     - "[sdlc-root]/knowledge/architecture/deployment-patterns.yaml"
     - "[sdlc-root]/knowledge/architecture/database-optimization-methodology.yaml"
+    - "[sdlc-root]/knowledge/architecture/observability-patterns.yaml"
+    - "[sdlc-root]/knowledge/architecture/performance-optimization-philosophy.yaml"
 
   # ── Review / Quality ───────────────────────────────────────────────
   code-reviewer:
@@ -86,6 +92,7 @@ mappings:
     - "[sdlc-root]/knowledge/testing/gotchas.yaml"
     - "[sdlc-root]/knowledge/testing/tool-patterns.yaml"
     - "[sdlc-root]/knowledge/testing/component-catalog.yaml"
+    - "[sdlc-root]/knowledge/testing/test-infrastructure-patterns.yaml"
     - "[sdlc-root]/knowledge/architecture/debugging-methodology.yaml"
     - "[sdlc-root]/knowledge/coding/typescript-patterns.yaml"
     - "[sdlc-root]/knowledge/architecture/security-review-taxonomy.yaml"
@@ -99,7 +106,9 @@ mappings:
     - "[sdlc-root]/knowledge/testing/gotchas.yaml"
     - "[sdlc-root]/knowledge/testing/tool-patterns.yaml"
     - "[sdlc-root]/knowledge/testing/component-catalog.yaml"
+    - "[sdlc-root]/knowledge/testing/timing-paradigm.yaml"
     - "[sdlc-root]/knowledge/testing/timing-defaults.yaml"
+    - "[sdlc-root]/knowledge/testing/test-infrastructure-patterns.yaml"
     - "[sdlc-root]/knowledge/testing/advanced-test-patterns.yaml"
     - "[sdlc-root]/knowledge/testing/ai-generated-code-verification.yaml"
     - "[sdlc-root]/knowledge/architecture/agent-communication-protocol.yaml"
@@ -117,16 +126,21 @@ mappings:
     - "[sdlc-root]/knowledge/testing/gotchas.yaml"
     - "[sdlc-root]/knowledge/testing/tool-patterns.yaml"
     - "[sdlc-root]/knowledge/testing/component-catalog.yaml"
+    - "[sdlc-root]/knowledge/testing/timing-paradigm.yaml"
     - "[sdlc-root]/knowledge/testing/timing-defaults.yaml"
     - "[sdlc-root]/knowledge/architecture/debugging-methodology.yaml"
+    - "[sdlc-root]/knowledge/architecture/observability-patterns.yaml"
     - "[sdlc-root]/knowledge/architecture/agent-communication-protocol.yaml"
     - "[sdlc-root]/knowledge/architecture/investigation-report-format.yaml"
     - "[sdlc-root]/knowledge/architecture/error-cascade-methodology.yaml"
 
   performance-engineer:
+    - "[sdlc-root]/knowledge/testing/timing-paradigm.yaml"
     - "[sdlc-root]/knowledge/testing/timing-defaults.yaml"
     - "[sdlc-root]/knowledge/testing/tool-patterns.yaml"
     - "[sdlc-root]/knowledge/architecture/debugging-methodology.yaml"
+    - "[sdlc-root]/knowledge/architecture/observability-patterns.yaml"
+    - "[sdlc-root]/knowledge/architecture/performance-optimization-philosophy.yaml"
     - "[sdlc-root]/knowledge/architecture/agent-communication-protocol.yaml"
     - "[sdlc-root]/knowledge/architecture/investigation-report-format.yaml"
     - "[sdlc-root]/knowledge/architecture/error-cascade-methodology.yaml"
@@ -166,6 +180,8 @@ mappings:
     - "[sdlc-root]/knowledge/architecture/debugging-methodology.yaml"
     - "[sdlc-root]/knowledge/architecture/agent-communication-protocol.yaml"
     - "[sdlc-root]/knowledge/architecture/deployment-patterns.yaml"
+    - "[sdlc-root]/knowledge/architecture/observability-patterns.yaml"
+    - "[sdlc-root]/knowledge/testing/test-infrastructure-patterns.yaml"
 
   refactor-engineer:
     - "[sdlc-root]/knowledge/architecture/technology-patterns.yaml"

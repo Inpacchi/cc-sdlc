@@ -1,15 +1,22 @@
-# Cross-Project Component Test Strategies
-# How to test shared UI components regardless of which project uses them.
-# Last updated: 2026-03-15
+# Component Catalog — Project-Populated Template
+#
+# This file is a TEMPLATE, not a cc-sdlc rule set. Projects populate it with
+# their own shared UI components and the test strategies for each. The entries
+# below (MUI DataGrid, MUI Form Dialog, status chip, page header) are example
+# rows showing the expected structure — keep them if your project uses these
+# components, replace them if it doesn't.
+#
+# Each entry should include: description, applies_to, element_discovery,
+# test_patterns, gotchas. See any example below for structure.
 
 id: component-catalog
 name: "Component Catalog"
-description: "Test strategies for shared UI components including MUI DataGrid, form dialogs, status chips, and page headers"
+description: "Template: project-specific test strategies for shared UI components. Populated per project."
 pattern: entries
 category: testing
 spec_relevant: false
 project_applicability:
-  relevant_when: "Project uses MUI DataGrid or similar complex UI components"
+  relevant_when: "Project has a shared component library that tests interact with"
   action_if_irrelevant: customize
 last_updated: 2026-03-15
 
@@ -100,24 +107,5 @@ page_header:
   notes: "Consistent across all list pages — same structure, different content"
 
 
-# ─── Project-Specific Components ───
-# Add your project's component test strategies here following the same structure.
-# Each entry should include: description, applies_to, element_discovery, test_patterns, gotchas.
-#
-# Example entry structure:
-#
-# your_component_name:
-#   description: "Short description"
-#   applies_to:
-#     - "your-project (feature area)"
-#   element_discovery:
-#     preferred_method: "accessibility tree"
-#     patterns:
-#       key_element: "role=X, name='Y'"
-#   test_patterns:
-#     open: "trigger action → wait for component"
-#   gotchas:
-#     - id: "unique-gotcha-id"
-#       symptom: "What goes wrong"
-#       cause: "Why it happens"
-#       prevention: "How to avoid it"
+# Add additional project-specific component entries following the structure above.
+# Each entry needs: description, applies_to, element_discovery, test_patterns, gotchas.

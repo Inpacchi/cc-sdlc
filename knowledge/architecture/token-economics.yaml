@@ -93,15 +93,14 @@ practical_guidelines:
 # Session Degradation Patterns
 # ─────────────────────────────────────────────
 #
-# Source: Claude Code Best Practices (code.claude.com/docs/en/best-practices) —
-#   "Manage context aggressively" and "Avoid common failure patterns" sections.
-#   Chroma Research, "Context Rot" (trychroma.com/research/context-rot):
-#     - Models perform BETTER on shuffled haystacks than logically structured ones
-#     - Claude abstains when uncertain; GPT hallucinates confident wrong answers
-#     - Degradation starts above ~500 words for some tasks, intensifies with length
-#     - Lower semantic similarity between query and target accelerates degradation
-#     - Distractors have non-uniform impact — some cause far more degradation than others
-#   CS146S Wk 6: "Context Rot: Understanding Degradation in AI Context Windows."
+# Source: Chroma Research, "Context Rot" (trychroma.com/research/context-rot):
+#   - Models perform BETTER on shuffled haystacks than logically structured ones
+#   - Models differ in degradation behavior: some abstain when uncertain, others
+#     hallucinate confident wrong answers — verify empirically for your target model
+#   - Degradation starts above ~500 words for some tasks, intensifies with length
+#   - Lower semantic similarity between query and target accelerates degradation
+#   - Distractors have non-uniform impact — some cause far more degradation than others
+# CS146S Wk 6: "Context Rot: Understanding Degradation in AI Context Windows."
 #
 # Context quality is not static — it degrades dynamically over a session
 # as failed approaches, corrections, tool output, and exploration accumulate.
@@ -121,14 +120,16 @@ session_degradation:
     context size.
 
   model_behavior_under_degradation:
-    claude: "Tends to abstain when uncertain — explicitly states it cannot find an answer. Preferable to hallucination but can stall workflows."
-    gpt_models: "Highest rates of hallucination — generates confident but incorrect responses. More dangerous in review contexts where wrong assertions pass as findings."
+    principle: >
+      Model families differ in how they fail under degraded context — some abstain
+      when uncertain (producing incomplete but honest output), others hallucinate
+      confident wrong answers. The specific behavior of any given model drifts as
+      new versions ship; verify empirically rather than relying on stated behavior.
     implication: >
-      Claude's abstention behavior means degraded context is more likely to produce
-      incomplete reviews than wrong reviews. GPT-family models in degraded context
-      produce plausible-sounding but incorrect findings. When using any model for
-      review in long sessions, bias toward false negatives (missed issues) is safer
-      than bias toward false positives (wrong findings that waste fix cycles).
+      For review tasks in long sessions, bias toward false negatives (missed
+      issues) is safer than bias toward false positives (wrong findings that
+      waste fix cycles). Configure review gates accordingly: prefer models that
+      abstain over models that confabulate for correctness-critical work.
 
   degradation_signals:
     - signal: "Agent repeats a mistake that was already corrected"

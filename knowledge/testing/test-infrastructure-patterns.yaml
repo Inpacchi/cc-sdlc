@@ -1,0 +1,233 @@
+# Test Infrastructure Patterns
+# How to structure, run, and maintain a test suite so it serves the team
+# rather than slowing it down.
+# Last updated: 2026-04-21
+
+id: test-infrastructure-patterns
+name: "Test Infrastructure Patterns"
+description: "Patterns for test suite structure, CI execution, result reporting, and flake management"
+pattern: entries
+category: testing
+spec_relevant: false
+project_applicability:
+  relevant_when: "Any project with a test suite that runs in CI"
+  action_if_irrelevant: customize
+last_updated: 2026-04-21
+
+# ─────────────────────────────────────────────
+# Core Principles
+# ─────────────────────────────────────────────
+
+core_principles:
+  - principle: "Tests are code too"
+    rule: "Apply the same quality bar to test code as production code: readability, reusability, clear failure messages. A bad test suite is tech debt."
+
+  - principle: "Fast feedback beats comprehensive coverage"
+    rule: "A suite that runs in 30s and catches 80% of bugs is more valuable than one that runs in 30min and catches 95%. Developers run fast suites; slow suites get skipped."
+
+  - principle: "Flakes are bugs"
+    rule: "Intermittent test failures are not 'just flaky tests' — they indicate real race conditions, environmental coupling, or ordering assumptions. Treat flakes as P1 bugs, not P3 noise."
+
+  - principle: "The test suite is a product"
+    rule: "It has users (developers), requirements (fast, reliable, clear failures), and a lifecycle (maintained, versioned, deprecated). Invest in it accordingly."
+
+# ─────────────────────────────────────────────
+# Test Suite Structure
+# ─────────────────────────────────────────────
+
+suite_structure:
+  tiered_execution:
+    description: >
+      Not every test needs to run every time. Tier the suite by cost and
+      coverage so developers get fast feedback on common changes and full
+      confidence before deployment.
+
+    tier_1_unit:
+      what: "Pure logic tests, no I/O, no services"
+      runtime_target: "< 30 seconds for the full tier"
+      run_when: "On every file save (watch mode), pre-commit, every PR"
+      coverage_focus: "Algorithms, business logic, data transformations"
+
+    tier_2_integration:
+      what: "Tests that cross module boundaries — real DB, mocked external APIs"
+      runtime_target: "< 5 minutes for the full tier"
+      run_when: "Every PR, every merge to main"
+      coverage_focus: "Repository/query behavior, API contract, service integration"
+
+    tier_3_end_to_end:
+      what: "Full-stack tests through a real browser/app against a deployed service"
+      runtime_target: "< 20 minutes for the critical-path subset"
+      run_when: "Every PR (critical-path subset), full suite before deploy"
+      coverage_focus: "User journeys, cross-system integration, regression detection on key flows"
+
+    tier_4_performance_load:
+      what: "Load tests, soak tests, performance regression detection"
+      runtime_target: "N/A — runs on a schedule, not on PR"
+      run_when: "Nightly, pre-release, after infrastructure changes"
+      coverage_focus: "SLA thresholds, resource limits, scaling behavior"
+
+  organization:
+    colocate_with_source: "Unit tests live next to the code they test (foo.ts / foo.test.ts). Integration and E2E tests live in a dedicated directory."
+    mirror_structure: "Test directories mirror source directory structure. A reader can find the test for any source file in a predictable place."
+    name_by_behavior: "Test names describe behavior, not implementation: 'rejects invalid email' beats 'test_validateEmail_case2'."
+
+# ─────────────────────────────────────────────
+# CI Execution
+# ─────────────────────────────────────────────
+
+ci_execution:
+  parallelization:
+    principle: "Split the suite across workers. Total wall time = longest worker, not sum of all tests."
+    shard_strategies:
+      by_file: "Each worker runs a subset of test files. Simple; balance depends on file-level test count uniformity."
+      by_test_class: "Finer-grained splitting. Better balance, more overhead."
+      by_duration: "Measure past runs, assign tests to workers based on historical duration. Best balance, requires duration tracking."
+
+  test_selection:
+    principle: "Running every test on every change is wasteful for small PRs."
+    strategies:
+      affected_only: "Run tests whose dependency graph intersects the changed files. Requires build-system support (Nx, Turborepo, Bazel)."
+      tag_based: "Tag tests by area (auth, payments, search). Run tags matching the change. Requires discipline to tag correctly."
+      full_suite_on_main: "Short-circuit on PRs (affected only) but always run the full suite on main branch post-merge."
+
+  caching:
+    dependencies: "Cache node_modules / venv / .cargo / etc. Bust on lockfile change."
+    build_artifacts: "Cache compiled artifacts keyed on source hash. Avoid recompiling unchanged code."
+    test_results: "If a test ran on an unchanged dependency graph, reuse the previous result (requires explicit support)."
+
+  retry_policy:
+    rule: "Retries hide flakes. Use them judiciously."
+    recommendation: >
+      Retry once on network/infrastructure errors (pod evictions, transient
+      503s). Do not retry on test assertion failures — that's masking a bug.
+      Any test that needs retries to pass reliably should be flagged and fixed.
+
+# ─────────────────────────────────────────────
+# Test Isolation
+# ─────────────────────────────────────────────
+
+test_isolation:
+  principle: >
+    Every test must be independent of every other test. Order-dependent tests
+    are bugs waiting to surface. Tests that fail when run in parallel but pass
+    serially have isolation bugs — serial execution is never the correct fix.
+
+  common_isolation_failures:
+    - failure: "Shared database state"
+      fix: "Each test uses a unique namespace (schema, prefix, tenant). Clean up in teardown or use transactional rollback."
+
+    - failure: "Shared filesystem state"
+      fix: "Each test uses a unique temp directory. Clean up in teardown."
+
+    - failure: "Shared in-memory state (singletons, caches, module-level vars)"
+      fix: "Reset between tests via beforeEach. Refactor singletons to be injectable for tests."
+
+    - failure: "Shared network ports"
+      fix: "Let the OS assign ports (bind to 0). Pass the assigned port to the test via fixture."
+
+    - failure: "Time-dependent behavior (current time, timezone)"
+      fix: "Inject a clock abstraction. Freeze or set time explicitly in tests."
+
+    - failure: "Random values (random IDs, shuffled inputs)"
+      fix: "Seed the RNG deterministically per test. Tests must be reproducible."
+
+  parallel_safe_patterns:
+    - "Unique worker ID in resource names (e.g., DB `test_db_worker_${WORKER_ID}`)"
+    - "Transactional tests — wrap each test in a transaction, roll back at end"
+    - "Ephemeral fixtures — spin up a dedicated service per worker (containers, local-only DB)"
+
+# ─────────────────────────────────────────────
+# Result Reporting
+# ─────────────────────────────────────────────
+
+result_reporting:
+  what_the_report_must_answer:
+    - "Did the suite pass? (binary signal)"
+    - "Which tests failed? (specific names, not just counts)"
+    - "What was the failure mode for each? (error message, stack trace, screenshot if UI)"
+    - "How long did it take? (by tier, by worker)"
+    - "Is this a new failure or a known flake? (historical context)"
+
+  failure_output:
+    rule: >
+      A failure message should tell a developer what broke without needing to
+      re-run the test locally. Include expected vs actual, the input that
+      caused the failure, and any framework-captured artifacts (screenshots,
+      DOM snapshots, network logs).
+
+    good_example: >
+      "FAIL: order total calculation
+       Expected: $42.50
+       Actual: $38.25
+       Input: { items: [...], taxRate: 0.08, discount: 0.10 }
+       Possible cause: tax applied before discount instead of after."
+
+    bad_example: >
+      "FAIL: test_order_total_2 — assertion failed"
+
+  historical_tracking:
+    - "Track which tests fail most often. Top-N flakes deserve dedicated fix time."
+    - "Track pass rate over time. Sudden drops indicate environmental issues."
+    - "Track suite duration. Sudden increases indicate performance regressions or infrastructure slowdowns."
+
+# ─────────────────────────────────────────────
+# Flake Management
+# ─────────────────────────────────────────────
+
+flake_management:
+  definition: "A test that sometimes passes and sometimes fails against the same code, on the same environment, within a short time window."
+
+  detection:
+    - "Run the suite repeatedly (10-50 times) on a stable commit. Any test that fails even once is a candidate."
+    - "Track per-test pass rate across runs. Anything below 99% pass rate is flaky."
+
+  triage:
+    classify_by_root_cause:
+      - "Timing — race conditions, insufficient waits, animation coupling"
+      - "Environment — shared state, port conflicts, resource exhaustion"
+      - "External dependencies — network calls, third-party services"
+      - "Test isolation — order dependence, shared fixtures"
+      - "Assertion fragility — asserting on unstable details (generated IDs, timestamps)"
+
+    do_not_do:
+      - "Do not retry until it passes. Retries hide the root cause."
+      - "Do not disable and forget. Disabled flakes are technical debt that compounds."
+      - "Do not serialize the suite to avoid parallel flakes. Serial execution is not a fix."
+
+    instead:
+      - "Quarantine the flake — move it out of the main suite, page an owner to fix it."
+      - "Fix the root cause. For timing flakes, find the missing signal. For environment flakes, fix isolation. For external dependencies, stub or use a test double."
+      - "Delete the test if the behavior it checks is covered elsewhere and the test is unreliable by nature."
+
+# ─────────────────────────────────────────────
+# Anti-Patterns
+# ─────────────────────────────────────────────
+
+anti_patterns:
+  - pattern: "Running the entire test suite on every file save"
+    why_bad: "Slows iteration, breaks flow state. Developers disable the watch mode and skip testing."
+    instead: "Watch mode runs only affected tests. Full suite runs in CI."
+
+  - pattern: "100% coverage as a target"
+    why_bad: "Drives toward testing implementation details and trivial getters. Tests become brittle and add no value."
+    instead: "Target coverage on critical paths. Measure behavior coverage, not line coverage."
+
+  - pattern: "Snapshot tests for everything"
+    why_bad: "Snapshots fail on any output change, trained developers to blindly regenerate them. Provide no assertion on what matters."
+    instead: "Use snapshots for stable, whole-structure outputs (config files, serialized formats). Use explicit assertions for behavior."
+
+  - pattern: "Mock everything"
+    why_bad: "Mock-heavy tests verify the mocks, not the code. Real bugs live at the boundary between modules, which mocks erase."
+    instead: "Mock at the edges (external services). Let internal calls go through real code. Prefer integration over heavy unit mocking."
+
+  - pattern: "Tests that test the test framework"
+    why_bad: "If you find yourself testing 'does jest work correctly', you're past a useful test."
+    instead: "Trust the framework. Test your own logic."
+
+  - pattern: "Skipping tests to unblock a release"
+    why_bad: "Skipped tests never come back. The pattern becomes 'skip, ship, forget'."
+    instead: "Either fix the test or delete it with justification. Skip is an anti-pattern."
+
+  - pattern: "Long, narrative test functions"
+    why_bad: "When they fail, it's unclear which assertion caught the bug or how to reproduce."
+    instead: "One behavior per test. Clear arrange-act-assert structure. If the test is complex, the code under test probably is too."

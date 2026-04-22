@@ -33,22 +33,21 @@ gotchas:
     discovered: "Formula cells displayed error icons at UAT handoff because API wasn't started"
     applies_to: "all projects with API backends"
 
-  - id: react-strictmode-double-mount
+  - id: dev-mode-double-invoke
     severity: medium
-    symptom: "localStorage state gets clobbered on page load"
-    cause: "React 19 StrictMode mounts components twice in dev mode — useEffect writes to localStorage on both mounts, second write may overwrite saved state"
-    resolution: "useRef guard on useEffect that writes to localStorage"
-    prevention: "When testing localStorage persistence, always include full page refresh (not just re-render)"
-    discovered: "Column visibility settings lost on refresh"
-    applies_to: "all React 19 projects using localStorage in useEffect"
+    symptom: "Persistent state (localStorage, IndexedDB, remote writes) gets clobbered on load, or side effects run twice in dev but once in production"
+    cause: "Many dev-mode frameworks intentionally double-invoke lifecycle/effect code to surface bugs (e.g., React StrictMode double-mounts components). Effects that write to persistent state write twice; the second write may overwrite fresh state with stale closure values."
+    resolution: "Guard the write with a ref/flag, or make the write idempotent against itself"
+    prevention: "When testing persistence logic, always include a full page reload (not just re-render). Any bug that only surfaces in dev is still a bug — production will eventually hit it."
+    applies_to: "any framework with dev-mode double-invoke (React StrictMode, Vue dev hooks, etc.)"
 
-  - id: datagrid-virtual-scroll
+  - id: virtualized-list-dom-absent
     severity: medium
-    symptom: "Cannot find expected rows in DOM"
-    cause: "MUI DataGrid virtualizes rows — only rows in the visible viewport exist in DOM"
-    resolution: "Scroll to target row before asserting, or verify total count via pagination text"
-    prevention: "Don't assert on specific row content without ensuring row is in viewport"
-    applies_to: "all projects using MUI DataGrid"
+    symptom: "Cannot find expected rows/items in DOM despite data being present"
+    cause: "Virtualized UI libraries (data grids, infinite lists, tree views) only render items in the visible viewport — off-screen items don't exist in the DOM"
+    resolution: "Scroll the target into view before asserting, or verify total count via library-exposed APIs (pagination text, item count, etc.)"
+    prevention: "Don't assert on specific item content without ensuring the item is in the rendered viewport. Test scroll behavior as a first-class concern."
+    applies_to: "any UI using virtualization (MUI DataGrid, react-window, AG Grid, TanStack Virtual, etc.)"
 
   - id: tab-id-reuse
     severity: low
@@ -74,13 +73,13 @@ gotchas:
     prevention: "Always follow open with goto <url>"
     applies_to: "Playwright CLI"
 
-  - id: mui-popover-backdrop-intercepts
+  - id: invisible-overlay-intercepts-pointers
     severity: medium
-    symptom: "Click on element behind popover times out with 'subtree intercepts pointer events'"
-    cause: "MUI Popover renders an invisible backdrop (MuiBackdrop-invisible) that covers the entire page and intercepts all pointer events"
-    resolution: "Press Escape to close the popover before clicking elements behind it"
-    prevention: "When interacting with MUI popovers/menus, always close them (Escape) before clicking other page elements"
-    applies_to: "all projects using MUI Popover/Menu/Dialog"
+    symptom: "Click on an element behind an open popover/menu/dialog times out with 'subtree intercepts pointer events' or similar"
+    cause: "Many popover/menu/dialog components render an invisible full-page backdrop to capture outside-click events. The backdrop intercepts all pointer events, blocking clicks on elements behind the overlay even though the overlay appears 'invisible' to the human eye."
+    resolution: "Close the overlay (usually Escape) before clicking other page elements"
+    prevention: "When interacting with popovers/menus/dialogs in tests, explicitly close them before moving on to other interactions. Treat overlay dismissal as a required step, not an assumption."
+    applies_to: "any UI library with backdrop-based outside-click handling (MUI, Radix, Headless UI, Ant Design, etc.)"
 
   - id: playwright-cli-fill-requires-snapshot
     severity: low

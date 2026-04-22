@@ -2,8 +2,8 @@
 # Verification frameworks specific to AI-generated code — addressing failure modes
 # that traditional testing misses: system invariants, behavioral compliance, and
 # evaluation hygiene.
-# Source: Tessl Engineering Blog (Jennifer Sand, Patrick Debois, unnamed authors)
-# Last updated: 2026-03-30
+# Source: Industry research on AI coding agent behavior (multiple sources, 2025-2026).
+# Last updated: 2026-04-21
 
 id: ai-generated-code-verification
 name: "AI-Generated Code Verification"
@@ -24,10 +24,9 @@ last_updated: 2026-03-30
 # System Invariants — Three-Level Taxonomy
 # ─────────────────────────────────────────────
 #
-# Source: Tessl "Beyond Tests: What to Verify in AI-Generated Code" (Jennifer Sand)
 # Caveat: Taxonomy is a proposal with one example per level, not an exhaustive
-# validated classification. No quantitative evidence provided. Full implementation
-# methodology was deferred to a conference talk, not published in the article.
+# validated classification. Apply the principle; extend the levels with
+# project-specific invariants as you find them.
 
 system_invariants:
   principle: >
@@ -93,12 +92,12 @@ system_invariants:
 # Behavioral Compliance Architecture
 # ─────────────────────────────────────────────
 #
-# Source: Tessl "Our AI Is the Bright Kid with No Manners" Parts 1 & 2
-# Evidence: Controlled evaluation — 28% baseline → 99% with tile (7 scenarios,
-# 4 demo repos). Part 1 cited 15% baseline from a different scenario subset.
-# Caveat: Demo repos modeled after real projects, not real OSS projects.
-# Evaluation uses Tessl's own tooling. 15 iteration cycles were needed to find
-# the right balance — no formula for optimal layering exists.
+# Evidence from controlled evaluation on demo repositories: baseline compliance
+# rates of 15-28% improved to 99% when agent instructions were architected as
+# three distinct layers (scripture/commandments/rituals). Caveat: evaluated on
+# demo repos modeled after real projects, not real OSS projects. Multiple
+# iteration cycles were needed to find the right balance — no formula for
+# optimal layering exists.
 
 behavioral_compliance:
   principle: >
@@ -155,9 +154,10 @@ behavioral_compliance:
 # Deterministic-First Principle
 # ─────────────────────────────────────────────
 #
-# Source: Tessl "Bright Kid Part 2"
-# Evidence: Claimed-issue detection scored 0% across 7 skill versions when
-# implemented as LLM judgment. Moved to bash script calling GitHub API → 100%.
+# Evidence: Claimed-issue detection scored 0% across 7 skill-instruction versions
+# when implemented as LLM judgment ("check issue comments"). Moved to a script
+# calling the relevant API to fetch all comments, with the agent interpreting
+# the structured output → 100% accuracy.
 
 deterministic_first:
   principle: >
@@ -181,10 +181,10 @@ deterministic_first:
 # Eval Hygiene — Contamination & Diagnostics
 # ─────────────────────────────────────────────
 #
-# Source: Tessl "Bright Kid Part 2"
-# Evidence: Auto-generated scenarios scored 93% baseline. Realistic scenarios
-# (single-sentence tasks, no breadcrumbs) scored 15%. The gap was caused by
-# inline file content in task descriptions acting as "open-book exam answers."
+# Evidence: In controlled evaluation, auto-generated scenarios scored 93%
+# baseline. The same agent on realistic scenarios (single-sentence tasks with
+# no embedded breadcrumbs) scored 15%. The gap was caused by inline file
+# content in task descriptions acting as "open-book exam answers."
 
 eval_contamination:
   principle: >
@@ -219,7 +219,8 @@ eval_contamination:
     variance is high enough to produce false signals.
 
   optimizer_conflict: >
-    Tessl's skill review optimizer and task evals can give contradictory
-    guidance. Example: "This is NOT optional" improved eval scores by 21
-    points but the optimizer removed it for style reasons. Resolution: trust
-    evals over style scores when they conflict.
+    Automated style optimizers (linters for skill/prompt prose) and behavioral
+    evals can give contradictory guidance. Example: "This is NOT optional"
+    improved eval scores by 21 points but a style optimizer flagged it as
+    verbose. Resolution: trust behavioral evals over style scores when they
+    conflict — style is advisory; behavior is the contract.

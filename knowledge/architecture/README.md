@@ -18,7 +18,9 @@ knowledge/architecture/
 ├── investigation-report-format.yaml           ← Structured output format for investigation agents
 ├── knowledge-management-methodology.yaml      ← Pattern taxonomy, validation, two-tier architecture
 ├── ml-system-design.yaml                      ← ML pipelines, confidence gates, active learning
+├── observability-patterns.yaml                ← Three pillars, golden signals, logging discipline, tracing
 ├── payment-state-machine.yaml                 ← Payment FSM, audit trail, webhook idempotency
+├── performance-optimization-philosophy.yaml   ← Measurement-first, hot-path discipline, caching, query optimization
 ├── pipeline-design-patterns.yaml              ← Idempotent pipelines, content hashing, rollback
 ├── prompt-engineering-patterns.yaml           ← LLM prompt design, evaluation, token economics
 ├── security-review-taxonomy.yaml              ← 7-domain security review, OWASP mapping

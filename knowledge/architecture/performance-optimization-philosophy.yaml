@@ -1,0 +1,222 @@
+# Performance Optimization Philosophy
+# Principles for reasoning about performance: when to optimize, what to
+# measure, and which techniques are worth reaching for.
+# Last updated: 2026-04-21
+
+id: performance-optimization-philosophy
+name: "Performance Optimization Philosophy"
+description: "Principles and techniques for performance optimization: measurement-first, hot-path discipline, caching/lazy-loading/query patterns"
+pattern: entries
+category: architecture
+spec_relevant: false
+project_applicability:
+  relevant_when: "Any system where latency, throughput, or resource cost matters in production"
+  action_if_irrelevant: remove
+last_updated: 2026-04-21
+
+# ─────────────────────────────────────────────
+# Core Principle — Measure, Don't Guess
+# ─────────────────────────────────────────────
+
+core_principle:
+  rule: >
+    Performance intuition is unreliable. Modern systems have too many layers
+    (CPU caches, JIT compilation, OS schedulers, network stacks, framework
+    abstractions) for any single person to predict hotspots accurately. Measure
+    before optimizing. Measure after optimizing. Without measurement, you are
+    guessing — and you will usually guess wrong.
+  rationale: >
+    Decades of optimization anecdotes show the same pattern: engineers spend
+    days optimizing code that wasn't the bottleneck, while the real bottleneck
+    sits untouched. The only reliable way to find the bottleneck is to measure
+    production-like workloads.
+  corollary: >
+    "We should optimize this for performance" without a measurement is
+    speculation, not engineering. Require evidence before spending optimization
+    budget.
+
+# ─────────────────────────────────────────────
+# When to Optimize
+# ─────────────────────────────────────────────
+
+when_to_optimize:
+  never: "To satisfy intuition. 'This feels slow' is not evidence."
+  rarely: "Proactively, during feature development. Premature optimization trades readability for speculative gains."
+  sometimes: "Responsively, when a measurement shows a real problem (user-visible latency, cost overrun, SLA miss)."
+  always: "At architectural decision points where a later change would be 10× harder (e.g., choosing a database, designing a cache strategy)."
+
+  signals_that_optimization_is_needed:
+    - "User-visible latency exceeds product targets (e.g., p95 > 1s on interactive endpoints)"
+    - "Infrastructure costs grow faster than usage"
+    - "Saturation metrics (CPU, memory, connection pool) trend toward limits"
+    - "Background jobs cannot keep up with incoming work"
+    - "Downstream services throttle or error under load"
+
+# ─────────────────────────────────────────────
+# The Hot Path Discipline
+# ─────────────────────────────────────────────
+
+hot_path_discipline:
+  principle: >
+    In most systems, 10% of the code handles 90% of the work. Optimize the
+    hot path; leave the cold path readable.
+  how_to_find_the_hot_path:
+    - "Profile production traffic, not synthetic benchmarks. Synthetic benchmarks rarely match real workloads."
+    - "Look for high call counts combined with non-trivial per-call cost. A fast function called billions of times beats a slow function called once."
+    - "Check both CPU profiles and allocation profiles. Some bottlenecks are GC pressure, not CPU time."
+
+  hot_path_rules:
+    - "Minimize allocations. Object allocation + garbage collection is often the hidden cost."
+    - "Avoid redundant work. Compute once, cache, reuse."
+    - "Batch where possible. N individual operations usually cost more than one operation with N items."
+    - "Consider data locality. Sequential memory access is much faster than random access."
+
+  cold_path_rules:
+    - "Prefer readable code to fast code. Cold path performance doesn't matter."
+    - "Don't duplicate hot-path optimizations here. Complexity without payoff."
+
+# ─────────────────────────────────────────────
+# Caching — Principles and Pitfalls
+# ─────────────────────────────────────────────
+
+caching:
+  core_principle: >
+    Caching trades memory (and correctness risk) for latency. Every cache
+    introduces two problems: eviction (when to throw it away) and invalidation
+    (when it becomes wrong). "There are only two hard problems in computer
+    science: cache invalidation and naming things." The quip is about this.
+
+  levels:
+    cpu_cache: "Data locality, sequential access. Not something you configure — something you design for."
+    process_cache: "In-memory within a single process. Fastest access, no network cost, but doesn't share across hosts."
+    distributed_cache: "Shared across hosts (Redis, Memcached). Network cost, but cache is warm across the fleet."
+    cdn_cache: "At the edge, close to users. Only works for content that doesn't vary per user (or varies by a few buckets)."
+    client_cache: "In the user's browser or app. Zero network cost, but oldest staleness risk."
+
+  when_caching_helps:
+    - "Read-heavy workloads where the same data is requested repeatedly"
+    - "Expensive computations whose inputs don't change often"
+    - "External API calls with strict rate limits"
+    - "Data that's hard to recompute (aggregations, derived state)"
+
+  when_caching_hurts:
+    - "Write-heavy workloads — every write needs to invalidate, which can cost more than the cache saves"
+    - "Data that's inherently per-request (auth tokens, session state)"
+    - "Systems that prioritize consistency over latency (finance, inventory, safety-critical)"
+
+  invalidation_strategies:
+    time_based_ttl:
+      how: "Cache entries expire after N seconds"
+      pros: "Simple, no coordination needed"
+      cons: "Stale data for up to TTL; thundering herd on expiration"
+    event_based:
+      how: "Invalidate when underlying data changes (via events, pub/sub)"
+      pros: "Fresher data, lower staleness window"
+      cons: "Complex — every write path must know every cache key affected"
+    read_through:
+      how: "Cache miss triggers load from source; cache is always consistent with last-read-from-source"
+      pros: "Simple mental model"
+      cons: "No freshness guarantee; first read after invalidation is still slow"
+    write_through:
+      how: "Every write updates cache and source together"
+      pros: "Cache is always fresh"
+      cons: "Writes are slower; cache and source can diverge on failure"
+
+  thundering_herd:
+    problem: "Popular cache entry expires, thousands of requests miss simultaneously, overwhelm the backend"
+    mitigations:
+      - "Stagger TTLs (add jitter) so popular keys don't expire simultaneously"
+      - "Lock on miss — first miss reloads, others wait"
+      - "Serve stale-while-revalidate — return stale data, refresh in background"
+
+# ─────────────────────────────────────────────
+# Lazy Loading
+# ─────────────────────────────────────────────
+
+lazy_loading:
+  principle: >
+    Don't pay the cost of data or code you don't need yet. Load on demand.
+  when_it_helps:
+    - "Large datasets where users rarely see everything (long lists, deep trees)"
+    - "Expensive dependencies only some code paths need (optional features, admin tools)"
+    - "Client-side bundles where initial page load matters (code-splitting)"
+  when_it_hurts:
+    - "When the lazy load itself is slower than eager — e.g., N+1 queries"
+    - "When users always need everything — lazy loading just adds round trips"
+    - "When state management becomes complex because loading is conditional"
+
+  n_plus_1_anti_pattern:
+    what: "Loading a list, then triggering a separate query for each item — 1 query + N queries"
+    how_to_detect: "Query count scales linearly with result size"
+    fixes:
+      - "Join / eager-load at the query layer (SQL JOIN, ORM include)"
+      - "Batch the N queries into one (WHERE id IN (...))"
+      - "DataLoader pattern — collect individual requests in a tick, issue one batched query"
+
+# ─────────────────────────────────────────────
+# Database Query Optimization
+# ─────────────────────────────────────────────
+
+database_optimization:
+  principles:
+    - "Measure query plans. EXPLAIN (or equivalent) shows what the database actually does, not what you think it does."
+    - "Index columns used in WHERE, JOIN, and ORDER BY — but don't over-index. Every index slows writes."
+    - "Avoid SELECT *. Fetch only the columns you need; the planner can use covering indexes."
+    - "Push filtering to the database. LIMIT and WHERE in SQL beat filtering in application code."
+    - "Be explicit about transaction boundaries. Long transactions hold locks; short transactions reduce contention."
+
+  common_fixes:
+    - issue: "Full table scan on a large table"
+      cause: "Missing index on the filter column, or the query can't use the existing index (functions on columns, type mismatch)"
+      fix: "Add an index. Rewrite the query to avoid disabling existing indexes."
+
+    - issue: "Query is slow on large result sets"
+      cause: "No pagination; trying to return everything"
+      fix: "Add LIMIT + cursor-based pagination. Offset-based pagination degrades at high offsets."
+
+    - issue: "Slow JOIN"
+      cause: "Missing index on join column, or joining more tables than needed"
+      fix: "Ensure both sides of the JOIN are indexed. Consider denormalization for very hot joins."
+
+    - issue: "Writes slowed by indexes"
+      cause: "Too many indexes; every INSERT/UPDATE must maintain all of them"
+      fix: "Drop unused indexes. Identify them via usage stats (pg_stat_user_indexes in Postgres, etc.)."
+
+  scaling_reads:
+    - "Read replicas for read-heavy workloads — eventual consistency is usually acceptable for reads"
+    - "Materialized views for expensive aggregations — refresh on a schedule or event"
+    - "Denormalization at boundaries — duplicate data for read efficiency, accept that writes must maintain multiple copies"
+
+  scaling_writes:
+    - "Partitioning / sharding — split the dataset across multiple databases by a partition key"
+    - "Event sourcing — write events to a log, derive state asynchronously"
+    - "Queue-backed writes — accept writes into a queue, process asynchronously with backpressure"
+
+# ─────────────────────────────────────────────
+# Anti-Patterns
+# ─────────────────────────────────────────────
+
+anti_patterns:
+  - pattern: "Optimizing based on micro-benchmarks without profiling production"
+    why_bad: "Micro-benchmarks measure the wrong thing. Real workloads have concurrent load, GC pressure, cache misses, and I/O that micro-benchmarks exclude."
+    instead: "Profile production or production-like load. Optimize the actual hot path."
+
+  - pattern: "Caching everything by default"
+    why_bad: "Cache invalidation becomes a full-time job. Debugging becomes harder — staleness masquerades as bugs."
+    instead: "Cache when measured latency justifies the invalidation cost. Default to no cache; add caches deliberately."
+
+  - pattern: "Ignoring tail latency"
+    why_bad: "Average latency can look fine while p99 is catastrophic. User experience is governed by tail latency."
+    instead: "Alert on p95 and p99, not just average. One slow request can stall a page that waits for multiple parallel requests."
+
+  - pattern: "Horizontal scaling before optimizing per-node cost"
+    why_bad: "Adding more inefficient nodes multiplies the inefficiency. Costs scale linearly forever."
+    instead: "Optimize per-node efficiency first. Scale out after the per-node work is reasonably tight."
+
+  - pattern: "Benchmarking without realistic data volumes"
+    why_bad: "Algorithms that look fast on 100 items are catastrophic on 10M items. N+1 queries don't show up until real data exists."
+    instead: "Test with production-representative data volumes. Load test before launch."
+
+  - pattern: "Treating GC pressure as free"
+    why_bad: "In GC'd languages, allocation-heavy hot paths are limited by GC pauses, not CPU"
+    instead: "Profile allocations. Pool frequently-allocated objects. Use arrays of primitives where possible."

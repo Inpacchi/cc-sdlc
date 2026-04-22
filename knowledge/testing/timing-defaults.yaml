@@ -1,78 +1,58 @@
-# Cross-Project Timing Defaults
-# Default wait profiles by component type. Override with project-specific measurements.
-# Last updated: 2026-03-13
+# Timing Defaults — Project-Populated Template
+#
+# This file is a TEMPLATE for project-specific timing measurements. It is NOT
+# a canonical cc-sdlc rule set — values are project-specific by nature (they
+# depend on framework choices, infrastructure, service latency, and UI library).
+#
+# Generic guidance on WHEN to use explicit waits (vs signal-based waits) lives
+# in timing-paradigm.yaml. This file holds actual measured values.
+#
+# Each entry represents a measured wait profile for a specific scenario in this
+# project's environment. Measure (see timing-paradigm.yaml § "Measuring Timing")
+# before adding or updating any value.
 
 id: timing-defaults
 name: "Timing Defaults"
-description: "Default wait-time profiles by UI component type for Playwright-based test sessions"
+description: "Template: project-specific wait-time profiles. Populated per project with measured values."
 pattern: entries
 category: testing
 spec_relevant: false
 project_applicability:
-  relevant_when: "Project uses Playwright CLI and has React/MUI components"
+  relevant_when: "Project has scenarios where signal-based waits aren't feasible and a timing default is needed"
   action_if_irrelevant: customize
-last_updated: 2026-03-13
+last_updated: 2026-04-21
 
-# Note: Playwright CLI waits for actionability automatically (element visible, enabled, stable).
-# These timings are for explicit waits when auto-wait is insufficient.
+# ─── Example Structure ───
+# Replace the examples below with this project's measured profiles.
+# Each entry should include: description, default_wait_ms, measured_on, environment, notes.
 
-page_navigation:
-  description: "Time for React hydration + initial data fetch after route change"
+example_page_navigation:
+  description: "Time for app framework hydration + initial data fetch after route change"
   default_wait_ms: 2000
-  notes: "Playwright CLI auto-waits for navigation, but async data fetch may not be covered"
+  measured_on: "YYYY-MM-DD"
+  environment: "local dev / CI / staging"
+  notes: "Replace with actual measurement. See timing-paradigm.yaml § 'Measuring Timing' for methodology."
 
-datagrid_render:
-  description: "Time for MUI DataGrid to initialize after page mount"
-  default_wait_ms: 1500
-  notes: "Grid initializes after React mount — columns, rows, virtualization"
-
-api_data_fetch:
-  description: "Time for API response + React Query cache hydration"
+example_data_fetch:
+  description: "API response + cache hydration for data-heavy views"
   default_wait_ms: 1000
-  notes: "Varies by dataset size and server load"
+  measured_on: "YYYY-MM-DD"
+  environment: "local dev / CI / staging"
+  notes: "Varies by dataset size and server load. Re-measure if p95 latency changes."
 
-formula_computation:
-  local:
-    description: "Arithmetic, ROUND, IF — synchronous formulas"
-    default_wait_ms: 0
-    notes: "Resolves instantly, no wait needed"
-  remote:
-    description: "Remote function calls (INVENTORY_ON_HAND, etc.)"
-    default_wait_ms: 500
-    notes: "Depends on API response time; dev harness uses 300-500ms simulated delay"
-
-login_flow:
-  description: "Auth request + redirect to home"
-  default_wait_ms: 2000
-  notes: "Includes POST to /api/session + client-side redirect"
-
-dialog_open:
-  description: "MUI Dialog animation + mount"
+example_modal_open:
+  description: "Modal/dialog animation + mount time"
   default_wait_ms: 300
-  notes: "MUI transitions take ~225ms by default"
+  measured_on: "YYYY-MM-DD"
+  environment: "local dev / CI / staging"
+  notes: "Most UI libraries target 200-300ms transitions."
 
-dialog_close_after_save:
-  description: "Mutation request + cache invalidation + dialog close"
-  default_wait_ms: 1000
-  notes: "Includes API round-trip + React Query invalidation + re-render"
+example_auth_flow:
+  description: "Login request + redirect to home"
+  default_wait_ms: 2000
+  measured_on: "YYYY-MM-DD"
+  environment: "local dev / CI / staging"
+  notes: "Includes auth endpoint round-trip + client-side redirect."
 
-client_side_filter:
-  description: "useMemo recomputation after search input change"
-  default_wait_ms: 100
-  notes: "Nearly instant — no debounce, synchronous filter"
-
-localstorage_persistence:
-  description: "Write to localStorage + verify on reload"
-  default_wait_ms: 0
-  notes: "Synchronous — but test must include full page refresh, not just re-render (see gotcha: react-strictmode-double-mount)"
-
-
-# ─── Project-Specific Timing Profiles ───
-# Add your project's timing profiles here as they are measured.
-# Override the generic defaults above or add new profiles for specific services.
-#
-# Example:
-# your_service_name:
-#   description: "What this times"
-#   default_wait_ms: 500
-#   notes: "Measured on YYYY-MM-DD against [environment]"
+# Add additional measured profiles below as the test suite grows. Remove the
+# `example_` entries once this project's real profiles are populated.

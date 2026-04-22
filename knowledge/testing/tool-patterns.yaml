@@ -1,15 +1,18 @@
-# Cross-Project Tool Patterns
-# How to use each tool effectively. Learned from actual test sessions.
-# Last updated: 2026-03-15
+# Tool Patterns — Reference Template
+#
+# Reference patterns for common browser-testing tools (Playwright CLI, Playwright MCP,
+# AI browser tools). The entries below are generic usage patterns — lifecycles,
+# workflows, and tool-specific gotchas that apply to any project using these tools.
+# Projects may extend with project-specific wrappers, fixtures, and helpers.
 
 id: tool-patterns
 name: "Tool Patterns"
-description: "Cross-project patterns for Playwright CLI, AI browser tools, and Playwright MCP usage during test sessions"
+description: "Reference patterns for Playwright CLI, AI browser tools, and Playwright MCP usage during test sessions. Projects extend with their own test infrastructure."
 pattern: entries
 category: testing
 spec_relevant: false
 project_applicability:
-  relevant_when: "Project uses Playwright CLI for browser testing"
+  relevant_when: "Project uses Playwright CLI, Playwright MCP, or an AI browser tool for testing"
   action_if_irrelevant: customize
 last_updated: 2026-03-15
 
@@ -101,18 +104,6 @@ playwright_mcp:
     - "browser_network_requests to verify API calls"
 
 
-# ─── Project-Specific Playwright Patterns ───
-# Add your project's test infrastructure patterns here.
-# Common areas: auth fixtures, multi-service setup, real-time/WebSocket helpers,
-# parameterized test factories, seed data helpers.
-#
-# Example structure:
-# your_project_playwright:
-#   description: "Playwright patterns for [your project]"
-#   auth:
-#     storage_state: "path/to/auth/state.json"
-#     fixture: "getAuthenticatedContext()"
-#     notes: "How auth is handled in your test suite"
-#   test_setup:
-#     - "Step 1"
-#     - "Step 2"
+# Add project-specific test infrastructure patterns below (auth fixtures, multi-service
+# setup, real-time/WebSocket helpers, parameterized test factories, seed data helpers).
+# Each entry should document what the pattern does and when tests should use it.

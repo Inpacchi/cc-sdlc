@@ -1,0 +1,124 @@
+# Timing Paradigm — Cross-Project Principles
+# Generic guidance for handling timing in end-to-end and integration tests.
+# Project-specific wait values live in timing-defaults.yaml.
+# Last updated: 2026-04-21
+
+id: timing-paradigm
+name: "Timing Paradigm"
+description: "Principles for handling timing in tests: when to wait, how to wait, and why flat sleeps are a smell"
+pattern: entries
+category: testing
+spec_relevant: false
+project_applicability:
+  relevant_when: "Any project with end-to-end or integration tests"
+  action_if_irrelevant: customize
+last_updated: 2026-04-21
+
+# ─────────────────────────────────────────────
+# Core Principle — Wait for signals, not for time
+# ─────────────────────────────────────────────
+
+core_principle:
+  rule: >
+    Tests should wait for observable signals (elements appearing, network responses
+    returning, state transitions completing) — not for fixed amounts of wall-clock
+    time. Time-based waits are a smell: they either pass slowly (over-waiting) or
+    flake under load (under-waiting).
+  rationale: >
+    Fixed sleeps couple test stability to machine speed, network conditions, and
+    render performance. Every sleep is a bet about the environment. Signal-based
+    waits adapt automatically and document what the test is actually waiting for.
+
+# ─────────────────────────────────────────────
+# When Auto-Wait Is Insufficient
+# ─────────────────────────────────────────────
+
+auto_wait_gaps:
+  description: >
+    Modern test runners (Playwright, Cypress, Testing Library) auto-wait for element
+    actionability — visible, enabled, stable. This covers most UI interactions. But
+    auto-wait does NOT cover:
+  gaps:
+    - scenario: "Async data fetch after route change"
+      why_missed: "Navigation completes when DOM is ready; the fetch that populates the page happens after"
+      signal_to_wait_for: "A specific element that only appears once data loads (loading spinner replaced by content, row count > 0, specific text)"
+    - scenario: "Client-side state hydration (cache warming, restored UI state)"
+      why_missed: "The DOM may render with empty/stale state before hydration completes"
+      signal_to_wait_for: "Hydrated content markers (value populated in field, checkbox state applied, sort order reflected)"
+    - scenario: "Background mutations with optimistic UI"
+      why_missed: "The UI updates immediately; the server hasn't yet confirmed"
+      signal_to_wait_for: "Server-confirmation indicator (saved badge, success toast, version number increment) if the test asserts on persisted state"
+    - scenario: "Animations that gate subsequent interactions"
+      why_missed: "Element is actionable mid-animation but clicking may not register"
+      signal_to_wait_for: "Animation-complete signal (transitionend event, stable bounding box, specific CSS state)"
+    - scenario: "Parallel side effects (e.g., analytics, telemetry, broadcast events)"
+      why_missed: "These don't affect the foreground UI but the test may need to assert on them"
+      signal_to_wait_for: "The specific side-effect signal — network request observed, event emitted, storage written"
+
+# ─────────────────────────────────────────────
+# Wait Strategies (in order of preference)
+# ─────────────────────────────────────────────
+
+wait_strategies:
+  - strategy: "Assertion-driven polling"
+    how: "Use the test framework's built-in retry assertion (e.g., Playwright's toHaveText, Cypress's should, RTL's waitFor). Assertions retry until they pass or timeout."
+    when: "Default choice for any UI state check"
+    example: "await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();"
+
+  - strategy: "Explicit signal wait"
+    how: "Wait for a specific element, network response, or condition using the framework's wait primitive"
+    when: "When the signal isn't naturally an assertion (e.g., waiting for a request before making the next one)"
+    example: "await page.waitForResponse(r => r.url().includes('/api/orders') && r.status() === 200);"
+
+  - strategy: "Network idle"
+    how: "Wait for network activity to quiesce (no requests in flight for N ms)"
+    when: "Pages with many parallel requests where tracking each is impractical"
+    caveats: "Unreliable on apps with polling, streaming, or analytics — those never go idle. Prefer assertion-driven when possible."
+
+  - strategy: "Fixed sleep (last resort)"
+    how: "Sleep a specific duration"
+    when: "Only when no observable signal exists, AND a fixed duration is known to cover the behavior"
+    caveats: "Comment WHY the sleep is necessary. Flag as tech debt. Plan to replace with signal-based wait when the signal becomes observable."
+
+# ─────────────────────────────────────────────
+# Measuring Timing (for project-specific defaults)
+# ─────────────────────────────────────────────
+
+measurement_guidance:
+  purpose: >
+    When signal-based waits aren't feasible and a timing default is needed,
+    measure before choosing a value. Guessing produces flakes.
+  method:
+    - "Instrument the code path — log start and end timestamps"
+    - "Run the path 20-50 times locally and in CI (CI is usually slower)"
+    - "Use p95 (not mean) as the baseline; add 50-100% margin for safety"
+    - "Record the measurement date and environment in the project's timing-defaults.yaml"
+  signals_for_remeasurement:
+    - "Flaky tests that occasionally time out"
+    - "Tests that pass in CI but feel slow locally (or vice versa)"
+    - "Major environment changes (infrastructure upgrade, framework version bump)"
+
+# ─────────────────────────────────────────────
+# Anti-Patterns
+# ─────────────────────────────────────────────
+
+anti_patterns:
+  - pattern: "Sprinkling sleeps to 'fix' flaky tests"
+    why_bad: "Sleep masks the real problem (missing signal, wrong wait, race condition). The flake returns on slower hardware."
+    instead: "Identify the signal being waited for. Make it observable if it isn't."
+
+  - pattern: "Waiting for a specific millisecond count across many tests"
+    why_bad: "Tightly couples the test suite to current environment performance. A single infrastructure change cascades failures."
+    instead: "Centralize timing defaults in one file. When env changes, update once."
+
+  - pattern: "Increasing timeouts instead of fixing root causes"
+    why_bad: "Symptom treatment. Long timeouts slow the suite; the underlying race still exists."
+    instead: "If a wait needs >5s in normal conditions, investigate what's slow and fix it."
+
+  - pattern: "Serial execution to avoid timing issues"
+    why_bad: "Masks test isolation bugs. The suite runs 5-10× slower and the bugs surface in production."
+    instead: "Fix isolation (unique namespaces per worker, proper cleanup). Serial is never the answer."
+
+  - pattern: "Prophylactic sleeps before service checks"
+    why_bad: "If the service just restarted, retry logic handles the brief unavailability window. Sleep just slows the happy path."
+    instead: "Check immediately. Retry once on failure with a short delay (≤2s)."
