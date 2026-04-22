@@ -1,6 +1,12 @@
 ---
 name: sdlc-status
-description: Show project SDLC status — active deliverables, blocked items, and recent archives. Use when: "SDLC status", "show project status", "what are we working on", "deliverable dashboard", "show deliverables"
+description: >
+  Show project SDLC status — active deliverables, blocked items, and recent archives.
+  Read-only: scans catalog and current_work/, makes no changes.
+  Triggers on "SDLC status", "show project status", "what are we working on",
+  "deliverable dashboard", "show deliverables", "/sdlc-status".
+  Do NOT use for resuming a specific deliverable — use sdlc-resume.
+  Do NOT use for compliance or health audits — use sdlc-audit.
 ---
 
 # SDLC Status Dashboard

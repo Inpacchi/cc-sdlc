@@ -1,6 +1,14 @@
 ---
 name: sdlc-team-review-fix
-description: "Unified team-powered review and fix lifecycle. Domain agents review any target (commit, diff, files, directory), debate findings organically with an architect mediator, then fix all findings using persistent teammates -- no fresh agent spawning. Loops review-fix rounds until clean within one persistent team.\nTriggers on \"team review\", \"deep review\", \"review and fix with team\", \"/team-review-fix\", \"team review this commit\", \"team review these files\".\nDo NOT use for quick reviews -- use sdlc-review-diff or sdlc-review-commit. Do NOT use without CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1."
+description: >
+  Unified team-powered review and fix lifecycle. Domain agents review any target (commit, diff,
+  files, directory), debate findings organically with an architect mediator, then fix all findings
+  using persistent teammates — no fresh agent spawning. Loops review-fix rounds until clean
+  within one persistent team.
+  Triggers on "team review", "deep review", "review and fix with team", "/team-review-fix",
+  "team review this commit", "team review these files".
+  Do NOT use for quick reviews — use sdlc-review-diff or sdlc-review-commit.
+  Do NOT use without CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1.
 ---
 
 # Team Review & Fix

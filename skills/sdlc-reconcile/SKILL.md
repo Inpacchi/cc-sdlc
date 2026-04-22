@@ -1,11 +1,13 @@
 ---
 name: sdlc-reconcile
 description: >
-  Reconcile untracked ad hoc work back into the SDLC process. Trigger when the user says
-  "Let's catalog our ad hoc work", "Let's catch up the docs", "What have we done since D[last]?",
-  "Let's rejoin the process", "Reconcile our recent work", or any similar phrase indicating
-  they want to bring informal commits back into the tracked process. Do NOT trigger for
-  compliance audits — those use the sdlc-audit skill.
+  Reconcile untracked ad hoc work back into the SDLC process — bring informal commits into the
+  tracked deliverable catalog with backfilled spec/plan/result artifacts.
+  Triggers on "let's catalog our ad hoc work", "let's catch up the docs",
+  "what have we done since D[last]?", "let's rejoin the process", "reconcile our recent work",
+  "/sdlc-reconcile".
+  Do NOT use for compliance audits — use sdlc-audit.
+  Do NOT use for tracked deliverables that just need archival — use sdlc-archive.
 ---
 
 # SDLC Reconciliation

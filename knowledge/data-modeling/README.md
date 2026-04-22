@@ -10,14 +10,8 @@ Organized by **business concept** (how a domain expert thinks about it), not by 
 knowledge/data-modeling/
 ├── README.md                       ← This file
 ├── patterns/                       ← Core UDM patterns (one YAML per subject area)
-│   ├── people-and-organizations.yaml   ← Party/Role (the foundational pattern)
-│   ├── products.yaml                   ← (future) Product Type/Feature
-│   ├── orders.yaml                     ← (future) Order/Line Item
-│   ├── work-effort.yaml                ← (future) Task/Assignment
-│   ├── business-transactions.yaml      ← (future) Account/Transaction
-│   └── communication-events.yaml       ← (future) Interaction/Channel
-├── industries/                     ← Industry-specific overlays
-│   └── (future: healthcare.yaml, financial-services.yaml, etc.)
+│   ├── meta-framework.yaml             ← UDM meta-framework: generic entities over domain-specific
+│   └── people-and-organizations.yaml   ← Party/Role (the foundational pattern)
 ├── anti-patterns/                  ← Common mistakes + why they fail
 │   └── common-modeling-mistakes.yaml
 ├── assessment/                     ← Templates for evaluating existing models
@@ -25,6 +19,10 @@ knowledge/data-modeling/
 └── diagrams/                      ← Visual reference diagrams
     └── party-role-erd.d2
 ```
+
+**Planned additions** (add when first concrete need arises):
+- `patterns/products.yaml`, `patterns/orders.yaml`, `patterns/work-effort.yaml`, `patterns/business-transactions.yaml`, `patterns/communication-events.yaml` — additional Silverston UDM subject areas
+- `industries/` — industry-specific overlays (healthcare, financial-services, etc.)
 
 ## How This Gets Used
 

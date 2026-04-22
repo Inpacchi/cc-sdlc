@@ -34,6 +34,34 @@ Each entry contains:
 
 ---
 
+## 2026-04-21: Audit-driven fixes (compliance score 6.5 → remediation pass)
+
+**Origin:** `/audit` compliance run post-commit `a476feb`. Score 6.5/10 — NEEDS ATTENTION with 4 major + 5 minor findings.
+
+**What happened:** The cross-cutting phrasing contract + reliability work in `a476feb` introduced several inconsistencies: a stale cross-reference in `sdlc-initialize`, a missing Red Flag, duplicate changelog numbering, and existing README staleness resurfaced across the audit. Plus pre-existing convention violations (frontmatter format, anti-triggers) in 5 short utility skills.
+
+**Changes made:**
+
+1. **`process/commands.md`** — Added new "Core SDLC Workflow" section listing the 5 core workflow skills (`sdlc-idea`, `sdlc-plan`, `sdlc-execute`, `sdlc-lite-plan`, `sdlc-lite-execute`) that had been undocumented in the command reference despite being the most-invoked skills.
+2. **`skills/sdlc-initialize/SKILL.md`** — Removed all `neuroloom_integration` references as dead code. The field was written but never read by cc-sdlc (base migrate stopped using it in the 2026-04-21 Neuroloom-branching cleanup), and adapter plugins don't consume cc-sdlc's version of the field either — they write their own manifest when their override-version init runs. Removed: the `HAS_NEUROLOOM` detection block, the manifest field, two Red Flags about detection accuracy, and the stale Integration "Produces" reference. Replaced with a single note explaining that adapter plugins override the skill entirely. Added new "Overridden by" integration line to make the adapter relationship explicit. Adapter-detection Red Flag added to prevent reintroduction.
+3. **`skills/sdlc-develop-skill/SKILL.md`** — Added the missing "inline adapter conditional" Red Flag (the changelog claimed two Red Flags but only one was written). Also fixed a truncated instruction in the Phrasing Contract scaffolding bullet that omitted its `(Neuroloom projects: ...)` example.
+4. **`knowledge/testing/README.md`** — Added missing entry for `ai-generated-code-verification.yaml`.
+5. **`knowledge/coding/README.md`** — Added missing entry for `context-engineering-patterns.yaml`.
+6. **`knowledge/architecture/README.md`** — Added missing entry for `token-economics.yaml`.
+7. **`skills/sdlc-plan/SKILL.md`** — Converted bare-scalar description to `>` folded scalar; added explicit `Do NOT use` anti-triggers pointing to sdlc-execute, sdlc-lite-plan, sdlc-idea.
+8. **`skills/sdlc-archive/SKILL.md`** — Converted bare-scalar description to `>` folded scalar; added `Do NOT use` anti-triggers for In-Progress deliverables and chronicle restructuring.
+9. **`skills/sdlc-reconcile/SKILL.md`** — Rewrote description as `>` folded scalar; normalized anti-triggers to the `Do NOT use for X — use Y` format.
+10. **`skills/sdlc-resume/SKILL.md`** — Converted bare-scalar description to `>` folded scalar; added `Do NOT use` anti-triggers for new-deliverable starts and project-wide status.
+11. **`skills/sdlc-status/SKILL.md`** — Converted bare-scalar description to `>` folded scalar; added `Do NOT use` anti-triggers for single-deliverable resume and compliance audits.
+12. **`skills/team-review-fix/SKILL.md`** — Converted double-quoted-string description (with `\n` escapes) to `>` folded scalar.
+13. **`process/sdlc_changelog.md`** — Fixed duplicate `7`/`8` item numbering in the 2026-04-21 phrasing contract entry. Retained the detailed versions of items 7-8 and removed the redundant brief versions.
+14. **`skeleton/manifest.json`** — Added `BOOTSTRAP.md` to `_not_installed_comment` alongside `templates/optional/` and `CLAUDE-SDLC.md`. Clarifies that `BOOTSTRAP.md` is a source-only file (bootstrap document read via curl) rather than a missing manifest entry.
+15. **`knowledge/data-modeling/README.md`** — Replaced inline "future" placeholders in the Structure tree with a separate "Planned additions" section. Only actually-existing files now appear in the tree; future files are documented separately so the README accurately reflects disk state.
+
+**Rationale:** Every finding traced to either the recent cross-cutting refactor (items 2, 3, 13) or pre-existing drift that compounded across audit cycles (items 4-6, 7-12, 15). The pattern — README staleness and post-refactor stale cross-references recurring across audit cycles — is also noted as a promotion candidate for CLAUDE.md consistency checks in a follow-up.
+
+---
+
 ## 2026-04-21: Add drift detection, transaction log, point-of-no-return, recovery docs
 
 **Origin:** Adoption of reliability improvements first made in `neuroloom-sdlc-plugin` during its audit pass. The plugin and cc-sdlc share most init/migrate failure modes; patterns that helped the plugin help here too.
@@ -70,11 +98,30 @@ The missing piece was an explicit phrasing contract — cc-sdlc skills need to u
 4. **`skills/sdlc-develop-skill/SKILL.md`** — Added Phrasing Contract requirement to orchestration skill scaffolding. Added two Red Flag entries warning against inline conditionals and custom phrasing.
 5. **`skills/sdlc-execute/SKILL.md`** — Removed inline `(Neuroloom projects: use memory_search...)` conditional from cross-domain knowledge injection paragraph. Adapter plugin handles translation at install time.
 6. **`skills/sdlc-tests-create/SKILL.md`** — Removed inline `(Neuroloom projects: use memory_search...)` conditional from SDET cross-domain injection paragraph.
-7. **`process/discipline_capture.md`** — Removed two inline Neuroloom conditionals (agent-context-map lookup and `memory_store` parenthetical). Adapter handles these.
-8. **`process/overview.md`** — Removed inline `(Neuroloom projects use memory_store...)` conditional from knowledge capture paragraph.
 7. **`process/discipline_capture.md`** — Removed inline `(skip for Neuroloom projects...)` conditional from agent knowledge lookup instruction (line 18) AND inline `(Neuroloom projects: use memory_store with sdlc:discipline:{name}...)` conditional from parking lot capture instruction (line 88). Both files were already in the plugin's transformation table.
 8. **`process/overview.md`** — Removed inline `(Neuroloom projects use memory_store with sdlc:knowledge and sdlc:domain:testing tags)` conditional from Knowledge Capture paragraph. File is in the plugin's transformation table.
 9. **`skills/sdlc-migrate/SKILL.md`** — Removed all Neuroloom-specific branching (dead code). The plugin's `/sdlc-migrate` overrides cc-sdlc's version when installed, so Neuroloom detection, `[has-neuroloom]` flag, `HAS_NEUROLOOM` variable, entire "Neuroloom-Aware Content Transformation" section, `neuroloom_integration` manifest field handling, and all per-step Neuroloom branches were unreachable in practice. Added a single informational note explaining that adapter plugins override this skill. cc-sdlc's sdlc-migrate now focuses solely on file-based migration.
+10. **`knowledge/architecture/token-economics.yaml`** — Removed stale model-comparison content (Claude-vs-GPT behavior from ~2024) in the session-degradation source comment and the `model_behavior_under_degradation` block. Model behavior drifts as new versions ship — replaced with model-agnostic guidance that teams verify empirically for their target model.
+11. **`knowledge/testing/gotchas.yaml`** — Generalized three framework-specific gotchas to apply across any matching pattern:
+    - `react-strictmode-double-mount` → `dev-mode-double-invoke` (covers React StrictMode, Vue dev hooks, any framework with dev-mode double-invocation)
+    - `datagrid-virtual-scroll` → `virtualized-list-dom-absent` (covers MUI DataGrid, react-window, AG Grid, TanStack Virtual, any virtualized UI)
+    - `mui-popover-backdrop-intercepts` → `invisible-overlay-intercepts-pointers` (covers MUI, Radix, Headless UI, Ant Design, any library with backdrop-based outside-click handling)
+12. **`knowledge/testing/component-catalog.yaml`** — Repositioned as a project-populated template. Removed trailing placeholder scaffolding (`# your_component_name:` example block); added a clear header note explaining that the file is a TEMPLATE populated per project, with existing MUI entries as example rows.
+13. **`knowledge/testing/tool-patterns.yaml`** — Repositioned as a reference template. Removed trailing placeholder scaffolding (`# your_project_playwright:` block); added header clarifying that entries document generic tool usage patterns and projects extend with project-specific infrastructure.
+14. **`knowledge/testing/timing-defaults.yaml`** — Split paradigm from defaults. Generic principles (wait-for-signals, auto-wait gaps, measurement guidance, anti-patterns) moved to new `knowledge/testing/timing-paradigm.yaml`. Original file repositioned as a project-populated template with example entries showing the measurement structure.
+15. **`knowledge/testing/timing-paradigm.yaml`** (NEW) — Generic principles for handling timing in tests: core principle (wait for signals not time), when auto-wait is insufficient, wait-strategy preference order, measurement methodology, anti-patterns. Derives from the splitting of `timing-defaults.yaml`.
+16. **`knowledge/testing/ai-generated-code-verification.yaml`** — Removed Tessl-specific tool references. Kept the principles (three-level invariant taxonomy, scripture/commandments/rituals architecture, deterministic-first, eval-contamination hygiene) but stripped proprietary tool/product names and genericized the optimizer-conflict example.
+17. **`knowledge/architecture/observability-patterns.yaml`** (NEW) — Coverage gap fill. Three pillars (logs/metrics/traces), four golden signals, logging discipline (levels, correlation IDs, what not to log), metric cardinality rules, distributed tracing principles, diagnosis playbook, anti-patterns.
+18. **`knowledge/architecture/performance-optimization-philosophy.yaml`** (NEW) — Coverage gap fill. Measure-don't-guess core principle, when to optimize, hot-path discipline, caching (levels, invalidation strategies, thundering herd), lazy loading (including N+1 anti-pattern), database query optimization (indexes, pagination, scaling reads/writes), anti-patterns.
+19. **`knowledge/testing/test-infrastructure-patterns.yaml`** (NEW) — Coverage gap fill. Core principles (tests are code, fast feedback, flakes are bugs, suite is a product), tiered execution (unit/integration/E2E/perf), CI execution (parallelization, test selection, caching, retry policy), test isolation patterns, result reporting, flake management, anti-patterns.
+20. **`skeleton/manifest.json`** — Added three new architecture files and two new testing files (`timing-paradigm.yaml`, `test-infrastructure-patterns.yaml`) to the knowledge source_files list.
+21. **`knowledge/architecture/README.md`** — Added entries for `observability-patterns.yaml` and `performance-optimization-philosophy.yaml` in the Structure tree.
+22. **`knowledge/testing/README.md`** — Added entries for `test-infrastructure-patterns.yaml` and `timing-paradigm.yaml`; updated descriptions for files that changed role (component-catalog and timing-defaults now templates, tool-patterns now reference).
+23. **`knowledge/agent-context-map.yaml`** — Wired the new knowledge files to relevant agent roles:
+    - `observability-patterns.yaml` → architect, backend-developer, debug-specialist, performance-engineer, build-engineer
+    - `performance-optimization-philosophy.yaml` → architect, backend-developer, data-architect, data-engineer, performance-engineer
+    - `test-infrastructure-patterns.yaml` → sdet, code-reviewer, build-engineer
+    - `timing-paradigm.yaml` → sdet, debug-specialist, performance-engineer (paired with timing-defaults)
 
 **Rationale:** Adapter plugins are a better abstraction than scattered conditionals. The Prisma/Terraform/VSCode pattern — stable core interface, adapter transforms at boundaries — keeps cc-sdlc focused on its own domain while allowing adapters independent release cadence. The phrasing contract is the interface boundary: cc-sdlc commits to consistent wording; adapters commit to transforming those exact phrases. Breaking the contract breaks the adapter silently, which is why the reviewer and auditor enforce it.
 

@@ -1,6 +1,15 @@
 ---
 name: sdlc-plan
-description: Use when starting any new feature, integration, or significant task that needs a spec and plan before implementation. Covers the full planning lifecycle — registers the deliverable ID, domain agents write the spec, CD approves it, domain agents write the plan, domain agents review the plan, and the approved plan is saved for handoff to sdlc-execute. Use this BEFORE sdlc-execute. If someone says "let's build X", "new feature", "add support for Y", "start a new deliverable", "new D-number", "create deliverable", or presents a problem statement, this skill comes first.
+description: >
+  Use when starting any new feature, integration, or significant task that needs a spec and plan
+  before implementation. Covers the full planning lifecycle — registers the deliverable ID,
+  domain agents write the spec, CD approves it, domain agents write the plan, domain agents
+  review the plan, and the approved plan is saved for handoff to sdlc-execute.
+  Triggers on "let's build X", "new feature", "add support for Y", "start a new deliverable",
+  "new D-number", "create deliverable", "/sdlc-plan", or a problem statement.
+  Do NOT use for executing an already-approved plan — use sdlc-execute.
+  Do NOT use for lightweight same-session work (1–3 files) — use sdlc-lite-plan.
+  Do NOT use for open-ended exploration without a concrete scope yet — use sdlc-idea.
 ---
 
 # SDLC Planning

@@ -8,7 +8,8 @@ Code quality principles, anti-patterns, and structural rules that apply across a
 knowledge/coding/
 ├── README.md                              ← This file
 ├── code-quality-principles.yaml           ← Structural rules: testability, mocking stance, code smells
-└── typescript-patterns.yaml               ← Branded types, Result types, exhaustiveness, type predicates
+├── typescript-patterns.yaml               ← Branded types, Result types, exhaustiveness, type predicates
+└── context-engineering-patterns.yaml      ← Activation framing, prompt caching, model-to-skill alignment, context-window management
 ```
 
 ## How This Gets Used

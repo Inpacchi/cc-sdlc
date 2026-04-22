@@ -2,7 +2,19 @@
 
 Quick reference for all SDLC skills and commands. Slash commands (`/sdlc-*`) are auto-discoverable — type `/` in Claude Code to see available skills. Natural-language triggers require knowing the phrase.
 
-## Workflow Commands
+## Core SDLC Workflow
+
+The standard deliverable lifecycle: **ideation → plan → execute**. Most work flows through these skills.
+
+| Command | Action |
+|---------|--------|
+| `/sdlc-idea` or "I have an idea" | Invokes `sdlc-idea` — open-ended exploration for seeds that aren't ready to plan yet; produces an idea brief |
+| "Let's build X" / "Plan deliverable DNN" | Invokes `sdlc-plan` — full planning lifecycle (spec + plan with domain-agent review) for non-trivial work |
+| "Execute the plan at ..." | Invokes `sdlc-execute` — executes an approved plan; worker agents implement, review, and fix |
+| "Quick plan for X" / small tweak | Invokes `sdlc-lite-plan` — lightweight plan for same-session 1–3 file changes |
+| "Execute the lite plan" | Invokes `sdlc-lite-execute` — executes a lite plan with the same review-fix loop |
+
+## Lifecycle Commands
 
 | Command | Action |
 |---------|--------|

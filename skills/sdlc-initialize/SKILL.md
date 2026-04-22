@@ -334,13 +334,9 @@ if [ -d .claude/sdlc ]; then
 else
   SDLC_ROOT="ops/sdlc"
 fi
-
-# Detect Neuroloom integration
-HAS_NEUROLOOM=false
-[ -d neuroloom-sdlc-plugin ] && HAS_NEUROLOOM=true
-[ -d neuroloom-claude-plugin ] && HAS_NEUROLOOM=true
-grep -q '"neuroloom"' .claude/settings.json 2>/dev/null && HAS_NEUROLOOM=true
 ```
+
+**Note on adapter plugins:** Adapter plugins install their own `/sdlc-initialize` that overrides this skill. When an adapter is present, this skill does not run at all — the adapter's init writes its own manifest. cc-sdlc's base init therefore does not detect, flag, or write adapter-specific fields; those are the adapter's concern.
 
 **Write `.sdlc-manifest.json`** at project root. Includes an `installed_files` map of SHA-256 hashes for every framework file written in Phase 1. This enables `sdlc-migrate` to detect post-install manual edits (drift) before overwriting.
 
@@ -353,7 +349,6 @@ grep -q '"neuroloom"' .claude/settings.json 2>/dev/null && HAS_NEUROLOOM=true
   "install_date": "<ISO 8601 timestamp>",
   "file_count": <number of files installed>,
   "sdlc_root": "<SDLC_ROOT value from detection above>",
-  "neuroloom_integration": <HAS_NEUROLOOM value from detection above>,
   "installed_files": {
     "ops/sdlc/process/overview.md":      { "sha256": "<hash>", "size": <bytes>, "installed_at": "<ISO timestamp>" },
     "ops/sdlc/knowledge/architecture/agent-communication-protocol.yaml": { "sha256": "<hash>", "size": <bytes>, "installed_at": "<ISO timestamp>" },
@@ -376,7 +371,7 @@ sha256sum "{path}" | awk '{print $1}'
 
 Project-specific files (e.g., `knowledge/agent-context-map.yaml` after wiring) are expected to drift — those are handled by migrate via merge logic, not by hash comparison. `installed_files` tracks unexpected drift in files CD never intended to modify.
 
-The `sdlc_root` and `neuroloom_integration` fields enable `sdlc-migrate` to apply correct path transformations and preserve MCP tool calls during migration. The `installed_files` map enables drift detection during migration.
+The `sdlc_root` field enables `sdlc-migrate` to resolve the project's SDLC root path (`ops/sdlc/` vs `.claude/sdlc/`) during migration. The `installed_files` map enables drift detection during migration (see sdlc-migrate §1.2a).
 
 Report progress to CD:
 ```
@@ -989,12 +984,12 @@ Absolute last resort. Requires explicit CD decision.
 | "Installation failed, I'll create the directories manually" | Fix the installation failure. Manual creation misses files and skips version tracking. |
 | "Manager Rule applies from the start" | In greenfield Phases 0–3, no agents exist. CC works directly. Manager Rule activates at Phase 4. |
 | "I'll batch all the ideation questions" | One question at a time via AskUserQuestion. Batched questions get shallow answers. |
-| "I only found neuroloom-sdlc-plugin, so neuroloom_integration is false" | Check for both `neuroloom-sdlc-plugin` AND `neuroloom-claude-plugin`. Also check `.claude/settings.json` for "neuroloom". Any of these signals Neuroloom integration. |
-| "I'll set neuroloom_integration based on the plugin directory alone" | The full detection includes plugin directories, settings.json, and manifest flags. Run the full detection script — partial checks miss edge cases. |
+| "I'll add adapter-plugin detection to this skill" | Adapter plugins override this skill entirely when installed — they never depend on cc-sdlc base detecting them. Detection logic in this skill would be dead code. |
 
 ## Integration
 
 - **Feeds into:** `sdlc-plan` (first deliverable), `sdlc-lite-plan` (first lightweight task), `sdlc-status` (health check), `sdlc-migrate` (consumes `.sdlc-manifest.json` for version tracking and path detection)
 - **Uses:** `/sdlc-create-agent` (agent creation), Context7 (knowledge verification), `AskUserQuestion` (CD gates)
-- **Produces:** Fully initialized SDLC framework with project-specific agents, knowledge, and disciplines; `.sdlc-manifest.json` with `sdlc_root` and `neuroloom_integration` fields
+- **Produces:** Fully initialized SDLC framework with project-specific agents, knowledge, and disciplines; `.sdlc-manifest.json` with `sdlc_root`, `source_version`, and `installed_files` fields
 - **Borrows from:** `sdlc-idea` (ideation principles for Phase 0), spec template (Phase 0c structure)
+- **Overridden by:** adapter plugins when installed — their `/sdlc-initialize` takes precedence and this skill does not run

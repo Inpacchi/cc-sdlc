@@ -22,7 +22,8 @@ knowledge/architecture/
 ├── pipeline-design-patterns.yaml              ← Idempotent pipelines, content hashing, rollback
 ├── prompt-engineering-patterns.yaml           ← LLM prompt design, evaluation, token economics
 ├── security-review-taxonomy.yaml              ← 7-domain security review, OWASP mapping
-└── technology-patterns.yaml                   ← Reusable patterns by concern (search, real-time, auth, etc.)
+├── technology-patterns.yaml                   ← Reusable patterns by concern (search, real-time, auth, etc.)
+└── token-economics.yaml                       ← Context window and token budgets as architectural constraints on knowledge retrieval and agent dispatch
 ```
 
 ## How This Gets Used

@@ -10,10 +10,13 @@ knowledge/testing/
 ├── README.md                          ← This file
 ├── testing-paradigm.yaml              ← Functional core/imperative shell, test type selection
 ├── advanced-test-patterns.yaml        ← Chaos hypothesis, property-based testing, feature-flag isolation
-├── tool-patterns.yaml                 ← How to use Playwright CLI, Playwright MCP, etc.
-├── component-catalog.yaml             ← Test strategies for shared UI components
+├── test-infrastructure-patterns.yaml  ← Suite structure, CI execution, result reporting, flake management
+├── tool-patterns.yaml                 ← Reference patterns for Playwright CLI, Playwright MCP, AI browser tools
+├── component-catalog.yaml             ← Template: project-populated test strategies for shared UI components
 ├── gotchas.yaml                       ← Cross-project failure patterns
-└── timing-defaults.yaml               ← Default wait profiles by component type
+├── timing-paradigm.yaml               ← Principles for handling timing in tests (wait for signals, not time)
+├── timing-defaults.yaml               ← Template: project-populated wait-time profiles with measured values
+└── ai-generated-code-verification.yaml ← Verification patterns for AI-generated code; eval-contamination guardrails
 ```
 
 ## How This Gets Used
