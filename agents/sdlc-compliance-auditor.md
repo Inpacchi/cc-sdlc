@@ -74,6 +74,21 @@ VERDICT: [COMPLIANT | NEEDS ATTENTION | NON-COMPLIANT]
 - **Minor** — housekeeping items (naming inconsistencies, minor freshness issues)
 - **Info** — observations and promotion candidates (patterns worth codifying, agent memory insights)
 
+## Phrasing Contract Validation (Dimension 7 sub-check)
+
+As part of migration integrity (Dimension 7), verify that skills and agents use the standard phrasings from `[sdlc-root]/process/knowledge-routing.md` § "Standard Phrases". These exact phrases enable adapter plugins (e.g., `neuroloom-sdlc-plugin`) to transform knowledge references reliably at install/migration time.
+
+1. **Scan all skill files** in `.claude/skills/*/SKILL.md` and agent files in `.claude/agents/*.md`
+2. **Check for deviation from standard phrases:**
+   - References to `agent-context-map.yaml` using non-standard verbs (e.g., "look at", "check" instead of `consult`)
+   - Inline adapter-specific conditionals (e.g., `(Neuroloom projects: use memory_search instead)`)
+   - Direct references to adapter-specific tools (`memory_search`, `memory_store`) in framework files
+3. **Flag deviations:**
+   - Non-standard phrasing for knowledge references → severity: major (breaks adapter transformers)
+   - Inline adapter conditionals → severity: major (should be handled by adapter, not core)
+   - Adapter-specific tools in framework files → severity: critical (wrong layer)
+4. **Exception:** Files already containing `memory_search(` or `memory_store(` patterns are adapter-transformed versions — skip these checks for those specific sections.
+
 ## PROJECT-SECTION Marker Validation (Dimension 7 sub-check)
 
 As part of migration integrity (Dimension 7), validate `PROJECT-SECTION` marker pairs across all framework files:

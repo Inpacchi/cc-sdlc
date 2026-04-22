@@ -100,6 +100,7 @@ Generate the skill body based on type. All types share common requirements; each
 - **Agent Selection Criteria** — table or tiered list showing which agents to dispatch and when
 - **Review lenses** — what each reviewing agent checks for
 - **Review-Fix Loop** — reference to `[sdlc-root]/process/review-fix-loop.md` if the skill has iterative review
+- **Phrasing Contract** — If the skill references the knowledge layer (e.g., `agent-context-map.yaml`, `knowledge/architecture/agent-communication-protocol.yaml`), use the exact standard phrasings from `[sdlc-root]/process/knowledge-routing.md` § "Standard Phrases". Do NOT add inline adapter conditionals like — adapter plugins handle translation at install time.
 
 #### Utility Skills (additional requirements)
 
@@ -226,6 +227,7 @@ Dispatch the `sdlc-reviewer` subagent on the modified skill file. Present its fi
 | "I'll skip the Integration section — this skill is standalone" | No skill is standalone. Every skill feeds into or complements others. |
 | "The name should describe the noun first" | Verb-first naming: `sdlc-review-commit`, not `commit-review`. |
 | "This orchestration skill doesn't need the Manager Rule" | If it dispatches agents, it MUST reference manager-rule.md. |
+| "I'll use custom phrasing like 'check' or 'look at' for knowledge lookups" | Use the exact phrases from the phrasing contract. Custom wording breaks adapter transformers. |
 | "I'll write the skill directly without this scaffolding" | Hand-written skills skip convention validation. Use this skill. |
 | "SKILL.md can be as long as needed" | Target 1,500-3,000 words for SKILL.md body. Move detailed content to references/. |
 | "I'll edit a framework skill directly without markers" | Framework sections are overwritten on migration. Use MODIFY mode to auto-wrap project-specific additions. |

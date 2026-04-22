@@ -177,7 +177,7 @@ USER-REQUESTED TEST CASES:
 
 Dispatch `sdet` with the Test Brief and full implementation context.
 
-**Cross-domain knowledge injection:** Consult `[sdlc-root]/knowledge/agent-context-map.yaml` for the agents who built the feature being tested and include their domain knowledge files in the SDET's dispatch prompt (Neuroloom projects: use `memory_search` with relevant domain tags instead).
+**Cross-domain knowledge injection:** Consult `[sdlc-root]/knowledge/agent-context-map.yaml` for the agents who built the feature being tested and include their domain knowledge files in the SDET's dispatch prompt.
 
 The dispatch prompt must include:
 - The Test Brief from Step 2 (coverage gaps, existing tests, user requests)

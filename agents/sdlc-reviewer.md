@@ -69,6 +69,13 @@ Determine the file type from its location and content:
 - [ ] All referenced files (`references/`, `scripts/`) actually exist
 - [ ] No duplicated content between SKILL.md and reference files
 
+### Phrasing Contract (for skills referencing the knowledge layer)
+Skills that reference `[sdlc-root]/knowledge/agent-context-map.yaml` or `[sdlc-root]/knowledge/architecture/agent-communication-protocol.yaml` MUST use the standard phrasings from `[sdlc-root]/process/knowledge-routing.md` § "Standard Phrases". These exact phrases are required so adapter plugins (e.g., `neuroloom-sdlc-plugin`) can reliably transform knowledge access at install time.
+- [ ] Lookups use `consult [sdlc-root]/knowledge/agent-context-map.yaml` (not custom phrasings like "look at", "check", "read")
+- [ ] Communication protocol references use `Read [sdlc-root]/knowledge/architecture/agent-communication-protocol.yaml`
+- [ ] No inline adapter-specific conditionals (e.g., `(Neuroloom projects: use memory_search instead)`) — adapter plugins handle translation
+- [ ] No direct references to adapter-specific tools (`memory_search`, `memory_store`) in cc-sdlc framework skills
+
 ## Agent-Specific Checks
 
 ### Frontmatter

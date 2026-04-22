@@ -37,6 +37,18 @@ This is the **source repository** for the cc-sdlc framework. It contains SDLC sk
 
 See `plugins/README.md` for details and `plugins/*-setup.md` for installation instructions.
 
+## Adapter Plugins
+
+cc-sdlc is the stable core. Adapter plugins live in separate repos and transform cc-sdlc's file-based knowledge references into alternate backends (e.g., memory graphs) at install/migration time.
+
+| Plugin | Location | What It Adapts |
+|--------|----------|----------------|
+| **neuroloom-sdlc-plugin** | `~/Projects/neuroloom/neuroloom-sdlc-plugin` (local); `endless-galaxy-studios/neuroloom-sdlc-plugin` (GitHub) | Swaps file-based knowledge routing (`agent-context-map.yaml`) for Neuroloom's `memory_search` / `memory_store` MCP calls. Overrides `/sdlc-initialize`, `/sdlc-migrate`, `/sdlc-port`; transforms other cc-sdlc skills during install/migration via a phrasing-contract-driven transformation table. |
+
+**The phrasing contract** (`process/knowledge-routing.md` § "Adapter Plugins and the Phrasing Contract") is the interface between cc-sdlc and adapters. cc-sdlc commits to using a fixed set of standard phrases when referencing the knowledge layer; adapters commit to transforming those exact phrases. When you change a knowledge-layer reference pattern in cc-sdlc, tag the changelog entry with `[contract-change]` so adapter maintainers catch it on their next upstream pull.
+
+**Working across both repos:** If a change here affects the contract, make the paired change in `neuroloom-sdlc-plugin` (typically in `skills/sdlc-migrate/SKILL.md` § "Pattern Mapping" and "Files Containing These Patterns"). Verify: `grep -n "consult\|Read" ~/Projects/neuroloom/neuroloom-sdlc-plugin/skills/sdlc-migrate/SKILL.md` shows the transformation table up to date.
+
 ## When Editing This Repo
 
 - Changes to skills, agents, and process docs affect all downstream projects on next migration

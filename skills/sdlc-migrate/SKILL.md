@@ -51,7 +51,28 @@ git -C [cc-sdlc-path] archive HEAD:<dir> | tar -x -C /tmp/extract/
 # Verify each file before copying to project
 ```
 
-**Why this matters:** During migration, a single silent `git show` failure can destroy dozens of project files. The neuroloom migration bug (2026-04-15) emptied 8 knowledge READMEs because `git show` produced no output after the temp clone was cleaned up — the shell redirect created empty files over the project's content.
+**Why this matters:** During migration, a single silent `git show` failure can destroy dozens of project files. A 2026-04-15 bug emptied 8 knowledge READMEs because `git show` produced no output after the temp clone was cleaned up — the shell redirect created empty files over the project's content.
+
+## Transaction Log
+
+Every phase start/end, gate decision, mutation, and failure writes an append-only JSONL entry to `.sdlc-transaction-log` in the project root. Schema and event types are documented in `sdlc-initialize/SKILL.md` § "Transaction Log" — this skill follows the same format.
+
+**Run ID convention for migrate:** `migrate-{6-char-random-hex}` (e.g., `migrate-def456`).
+
+**Migrate-specific events to log:**
+- `drift_detected` — when §1.2a finds a drifted file (one entry per file)
+- `drift_decision` — CD's choice at the drift gate (`overwrite`/`keep`/`extract_markers`)
+- `deviation_detected` — when §2.1c finds non-marker project customizations
+- `marker_preserved` — when a PROJECT-SECTION block is re-injected during §2.1d
+- `phase_skip` — when an entire phase is skipped (e.g., no skills changed in §1.3)
+
+**Recovery from migrate crash:**
+```bash
+tail -n 100 .sdlc-transaction-log | jq 'select(.run_id | startswith("migrate-"))'
+# Last mutation event = what was last committed
+# Last phase_start without phase_end = crash point
+# checkpoint: point_of_no_return event tells you whether mutations started
+```
 
 ## Pre-Flight Check
 
@@ -75,7 +96,6 @@ The cc-sdlc source uses canonical paths (`knowledge/`, `disciplines/`, `process/
 | Signal | Detection | Result |
 |--------|-----------|--------|
 | **SDLC directory** | `[ -d ops/sdlc ]` vs `[ -d .claude/sdlc ]` | Set `[sdlc-root]` to whichever exists (if both exist, prefer `ops/sdlc` and warn user) |
-| **Neuroloom integration** | `[ -d neuroloom-sdlc-plugin ]` OR `[ -d neuroloom-claude-plugin ]` OR `grep -q "neuroloom" .claude/settings.json` OR manifest has `neuroloom_integration: true` | Set `[has-neuroloom]` flag |
 
 ```bash
 # Detect SDLC root
@@ -90,21 +110,15 @@ else
   echo "No SDLC directory found — use sdlc-initialize"
   exit 1
 fi
-
-# Detect Neuroloom integration
-HAS_NEUROLOOM=false
-[ -d neuroloom-sdlc-plugin ] && HAS_NEUROLOOM=true
-[ -d neuroloom-claude-plugin ] && HAS_NEUROLOOM=true
-grep -q '"neuroloom"' .claude/settings.json 2>/dev/null && HAS_NEUROLOOM=true
-jq -e '.neuroloom_integration == true' .sdlc-manifest.json 2>/dev/null && HAS_NEUROLOOM=true
 ```
+
+**Adapter plugins:** If the project uses an adapter plugin (e.g., `neuroloom-sdlc-plugin`), that plugin's `/sdlc-migrate` overrides this skill. This skill only runs in projects that use cc-sdlc's file-based defaults. Adapter-specific concerns (e.g., memory-graph knowledge backends) are handled by the adapter's own migrate skill — this skill does not branch on adapter presence.
 
 **Step 3 — Report assessment:**
 
 ```
 MIGRATION ASSESSMENT
 SDLC root: [sdlc-root] (ops/sdlc or .claude/sdlc)
-Neuroloom integration: [yes/no]
 Has .sdlc-manifest.json: [yes/no]
 Has .claude/agents/: [yes/no]
 Has .claude/skills/: [yes/no]
@@ -146,66 +160,6 @@ Some files in the cc-sdlc source are **templates** that become project-specific 
 | `knowledge/provenance_log.md` | Project's knowledge provenance records — append-only log of ingestions and research handoffs |
 
 Framework files may contain canonical agent names (e.g., `frontend-developer`) in examples. These are illustrative — they don't affect dispatch behavior. The project's actual agents in `.claude/agents/` and `agent-context-map.yaml` define what gets dispatched.
-
-### Neuroloom-Aware Content Transformation
-
-When `[has-neuroloom]` is true, **preserve MCP tool calls** in framework content. The cc-sdlc source uses file path references (generic), but Neuroloom projects use MCP tools for knowledge access.
-
-#### Pattern Mapping
-
-| cc-sdlc Generic Pattern | Neuroloom Pattern (preserve if present) |
-|-------------------------|----------------------------------------|
-| `consult [sdlc-root]/knowledge/agent-context-map.yaml` | `memory_search(query="[agent-name] domain-specific patterns...", tags=["sdlc:knowledge"])` |
-| `Read [sdlc-root]/knowledge/architecture/agent-communication-protocol.yaml` | `memory_search(query="agent communication protocol...", tags=["sdlc:knowledge", "sdlc:domain:architecture"])` |
-| `Append to [sdlc-root]/disciplines/*.md` | `memory_store(tags=["sdlc:discipline:{name}", "sdlc:parking-lot"])` |
-| `knowledge stores ([sdlc-root]/knowledge/)` | `Neuroloom knowledge store (via memory_store)` |
-| `[sdlc-root]/knowledge/testing/` | `memory_store with tags ["sdlc:knowledge", "sdlc:domain:testing"]` |
-| `look up agent's mapped files from agent-context-map.yaml` | `memory_search(query="{agent-name} domain patterns", tags=["sdlc:knowledge"])` |
-
-#### Files Containing These Patterns
-
-These framework files contain knowledge access patterns that differ between generic cc-sdlc and Neuroloom:
-
-| File | Section | Pattern Type |
-|------|---------|--------------|
-| `agents/AGENT_TEMPLATE.md` | `## Knowledge Context` | Agent knowledge retrieval |
-| `agents/AGENT_TEMPLATE.md` | `## Communication Protocol` | Protocol retrieval |
-| `agents/AGENT_TEMPLATE.md` | "Surfacing Learnings" | Knowledge store reference |
-| `agents/sdlc-compliance-auditor.md` | Methodology reference | Knowledge retrieval |
-| `agents/sdlc-reviewer.md` | Agent wiring checklist | Knowledge wiring validation |
-| `process/discipline_capture.md` | Agent knowledge lookup | Knowledge retrieval |
-| `process/discipline_capture.md` | "How to Capture" | Discipline store |
-| `process/overview.md` | Knowledge capture | Knowledge store |
-
-#### Content-Merge Rules for Neuroloom Projects
-
-1. **Detection heuristic:** Before merging any file listed above, scan the project's current version for `memory_search(` or `memory_store(`. If present, the project uses Neuroloom integration.
-
-2. **Section-level preservation:** When merging a file with Neuroloom patterns:
-   - Identify sections containing MCP tool calls (usually delimited by `##` headings)
-   - Extract the project's MCP-based version of those sections
-   - Apply upstream framework updates to sections WITHOUT MCP calls
-   - Re-inject the project's MCP-based sections verbatim
-   - Log: `Neuroloom pattern preserved: [file] § [section]`
-
-3. **Per-file detection for partial Neuroloom:** Even when `[has-neuroloom]` is true at the project level, apply detection at file level before merging. Scan the project's current version of each file in the "Files Containing These Patterns" table for `memory_search(` or `memory_store(`. If present, apply content-merge preservation for that file. If absent, direct-copy is safe. This handles projects that migrated to Neuroloom piecemeal — some files may have MCP patterns while others still use file paths.
-
-4. **Reviewer checklist transformation:** The `sdlc-reviewer.md` contains checklists that validate knowledge wiring. For Neuroloom projects:
-   - Preserve: `Knowledge Context section includes a memory_search call`
-   - Don't overwrite with: `Knowledge Context section references agent-context-map.yaml`
-
-5. **Agent template sections:** The `AGENT_TEMPLATE.md` drives new agent creation. For Neuroloom projects:
-   - Preserve: `call memory_search(query="[agent-name] domain-specific patterns...`
-   - Don't overwrite with: `consult [sdlc-root]/knowledge/agent-context-map.yaml`
-
-**Why this matters:** Neuroloom projects store SDLC knowledge in the Neuroloom memory graph, accessed via MCP tools. Overwriting these with file path references breaks:
-- Semantic search (queries by meaning, not file membership)
-- Cross-domain discovery (relevant knowledge from unexpected domains)
-- Context injection (Neuroloom plugin injects memories into agent context)
-
-The migration must preserve whichever pattern the project uses.
-
----
 
 ## Phase 1: Detect What Changed
 
@@ -249,6 +203,42 @@ Proceed with migration?
 
 **Gate:** Wait for user confirmation before continuing to Phase 2.
 
+### 1.2a Operational Drift Detection
+
+Before computing upstream-vs-project diffs, detect **drift** — files where the hash recorded at install time (`installed_files[path].sha256` in `.sdlc-manifest.json`) no longer matches the current on-disk hash. Drift indicates the file was edited post-install without going through PROJECT-SECTION markers.
+
+For each path in `manifest.installed_files`:
+
+```
+current_hash = sha256(file contents on disk)
+installed_hash = manifest.installed_files[path].sha256
+
+if current_hash != installed_hash:
+  categorize based on upstream comparison:
+    - DRIFTED-CLEAN:    project edited, upstream unchanged since install
+    - DRIFTED-CONFLICT: project edited AND upstream changed
+    - DRIFTED-ORPHAN:   project edited, file removed/moved in upstream
+```
+
+**Drift categories and defaults:**
+
+| Category | Meaning | Gate Action |
+|----------|---------|-------------|
+| `DRIFTED-CLEAN` | Project edited, upstream unchanged | Prompt: overwrite with upstream / keep project version / extract project edits into PROJECT-SECTION markers |
+| `DRIFTED-CONFLICT` | Project edited AND upstream changed | Hard prompt: show both diffs, require three-way decision |
+| `DRIFTED-ORPHAN` | Project edited, file removed upstream | Prompt: keep as project-owned / move to legacy / delete |
+
+Surface drifted files in the §1.3 change manifest with a `⚠ DRIFT` marker so CD sees them before any mutation. Phase 2's direct-copy operations (§2.1) and content-merges (§2.2+) must consult drift status before acting — if a file is drifted, the Phase 2 default action is overridden by the drift gate decision.
+
+**Why this matters:** Without drift detection, migration silently overwrites manual edits to framework files. With it, every unexpected edit gets surfaced and consented before being touched.
+
+**Back-fill path (projects initialized before `installed_files` was introduced):**
+
+If `.sdlc-manifest.json` lacks an `installed_files` field:
+1. Log: "Drift detection unavailable — manifest predates installed_files field"
+2. Back-fill: hash each file listed in `skeleton/manifest.json` source_files at its installed path, record to `installed_files` with `installed_at: "backfilled-{CURRENT_VERSION}"`
+3. Proceed without drift analysis for this migration — it becomes available starting with the next migration
+
 ### 1.3 Categorize Changes
 
 Group the changed cc-sdlc files by migration strategy:
@@ -280,16 +270,29 @@ This migration skill is responsible for **consuming** markers: extracting, prese
 
 ## Phase 2: Apply Framework Updates
 
+> ## ⚠ POINT OF NO RETURN
+>
+> **Phase 1 was read-only** — source version identification, changelog review, and change categorization. All three completed without touching workspace state. Cancellation at any Phase 1 point left no trace.
+>
+> **Phase 2 is the first phase that commits mutations.** The first file write in §2.1 overwrites on disk. Once that has run, **cancellation leaves partial state**. The good news: migrations are designed to be resumable — re-running `/sdlc-migrate` from a crash point will complete via PROJECT-SECTION marker re-extraction and idempotent copy. The bad news: the workspace `source_version` will be in an intermediate state until the re-run completes.
+>
+> Before proceeding, verify:
+> - §1.2 changelog review gate returned `approved`
+> - If drift was detected in §1.2a, every drifted file has a `drift_decision` logged
+> - Transaction log has the corresponding `gate` events with `approved` results
+>
+> Log a `checkpoint: point_of_no_return` event to the transaction log immediately before the first file write.
+
 ### 2.1 Direct Copy Files
 
 For files with no project customizations, copy directly from cc-sdlc to the project's `[sdlc-root]/` directory:
 
 - `process/*.md` (framework process docs — `agent-selection.yaml` is NOT copied; it's project-specific, see "Project-Specific Files")
-- `knowledge/**/*.yaml` (but NOT `agent-context-map.yaml`) — **Neuroloom projects:** skip this; knowledge files are stored in the memory graph and updated via the Neuroloom plugin's migrate skill
+- `knowledge/**/*.yaml` (but NOT `agent-context-map.yaml`)
 - `knowledge/README.md` (to `[sdlc-root]/knowledge/`) — NOT `knowledge/provenance_log.md`; that's project-specific (see "Project-Specific Files")
 - `README.md` (to `[sdlc-root]/`)
-- `agents/AGENT_TEMPLATE.md`, `agents/AGENT_SUGGESTIONS.md` → `.claude/agents/` — **Neuroloom projects:** apply content-merge rules from "Neuroloom-Aware Content Transformation" section above; these files contain Knowledge Context patterns that differ between generic and Neuroloom projects
-- `agents/sdlc-reviewer.md`, `agents/sdlc-compliance-auditor.md` → `.claude/agents/` — **Neuroloom projects:** apply content-merge rules; these contain knowledge wiring validation patterns. (Framework subagents must be in `.claude/agents/` for Claude Code to dispatch them, not just `[sdlc-root]/agents/`)
+- `agents/AGENT_TEMPLATE.md`, `agents/AGENT_SUGGESTIONS.md` → `.claude/agents/`
+- `agents/sdlc-reviewer.md`, `agents/sdlc-compliance-auditor.md` → `.claude/agents/` (framework subagents must be in `.claude/agents/` for Claude Code to dispatch them, not just `[sdlc-root]/agents/`)
 - `playbooks/*.md` (unless the project has written its own playbooks — check git blame)
 - `examples/*.md`
 - `templates/*.md` (to `[sdlc-root]/templates/`)
@@ -671,17 +674,11 @@ These sections originate from the framework and should be updated across all pro
 
 For each agent in `.claude/agents/`:
 1. Check if `## Knowledge Context` section exists — add if missing
-2. Verify Communication Protocol references the correct source:
-   - **Non-Neuroloom projects:** correct YAML path (`[sdlc-root]/knowledge/agent-communication-protocol.yaml`)
-   - **Neuroloom projects:** `memory_search` with appropriate `sdlc:knowledge` tags
+2. Verify Communication Protocol references `[sdlc-root]/knowledge/architecture/agent-communication-protocol.yaml`
 3. Verify memory section guidelines match the latest template
 4. Do NOT touch: scope ownership, core principles, workflow, anti-rationalization tables, self-verification checklists, domain-specific content
 
 ### 3.3 Update Agent-Context-Map (if needed)
-
-**Skip this section if `[has-neuroloom]` is true.** Neuroloom projects do not use `agent-context-map.yaml` — agents load context via `memory_search` with `sdlc:knowledge` tags. Knowledge wiring changes are handled by the Neuroloom plugin's own migrate skill.
-
-**For non-Neuroloom projects:**
 
 The agent-context-map is **never overwritten** because projects have their own agent names. But it must be updated for four scenarios:
 
@@ -809,18 +806,12 @@ Log all applied changes in the migration report (§4.6). Log all skipped finding
 
 ### 4.1 File Path Integrity
 
-**For non-Neuroloom projects** (file-based knowledge layer):
-
 ```bash
 # Verify all agent-context-map paths resolve
 for path in $(grep -E '^\s+- ' [sdlc-root]/knowledge/agent-context-map.yaml | sed 's/.*- //'); do
   [ -f "$path" ] || echo "BROKEN: $path"
 done
 ```
-
-**For Neuroloom projects** (memory-based knowledge layer):
-
-Skip this check — `agent-context-map.yaml` does not exist. Agents access knowledge via `memory_search` with appropriate `sdlc:knowledge` tags instead. Knowledge integrity is verified by the Neuroloom plugin's compliance checks.
 
 ### 4.2 Agent Consistency
 
@@ -892,14 +883,12 @@ The project's `CLAUDE.md` contains CLAUDE-SDLC.md content — skill names, proce
 > Run a compliance audit focused on migration integrity. Check all 9 dimensions, with special attention to:
 > - Dimension 7 (Migration Integrity): All framework files match the cc-sdlc source at [new commit hash]
 > - No orphaned files from previous versions remain
-> - Agent-context-map paths all resolve (skip for Neuroloom projects — they use memory_search instead)
+> - Agent-context-map paths all resolve
 > - Content-merge preserved project data (tracker levels, parking lot entries, skill customizations)
-> - For Neuroloom projects: MCP tool calls (memory_search, memory_store) were preserved, not overwritten with file paths
 > - CLAUDE-SDLC.md references in CLAUDE.md are valid
 > - `agents/sdlc-compliance-auditor.md` is present and current
 >
 > **Context:** This audit runs immediately after migration applied changes. Uncommitted files in the working tree are expected — the user has not committed yet. Do NOT flag uncommitted migration files as findings.
-> **Project type:** [non-Neuroloom | Neuroloom] (detected in pre-flight)
 
 Present the subagent's findings to the user before proceeding to §4.5.
 
@@ -914,7 +903,8 @@ After migration, update `.sdlc-manifest.json`:
 1. **Update `source_version`** to the current cc-sdlc commit hash
 2. **Add missing fields** if the manifest predates this migration:
    - `sdlc_root`: set to `[sdlc-root]` detected in pre-flight
-   - `neuroloom_integration`: set to `[has-neuroloom]` detected in pre-flight
+   - `installed_files`: back-fill if absent (hash every file in `skeleton/manifest.json` source_files at its installed path; mark `installed_at: "backfilled-{CURRENT_VERSION}"`)
+3. **Refresh `installed_files` hashes.** For every file the migration just touched — direct copies, content-merges, drift resolutions — recompute SHA-256 of the final on-disk content and update the corresponding entry. For drift cases where CD chose "keep mine", record the current hash so the next migration sees a clean baseline. For files CD chose to overwrite with upstream, the new hash reflects the upstream content. This keeps drift detection accurate for the next migration.
 
 ```bash
 # Read existing manifest
@@ -926,11 +916,6 @@ MANIFEST=$(echo "$MANIFEST" | jq --arg v "$(git -C [cc-sdlc-path] rev-parse HEAD
 # Add sdlc_root if missing
 if ! echo "$MANIFEST" | jq -e '.sdlc_root' >/dev/null 2>&1; then
   MANIFEST=$(echo "$MANIFEST" | jq --arg r "$SDLC_ROOT" '.sdlc_root = $r')
-fi
-
-# Add neuroloom_integration if missing
-if ! echo "$MANIFEST" | jq -e '.neuroloom_integration' >/dev/null 2>&1; then
-  MANIFEST=$(echo "$MANIFEST" | jq --argjson n "$HAS_NEUROLOOM" '.neuroloom_integration = $n')
 fi
 
 echo "$MANIFEST" > .sdlc-manifest.json
@@ -1000,20 +985,77 @@ echo "$MANIFEST" > .sdlc-manifest.json
 - §4.3a CLAUDE-SDLC.md compatibility: no stale references / [list fixes]
 
 ### Verification
-- All agent-context-map paths resolve: yes/no (N/A for Neuroloom projects — they use memory_search)
+- All agent-context-map paths resolve: yes/no
 - All agents have Knowledge Context: yes/no
 - Spot-check passed: yes/no
 - Post-migration audit: passed/findings fixed (auditor dispatched automatically in §4.4)
 
-### Neuroloom Integration (if applicable)
-- Project type: [non-Neuroloom | Neuroloom]
-- Files with MCP patterns preserved: [list files where memory_search/memory_store calls were kept]
-- Sections skipped for Neuroloom: §3.3 (context map), §4.1 (path integrity)
-- Knowledge files: [skipped — Neuroloom stores in memory graph | copied]
-
 ### Next Steps
 1. Commit the migration
 ```
+
+---
+
+## Recovery / Emergency Restore
+
+If `/sdlc-migrate` crashes, is interrupted, or leaves the workspace in an inconsistent state, use this section to diagnose and recover. Migration is designed to be resumable — most scenarios resolve via re-running the skill.
+
+### Step 1: Diagnose
+
+**Transaction log** (authoritative timeline):
+```bash
+tail -n 200 .sdlc-transaction-log | jq -c 'select(.run_id | startswith("migrate-"))'
+# Last `run_start` marks the crashed migration run
+# Last `mutation` event shows what was last committed
+# Presence of `checkpoint: point_of_no_return` tells you whether mutations were attempted
+```
+
+**Manifest version:**
+```bash
+jq -r '.source_version' .sdlc-manifest.json
+```
+Authoritative post-migration version. If this matches the intended `LATEST_VERSION`, migration completed. If it still shows the old version, Phase 4.5 didn't run.
+
+**Source clone state:**
+```bash
+ls /tmp/cc-sdlc-migrate/ 2>/dev/null
+```
+If present, the temp clone wasn't cleaned up — may indicate crash during or before Phase 4.6. Safe to delete manually if the migration is resolved.
+
+**Drift decisions** (if §1.2a detected any):
+```bash
+grep -c '"event":"drift_decision"' .sdlc-transaction-log
+# If drift was detected but fewer drift_decision events than drift_detected events,
+# some files have unresolved drift — they weren't handled before the crash
+```
+
+### Step 2: Match state to recovery action
+
+| State | Recovery Action |
+|-------|-----------------|
+| Crash before point_of_no_return (Phase 0–1 events, no `checkpoint: point_of_no_return` in log) | **Safe — no recovery needed.** Re-run `/sdlc-migrate` from the top. Phase 0 and Phase 1 are idempotent. |
+| Crash after point_of_no_return, manifest updated to `LATEST_VERSION` | **Migration completed.** Any remaining issues are audit-level. Dispatch `sdlc-compliance-auditor` to identify. |
+| Crash after point_of_no_return, manifest still at old version | **Operational writes partial.** Re-run `/sdlc-migrate` — it detects the version skew and completes from the first unwritten file. PROJECT-SECTION marker re-extraction handles already-written files correctly. |
+| Crash during §2.1 direct copy | **File-level idempotency saves you.** Re-run — each direct copy is idempotent (same git show → same content). Previously copied files will simply re-copy with the same result. |
+| Crash during §2.1b knowledge YAML merge | **Knowledge files at intermediate state.** Re-run — key-level merge is idempotent when re-applied against its own output. Use git diff to verify files look correct after re-run. |
+| Drift decisions lost to crash (drift_detected without matching drift_decision) | **Re-run `/sdlc-migrate`.** Drift re-detected at §1.2a; CD re-prompted with same options. Prior decisions not preserved across crashes. |
+| Temp clone at `/tmp/cc-sdlc-migrate/` from prior run | **Clean up manually:** `rm -rf /tmp/cc-sdlc-migrate/` before re-running. Phase 0 would have cloned fresh. |
+
+### Step 3: Never do these things
+
+- **Do not edit `.sdlc-manifest.json` to match what you think the state should be.** If the manifest is wrong, re-run migrate; don't synthesize state.
+- **Do not delete `[sdlc-root]/` and re-run `/sdlc-initialize`.** That loses drift-detection history and treats the workspace as greenfield. Always prefer re-running migrate for mid-migration recovery.
+- **Do not ignore drift warnings from §1.2a.** They signal files where manual edits will be silently overwritten if you proceed without deciding.
+
+### Step 4: Absolute last resort
+
+If the workspace is so corrupted that re-running migrate cannot resolve it:
+
+1. Back up: `cp -r [sdlc-root] [sdlc-root].backup-{date}` and `cp .sdlc-manifest.json .sdlc-manifest.backup-{date}.json`
+2. Run `/sdlc-initialize` in repair mode to rebuild the skeleton.
+3. Manually re-apply project customizations from the backup (PROJECT-SECTION blocks, agent-context-map additions, discipline parking lot entries).
+
+This path loses `installed_files` hash history and resets drift-detection baselines — use only when no other recovery works.
 
 ---
 
@@ -1036,7 +1078,6 @@ echo "$MANIFEST" > .sdlc-manifest.json
 | "I'll rename all skill references to match upstream" | Guarded renames (§4.3a) — only rename if the target skill exists in the project. Renaming to a nonexistent skill causes silent process failures. |
 | "I'll rename agent names in skills to match upstream" | Guarded renames (§4.3a) — only rename if the target agent exists in the project. Projects use different agent names (`frontend-engineer` vs `frontend-developer`). Renaming to a nonexistent agent causes silent dispatch failures. |
 | "I'll auto-fix all the downstream impact findings" | Present findings to the user. They choose what to apply — some findings may not suit the project's context. |
-| "This project uses file paths for knowledge access, same as cc-sdlc" | Check for Neuroloom integration first. Projects with `memory_search`/`memory_store` calls use MCP tools, not file paths. Preserve the integration pattern during content-merge — don't overwrite MCP calls with file references. |
 | "The SDLC is in `ops/sdlc/`" | Not always. Some projects use `.claude/sdlc/`. Detect the actual structure in pre-flight and use `[sdlc-root]` throughout. |
 | "PROJECT-SECTION markers mean this content is protected, just re-inject it" | Markers preserve content from being overwritten, but they don't prevent staleness. Review marked content against upstream changes (§2.1d) — a 6-month-old custom skill phase may reference outdated patterns. |
 | "I'll skip the marker review for old blocks" | Old blocks are the most likely to be stale. The skip threshold is for recent blocks (< 7 days) that can't have drifted yet. |

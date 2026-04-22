@@ -34,6 +34,52 @@ Each entry contains:
 
 ---
 
+## 2026-04-21: Add drift detection, transaction log, point-of-no-return, recovery docs
+
+**Origin:** Adoption of reliability improvements first made in `neuroloom-sdlc-plugin` during its audit pass. The plugin and cc-sdlc share most init/migrate failure modes; patterns that helped the plugin help here too.
+
+**What happened:** Four improvements added to both `sdlc-initialize` and `sdlc-migrate`:
+
+1. **Drift detection** — `installed_files` SHA-256 hash map in `.sdlc-manifest.json`. Records hash of every framework file at install time. Migrate's new §1.2a compares current hashes against the recorded baseline to detect post-install manual edits, surfacing them to CD before they get silently overwritten. Includes back-fill path for projects predating this feature.
+2. **Transaction log** — Append-only JSONL at `.sdlc-transaction-log`. Every phase start/end, gate decision, mutation, and failure emits a structured event. Enables recovery diagnostics when a session crashes mid-init or mid-migrate.
+3. **Point-of-no-return markers** — Explicit callouts at Phase 1 of init and Phase 2 of migrate identifying where mutations begin. Prior phases can be cancelled without trace; post-checkpoint requires resume or repair.
+4. **Recovery / Emergency Restore sections** — Diagnosis-to-action tables in both skills covering mid-run crashes, last-mutation inference from the transaction log, resume strategies, and last-resort reset paths.
+
+**Changes made:**
+
+1. **`skills/sdlc-initialize/SKILL.md`** — Added Transaction Log section (top-level, after Pre-Agent Reality). Expanded `.sdlc-manifest.json` with `installed_files` hash map and scope rules. Added Phase 1d gitignore entry for `.sdlc-transaction-log`. Added Point-of-No-Return callout before Phase 1. Added Recovery / Emergency Restore section before Red Flags.
+2. **`skills/sdlc-migrate/SKILL.md`** — Added Transaction Log section cross-referencing init's schema, with migrate-specific events (`drift_detected`, `drift_decision`, `deviation_detected`, `marker_preserved`, `phase_skip`). Added §1.2a Operational Drift Detection with category table and back-fill path. Added Point-of-No-Return callout before Phase 2. Updated §4.5 to refresh `installed_files` hashes post-migration. Added Recovery / Emergency Restore section before Red Flags.
+
+**Rationale:** The worst failure modes in init/migrate are silent ones — manual edits overwritten without warning, partial state that can't be diagnosed after a crash. Drift detection eliminates the silent-overwrite case; transaction log eliminates the un-diagnosable-crash case. Both are low-risk additions (data structures + docs, no workflow changes) with high recovery value. Patterns port directly from the plugin because the underlying failure shapes are identical.
+
+---
+
+## 2026-04-21: Document phrasing contract for adapter plugins
+
+**Origin:** Investigation into how cc-sdlc should handle Neuroloom-style adapter plugins. Initial instinct was to scatter `(Neuroloom projects: use memory_search instead)` conditionals across skills. Research into mature adapter patterns (Prisma drivers, Terraform providers, VSCode extensions) revealed this as an anti-pattern.
+
+**What happened:** The correct architecture was already in use — `neuroloom-sdlc-plugin` has its own `/sdlc-initialize` and `/sdlc-migrate` that transform cc-sdlc skills at install time, replacing file references with `memory_search` calls. Content-aware migration preserves those transformations on upstream updates. The core stays pure; the adapter handles translation at boundaries.
+
+The missing piece was an explicit phrasing contract — cc-sdlc skills need to use consistent wording so the adapter's pattern-matching transformer can reliably find and replace references.
+
+**Changes made:**
+
+1. **`process/knowledge-routing.md`** — Replaced brief "Alternative: Memory-Based Routing" section with a full "Adapter Plugins and the Phrasing Contract" section. Documents the standard phrases skills must use, non-goals (no inline conditionals, no adapter-specific tool references in core), and the change-management protocol when contract-affecting changes ship.
+2. **`agents/sdlc-reviewer.md`** — Added "Phrasing Contract" checklist under skill content quality checks. Verifies skills use standard phrasings and don't include inline adapter conditionals or adapter-specific tools.
+3. **`agents/sdlc-compliance-auditor.md`** — Added "Phrasing Contract Validation" sub-check under Dimension 7. Flags non-standard phrasings (major), inline adapter conditionals (major), and adapter-specific tools in framework files (critical). Skips files that are adapter-transformed versions.
+4. **`skills/sdlc-develop-skill/SKILL.md`** — Added Phrasing Contract requirement to orchestration skill scaffolding. Added two Red Flag entries warning against inline conditionals and custom phrasing.
+5. **`skills/sdlc-execute/SKILL.md`** — Removed inline `(Neuroloom projects: use memory_search...)` conditional from cross-domain knowledge injection paragraph. Adapter plugin handles translation at install time.
+6. **`skills/sdlc-tests-create/SKILL.md`** — Removed inline `(Neuroloom projects: use memory_search...)` conditional from SDET cross-domain injection paragraph.
+7. **`process/discipline_capture.md`** — Removed two inline Neuroloom conditionals (agent-context-map lookup and `memory_store` parenthetical). Adapter handles these.
+8. **`process/overview.md`** — Removed inline `(Neuroloom projects use memory_store...)` conditional from knowledge capture paragraph.
+7. **`process/discipline_capture.md`** — Removed inline `(skip for Neuroloom projects...)` conditional from agent knowledge lookup instruction (line 18) AND inline `(Neuroloom projects: use memory_store with sdlc:discipline:{name}...)` conditional from parking lot capture instruction (line 88). Both files were already in the plugin's transformation table.
+8. **`process/overview.md`** — Removed inline `(Neuroloom projects use memory_store with sdlc:knowledge and sdlc:domain:testing tags)` conditional from Knowledge Capture paragraph. File is in the plugin's transformation table.
+9. **`skills/sdlc-migrate/SKILL.md`** — Removed all Neuroloom-specific branching (dead code). The plugin's `/sdlc-migrate` overrides cc-sdlc's version when installed, so Neuroloom detection, `[has-neuroloom]` flag, `HAS_NEUROLOOM` variable, entire "Neuroloom-Aware Content Transformation" section, `neuroloom_integration` manifest field handling, and all per-step Neuroloom branches were unreachable in practice. Added a single informational note explaining that adapter plugins override this skill. cc-sdlc's sdlc-migrate now focuses solely on file-based migration.
+
+**Rationale:** Adapter plugins are a better abstraction than scattered conditionals. The Prisma/Terraform/VSCode pattern — stable core interface, adapter transforms at boundaries — keeps cc-sdlc focused on its own domain while allowing adapters independent release cadence. The phrasing contract is the interface boundary: cc-sdlc commits to consistent wording; adapters commit to transforming those exact phrases. Breaking the contract breaks the adapter silently, which is why the reviewer and auditor enforce it.
+
+---
+
 ## 2026-04-17: Harden team-review-fix prompt layer (audit-driven)
 
 **Origin:** Team-review-fix audit 2026-04-17 (Neuroloom session, 5 commits, 11 teammates, 25 findings). The revised debate protocol worked — organic broadcast, architect tiebreaker, fixer reuse, clean shutdown all executed as designed. Failures were prompt-layer gaps: reviewer routing (4/7 emitted plain text), reviewer edits (2 violations), fixer duplicate task IDs, fixer lint skipped before FIX_COMPLETE.

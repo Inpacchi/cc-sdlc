@@ -119,9 +119,34 @@ If you add a new knowledge file that should apply to multiple agents (e.g., a pr
 
 ---
 
-## Alternative: Memory-Based Routing
+## Adapter Plugins and the Phrasing Contract
 
-Neuroloom projects use `memory_search` with `sdlc:knowledge` tags instead of `agent-context-map.yaml`. See the Neuroloom plugin's knowledge routing documentation for details.
+Some projects use an adapter plugin (e.g., `neuroloom-sdlc-plugin`) that swaps cc-sdlc's file-based knowledge routing for a different backend (e.g., a memory graph accessed via `memory_search`). The adapter plugin transforms skills and agents at install time — replacing file-path references with backend-native calls — and preserves those transformations during migrations via content-aware merging.
+
+This pattern (core stays pure, adapter transforms at boundaries) follows the Terraform/Prisma provider model. The key constraint: **cc-sdlc must use consistent phrasing** so the adapter's pattern-matching transformer can find and replace references reliably.
+
+### Standard Phrases (the contract)
+
+Skills and agents that reference the knowledge layer MUST use these exact phrases so adapter plugins can transform them reliably. Deviations break the transformer and cause silent routing failures in adapter-based projects.
+
+| Use Case | Required Phrasing |
+|----------|-------------------|
+| Looking up an agent's mapped knowledge files | `consult [sdlc-root]/knowledge/agent-context-map.yaml` |
+| Cross-domain knowledge injection during dispatch | `Consult [sdlc-root]/knowledge/agent-context-map.yaml for the [agent-name] entry and include relevant knowledge files in the dispatch prompt` |
+| Referencing the communication protocol | `Read [sdlc-root]/knowledge/architecture/agent-communication-protocol.yaml` |
+| Agent's Knowledge Context section (canonical, from `AGENT_TEMPLATE.md`) | `Before starting substantive work, consult [sdlc-root]/knowledge/agent-context-map.yaml and find your entry. Read the mapped knowledge files...` |
+| Reading domain knowledge stores | `Read [sdlc-root]/knowledge/<domain>/<file>.yaml` |
+| Wiring new files to agent mappings | `update [sdlc-root]/knowledge/agent-context-map.yaml` |
+
+### Non-Goals
+
+- **Don't scatter conditional branches** across skills. The adapter handles translation at install time — inline conditionals add noise without adding capability.
+- **Don't invent new phrasings** for the same operation. If a skill needs to look up an agent's mapped files, use the exact phrase from the table above.
+- **Don't directly reference adapter-specific tools** in cc-sdlc skills. Those are adapter concerns.
+
+### When cc-sdlc Changes
+
+If a change to cc-sdlc introduces a new knowledge-access pattern, the adapter plugin's migrate skill must be updated in parallel. Document the new phrase in the table above so the adapter maintainer can add a transformation rule. The commit message should tag the change with `[contract-change]` so adapter maintainers can filter for it.
 
 ---
 
