@@ -53,7 +53,7 @@
     "top_level": [
       "README.md"
     ],
-    "_not_installed_comment": "templates/optional/, CLAUDE-SDLC.md, and BOOTSTRAP.md are source-only — not installed to child projects. Optional templates are conditional CLAUDE.md appendices; CLAUDE-SDLC.md content is merged into the project's CLAUDE.md during initialization; BOOTSTRAP.md is the one-file bootstrap document read via curl during initial setup.",
+    "_not_installed_comment": "templates/optional/, CLAUDE-SDLC.md, BOOTSTRAP.md, and BOOTSTRAP-LITE.md are source-only — not installed to child projects. Optional templates are conditional CLAUDE.md appendices; CLAUDE-SDLC.md content is merged into the project's CLAUDE.md during initialization; BOOTSTRAP.md is the full-framework one-file bootstrap document read via curl during initial setup; BOOTSTRAP-LITE.md is the lite-starter bootstrap that installs a minimal 3-agent / 2-skill subset as an on-ramp to the full framework.",
     "process": [
       "process/README.md",
       "process/overview.md",

@@ -34,6 +34,53 @@ Each entry contains:
 
 ---
 
+## 2026-04-22: Lite Graduation phase in sdlc-initialize [on-ramp]
+
+**Origin:** Follow-up to the same-day `BOOTSTRAP-LITE.md` addition. The lite bootstrap's `GRADUATION.md` originally claimed `Bootstrap SDLC` would "detect and merge the lite install in place" — but `sdlc-initialize` had no such logic. First person to graduate would hit that gap and either lose lite customizations (discipline entries, changelog history) or have to merge by hand.
+
+**What happened:** Added Lite Graduation as a first-class mode in `sdlc-initialize` alongside Greenfield, Retrofit, and Repair. Mode Detection now checks for `ops/sdlc-lite/` and routes to a new Phase 0-L that merges the lite install into the full layout before Phase 1's standard install runs. The merge is designed to compose with existing skip-existing-files logic — after 0-L moves `ops/sdlc-lite/*` into `ops/sdlc/*`, Phase 1's install preserves everything the graduation just placed (lite manager-rule, lite disciplines with real insights, lite knowledge customizations, lite changelog history).
+
+**Changes made:**
+
+1. **`skills/sdlc-initialize/SKILL.md`** — Added `Has ops/sdlc-lite/` and `Has .claude/skills/sdlc-lite-*` to the INITIALIZATION ASSESSMENT block; added a "Lite Graduation" row to the mode-detection table; added a new `## Lite Graduation Mode` section with Phase 0-L containing eight sub-steps (inventory + confirm, create full skeleton, move lite content into full layout, rewrite path references in lite skills/agents, remove SDLC-Lite block from CLAUDE.md, remove empty `ops/sdlc-lite/`, prepend graduation entry to migrated changelog, fall through to Phase 1). Also documented how downstream phases (1, 2, 3, 4, 5, 7) behave in graduated installs — what's preserved and what's added.
+2. **`BOOTSTRAP-LITE.md`** — Rewrote the GRADUATION.md content's "How to graduate" section from aspirational ("`Bootstrap SDLC` will detect and merge") to operational (steps Phase 0-L actually performs, with explicit preserved-vs-added lists).
+
+**Design choices worth noting:**
+
+- **Move-then-install, not merge-after-install.** Phase 0-L moves lite content into the full layout *before* Phase 1 runs. This lets Phase 1's existing skip-existing-files logic do the preservation automatically — no second pass, no conflict resolution. The alternative (install full, then reconcile) would require Phase 1 to know about lite semantics, which would leak graduation concerns throughout the skill.
+- **CLAUDE.md block deletion, not rewrite.** Lite appends a `# SDLC-Lite` block; full appends a full SDLC block. Initial design was to rewrite the lite block in place, but the full block's invocation table, agent roster, and commit conventions are supersets of the lite block — rewriting creates accidental divergence if the full CLAUDE-SDLC.md template evolves. Deleting the lite block and letting Phase 2 append the full block keeps CLAUDE.md sourced from a single template.
+- **Graduation entry prepended to migrated changelog, not appended.** Changelogs read newest-first; the graduation is the newest event. Preserves the lite history below it chronologically.
+- **Dry-run safety is implicit in "move, not copy".** If any move fails mid-0-L, `ops/sdlc-lite/` is left in an intermediate state, 0-L.f's final non-empty check catches it, and the directory is NOT deleted. User sees exactly which files didn't move and can retry or intervene.
+
+**Rationale:** On-ramps without off-ramps don't get adopted. A lite install that can't smoothly upgrade to the full framework either discourages adoption ("this is a dead end") or traps teams in lite permanently ("we built on this and can't move off"). Phase 0-L makes graduation a single-command operation with explicit preservation guarantees — the thing GRADUATION.md was already claiming and now actually delivers.
+
+---
+
+## 2026-04-22: BOOTSTRAP-LITE.md — minimal starter kit for teams new to cc-sdlc [on-ramp]
+
+**Origin:** User reported a workplace AI adoption effort where teammates found the full SDLC too much to absorb as a first exposure. Asked for an easy entry point that conveys the SDLC feel (plan → execute → review with domain agents, a knowledge+discipline learning layer, memory via changelog + deliverable IDs) without the full ceremony, designed to grow into the full framework rather than replace it.
+
+**What happened:** Drafted a sibling to `BOOTSTRAP.md` that installs only what's needed to feel the benefit: 3 generalist agents (`software-architect`, `fullstack-developer`, `code-reviewer`), the two existing `sdlc-lite-plan` / `sdlc-lite-execute` skills with dead references stripped, a 3-file knowledge store (architecture / coding / testing) wired through a lite `agent-context-map.yaml`, 3 discipline parking lots, the lite plan + result templates, the `manager-rule.md` / `finding-classification.md` / `review-fix-loop.md` process docs kept intact, a `sdlc_changelog.md` seeded with a bootstrap entry, a `docs/_index.md` deliverable catalog, and a CLAUDE.md merge block with commit format + invocation rules. Includes a stack-scan step before agent generation, an optional lite `/sdlc-develop-skill` orchestration, and a `GRADUATION.md` describing how `Bootstrap SDLC` upgrades the install in place.
+
+**Changes made:**
+
+1. **`BOOTSTRAP-LITE.md`** (new) — 12-step bootstrap flow. The entire bootstrap is installation, not an SDLC work session, so all mechanical text manipulation (skill-file reference stripping, YAML path rewrites, CLAUDE.md append) is performed directly by Claude Code rather than dispatched to `fullstack-developer`. Step 4 copies the two lite skills, then surgically removes references to framework pieces not installed in lite (chronicle, playbooks, `agent-selection.yaml`, `knowledge-routing.md`, `collaboration_model.md`, `deliverable_lifecycle.md`, structured-gap-detection paragraph from `discipline_capture.md`) while keeping verbatim the workflow spine: writer-writes-saves, PRE-GATE/POST-GATE, review-fix loop, finding classification, Worker Agent Reviews, plan+result file paths, deliverable ID claim, Completion Report, Context7 verification. Step 9 is the optional custom-skill orchestration, a stripped-down `/sdlc-develop-skill` (no DRY audit across sibling skills, no phrasing-contract compliance, no `sdlc-reviewer` gate, no PROJECT-SECTION markers — those assume a migration is coming, which lite does not have).
+2. **`skeleton/manifest.json`** — Extended the `_not_installed_comment` to call out `BOOTSTRAP-LITE.md` alongside `BOOTSTRAP.md` as a source-only file.
+
+**Design choices worth noting:**
+
+- **Install path is `ops/sdlc-lite/` not `ops/sdlc/`** so the full bootstrap can later merge into `ops/sdlc/` without collisions. `GRADUATION.md` documents the upgrade path.
+- **Finding classification and review-fix loop are kept intact, not inlined.** Initial draft simplified both to 3-class / 4-step inline summaries in the skill bodies. Rejected — those docs are the spine of the review half of the SDLC. Copying them into `ops/sdlc-lite/process/` alongside `manager-rule.md` preserves the full triage vocabulary (FIX / DECIDE / PRE-EXISTING / DEFER / WORDING) and the iterative dispatch-collect-fix-reenter loop the skills depend on.
+- **Structured gap detection is dropped, freeform capture kept.** The 3 automated comparisons in `discipline_capture.md` (knowledge-loaded-vs-needed, cross-domain friction, iteration cost — producing `MISSING_KNOWLEDGE` / `UNMAPPED_KNOWLEDGE` / `STALE_KNOWLEDGE` / `CROSS_DOMAIN_FRICTION` / `RESURFACING_PATTERN` gaps) need the full knowledge store + handoff protocol to produce meaningful signal. Lite keeps the freeform cross-discipline scan (append insights to the parking lot with `[NEEDS VALIDATION]`) because that part delivers value immediately; the structured comparisons become meaningful later, at graduation.
+- **Bootstrap is manager-direct throughout.** Initial draft had Step 4 dispatch `fullstack-developer` to strip the skill files. Revised — the Manager Rule is a work-session discipline, not an installation discipline. Framework installation is mechanical text manipulation; adding an agent round-trip for path rewrites creates ceremony without benefit and blurs when the Manager Rule actually activates (answer: during the user's first real work session after install).
+- **Agent-context-map is a first-class install.** The lite roster's knowledge-auto-consult is what makes knowledge files feel load-bearing instead of ornamental — teams that skip it end up with knowledge stores nobody reads, which kills the "learning system" feel.
+- **CLAUDE.md merge is the most important file.** Without the invocation table + Manager Rule anchor + commit format + changelog rule appended to `CLAUDE.md`, the assistant does not know when to invoke the lite skills or that the Manager Rule applies. Everything else is scaffolding around this merge.
+- **Changelog + deliverable catalog are in the core install, not optional.** These are the "memory" half of the SDLC experience — the planning half is the two skills, the memory half is the catalog + changelog. Without both halves, lite is just a planning habit, not a miniature SDLC.
+
+**Rationale:** Adoption resistance to full cc-sdlc is almost always "this is too much to learn at once," not "this does not solve a real problem." A lite bootstrap that takes 5 minutes to install, produces visible artifacts on the first plan, and has an obvious graduation path removes the all-or-nothing adoption choice. The gaps I almost omitted (changelog, CLAUDE.md merge, agent-context-map) are the three that separate "a miniature SDLC" from "a planning habit with extra steps" — hence they are in the core install rather than the graduation path.
+
+---
+
 ## 2026-04-22: DRY lens in sdlc-reviewer + Dimension 10 (Cross-Skill DRY) in ccsdlc-audit [drift-prevention]
 
 **Origin:** Follow-up to the same-day `sdlc-develop-skill` DRY audit. Adding the audit at write time catches drift introduced going forward; the matching read-time gates needed it too — sdlc-reviewer (the per-skill quality gate) and ccsdlc-audit (the framework-source compliance check that sweeps the whole repo periodically). Without these, write-time DRY discipline is bypassed any time someone hand-edits a skill, and existing accumulated drift never surfaces.
