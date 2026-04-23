@@ -64,3 +64,13 @@ spec → plan → implement
 - **Two-tier knowledge architecture.** Promoted → `[sdlc-root]/knowledge/architecture/knowledge-management-methodology.yaml` (two_tier_architecture section)
 
 - **Token economics as an architectural constraint.** Promoted → `[sdlc-root]/knowledge/architecture/token-economics.yaml`
+
+### External Ingestion — 2026-04-22 (Generic patterns from production systems)
+
+- **Async concurrency: pass a session/connection factory, never a shared session.** [NEEDS VALIDATION] In any async runtime (Python asyncio, Node.js, Go), passing a single shared database session/connection to multiple concurrent tasks produces silent corruption — the tasks interleave their statements on one connection. Pass a `session_factory` (callable returning a fresh session) instead, and have each task open its own. The same applies to HTTP clients with connection state, transaction handles, and any resource that has implicit per-call state. Document this in any architecture doc that introduces concurrent task fan-out.
+
+- **Advisory lock + connection pooling release locks silently.** [NEEDS VALIDATION] Database advisory locks (Postgres `pg_advisory_lock`, MySQL `GET_LOCK`, etc.) are scoped to the connection that acquired them. When the connection is returned to a pool mid-job, the lock releases — but the application code thinks it still holds the lock. Either pin the connection for the duration of the locked work, or use a different coordination primitive (Redis lock, distributed lock service). Same hazard exists with `SET LOCAL` Postgres settings, prepared statements, and any session-level state.
+
+- **Lazy initialization needs a short-circuit for tests.** [NEEDS VALIDATION] Service-level "initialize on first request" patterns (resolving config, loading models, opening connections) require an `_initialized` flag and a way to short-circuit it in tests. Otherwise tests inherit production initialization paths (network calls, filesystem reads, expensive setup) that make them slow and flaky. The pattern: `get_or_init()` checks the flag; `reset_for_tests()` clears it. Test setup calls reset before each scenario.
+
+- **"Metadata-only" flags don't gate behavior — until they do.** [NEEDS VALIDATION] When a schema field or config flag is labeled "metadata only" (e.g., `is_bidirectional`, `is_legacy`, `display_only`), readers assume it has no behavioral effect — but downstream code often branches on it. Document the actual enforcement point: which functions read this field, what they do with it, and whether the "metadata only" label is accurate. If behavior depends on a flag, the flag is not metadata.

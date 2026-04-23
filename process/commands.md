@@ -38,6 +38,13 @@ The standard deliverable lifecycle: **ideation → plan → execute**. Most work
 | `/sdlc-audit` | Compliance audit — deliverable integrity, knowledge layer health, migration correctness |
 | `/sdlc-audit improve` | Improvement audit — analyze current session or past session/commits for process gaps |
 
+## Incidents & Reference Docs
+
+| Command | Action |
+|---------|--------|
+| `/sdlc-debug-incident` | Two-phase incident workflow — TRIAGE during active response, CLOSEOUT to postmortem after remediation. Auto-detects mode from incident doc state. |
+| `/sdlc-create-reference-doc` | Create an internal developer-facing reference doc (event schemas, API surfaces, pipeline stage inventories). Author + review quorum + code-reviewer through review-fix loop. Writes to `docs/reference/{category}/`. |
+
 ## Knowledge & Content
 
 | Command | Action |

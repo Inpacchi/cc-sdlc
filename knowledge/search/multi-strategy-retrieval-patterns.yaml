@@ -1,0 +1,528 @@
+# Multi-Strategy Retrieval Patterns
+# Decision rules for parallel multi-strategy retrieval, result fusion, temporal search,
+# and graph-based retrieval in coding agent memory systems.
+# Source: Vectorize.io Hindsight (github.com/vectorize-io/hindsight, hindsight.vectorize.io)
+# Domain: Agentic coding memory — decisions, architectures, patterns, bug investigations
+#
+# Relationship to existing rules:
+# - RS8 covers RRF mechanics as a fusion option. MR4 here covers RRF specifically as the
+#   correct choice for heterogeneous multi-strategy pipelines and explains why it outperforms
+#   linear combination in that context.
+# - RS6 covers knowledge graph augmented retrieval at a conceptual level. MR3 here covers
+#   the concrete implementation pattern (recursive CTEs, multi-signal scoring, tanh saturation).
+# - RS1 covers two-stage reranking. MR9 here covers the post-rerank score lifecycle rule
+#   (discard RRF scores after reranking) which RS1 does not address.
+
+id: multi-strategy-retrieval-patterns
+name: "Multi-Strategy Retrieval Patterns"
+description: "Decision rules for parallel multi-strategy retrieval — temporal search, graph traversal, RRF fusion, token-budget results, and retrieval trace diagnostics"
+pattern: rules
+category: search
+spec_relevant: false
+project_applicability:
+  relevant_when: "Project uses hybrid retrieval (semantic + keyword + graph + temporal) in a memory system"
+  action_if_irrelevant: remove
+last_updated: 2026-04-06
+
+entries:
+  - rule_id: MR1
+    name: Parallel Multi-Strategy Retrieval Architecture
+    description: |
+      Run all retrieval strategies concurrently in a single pipeline pass: semantic
+      (vector similarity), keyword (BM25/FTS), graph (link expansion), and temporal
+      (date-filtered semantic). Fuse the results via RRF, then rerank the fused
+      candidate pool with a cross-encoder. Never run strategies sequentially unless
+      each stage gates the next by score threshold (cascade pattern).
+
+      Think of this like searching a codebase four ways at once: grep for the exact
+      function name, semantic search for "authentication flow", follow the import
+      graph from the module that changed, and filter to "files modified last sprint."
+      Running all four in parallel takes roughly as long as the slowest single search.
+    rationale: |
+      Different coding queries are served by different strategies. Exact identifiers
+      (function names, error codes, module paths) are found by keyword search;
+      conceptual queries ("how does the auth flow work") are found by vector
+      similarity; temporally-anchored queries ("what changed before the deploy
+      broke") need date filtering; relational questions ("what decisions led to
+      this architecture") need graph traversal. Running all four in parallel means no query
+      type is left unserved by the pipeline's structure. The RRF fusion step
+      then adjudicates rank without requiring calibrated scores across strategies.
+
+      Sequential execution would be slower without any quality benefit (strategies
+      are independent; each explores a different neighborhood of the memory space).
+      Cascade is appropriate only when one strategy is a strict superset of another
+      or when the cheapest strategy is highly confident for most queries — neither
+      is true in agent memory systems with mixed query intent.
+    checklist:
+      - "Are all four retrieval strategies (semantic, keyword, graph, temporal) run concurrently (asyncio.gather or equivalent)?"
+      - "Is each strategy's candidate list independently ranked before fusion?"
+      - "Is a single database connection reused across the semantic, BM25, and temporal arms to avoid connection overhead?"
+      - "Does the pipeline have a defined maximum candidate budget per strategy to bound memory and latency?"
+    anti_patterns:
+      - "Running strategies sequentially under the belief that parallelism is unnecessary — it doubles or quadruples latency"
+      - "Skipping graph or temporal legs for 'simple' queries without query-intent classification — miss the most valuable results"
+      - "Fusing raw scores from different strategies before normalizing — BM25 scores (unbounded) swamp cosine scores ([0,1])"
+    when_to_use: |
+      Any agent memory system where queries span different intents (navigational,
+      exploratory, temporal, relational). Required when recall quality is a primary
+      concern (e.g., LongMemEval benchmarks). The four-strategy architecture is
+      Hindsight's primary architectural advantage over single-strategy pipelines.
+    when_not_to_use: |
+      Corpora smaller than ~1,000 memories where a single well-tuned semantic search
+      already achieves near-perfect recall. Real-time systems with p50 < 20ms SLOs
+      where the cross-encoder reranking step (50-100ms) cannot be justified.
+    source: "Hindsight TEMPR pipeline (vectorize-io/hindsight) — retrieval.py, fusion.py, reranking.py"
+
+  - rule_id: MR2
+    name: Temporal Search via Natural-Language Date Parsing
+    description: |
+      Add a dedicated temporal retrieval arm that (1) parses natural language time
+      expressions from the query ("before the v2 migration", "last sprint",
+      "after we switched to async") into an absolute date range using
+      `query_timestamp` as the anchor, (2) fetches candidates by date proximity
+      alone using a lightweight rank (no embedding computation on the full set),
+      (3) then re-ranks those date-proximity candidates by semantic similarity
+      to the query to select the final temporal candidates.
+
+      Analogy: finding a specific architectural decision in your project history.
+      Step 1: narrow to the right time window ("before the refactor"). Step 2:
+      skim which decisions in that window match the topic. You narrow by time
+      first (cheap) then by content (expensive). Doing it in reverse — scanning
+      every decision ever recorded then filtering by date — is wasteful.
+    rationale: |
+      Temporal queries are a distinct query class that pure semantic search handles
+      poorly. "What did we decide about caching last sprint?" and "what have we
+      ever decided about caching?" may produce similar embeddings — but the former
+      needs recency filtering that the latter does not. Coding agents frequently
+      ask temporal questions: "what changed before the deploy broke", "what was
+      the auth pattern before the refactor", "bugs filed after the v2 migration." Splitting this into
+      a dedicated arm with date parsing ensures temporally-anchored queries always
+      get date-scoped candidates, without requiring the query embedding to happen to
+      land near recent memories in vector space.
+
+      The two-phase approach (date rank first, semantic rank second) prevents
+      expensive embedding computation on large date-range candidate pools. Rank
+      by date to get a manageable set (e.g., top 50 per memory type), then run
+      semantic similarity only on those 50.
+    checklist:
+      - "Is there a date-parsing module that resolves relative expressions ('last week', 'two months ago') using a configurable anchor timestamp?"
+      - "Does the temporal arm use a two-phase query: date-proximity ranking first, semantic re-ranking second?"
+      - "Is `query_timestamp` (the time of the search request, not ingestion time) the anchor for relative date expressions?"
+      - "Does the temporal arm produce a `temporal_proximity` score (e.g., linear proximity to range midpoint) for use in downstream boost calculations?"
+      - "Does the temporal leg fall back gracefully (no candidates returned, not an error) when no date expression is detected?"
+    anti_patterns:
+      - "Attempting to handle temporal queries via recency scoring alone — recency boosts all recent memories indiscriminately, not the ones the query is about"
+      - "Computing embeddings for all date-range matches before filtering — O(n) embedding cost for what should be a cheap date scan"
+      - "Using ingestion timestamp instead of content timestamp — a decision made last quarter, stored yesterday during a session summary, has the wrong temporal signal"
+      - "Hardcoding date windows (e.g., 'last 30 days') instead of parsing query intent — fails for queries like 'before the v2 migration' or 'during the auth refactor'"
+    when_to_use: |
+      Any memory system where users issue temporally-anchored queries. In agent
+      memory for coding assistants, this captures "what was the state of X before
+      the recent refactor" and "what decisions did we make in the last sprint."
+      Essential for LongMemEval temporal-reasoning benchmark category.
+    when_not_to_use: |
+      Pure semantic retrieval systems where no natural-language time expressions
+      are expected. Archival search systems where all queries are by explicit
+      date range (UI-driven date pickers, not NL parsing).
+    source: "Hindsight TEMPR pipeline — retrieval.py temporal search arm, BFS spreading implementation"
+
+  - rule_id: MR3
+    name: Graph Traversal as a Retrieval Leg with Multi-Signal Scoring
+    description: |
+      Implement graph retrieval as a full parallel leg — not a post-retrieval
+      enrichment step. Issue graph traversal as a single CTE query (one database
+      roundtrip) that scores candidates across three independent signals:
+      (1) entity co-occurrence (memories sharing named entities with the query
+      context), (2) semantic kNN neighbors (precomputed at insert time), and
+      (3) causal/typed edge traversal (explicit CAUSES, CAUSED_BY, ENABLES,
+      PREVENTS relationships). Score each signal independently, then sum across
+      signals for convergent evidence.
+
+      Analogy: imagine each memory is a file in a codebase. Graph retrieval finds
+      files that (a) reference the same modules as the queried file, (b) are
+      semantically similar in purpose, and (c) are explicitly linked by
+      dependency or causation edges. A memory that scores on all three signals
+      is almost certainly relevant. One that scores on only one might be a
+      coincidence.
+
+      For count-based signals like entity co-occurrence, apply tanh saturation:
+      `tanh(count × 0.5)` — this gives natural diminishing returns (1 entity →
+      0.46, 2 → 0.76, 3 → 0.91), preventing any single signal from dominating
+      when many entities overlap.
+    rationale: |
+      Graph traversal finds memories that are *related* to the query topic without
+      being *about* it in a way the embedding model would recognize. "What broke
+      after the auth refactor?" may not retrieve the auth decision memory via
+      semantic similarity (the symptom "500 errors on /login" and cause "removed
+      session middleware" have different embeddings), but it *will* retrieve it
+      via a CAUSED_BY edge. Graph retrieval captures structural knowledge that vector
+      space cannot — it follows the explicit connective tissue of the memory corpus.
+
+      Issuing all three signal types as a single CTE rather than three separate
+      queries eliminates round-trip overhead. The additive scoring formula
+      (`entity + semantic + causal ∈ [0, 3]`) explicitly rewards convergent evidence:
+      a candidate that appears in all three signals is more likely relevant than one
+      that appears in only one.
+    checklist:
+      - "Is graph traversal issued as a single CTE query (not three separate queries)?"
+      - "Are the three signal types (entity co-occurrence, semantic kNN, causal edges) scored independently and summed?"
+      - "Is entity co-occurrence scored with tanh saturation (`tanh(count × 0.5)`) to cap diminishing returns?"
+      - "Are semantic kNN neighbors precomputed at insert time (not query-time) to avoid O(n) similarity scans?"
+      - "Do causal/typed edges carry typed weights (CAUSES=2.0x boost, ENABLES=1.5x) to distinguish relationship strength?"
+      - "Is the graph leg's ranked output fed into RRF alongside semantic and keyword legs?"
+    anti_patterns:
+      - "Running graph traversal post-retrieval as enrichment only — it never contributes to recall, only to reranking existing results"
+      - "Using raw entity-overlap count as score (no saturation) — a memory with 10 shared entities scores 10x a memory with 1, which is wrong"
+      - "Issuing three separate queries for each graph signal type — three round trips where one suffices"
+      - "Treating all edge types identically (CAUSES and RELATED_TO get the same boost) — loses polarity and causal strength signal"
+      - "Not precomputing semantic kNN neighbors — query-time kNN over all memories defeats the purpose of having an index"
+    when_to_use: |
+      When the memory corpus has typed relationships between memories (REFERENCES,
+      CAUSED_BY, CONTRADICTS, etc.). Essential for relational queries and multi-hop
+      reasoning. The more explicit edges exist in the corpus, the larger the recall
+      lift from graph traversal. In Neuroloom, this directly addresses the
+      multi-session synthesis weakness in LongMemEval.
+    when_not_to_use: |
+      Corpora with sparse graph structure (few typed edges) — graph traversal
+      returns near-empty results and adds latency for no benefit. When memories
+      are isolated facts with no tracked relationships.
+    source: "Hindsight TEMPR pipeline — link_expansion_retrieval.py, entity scoring with tanh saturation"
+
+  - rule_id: MR4
+    name: RRF as the Correct Fusion Method for Heterogeneous Strategy Sets
+    description: |
+      When fusing results from strategies with incommensurable score distributions
+      (vector cosine ∈ [0,1], BM25 ts_rank_cd ∈ [0, unbounded], graph additive
+      ∈ [0,3], temporal proximity ∈ [0,1]), use Reciprocal Rank Fusion (RRF)
+      rather than linear combination. RRF formula: `score += 1 / (k + rank)` where
+      k=60 and rank is 1-indexed position within each strategy's result list.
+      Sum RRF contributions across all strategies a candidate appears in.
+
+      Analogy: four code search strategies each rank the same set of memories
+      differently (by embedding similarity, keyword match, graph proximity, and
+      recency). Instead of averaging their raw scores (which use different units),
+      you average their ranks. The memory that consistently ranks in the top 3
+      across multiple strategies is more likely relevant than one that ranks #1
+      in only one strategy.
+    rationale: |
+      Linear combination requires calibrated, commensurable score distributions.
+      BM25 scores and cosine similarity scores are not on the same scale — naively
+      combining them means the unnormalized BM25 scores dominate the formula
+      regardless of configured weights. Even after normalization, the effective
+      ranges within a given result set shift per query, making static weights
+      unreliable.
+
+      RRF operates only on rank positions, which are always ∈ [1, N]. This eliminates
+      the calibration problem entirely. k=60 is the empirically validated constant
+      from the original RRF paper — it controls how much weight lower-ranked results
+      receive. Do not tune k without strong empirical justification; the default
+      works well across a wide range of corpora. Track per-strategy `source_ranks`
+      alongside fused scores for debugging which strategy contributed which candidate.
+    checklist:
+      - "Is k=60 used as the RRF constant (not an arbitrary value)?"
+      - "Does each candidate carry a `source_ranks` dict showing its rank in each contributing strategy?"
+      - "Are RRF scores computed from 1-indexed rank positions (not 0-indexed)?"
+      - "Is multi-strategy appearance rewarded automatically (a candidate in 3 strategies accumulates 3 RRF contributions)?"
+      - "Are raw per-strategy scores preserved separately from the fused RRF score for debugging and trace mode?"
+    anti_patterns:
+      - "Normalizing BM25 and cosine scores to [0,1] and then applying linear combination — normalization is per-resultset and shifts dynamically, making static weights unreliable"
+      - "Tuning k away from 60 without empirical measurement — almost never beneficial"
+      - "Using RRF when one strategy has dramatically higher signal quality than others — RRF treats all strategies equally by rank; use weighted RRF (multiply each strategy's contribution by a weight) in that case"
+      - "Discarding source_ranks after fusion — this is the primary diagnostic for 'why did this result rank here'"
+    when_to_use: |
+      Any pipeline combining multiple retrieval strategies whose scores are on
+      different scales or have different dynamic ranges. The standard choice for
+      four-strategy pipelines. Particularly important when BM25 is one of the legs
+      (BM25 scores are unbounded and corpus-dependent).
+    when_not_to_use: |
+      When all strategies produce scores on the same calibrated scale and you want
+      explicit weight control (e.g., a pipeline where semantic consistently
+      outperforms keyword and you want to express that preference). Use weighted
+      RRF (per-strategy multiplier on `1/(k+rank)`) as a middle ground.
+    source: "Hindsight TEMPR pipeline — fusion.py, RRF formula with source_ranks tracking"
+
+  - rule_id: MR5
+    name: Token-Budget Retrieval Over Fixed-Count Results
+    description: |
+      Return search results up to a configurable token budget (e.g., 2048–8192
+      tokens) rather than a fixed result count (e.g., top-5 or top-10). Greedily
+      select results in ranked order until the next result would exceed the remaining
+      budget, then stop. Expose `max_tokens` as an independent control from search
+      depth (`budget`).
+
+      Analogy: packing a suitcase with a weight limit, not a "number of items" limit.
+      You pack the most important items first until you're at the weight limit — not
+      until you've packed exactly 5 items regardless of their size. A single large
+      item might fill the suitcase; ten small items might all fit.
+    rationale: |
+      AI agents consume memory search results as context window inputs. What they
+      care about is total token usage, not result count. A fixed-count approach
+      over-returns for short memories (wastes budget on unnecessary results) and
+      under-returns for long memories (may return only 1–2 results even when more
+      would fit). Token-budget retrieval aligns the return mechanism with how the
+      consumer actually uses the results.
+
+      The independent `max_tokens` / `budget` separation matters: `max_tokens`
+      controls output size (how much context the agent receives), while `budget`
+      controls search depth (how thoroughly the pipeline explores the corpus).
+      Conflating them forces a trade-off between thoroughness and output size that
+      is actually unnecessary — you can search broadly and then return a token-bounded
+      subset of the best results.
+    checklist:
+      - "Is result count determined by token budget rather than a fixed integer K?"
+      - "Is token counting applied greedily in ranked order (include next result if it fits, stop if it doesn't)?"
+      - "Are `max_tokens` (output size) and `budget` (search depth) independent parameters?"
+      - "Is the token count of each memory estimated before inclusion (not after fetching all results)?"
+      - "Does the budget parameter have at least three named levels (low/mid/high) with documented candidate counts per level?"
+    anti_patterns:
+      - "Conflating search depth with output size — searching broadly then truncating to top-5 wastes the deep search"
+      - "Using a fixed token limit without considering that a single long memory may consume the entire budget"
+      - "Returning all results above a score threshold without a token cap — unbounded context injection in agentic pipelines"
+      - "Setting the same token budget for all query types — exploratory queries benefit from a larger budget than navigational lookups"
+    when_to_use: |
+      Any pipeline serving AI agent consumers that have context window constraints.
+      Especially important as memory corpora grow — a fixed top-10 retrieval at
+      100 memories and at 100,000 memories returns the same number of results but
+      the corpus has 1000x more potentially-relevant content.
+    when_not_to_use: |
+      Human-facing search UIs where result count (not token count) is the natural
+      pagination unit. APIs where downstream consumers expect a predictable result
+      count for display purposes.
+    source: "Hindsight TEMPR pipeline — token_budget greedy filtering, max_tokens / budget parameter design"
+
+  - rule_id: MR6
+    name: Budget-Controlled Search Depth Independent of Output Size
+    description: |
+      Expose a `budget` parameter (e.g., low/mid/high or 1–3) that scales
+      retrieval depth — number of candidates fetched per strategy, BFS hop count
+      in graph traversal, number of date-range candidates before semantic re-ranking
+      — independently of how many results are ultimately returned. A `budget=high`
+      with `max_tokens=1024` performs a thorough search and returns a small, tightly
+      token-bounded result set. A `budget=low` with `max_tokens=4096` performs a
+      shallow search and returns a large result set.
+
+      Analogy: a fishing boat's search area (budget) vs. how full the ice chest is
+      (max_tokens/output). A small search area with a large chest returns whatever
+      you caught nearby. A large search area with a small chest means you searched
+      far and wide but only kept the best fish. These are orthogonal decisions.
+    rationale: |
+      Search depth and output size are orthogonal quality dimensions. Precision-critical
+      queries (navigational: "find the exact memory about X") benefit from shallow
+      but focused search with a small result set. Exploratory queries ("synthesize
+      everything we know about Y") benefit from deep search with a large result set.
+      Conflating budget and result size prevents expressing configurations like
+      "search broadly to maximize recall, but return only the top 3 results because
+      the agent has a small context budget."
+    checklist:
+      - "Is search depth (candidates per strategy, BFS hops) controlled separately from output size (max_tokens or result count)?"
+      - "Does `budget=high` translate to concrete candidate counts per strategy (not just 'more')?"
+      - "Is BFS hop count in graph traversal bounded by budget level (not hardcoded)?"
+      - "Is the budget parameter documented with example query types appropriate for each level?"
+    anti_patterns:
+      - "Using result count as the only search depth control — forces consumers to request more results just to search deeper"
+      - "Unlimited search depth — BFS without hop count bounds can traverse the entire graph on dense corpora"
+      - "Same budget for all consumers — an interactive coding assistant needs low latency (budget=low), a synthesis task tolerates higher latency (budget=high)"
+    when_to_use: |
+      Pipelines serving diverse consumers with different latency/recall trade-off
+      preferences. Particularly useful when the pipeline serves both interactive
+      (low-latency, navigational) and batch (thorough, synthesis) query patterns.
+    when_not_to_use: |
+      Simple single-strategy pipelines where search depth is naturally bounded
+      by the index structure. Systems where all queries have the same recall
+      requirements and latency SLO.
+    source: "Hindsight TEMPR pipeline — budget parameter controlling depth across all four retrieval arms"
+
+  - rule_id: MR7
+    name: Retrieval Trace Diagnostics for Silent Ranking Failures
+    description: |
+      Implement a `trace` mode that returns per-result source attribution alongside
+      ranked results. For each result, expose: which strategies retrieved it
+      (semantic / BM25 / graph / temporal), its rank within each strategy's list,
+      its RRF contribution from each strategy, its pre-reranking RRF score, and
+      its post-reranking final score. Trace mode should be opt-in (a query parameter)
+      and must not change the results — only annotate them.
+
+      Think of it like a receipt from a scoring committee. Instead of just knowing
+      who won, you know how each judge voted, which judges agreed, and how the final
+      score was computed. When the winner surprises you, the receipt tells you which
+      judge to argue with.
+    rationale: |
+      Ranking failures in multi-strategy pipelines are silent — no error is thrown,
+      results just aren't what they should be. The cause could be in any of four
+      retrieval arms, the RRF fusion, or the cross-encoder reranking. Without trace
+      data, diagnosing which stage failed requires re-running the query with
+      instrumentation added post-hoc. Trace mode makes this analysis instant.
+
+      Trace data is also essential for validating that per-strategy weights (if using
+      weighted RRF) have the intended effect: if BM25 is supposed to contribute 2x
+      the weight of semantic but trace shows BM25 barely contributes to any top-10
+      result, the corpus or index has a problem that weight changes won't fix.
+    checklist:
+      - "Does trace mode expose: which strategies retrieved each result, per-strategy rank, per-strategy RRF contribution, pre-rerank RRF score, and post-rerank final score?"
+      - "Is trace mode opt-in (not always on) to avoid serialization overhead in production paths?"
+      - "Does trace mode leave results identical — it annotates, it does not change?"
+      - "Are trace fields structured (typed dict or model), not free-text — parseable for automated analysis?"
+      - "Is trace data used in the evaluation pipeline to diagnose recall failures by strategy?"
+    anti_patterns:
+      - "Logging trace data server-side only (not returned to the caller) — caller cannot self-diagnose ranking anomalies"
+      - "Returning trace data in production paths unconditionally — adds serialization overhead to every response"
+      - "Trace mode that changes the ranking (e.g., shorter candidate lists for trace queries) — trace results are not representative"
+      - "Free-text trace output ('retrieved via semantic') instead of structured fields — cannot be parsed for automated regression detection"
+    when_to_use: |
+      During development, evaluation, and ranking formula iteration. Should be
+      available in production as a debug flag but not default-on. Essential during
+      LongMemEval benchmark evaluation to diagnose whether failures are recall
+      failures (strategy never retrieved the correct result) or ranking failures
+      (strategy retrieved it but ranked it too low).
+    when_not_to_use: |
+      Not for default production query paths — the serialization overhead of per-result
+      score breakdowns is non-trivial at high query volume.
+    source: "Hindsight TEMPR pipeline — trace=True parameter exposing source_ranks and per-strategy contributions"
+
+  - rule_id: MR8
+    name: BFS Spreading with Typed Causal Boosts for Temporal Propagation
+    description: |
+      When propagating temporal relevance through the memory graph, apply typed
+      causal boosts rather than uniform edge weights. Causal edges (CAUSES,
+      CAUSED_BY) receive a 2.0x boost; enabling edges (ENABLES, PREVENTS) receive
+      1.5x; generic temporal edges receive 1.0x. The propagation formula is:
+      `propagated_score = parent_score × link_weight × causal_boost × decay_factor`.
+      Bound BFS with a maximum hop count (e.g., 5 iterations) and a minimum score
+      floor (e.g., 0.2) to prevent infinite traversal on dense graphs.
+
+      When two temporal scores exist for a node (from direct proximity and from
+      propagation), take the maximum rather than summing — avoid double-counting
+      a memory's relevance to a time window it's directly in.
+
+      Analogy: a breaking change propagating through dependent modules. The commit
+      that changed the API signature has high temporal proximity to the breakage.
+      A downstream test failure one hop away is slightly less certain. But if that
+      test file is connected via a CAUSED_BY edge to the API change, it deserves
+      higher confidence than a file that merely happened to be modified the same
+      day. Causal connections carry stronger signal than temporal coincidence.
+    rationale: |
+      Uniform BFS (all edges equal) fails to distinguish between memories that are
+      merely temporally co-located and memories that are causally responsible for
+      the event. A config change three weeks ago and an unrelated refactor from
+      the same week have the same temporal proximity — but the config change is
+      causally connected to the production incident via a CAUSED_BY edge, and
+      that causal link should propagate with higher confidence than mere temporal
+      coincidence.
+
+      The score floor (0.2) prevents BFS from returning arbitrarily weakly-connected
+      results just because they're reachable. The hop count bound (5) prevents
+      quadratic graph traversal on dense corpora. Both are safety constraints, not
+      quality parameters — they prevent pathological behavior without affecting
+      the quality of well-connected temporal clusters.
+    checklist:
+      - "Are causal edge types given higher BFS propagation boosts than generic temporal edges?"
+      - "Is propagated score bounded by a floor threshold (e.g., 0.2) to avoid returning weakly-connected results?"
+      - "Is BFS bounded by a maximum hop count to prevent full-graph traversal?"
+      - "When direct and propagated temporal scores exist for the same node, is max taken (not sum)?"
+      - "Is per-source neighbor count capped (e.g., 10) within each BFS expansion to avoid fan-out explosions on high-degree nodes?"
+    anti_patterns:
+      - "Uniform edge weights in temporal BFS — treats causal connections and coincidental temporal proximity identically"
+      - "Unbounded BFS — on a corpus with 10,000 memories and dense relationships, an unbounded BFS from a popular entity will visit most of the graph"
+      - "Summing direct and propagated temporal scores — a memory with both direct proximity and propagation from a parent gets double-counted"
+      - "Not capping per-source neighbor expansion — high-degree nodes (e.g., a concept mentioned in 500 memories) will fan out to the entire corpus in one hop"
+    when_to_use: |
+      Memory systems where causal and temporal relationships are explicitly tracked
+      as typed edges. Directly applicable to Neuroloom's CAUSED_BY, REFERENCES,
+      and SUPERSEDES edges for multi-hop temporal queries.
+    when_not_to_use: |
+      Flat memory systems without typed relationships. Corpora where causal edges
+      are sparse enough that uniform BFS and typed BFS produce identical results.
+    source: "Hindsight TEMPR pipeline — retrieval.py BFS spreading with causal_boost weights and safety bounds"
+
+  - rule_id: MR9
+    name: Discard Intermediate Fusion Scores After Reranking
+    description: |
+      RRF scores are a retrieval proxy — they select which candidates to present
+      to the cross-encoder for reranking, not a quality signal in their own right.
+      After cross-encoder reranking produces normalized scores, explicitly discard
+      the RRF scores and use only the cross-encoder score (plus any multiplicative
+      boosts) for final ranking. Do not carry RRF scores into the final result set
+      as a quality signal.
+
+      Analogy: a qualifying round in a competition selects who enters the final.
+      Once the final is run, the qualifying time is irrelevant — only the final
+      result counts. Mixing qualifying times into the final ranking would corrupt it.
+    rationale: |
+      Scores have a lifecycle, and carrying stale intermediate scores into final
+      output creates confusion and silent ranking corruption. RRF scores reflect
+      rank position across retrieval strategies — they encode "this result was
+      consistently ranked near the top across multiple retrieval methods." The
+      cross-encoder score encodes "this result is semantically relevant to the
+      query." These are different signals at different pipeline stages. After
+      reranking, the cross-encoder has subsumed the retrieval quality signal.
+      The RRF score is no longer the authoritative quality measure.
+
+      Preserving RRF scores for trace/diagnostic purposes is correct — but they
+      must not be used in the final sort order or returned as quality indicators.
+    checklist:
+      - "Is the final ranking determined by cross-encoder score (+ boosts), not RRF score?"
+      - "Are RRF scores preserved in trace output for debugging but excluded from final quality signals?"
+      - "Is the score field on returned results clearly the post-rerank score, not the pre-rerank RRF score?"
+      - "If secondary signals (recency, temporal) are applied after reranking, are they applied multiplicatively to the cross-encoder score — not to the RRF score?"
+    anti_patterns:
+      - "Returning RRF scores as the 'relevance score' in the API response — callers will interpret them as quality signals when they are rank-order proxies"
+      - "Applying recency boost to RRF scores instead of cross-encoder scores — the boost amplifies retrieval rank, not relevance"
+      - "Averaging RRF and cross-encoder scores as the final signal — combines incommensurable signals from different pipeline stages"
+    when_to_use: |
+      Any two-stage pipeline where RRF (or any rank-based fusion) precedes a
+      quality-scoring step like cross-encoder reranking. This rule applies to the
+      Neuroloom D43 pipeline and any subsequent pipeline that retains the
+      retrieve-then-rerank structure.
+    when_not_to_use: |
+      Single-stage pipelines with no reranking — RRF is the final signal in that
+      case and should not be discarded.
+    source: "Hindsight TEMPR pipeline — reranking.py explicit RRF score discard post-rerank"
+
+  - rule_id: MR10
+    name: Observation-Specific Graph Expansion for Synthesized Memories
+    description: |
+      When graph traversal encounters a synthesized/consolidated memory (an
+      "observation" created by aggregating source memories), do not attempt
+      direct entity-link expansion — observations may not have direct entity
+      associations from the ingestion pipeline. Instead, follow the observation's
+      `source_memory_ids` to retrieve its constituent memories, traverse their
+      entity links to world facts, then expand to related observations from those
+      world facts. This creates an indirect expansion path:
+      `observation → source memories → entities → related world facts → related observations`.
+
+      Analogy: to find related memories for a synthesized "auth module
+      architectural pattern" summary, you first find the individual decision
+      and bug_fix memories it was synthesized from, then follow their entity
+      links (modules, functions, config keys) to other related memories.
+      You can't navigate directly from the summary because it was created
+      top-down and doesn't carry the same file-level or symbol-level links.
+    rationale: |
+      Consolidation (the process of synthesizing multiple raw memories into an
+      observation) creates a new node type that lacks the ingestion-time metadata
+      (entity associations, direct kNN precomputation) that raw memories have.
+      A naive graph expansion that treats observations like raw memories will
+      return empty results or random low-quality neighbors.
+
+      The indirect path through source memories recovers full graph connectivity
+      for observations without requiring re-processing them through the same
+      ingestion pipeline. It also correctly reflects the semantics: an observation
+      is relevant because of what it was synthesized from, and those source
+      memories are the navigational anchor.
+    checklist:
+      - "Does graph traversal detect the memory type (raw vs. synthesized/observation) before choosing expansion strategy?"
+      - "For synthesized memories, does the expansion path go through `source_memory_ids` rather than direct entity links?"
+      - "Is the indirect expansion path bounded by the same hop count and score floor constraints as direct expansion?"
+      - "Are synthesized memories' source IDs persisted at consolidation time (not reconstructed at query time)?"
+    anti_patterns:
+      - "Treating all memory types identically in graph traversal — observations without direct entity links return empty graph results"
+      - "Skipping graph traversal entirely for synthesized memories — misses the connectivity through source memories"
+      - "Reconstructing source memory provenance at query time via an extra query — this should be precomputed and stored at consolidation time"
+    when_to_use: |
+      Any memory system that has both raw memories and synthesized/consolidated
+      observations, where observations are created by aggregating source memories.
+      Directly applicable to Neuroloom if/when multi-session synthesis and
+      observation consolidation are implemented.
+    when_not_to_use: |
+      Flat memory systems without consolidation — no distinction between raw
+      and synthesized memory types means the indirect path is unnecessary.
+    source: "Hindsight TEMPR pipeline — link_expansion_retrieval.py observation-specific expansion path via source_memory_ids"

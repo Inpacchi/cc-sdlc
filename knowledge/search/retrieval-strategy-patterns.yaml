@@ -1,0 +1,283 @@
+# Retrieval Strategy Patterns
+# Decision rules for choosing and implementing query-time RAG strategies.
+# Source: coleam00/ottomator-agents/all-rag-strategies (11 RAG strategy docs + implementation)
+
+id: retrieval-strategy-patterns
+name: "Retrieval Strategy Patterns"
+description: "Decision rules for query-time RAG strategies — reranking, multi-query, self-reflective, agentic retrieval"
+pattern: rules
+category: search
+spec_relevant: false
+project_applicability:
+  relevant_when: "Project uses vector similarity search (pgvector, FAISS, etc.) for retrieval"
+  action_if_irrelevant: remove
+last_updated: 2026-04-03
+
+entries:
+  - rule_id: RS1
+    name: Two-Stage Retrieval with Reranking
+    description: |
+      Over-fetch candidates at 4x-5x the target count using fast vector search,
+      then rerank with a cross-encoder model to select the top-N. The cross-encoder
+      evaluates each (query, document) pair jointly, capturing richer semantic
+      interactions than embedding similarity alone.
+    rationale: |
+      Bi-encoder (embedding) similarity is fast but shallow — it encodes query and
+      document independently. Cross-encoders process both together through the
+      transformer, achieving significantly higher precision at the cost of being
+      O(n) per candidate rather than O(1) lookup. The two-stage approach gets the
+      best of both: speed from the first stage, precision from the second.
+    checklist:
+      - "Does the retrieval pipeline over-fetch candidates (4x-5x target) before reranking?"
+      - "Is the cross-encoder model loaded once and reused, not re-initialized per query?"
+      - "Are reranked scores used for final ordering, not the original embedding similarity?"
+    anti_patterns:
+      - "Reranking the entire corpus instead of a pre-filtered candidate set"
+      - "Using embedding cosine similarity as final ranking when precision is critical"
+      - "Over-fetching too aggressively (>50 candidates) — diminishing returns and higher latency"
+    when_to_use: |
+      Precision-critical queries where returning the wrong result is costly.
+      Legal, medical, financial domains. When the candidate pool is large enough
+      that vector search alone returns near-misses.
+    when_not_to_use: |
+      Real-time response requirements (<100ms). Very small candidate pools where
+      vector search already returns near-perfect results. Resource-constrained
+      environments where the cross-encoder model (~100MB) cannot be loaded.
+    model_recommendations: |
+      - cross-encoder/ms-marco-MiniLM-L-6-v2: Fast, lightweight (~80MB). Good default
+        for most use cases. 6 layers, 22M params. ~5ms per pair on GPU.
+      - Cohere rerank-3 (API): Highest quality, no local GPU needed. Pay per call.
+        Best when precision is critical and you have API budget.
+      - BGE reranker: Open source alternative with good quality. Larger than MiniLM
+        but better on domain-specific content.
+      For sentence-transformers CrossEncoder: load the model ONCE at startup and reuse.
+      Do not re-initialize per query — model loading takes seconds, inference takes
+      milliseconds.
+    source: "coleam00/ottomator-agents docs/01-reranking.md, Pinecone rerankers guide, wshobson/agents rag-implementation/SKILL.md"
+
+  - rule_id: RS2
+    name: Multi-Query Parallel Retrieval
+    description: |
+      Generate 3-4 reformulations of the original query using an LLM, execute all
+      searches concurrently, then deduplicate results by chunk ID keeping the
+      highest similarity score per chunk. Returns the union of results across
+      all query perspectives.
+    rationale: |
+      Distance-based retrieval is sensitive to query phrasing. A single query
+      captures one angle; multiple reformulations cover synonyms, related concepts,
+      and different specificity levels. Parallel execution (asyncio.gather) means
+      latency is wall-clock equivalent to a single query despite 4x the DB hits.
+    checklist:
+      - "Are query variations generated with explicit instructions to vary perspective, not just rephrase?"
+      - "Are searches executed concurrently (asyncio.gather or equivalent), not sequentially?"
+      - "Does deduplication keep the highest similarity score when the same chunk appears in multiple result sets?"
+    anti_patterns:
+      - "Sequential execution of query variations — negates the latency benefit"
+      - "No deduplication — returns duplicate chunks from overlapping queries"
+      - "Generating too many variations (>5) — diminishing returns, higher cost"
+    when_to_use: |
+      Ambiguous or broad queries with multiple valid interpretations. When recall
+      matters more than precision. Exploratory search where the user's intent
+      is unclear.
+    when_not_to_use: |
+      Highly specific queries with clear intent (e.g., exact entity lookup).
+      When latency budget is tight and the extra LLM call for expansion is
+      too expensive. Small retrieval corpora where a single query already
+      returns comprehensive results.
+    source: "coleam00/ottomator-agents docs/06-multi-query-rag.md, docs/05-query-expansion.md"
+
+  - rule_id: RS3
+    name: Query Expansion vs Multi-Query Distinction
+    description: |
+      Query expansion enriches ONE query into a more detailed, comprehensive version
+      (adding context, related terms, clarifying intent). Multi-query generates
+      MULTIPLE distinct query phrasings to search from different angles. These are
+      complementary but different strategies. Query expansion improves precision
+      of a single search; multi-query improves recall across multiple searches.
+    rationale: |
+      Conflating the two leads to implementation confusion. Expansion is a 1-to-1
+      transform (brief query -> detailed query). Multi-query is a 1-to-N transform
+      (one query -> N distinct phrasings). Expansion can be used as a preprocessing
+      step before multi-query, but they solve different problems.
+    checklist:
+      - "Is the distinction between expansion (1-to-1) and multi-query (1-to-N) clear in the codebase?"
+      - "If both are used, is expansion applied first, then the expanded query used as input to multi-query generation?"
+    source: "coleam00/ottomator-agents docs/05-query-expansion.md, docs/06-multi-query-rag.md"
+
+  - rule_id: RS4
+    name: Self-Reflective Retrieval Loop
+    description: |
+      After initial retrieval, use an LLM to grade relevance of results (e.g., 1-5
+      scale). If the grade falls below a threshold (e.g., <3), automatically refine
+      the query and re-search. Optionally verify the final answer against retrieved
+      documents before returning. Maximum 2-3 iterations to bound latency.
+    rationale: |
+      Initial retrieval often fails for complex or abstract queries. Self-reflection
+      creates a feedback loop where the system detects poor results and corrects
+      course. The key insight is that LLMs can reliably judge retrieval relevance
+      even when the initial query was poorly formed. Bounding iterations prevents
+      infinite loops on genuinely hard queries.
+    checklist:
+      - "Is there a maximum iteration count (2-3) to prevent unbounded retry loops?"
+      - "Does the grading prompt produce a numeric score, not free-text assessment?"
+      - "Is the refinement prompt given the original query AND the low-scoring results as context for improvement?"
+      - "Is reflection metadata (original query, refined query, grade scores) logged for debugging?"
+    anti_patterns:
+      - "Unbounded retry loops — must cap iterations"
+      - "Using the same query for retry without refinement — will get the same poor results"
+      - "Grading with free-text instead of numeric scores — harder to threshold programmatically"
+    when_to_use: |
+      Complex research queries where initial retrieval frequently misses. When
+      answer accuracy is critical and latency budget allows 2-3 LLM calls.
+      Domains where query formulation is inherently difficult.
+    when_not_to_use: |
+      Real-time responses required. Simple factual lookups. Cost-constrained
+      environments — self-reflection is the most expensive strategy (2-3 extra
+      LLM calls per query).
+    source: "coleam00/ottomator-agents docs/10-self-reflective-rag.md, LangChain CRAG/Self-RAG"
+
+  - rule_id: RS5
+    name: Agentic Tool-Selection Retrieval
+    description: |
+      Give the retrieval agent multiple tools (semantic search, full-document
+      retrieval, structured SQL query, web search) and let it reason about which
+      to use based on query analysis. The agent can chain tools — e.g., semantic
+      search to find relevant chunks, then full-document retrieval to get complete
+      context when chunks are insufficient.
+    rationale: |
+      No single retrieval strategy is optimal for all query types. Factual lookups
+      need different treatment than exploratory research. Giving the agent a toolkit
+      and letting it reason about strategy selection adapts to query complexity
+      automatically. The key pattern is tool chaining — initial results inform
+      which tool to use next.
+    checklist:
+      - "Does each retrieval tool have a clear, distinct purpose described in its docstring?"
+      - "Can the agent chain tools (use output of one as input to another)?"
+      - "Is there a fallback for when the agent's tool selection is suboptimal?"
+    anti_patterns:
+      - "Too many tools with overlapping purposes — confuses agent tool selection"
+      - "No full-document retrieval option — agent is stuck with chunks that lack context"
+      - "Forcing a specific tool order instead of letting the agent reason about strategy"
+    when_to_use: |
+      Diverse query types requiring different retrieval approaches. When you have
+      heterogeneous data sources (structured + unstructured). When query complexity
+      varies significantly across requests.
+    when_not_to_use: |
+      Simple, predictable query patterns where a fixed pipeline is sufficient.
+      When you need deterministic, reproducible retrieval behavior. When the
+      overhead of agent reasoning is not justified by query diversity.
+    source: "coleam00/ottomator-agents docs/02-agentic-rag.md, Qdrant agentic RAG guide"
+
+  - rule_id: RS6
+    name: Knowledge Graph Augmented Retrieval
+    description: |
+      Combine vector similarity search with graph traversal to capture entity
+      relationships that embedding similarity misses. Vector search finds
+      semantically similar content; graph traversal follows explicit typed edges
+      (HAS_CEO, CAUSED_BY, REFERENCES) to find structurally related content.
+      Hybrid approach: vector for semantic relevance + graph for relational context.
+    rationale: |
+      Vector similarity captures "talks about similar things" but misses explicit
+      relationships. "Who is the CEO of ACME?" requires traversing a HAS_CEO edge,
+      not finding documents semantically similar to "CEO". Graph structure provides
+      factual grounding that reduces hallucination in relationship-heavy queries.
+    checklist:
+      - "Are graph edges typed (not generic 'related_to') to enable targeted traversal?"
+      - "Is there a strategy for when to use graph traversal vs vector search vs both?"
+      - "Are graph query results combined with vector results using a defined fusion strategy (e.g., RRF)?"
+    when_to_use: |
+      Relationship-heavy queries ("what caused X?", "who is related to Y?").
+      Domains with complex entity interconnections. When vector search alone
+      returns semantically similar but factually unrelated results.
+    when_not_to_use: |
+      Pure semantic similarity queries ("find documents about topic X").
+      When the overhead of maintaining a graph structure is not justified.
+      When entity extraction quality is unreliable.
+    source: "coleam00/ottomator-agents docs/03-knowledge-graphs.md, Neo4j GraphRAG guide"
+
+  - rule_id: RS7
+    name: Strategy Selection Decision Matrix
+    description: |
+      Choose retrieval strategy based on query characteristics:
+      - Simple factual lookup -> standard vector search (fastest, cheapest)
+      - Ambiguous/broad query -> multi-query parallel retrieval (best recall)
+      - Precision-critical -> two-stage with reranking (best precision)
+      - Complex research -> self-reflective loop (self-correcting, highest latency)
+      - Relationship query -> graph-augmented retrieval (structural relationships)
+      - Mixed data sources -> agentic tool selection (most flexible)
+      Strategies can be composed: e.g., multi-query + reranking, or agentic
+      with self-reflection.
+    rationale: |
+      No single strategy dominates across all dimensions. The right choice depends
+      on the query's precision requirements, latency budget, and data characteristics.
+      A decision matrix prevents both under-engineering (always using basic search)
+      and over-engineering (always using the most expensive strategy).
+    checklist:
+      - "Is there a defined mapping from query characteristics to retrieval strategy?"
+      - "Can strategies be composed (e.g., multi-query + reranking) for complex needs?"
+      - "Is the default strategy documented (typically standard vector search)?"
+    source: "coleam00/ottomator-agents README.md strategy overview table"
+
+  - rule_id: RS8
+    name: Hybrid Search Fusion Methods
+    description: |
+      When combining vector and keyword search results, choose a fusion method:
+      - Reciprocal Rank Fusion (RRF): score = sum(1/(k + rank)) across result lists.
+        k=60 is the standard constant. Rank-based — ignores raw scores entirely.
+        Best general-purpose method. Requires no tuning of weights or normalization.
+      - Linear Combination: score = alpha * normalized_vector_score + (1-alpha) * normalized_keyword_score.
+        Requires normalizing both score distributions to [0,1]. Alpha controls the balance
+        (0.5 = equal weight, 0.7 = favor vector). Needs tuning per corpus.
+      - Cross-Encoder Reranking: use both result sets as candidate pool, then rerank all
+        candidates jointly with a cross-encoder. Highest quality but slowest.
+      - Cascade: keyword search first as a filter, then vector search within filtered set.
+        Most efficient when keyword filter dramatically reduces candidate pool.
+      Default recommendation: RRF (simplest, no tuning needed, works well empirically).
+      Upgrade to linear combination if you need fine-grained control over vector vs keyword weight.
+      Add cross-encoder reranking on top of either when precision is critical.
+    rationale: |
+      RRF is robust because it uses only rank positions, not raw scores. This matters
+      because vector similarity scores (0.0-1.0 cosine) and BM25 scores (unbounded positive)
+      are on completely different scales. RRF sidesteps the normalization problem entirely.
+      The k=60 constant controls how much weight lower-ranked results get — higher k
+      flattens the distribution (more democratic), lower k gives disproportionate weight
+      to top results. 60 is the empirically validated default from the original RRF paper.
+    checklist:
+      - "Is the fusion method documented and justified for the use case?"
+      - "For RRF, is k=60 used as the starting point (not an arbitrary value)?"
+      - "For linear combination, are raw scores normalized to [0,1] before combining?"
+      - "Are both vector and keyword scores logged separately for debugging?"
+    anti_patterns:
+      - "Adding raw BM25 scores to raw cosine similarity scores without normalization"
+      - "Tuning RRF's k constant without understanding what it controls (almost never needed)"
+      - "Using linear combination without establishing alpha through empirical testing"
+    when_to_use: |
+      Any search system that combines vector similarity with keyword/BM25 search.
+      Particularly important when queries mix semantic intent with exact terms
+      (e.g., function names, error codes, specific identifiers).
+    source: "wshobson/agents hybrid-search-implementation/SKILL.md, similarity-search-patterns/SKILL.md"
+
+  - rule_id: RS9
+    name: Distance Metric Selection
+    description: |
+      Choose the similarity/distance metric based on how embeddings are produced:
+      - Cosine distance: measures angle between vectors, ignores magnitude. Best for
+        normalized embeddings (most text embedding models). A sticky note and a full
+        essay about the same topic point the same direction — cosine says they're similar.
+      - Dot product: like cosine but magnitude matters. Use when vector length encodes
+        importance or confidence (e.g., some retrieval-specific models).
+      - Euclidean (L2): measures straight-line distance. Use when both direction AND
+        magnitude are semantically meaningful. Rarely the best choice for text embeddings.
+      Default recommendation: Cosine distance for text embeddings. This is what pgvector's
+      `<=>` operator computes. Almost all modern text embedding models (OpenAI, Voyage AI,
+      sentence-transformers) produce embeddings where cosine is the appropriate metric.
+    rationale: |
+      Using the wrong distance metric silently degrades search quality. If your embeddings
+      are L2-normalized (unit length), cosine and dot product give identical rankings.
+      But if they're not normalized and you use dot product, longer vectors get unfairly
+      boosted. Cosine normalizes automatically, making it the safe default.
+    checklist:
+      - "Is the distance metric matched to the embedding model's documentation?"
+      - "For pgvector, is `vector_cosine_ops` used for the HNSW index operator class?"
+      - "If switching embedding models, was the distance metric re-evaluated?"
+    source: "wshobson/agents similarity-search-patterns/SKILL.md distance metrics table"

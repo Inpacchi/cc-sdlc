@@ -1,0 +1,131 @@
+# Retrieval Evaluation Patterns
+# Decision rules for measuring and monitoring search quality — IR metrics,
+# embedding model comparison, LLM-as-judge for RAG, and regression detection.
+# Source: wshobson/agents/plugins/llm-application-dev (embedding-strategies, llm-evaluation, rag-implementation skills)
+
+id: retrieval-evaluation-patterns
+name: "Retrieval Evaluation Patterns"
+description: "Decision rules for IR metric selection, embedding comparison, RAG evaluation, and search quality regression detection"
+pattern: rules
+category: search
+spec_relevant: false
+project_applicability:
+  relevant_when: "Project has a search or retrieval pipeline that needs quality measurement"
+  action_if_irrelevant: remove
+last_updated: 2026-04-03
+
+entries:
+  - rule_id: RE1
+    name: IR Metric Selection by Use Case
+    description: |
+      Choose the right retrieval metric based on what aspect of search quality matters:
+      - Recall@K: "Of all correct results that exist, what fraction appeared in our top K?"
+        Use when completeness matters (e.g., finding ALL related memories). If there are 5
+        relevant items and you return 3 in the top 10, Recall@10 = 0.6.
+      - Precision@K: "Of the K results we returned, what fraction are actually relevant?"
+        Use when result quality matters more than completeness. 3 relevant out of 10
+        returned = Precision@10 = 0.3.
+      - MRR (Mean Reciprocal Rank): "How high is the first correct result?" MRR = 1/rank
+        of first relevant result, averaged over queries. If the first relevant result is
+        at position 3, reciprocal rank = 1/3. Use when finding ONE good result fast matters.
+      - nDCG@K (Normalized Discounted Cumulative Gain): "Are the best results ranked highest?"
+        Gives more credit for relevant results appearing earlier. Use when ranking order
+        matters and you have graded relevance (not just binary relevant/not).
+      Default recommendation: Recall@10 as primary metric (matches Neuroloom's use case
+      of finding all related memories), MRR as secondary (speed to first relevant result).
+    rationale: |
+      Different metrics optimize for different user experiences. A memory search that
+      misses 40% of relevant items (low recall) but ranks what it finds well (high nDCG)
+      is worse for Neuroloom than one that finds everything but in suboptimal order.
+      Choosing the wrong metric means optimizing for the wrong thing.
+    checklist:
+      - "Is there a primary retrieval metric defined for the search pipeline?"
+      - "Is the metric appropriate for the use case (completeness vs precision vs ranking)?"
+      - "Is there a golden evaluation set with labeled relevant documents per query?"
+    anti_patterns:
+      - "Evaluating search quality by eyeballing results instead of measuring metrics"
+      - "Using only Precision@K when completeness matters (low recall goes undetected)"
+      - "Reporting a single metric without K value (Recall@10 vs Recall@50 are very different)"
+    source: "wshobson/agents embedding-strategies/SKILL.md evaluate_retrieval_quality(), llm-evaluation/SKILL.md"
+
+  - rule_id: RE2
+    name: Embedding Model Comparison Framework
+    description: |
+      Compare embedding models systematically before choosing one:
+      1. Build a golden set: 50-100 queries with labeled relevant documents.
+      2. Embed all documents with each candidate model.
+      3. For each model, run all queries and collect top-K results.
+      4. Compute Recall@K, MRR, and nDCG@K for each model.
+      5. Also measure: embedding latency, dimension count (affects storage), and cost.
+      6. Plot quality vs cost tradeoff. Choose the model at the knee of the curve.
+      The model with the highest Recall@K isn't always the winner — if it costs 10x more
+      and gives only 2% better recall, the cheaper model wins on economics.
+    rationale: |
+      Embedding model choice is one of the highest-leverage decisions in a search pipeline.
+      A bad model produces bad vectors; no amount of query-time tuning (reranking, fusion)
+      can recover quality lost at the embedding stage. But "better" models aren't always
+      worth the cost — a systematic comparison with real queries quantifies the tradeoff.
+    checklist:
+      - "Is there a golden evaluation set with labeled relevance for model comparison?"
+      - "Are models compared on the same queries and document set?"
+      - "Is cost (per-embedding price, dimension size, latency) included in the comparison?"
+    anti_patterns:
+      - "Choosing a model based on MTEB leaderboard rank without testing on your domain"
+      - "Comparing models on different query sets (apples to oranges)"
+      - "Ignoring dimension count — 3072-dim vectors cost 2x the storage of 1536-dim"
+    source: "wshobson/agents embedding-strategies/SKILL.md compare_embedding_models()"
+
+  - rule_id: RE3
+    name: RAG Faithfulness Evaluation
+    description: |
+      RAG systems need evaluation on BOTH retrieval quality AND generation quality.
+      Five key metrics for RAG:
+      - Retrieval Precision: fraction of retrieved docs that are relevant
+      - Retrieval Recall: fraction of relevant docs that were retrieved
+      - Answer Relevance: does the generated answer address the question?
+      - Faithfulness (Groundedness): is the answer grounded in the retrieved context?
+        (This catches hallucination — the model making claims not in the source docs.)
+      - Context Relevance: is the retrieved context relevant to the question?
+      Faithfulness is the most important RAG-specific metric. Measure it with either
+      NLI (natural language inference) models or LLM-as-judge.
+    rationale: |
+      A RAG system can fail at two stages: retrieval (wrong documents) or generation
+      (wrong answer from right documents). Measuring only end-to-end accuracy conflates
+      these failure modes. Separating retrieval and generation metrics tells you WHERE
+      to fix: improve the index/embedding or improve the prompt/LLM.
+    checklist:
+      - "Are retrieval metrics (precision, recall) measured separately from generation metrics?"
+      - "Is faithfulness/groundedness measured to catch hallucination?"
+      - "Is there a test set with both relevant documents AND expected answers?"
+    anti_patterns:
+      - "Only measuring end-to-end accuracy without separating retrieval vs generation quality"
+      - "Trusting LLM outputs as factual without checking against retrieved context"
+      - "No systematic evaluation — relying on ad hoc manual testing"
+    source: "wshobson/agents rag-implementation/SKILL.md RAGEvalMetrics, llm-evaluation/SKILL.md"
+
+  - rule_id: RE4
+    name: Search Quality Regression Detection
+    description: |
+      Monitor search quality continuously and detect regressions before users notice:
+      1. Maintain a golden eval set (50+ queries with labeled relevant results).
+      2. Run the eval set against the search pipeline on every significant change
+         (new embeddings, index rebuild, query logic change).
+      3. Flag a regression if any primary metric drops >5% relative to baseline.
+      4. Store baseline results with timestamps. After confirming an improvement,
+         update the baseline.
+      Regressions can come from: model updates, data drift (new content changes
+      the embedding space), index parameter changes, or code bugs.
+    rationale: |
+      Search quality degrades silently — there's no error log when results get worse,
+      only unhappy users. Automated regression detection on a golden set catches
+      degradation before it reaches production. The 5% threshold is a starting point;
+      calibrate based on your quality tolerance.
+    checklist:
+      - "Is there an automated regression check that runs on search pipeline changes?"
+      - "Is the regression threshold defined (e.g., 5% relative drop in Recall@10)?"
+      - "Is there a baseline snapshot that gets updated after verified improvements?"
+    anti_patterns:
+      - "Deploying search changes without measuring quality impact"
+      - "Using a stale golden set that doesn't represent current query patterns"
+      - "Setting the regression threshold too loose (10%+) — significant degradation goes undetected"
+    source: "wshobson/agents llm-evaluation/SKILL.md RegressionDetector, embedding-strategies/SKILL.md"

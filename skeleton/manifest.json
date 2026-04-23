@@ -32,6 +32,7 @@
     "ops/sdlc/knowledge/design",
     "ops/sdlc/knowledge/product-research",
     "ops/sdlc/knowledge/testing",
+    "ops/sdlc/knowledge/search",
     "ops/sdlc/playbooks",
     "ops/sdlc/templates"
   ],
@@ -85,7 +86,9 @@
       "templates/test_spec_template.md",
       "templates/sdlc_lite_plan_template.md",
       "templates/sdlc_lite_result_template.md",
-      "templates/postmortem_template.md"
+      "templates/postmortem_template.md",
+      "templates/decision_record_template.md",
+      "templates/reference_doc_template.md"
     ],
     "_templates_note": "templates/*.md are installed to child projects. templates/optional/ is source-only (conditional CLAUDE.md appendices read during initialization).",
     "templates_optional_source_only": [
@@ -172,6 +175,14 @@
       "knowledge/testing/ai-generated-code-verification.yaml",
       "knowledge/testing/test-infrastructure-patterns.yaml",
       "knowledge/coding/context-engineering-patterns.yaml",
+      "knowledge/search/README.md",
+      "knowledge/search/retrieval-strategy-patterns.yaml",
+      "knowledge/search/ingestion-pipeline-patterns.yaml",
+      "knowledge/search/vector-index-tuning-patterns.yaml",
+      "knowledge/search/retrieval-evaluation-patterns.yaml",
+      "knowledge/search/multi-strategy-retrieval-patterns.yaml",
+      "knowledge/search/evidence-combination-frameworks.md",
+      "knowledge/search/score-transform-catalog.md",
       "knowledge/provenance_log.md"
     ],
     "skills": [
@@ -205,7 +216,9 @@
       "skills/sdlc-review/SKILL.md",
       "skills/enrich-agent/SKILL.md",
       "skills/research-external/SKILL.md",
-      "skills/team-review-fix/SKILL.md"
+      "skills/team-review-fix/SKILL.md",
+      "skills/sdlc-debug-incident/SKILL.md",
+      "skills/sdlc-create-reference-doc/SKILL.md"
     ],
     "agents": [
       "agents/AGENT_TEMPLATE.md",

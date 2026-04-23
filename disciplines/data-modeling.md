@@ -50,6 +50,16 @@ Industry overlays: Healthcare, Insurance, Financial Services, Telecom, Manufactu
 
 - **Entity-Party-Role (EPR) pattern.** [NEEDS VALIDATION] Entity → has many PartyRoles → Party + Role. Three-tier assignment UX: bulk (fast) → individual with role (medium) → full RACI matrix (detailed). The pattern generalizes: ResourceAssignment, transaction party roles, and account party roles all use EPR.
 
+### External Ingestion — 2026-04-22 (Generic SQL & ORM patterns from production systems)
+
+- **Multi-tenant isolation must be validated at every CTE hop, not just endpoints.** [NEEDS VALIDATION] When a recursive CTE traverses a graph in a multi-tenant schema, the temptation is to filter `WHERE tenant_id = ?` on the anchor query and assume the recursive step inherits it. It does not — the recursive step joins from the previous level into new rows that may belong to other tenants. Apply the tenant filter on **both** the anchor query AND the recursive step. The same hazard exists in any iterated query (CTEs, repeated joins, graph traversals): isolation must hold at every hop, not just at the entry point.
+
+- **LEFT JOIN filter placement: ON vs WHERE have different semantics.** [NEEDS VALIDATION] On an OUTER join, putting a filter in the `ON` clause keeps the unmatched rows (with NULLs in the joined columns); putting it in the `WHERE` clause removes them, silently turning the LEFT JOIN into an INNER JOIN. Multi-tenant queries get this wrong constantly: `LEFT JOIN child ON child.parent_id = parent.id WHERE child.tenant_id = ?` excludes parents with no children. The fix: `LEFT JOIN child ON child.parent_id = parent.id AND child.tenant_id = ?`. This SQL fundamental belongs in any data-modeling review checklist.
+
+- **ORM-enabled DML still fires `onupdate` hooks even with `synchronize_session=False`.** [NEEDS VALIDATION] In SQLAlchemy (and similar ORMs), `synchronize_session=False` on an UPDATE only suppresses cache synchronization — it does NOT skip column-level `onupdate` hooks (e.g., `updated_at = func.now()`). For true bypass (e.g., a backfill that should not bump `updated_at`), use raw SQL or `synchronize_session=False` plus `bind_arguments={'execution_options': {'compiled_cache': None}}`. The general principle: ORM "skip features" almost never skip everything; verify by reading the generated SQL with `echo=True` or equivalent.
+
+- **Idle-in-transaction timeout requires explicit COMMIT in async code.** [NEEDS VALIDATION] In async runtimes, an implicit transaction can be left open across an `await` boundary if the code path doesn't explicitly commit. The connection sits in `idle in transaction` state, vulnerable to `idle_in_transaction_session_timeout` killing it mid-operation. The pattern: wrap async work in an explicit `async with session.begin():` block, or call `session.commit()` before any long-running async gap. Same hazard exists with explicit savepoints in long-lived sessions.
+
 ### Skill Trajectory
 
 ```

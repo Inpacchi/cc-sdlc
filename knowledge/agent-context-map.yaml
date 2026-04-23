@@ -201,6 +201,14 @@ mappings:
     - "[sdlc-root]/knowledge/coding/typescript-patterns.yaml"
     - "[sdlc-root]/knowledge/architecture/agent-communication-protocol.yaml"
     - "[sdlc-root]/knowledge/architecture/prompt-engineering-patterns.yaml"
+    # Search / retrieval (only relevant for projects with RAG or vector search)
+    - "[sdlc-root]/knowledge/search/retrieval-strategy-patterns.yaml"
+    - "[sdlc-root]/knowledge/search/ingestion-pipeline-patterns.yaml"
+    - "[sdlc-root]/knowledge/search/retrieval-evaluation-patterns.yaml"
+    - "[sdlc-root]/knowledge/search/multi-strategy-retrieval-patterns.yaml"
+    - "[sdlc-root]/knowledge/search/vector-index-tuning-patterns.yaml"
+    - "[sdlc-root]/knowledge/search/evidence-combination-frameworks.md"
+    - "[sdlc-root]/knowledge/search/score-transform-catalog.md"
 
   # ── Payments / Legal ───────────────────────────────────────────────
   payment-engineer:

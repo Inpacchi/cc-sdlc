@@ -1,0 +1,166 @@
+# Vector Index Tuning Patterns
+# Decision rules for index type selection, HNSW parameter tuning, quantization,
+# and memory estimation for vector search infrastructure.
+# Source: wshobson/agents/plugins/llm-application-dev (vector-index-tuning, similarity-search-patterns skills)
+
+id: vector-index-tuning-patterns
+name: "Vector Index Tuning Patterns"
+description: "Decision rules for vector index selection, HNSW tuning, quantization strategies, and memory estimation"
+pattern: rules
+category: search
+spec_relevant: false
+project_applicability:
+  relevant_when: "Project uses pgvector or any vector index for similarity search"
+  action_if_irrelevant: remove
+last_updated: 2026-04-03
+
+entries:
+  - rule_id: VT1
+    name: Index Type Selection by Data Size
+    description: |
+      Choose the vector index type based on the number of vectors in the dataset:
+      - < 10K vectors: Flat (exact search) — brute-force scan is fast enough, gives 100% recall
+      - 10K - 1M vectors: HNSW — graph-based approximate search, ~95-99% recall, O(log n)
+      - 1M - 100M vectors: HNSW + scalar quantization (INT8) — same recall with ~4x less memory
+      - > 100M vectors: IVF + product quantization (PQ) or DiskANN — ~90-95% recall, minimal memory
+      Think of it like searching a library: a small bookshelf you can scan visually (flat),
+      a medium library needs a card catalog with cross-references (HNSW), and a massive
+      archive needs a hierarchical filing system with compressed summaries (IVF+PQ).
+    rationale: |
+      Each index type trades recall for speed and memory differently. Flat search is O(n)
+      — fine for small datasets but unusable at scale. HNSW maintains a navigable graph
+      where each node connects to ~M neighbors, giving O(log n) search. IVF partitions
+      the space into clusters and only searches nearby clusters. Product quantization
+      compresses vectors from e.g. 6144 bytes to ~64 bytes, enabling billion-scale search
+      in RAM.
+    checklist:
+      - "Is the index type appropriate for the current dataset size?"
+      - "Is there a plan to upgrade the index type as data grows past the next threshold?"
+      - "For HNSW, are the M and ef_construction parameters set appropriately?"
+    anti_patterns:
+      - "Using flat (exact) search on >100K vectors without acknowledging the latency cost"
+      - "Using IVF+PQ on small datasets where HNSW gives better recall with acceptable memory"
+      - "Not monitoring dataset growth against index type thresholds"
+    source: "wshobson/agents vector-index-tuning/SKILL.md, similarity-search-patterns/SKILL.md"
+
+  - rule_id: VT2
+    name: HNSW Parameter Tuning by Recall Target
+    description: |
+      HNSW has three key parameters. Two are set at index build time (immutable without rebuild),
+      one is tunable per query:
+      - M (build-time): Number of bidirectional connections per node. Higher M = better recall,
+        more memory. Default 16. Use 32 for >1M vectors or >95% recall target. Use 48 for >99% recall.
+      - ef_construction (build-time): Controls index build quality. Higher = better graph
+        structure, slower build. Default 64-128. Use 200+ for >99% recall target.
+      - ef_search (query-time): Number of candidates explored during search. The only runtime
+        tuning knob. Default 40. Increase to 128 for >95% recall, 256 for >99%.
+      Recommendation matrix:
+        num_vectors < 100K:  M=16, ef_construction=100
+        100K - 1M:           M=32, ef_construction=200
+        > 1M:                M=48, ef_construction=256
+      For pgvector specifically: ef_search is set via `SET LOCAL hnsw.ef_search = N` per query.
+    rationale: |
+      M controls graph connectivity — like how many "friends" each node in a social network has.
+      More friends means you can reach any node in fewer hops (better recall), but storing all
+      those connections costs memory (roughly M * 2 * 4 bytes per node). ef_construction is
+      like how carefully you pick those friends when building the network — spending more time
+      upfront yields better connections. ef_search is how many candidates you interview during
+      each search — more candidates means you're less likely to miss the best match.
+    checklist:
+      - "Are M and ef_construction set based on dataset size and recall requirements?"
+      - "Is ef_search tuned per use case (high for recall-critical, low for speed-critical)?"
+      - "Is ef_search set via SET LOCAL (not globally) to prevent cross-request interference?"
+    anti_patterns:
+      - "Using default M=16 for >1M vectors without benchmarking recall"
+      - "Setting ef_search globally instead of per-query — affects all concurrent queries"
+      - "Tuning ef_search without measuring actual recall improvement (diminishing returns)"
+    source: "wshobson/agents vector-index-tuning/SKILL.md"
+
+  - rule_id: VT3
+    name: Quantization Strategy Selection
+    description: |
+      Quantization compresses vectors to reduce memory usage. Choose based on acceptable
+      recall loss vs memory savings:
+      - FP32 (no quantization): 4 bytes/dim. Baseline. 1536-dim = 6KB per vector.
+      - FP16 (half precision): 2 bytes/dim. ~50% memory reduction, negligible recall loss.
+      - INT8 (scalar quantization): 1 byte/dim. ~75% memory reduction, <1% recall loss
+        when rescoring with original vectors. Best default for memory optimization.
+      - Product Quantization (PQ): ~32-64 bytes total regardless of dimension. ~94% memory
+        reduction. 2-5% recall loss. Use for >10M vectors with memory constraints.
+      - Binary: dimension/8 bytes. ~97% memory reduction. Significant recall loss.
+        Only for candidate pre-filtering, not final ranking.
+      Memory formula: vector_storage = num_vectors * dimensions * bytes_per_dim
+    rationale: |
+      Think of quantization like image compression: JPEG (INT8) looks almost identical
+      to the original but is much smaller. Extreme compression like a tiny thumbnail
+      (binary) loses too much detail for precise matching but works for quick filtering.
+      INT8 quantization maps each float to one of 256 levels (like reducing a photo from
+      millions of colors to 256) — the relative ordering of distances is preserved well
+      enough for nearest neighbor search.
+    checklist:
+      - "Is INT8 scalar quantization the default when memory optimization is needed?"
+      - "For PQ, is there a rescoring step using original vectors to recover recall?"
+      - "Has recall been benchmarked before and after quantization on representative queries?"
+    anti_patterns:
+      - "Using PQ or binary quantization as the sole ranking signal without rescoring"
+      - "Applying quantization without measuring recall impact on actual queries"
+      - "Not considering FP16 as a zero-effort first step before INT8"
+    source: "wshobson/agents vector-index-tuning/SKILL.md"
+
+  - rule_id: VT4
+    name: Memory Estimation Formula
+    description: |
+      Estimate total memory for a vector index before provisioning infrastructure:
+        vector_storage = num_vectors * dimensions * bytes_per_dimension
+        hnsw_overhead  = num_vectors * M * 2 * 4  (bidirectional edges, 4 bytes each)
+        total_memory   = vector_storage + hnsw_overhead
+      Example for 1M vectors, 1536 dims, FP32, M=16:
+        vector_storage = 1,000,000 * 1536 * 4 = 5.7 GB
+        hnsw_overhead  = 1,000,000 * 16 * 2 * 4 = 122 MB
+        total          = ~5.8 GB
+      Same with INT8 quantization:
+        vector_storage = 1,000,000 * 1536 * 1 = 1.4 GB
+        total          = ~1.6 GB (3.6x reduction)
+    rationale: |
+      Running out of memory causes index to spill to disk, which increases search latency
+      by 10-100x. Accurate memory estimation prevents this. The HNSW graph overhead is
+      usually small relative to vector storage, but matters at high M values.
+    checklist:
+      - "Has memory been estimated for the target dataset size before provisioning?"
+      - "Does the estimate include both vector storage AND index overhead?"
+      - "Is there headroom for growth (2x current size is a reasonable buffer)?"
+    source: "wshobson/agents vector-index-tuning/SKILL.md"
+
+  - rule_id: VT5
+    name: Performance Benchmarking Methodology
+    description: |
+      Benchmark vector search systematically before tuning:
+      1. Establish ground truth: compute exact (flat) nearest neighbors for a set
+         of representative queries (100+ queries from actual usage patterns).
+      2. Sweep parameters: vary one parameter at a time (M, ef_construction, ef_search)
+         while measuring recall@K, latency P50/P95/P99, and memory usage.
+      3. Plot tradeoff curves: recall vs latency, recall vs memory. Find the knee
+         of the curve where further tuning yields diminishing returns.
+      4. Use real query distribution: synthetic random vectors don't represent actual
+         query patterns. Benchmark with queries sampled from production logs.
+      Key metrics to capture per configuration:
+        - recall@10 (primary quality metric)
+        - latency P50, P95, P99 in milliseconds
+        - QPS (queries per second) at target concurrency
+        - memory usage in MB
+    rationale: |
+      Tuning without benchmarking is guessing. The relationship between parameters and
+      performance is non-linear and data-dependent — a configuration optimal for one
+      dataset may underperform on another. Systematic benchmarking with real queries
+      produces reliable parameter recommendations.
+    checklist:
+      - "Is there a ground truth set computed with exact (flat) search?"
+      - "Are benchmarks run with real (or representative) queries, not random vectors?"
+      - "Are recall AND latency measured together (not just one)?"
+      - "Are results plotted as tradeoff curves to identify the optimal operating point?"
+    anti_patterns:
+      - "Tuning parameters based on documentation defaults without benchmarking"
+      - "Benchmarking with random vectors that don't match production query distribution"
+      - "Optimizing for recall alone without considering latency budget"
+      - "Running benchmarks on cold indexes (HNSW performance improves after warm-up)"
+    source: "wshobson/agents vector-index-tuning/SKILL.md, similarity-search-patterns/SKILL.md"

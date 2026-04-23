@@ -1,0 +1,254 @@
+# Ingestion Pipeline Patterns
+# Decision rules for document chunking, contextual enrichment, and embedding strategies.
+# Source: coleam00/ottomator-agents/all-rag-strategies (11 RAG strategy docs + implementation)
+
+id: ingestion-pipeline-patterns
+name: "Ingestion Pipeline Patterns"
+description: "Decision rules for RAG ingestion — chunking strategies, contextual enrichment, embedding approaches"
+pattern: rules
+category: search
+spec_relevant: false
+project_applicability:
+  relevant_when: "Project ingests documents or text into a vector store for retrieval"
+  action_if_irrelevant: remove
+last_updated: 2026-04-03
+
+entries:
+  - rule_id: IP1
+    name: Context-Aware Chunking Over Fixed-Size
+    description: |
+      Use semantic similarity between consecutive sentences (or document structure
+      analysis) to determine chunk boundaries, rather than fixed token/character
+      counts. Group sentences with similarity above a threshold into the same chunk.
+      Respect document structure boundaries (headings, sections, tables) as natural
+      chunk break points.
+    rationale: |
+      Fixed-size chunking splits mid-topic, creating chunks that lack coherence.
+      Semantic chunking ensures each chunk contains a complete thought or topic,
+      which produces better embeddings (the embedding represents a coherent concept)
+      and better retrieval (the retrieved chunk is self-contained and useful).
+    checklist:
+      - "Does the chunker analyze document structure (headings, sections) for natural boundaries?"
+      - "Does it preserve semantic coherence within chunks (not splitting mid-topic)?"
+      - "Is there a maximum chunk size to prevent unbounded chunks on monotopic content?"
+    anti_patterns:
+      - "Fixed-size chunking with arbitrary token counts (e.g., every 500 tokens)"
+      - "Splitting on whitespace or character counts without semantic analysis"
+      - "Ignoring document structure (headings, tables) in chunk boundary detection"
+    when_to_use: |
+      All documents with diverse topics or clear structure. Technical documentation,
+      reports, policies. Default choice for any non-trivial ingestion pipeline.
+    when_not_to_use: |
+      Homogeneous documents with consistent topics throughout (e.g., logs).
+      When processing speed is critical and semantic analysis overhead is
+      unacceptable.
+    source: "coleam00/ottomator-agents docs/07-context-aware-chunking.md, Docling HybridChunker"
+
+  - rule_id: IP2
+    name: Contextual Enrichment at Ingestion Time
+    description: |
+      Before embedding a chunk, prepend a 1-2 sentence LLM-generated context
+      explaining what the chunk discusses in relation to the full document.
+      The enriched chunk is then embedded and indexed. This is Anthropic's
+      "Contextual Retrieval" method. Enable as an optional flag, not default,
+      due to cost (1 LLM call per chunk).
+    rationale: |
+      Chunks lose document-level context after splitting. A chunk saying "Revenue
+      grew 3%" is ambiguous without knowing which company and quarter. Adding
+      "This chunk from ACME Corp Q2 2023 filing discusses..." makes the chunk
+      self-contained. Anthropic reports 35-49% reduction in retrieval failures.
+      Combined with reranking, 67% reduction.
+    checklist:
+      - "Is contextual enrichment an opt-in flag (not default) due to cost?"
+      - "Does the enrichment prompt include both the full document context and the specific chunk?"
+      - "Is the contextual prefix prepended to the chunk BEFORE embedding (not stored separately)?"
+      - "Is there concurrency control on enrichment LLM calls to prevent rate limiting?"
+    anti_patterns:
+      - "Enabling enrichment by default — expensive and unnecessary for well-structured documents"
+      - "Storing context separately from the chunk — the embedding must include the context"
+      - "Using a large model for enrichment — gpt-4o-mini or equivalent is sufficient"
+    when_to_use: |
+      Dense technical documents where chunks lack standalone meaning.
+      Financial reports, legal documents, scientific papers.
+      When retrieval accuracy is critical and ingestion cost is acceptable.
+    when_not_to_use: |
+      Chunks that are already self-contained (e.g., FAQ entries, glossary items).
+      High-frequency corpus updates where re-enrichment cost accumulates.
+      Budget-constrained environments.
+    performance_notes: |
+      35-49% retrieval failure reduction (Anthropic benchmark).
+      67% reduction when combined with reranking.
+      Cost: 1 LLM call per chunk (use gpt-4o-mini or equivalent small model).
+    source: "coleam00/ottomator-agents docs/04-contextual-retrieval.md, Anthropic contextual retrieval blog"
+
+  - rule_id: IP3
+    name: Late Chunking for Context Preservation
+    description: |
+      Process the entire document through the embedding model's transformer layers
+      first, obtaining per-token embeddings with full document context. Then apply
+      chunking to the token embeddings (not the text) by mean-pooling token vectors
+      within each chunk boundary. Each chunk's embedding retains awareness of the
+      full document context.
+    rationale: |
+      Standard chunking embeds each chunk independently — the embedding for chunk 3
+      has no knowledge of chunks 1, 2, or 4. Late chunking processes all tokens
+      together through the transformer's attention mechanism, so every token
+      "sees" the full document before being pooled into chunk embeddings. This
+      preserves long-distance dependencies and cross-references.
+    checklist:
+      - "Does the embedding model support long enough context for full-document processing?"
+      - "Is mean-pooling used (not CLS token) for chunk-level embeddings from token-level outputs?"
+    when_to_use: |
+      Documents where meaning depends on long-distance relationships (e.g.,
+      a pronoun in paragraph 5 refers to an entity in paragraph 1).
+      When using long-context embedding models (8K+ tokens).
+    when_not_to_use: |
+      When using standard embedding models with small context windows.
+      When documents are short enough that regular chunking preserves context.
+      When the implementation complexity is not justified by retrieval gains.
+    source: "coleam00/ottomator-agents docs/08-late-chunking.md, Jina AI late chunking paper"
+
+  - rule_id: IP4
+    name: Hierarchical Parent-Child Chunking
+    description: |
+      Create a two-level chunk hierarchy: large parent chunks (1000-2000 tokens)
+      containing smaller child chunks (200-500 tokens). Embed and search on child
+      chunks for precision. When a child chunk matches, return its parent chunk
+      to the LLM for context. Store parent_id as metadata on child chunks.
+    rationale: |
+      Small chunks match more precisely (less noise in the embedding) but lack
+      context for the LLM to reason about. Large chunks provide context but match
+      less precisely. The parent-child pattern gets both: precise matching on
+      children, rich context from parents. The database schema is simple — just
+      a parent_id foreign key on the child chunks table.
+    checklist:
+      - "Do child chunks store a parent_id reference?"
+      - "Does retrieval join child matches back to parent chunks for context?"
+      - "Are parent chunks large enough to provide meaningful context (1000+ tokens)?"
+      - "Are child chunks small enough for precise matching (200-500 tokens)?"
+    anti_patterns:
+      - "Returning child chunks directly to the LLM without parent context"
+      - "Making parent chunks too small (losing the context benefit)"
+      - "Complex multi-level hierarchies when two levels suffice"
+    when_to_use: |
+      Structured documents with natural hierarchies (sections, chapters).
+      When chunks need to be small for matching but the LLM needs broader context.
+    when_not_to_use: |
+      Flat, unstructured documents. When agentic retrieval (chunk search +
+      full-document retrieval) provides equivalent flexibility without the
+      schema complexity.
+    source: "coleam00/ottomator-agents docs/09-hierarchical-rag.md"
+
+  - rule_id: IP5
+    name: Fine-Tuned Embeddings for Domain Specialization
+    description: |
+      Train embedding models on domain-specific (query, relevant_document) pairs
+      using contrastive loss (e.g., MultipleNegativesRankingLoss). Fine-tuned models
+      learn domain jargon, specialized relationships, and context-specific similarity
+      that generic models miss. Typical gains: 5-10% retrieval accuracy improvement.
+    rationale: |
+      Generic embedding models are trained on broad web data. Domain-specific
+      corpora (medical, legal, financial, code) use specialized vocabulary and
+      concept relationships that the generic model underweights. Fine-tuning
+      teaches the model that "EBITDA" is more related to "earnings" than to
+      "abbreviation" in a financial context.
+    checklist:
+      - "Is there sufficient training data (1000+ query-document pairs)?"
+      - "Is the fine-tuned model evaluated against a held-out test set before deployment?"
+      - "Is the base model appropriate for the embedding dimension requirements?"
+    when_to_use: |
+      Specialized domains with unique vocabulary (medical, legal, financial).
+      When retrieval accuracy with generic embeddings is measurably insufficient.
+      When training data (query-document pairs) is available or can be synthetically
+      generated.
+    when_not_to_use: |
+      General-purpose content. When high-quality generic models (e.g.,
+      text-embedding-3-small) already achieve acceptable accuracy.
+      When training infrastructure and data collection cost exceed the benefit.
+    source: "coleam00/ottomator-agents docs/11-fine-tuned-embeddings.md, Philipp Schmid fine-tuning guide"
+
+  - rule_id: IP6
+    name: Chunking Strategy Selection Guide
+    description: |
+      Choose chunking strategy based on document characteristics and requirements:
+      - Default: Context-aware semantic chunking (free, fast, good quality)
+      - High-value documents: Context-aware + contextual enrichment (expensive but 35-49% better)
+      - Long-distance dependencies: Late chunking (requires long-context model)
+      - Structured docs with hierarchy: Parent-child chunking (precision + context)
+      - Domain-specific corpus: Fine-tuned embeddings on top of any chunking strategy
+      Strategies compose: e.g., context-aware chunking + contextual enrichment + reranking.
+    rationale: |
+      Chunking strategy is the highest-leverage ingestion decision. Bad chunks
+      produce bad embeddings which no amount of query-time strategy can fix.
+      Start with context-aware as baseline; layer additional strategies only
+      when measurable retrieval problems justify the cost and complexity.
+    checklist:
+      - "Is context-aware chunking the default, with other strategies as opt-in enhancements?"
+      - "Is the chunking strategy choice documented with rationale for the specific corpus?"
+      - "Are ingestion costs (LLM calls for enrichment, compute for fine-tuning) budgeted?"
+    source: "coleam00/ottomator-agents README.md performance comparison tables"
+
+  - rule_id: IP7
+    name: Embedding Model Selection by Use Case
+    description: |
+      Select embedding models based on the content domain and deployment constraints.
+      Current landscape (2026):
+      - Voyage AI voyage-3-large (1024 dims, 32K tokens): Anthropic-recommended for
+        Claude applications. Best quality for general text. Use voyage-code-3 for code,
+        voyage-finance-2 for financial docs, voyage-law-2 for legal docs.
+      - OpenAI text-embedding-3-large (3072 dims, 8K tokens): Highest dimension count,
+        supports Matryoshka dimensionality reduction (request fewer dims at query time).
+        Best when you want to tune dimension/quality tradeoff post-deployment.
+      - OpenAI text-embedding-3-small (1536 dims, 8K tokens): Cost-effective general
+        purpose. Neuroloom's current model.
+      - BGE-large-en-v1.5 (1024 dims, 512 tokens): Open source, runs locally. Requires
+        query prefix "Represent this sentence for searching relevant passages:" for
+        optimal retrieval performance. Good for air-gapped or cost-sensitive deployments.
+      - all-MiniLM-L6-v2 (384 dims, 256 tokens): Smallest and fastest. For prototyping
+        or when latency/memory are extreme constraints. Not suitable for production
+        retrieval quality.
+      Key tradeoffs: Higher dimensions = better quality but more storage. Longer token
+      limits = can embed larger chunks without truncation. API models = simpler ops but
+      per-call cost. Local models = free inference but GPU/CPU overhead.
+    rationale: |
+      The embedding model determines the quality ceiling of the entire search pipeline.
+      A model trained on web text underweights domain-specific vocabulary (legal terms,
+      financial jargon, code patterns). Domain-specific models like Voyage's finance/law
+      variants are fine-tuned on domain corpora and learn that "EBITDA" relates to
+      "earnings" more than to "abbreviation."
+    checklist:
+      - "Is the embedding model documented with rationale for why it was chosen?"
+      - "Does the model's max token count accommodate the chunk sizes in use?"
+      - "For retrieval-specific models (BGE, E5), is the query prefix applied correctly?"
+      - "Has the model been evaluated on representative queries from the actual corpus?"
+    anti_patterns:
+      - "Choosing a model based solely on MTEB benchmark rank without domain testing"
+      - "Mixing embeddings from different models in the same vector index"
+      - "Ignoring max token limits — truncated inputs produce degraded embeddings"
+      - "Using a general-purpose model for a specialized domain without measuring quality"
+    source: "wshobson/agents embedding-strategies/SKILL.md model comparison table, vector-database-engineer.md"
+
+  - rule_id: IP8
+    name: Embedding Batch Processing
+    description: |
+      Always batch embedding API calls instead of one-at-a-time:
+      - Batch size 100 is a good default for API-based models (OpenAI, Voyage AI).
+      - For local models (sentence-transformers), use the largest batch that fits in
+        GPU memory (typically 32-256 depending on model size and GPU).
+      - Process batches concurrently when the API supports it (asyncio.gather with
+        concurrency limits to avoid rate limiting).
+      - Cache embeddings for static content. Re-embedding unchanged documents wastes
+        money and time. Store a content hash alongside the embedding to detect changes.
+    rationale: |
+      API-based embedding models charge per token, not per call. But network overhead
+      per call is fixed — sending 100 texts in one request vs 100 separate requests
+      saves ~99x the HTTP overhead. For local models, GPU utilization is maximized
+      by filling the batch dimension of the tensor.
+    checklist:
+      - "Are embedding calls batched (not one document at a time)?"
+      - "Is there a content hash to skip re-embedding unchanged documents?"
+      - "For API models, is there concurrency control to stay within rate limits?"
+    anti_patterns:
+      - "Embedding documents one-by-one in a loop — O(n) API calls instead of O(n/100)"
+      - "Re-embedding the entire corpus on every ingestion run"
+    source: "wshobson/agents embedding-strategies/SKILL.md Template 2, Template 5"

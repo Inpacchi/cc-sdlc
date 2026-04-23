@@ -225,3 +225,15 @@ Every commit must include **all** artifacts produced during the work — not jus
 
 **Never split SDLC documentation into a separate follow-up commit.** The documentation is part of the work, not a chore after the work. If `git status` shows unstaged SDLC files after staging application code, something was missed.
 
+---
+
+## Commit Message Format
+
+**Subject line:** Keep under ~72 characters. Use the conventional-commits prefix style: `feat(scope): ...`, `fix(scope): ...`, `chore(scope): ...`, `docs(scope): ...`, `refactor(scope): ...`. Scope is the package or domain (`api`, `web`, `auth`, `sdlc`, etc.). Imperative mood — "add feature" not "added feature."
+
+**Body wrapping:** Do **not** hard-wrap body text at 72 characters. Write natural sentences and let the viewer reflow. One blank line between paragraphs. The 50/72 convention existed for 80-column terminals and mailing-list patch workflows; neither governs how this repo's commits are read. Hard-wraps in the middle of a clause create awkward breakpoints in GitHub's commit view (where most reading happens) and don't help `git log` more than natural breaks would.
+
+**Intentional line breaks are fine** when they serve meaning — bullet lists, grouped clauses, or separating a trailing footer like `Co-Authored-By:`. What's out is mechanical wrapping at column 72.
+
+**Structure:** Subject line, blank line, paragraph-form body explaining the *why*. Bullet lists only when the content is genuinely enumerable (a list of behaviors, a list of affected files) — not as a default format. Close with any `Co-Authored-By:` trailer on its own line.
+
