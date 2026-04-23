@@ -34,6 +34,69 @@ Each entry contains:
 
 ---
 
+## 2026-04-23: Bulk mode refinements from first real runs [field-learning]
+
+**Origin:** Same-day follow-up. Bulk mode was applied immediately in `~/Projects/sleeved` and `~/Projects/neuroloom` (32 agents across 8 batches of 4 against `VoltAgent/awesome-claude-code-subagents` + `wshobson/agents`). Analysis of the session logs surfaced four friction points the initial spec didn't cover. Folded them back into the skill before the second use rediscovers them.
+
+**What happened:**
+
+- **Sleeved, Phase 1:** The assistant built the relevance table from training-data recall of what the two repos "probably contain" rather than actually listing them. User caught it ("Did you read the source repos already?"). Root cause: the skill said "do not WebFetch each file at this stage" and the assistant over-interpreted as "no fetches at all, generate from memory." The failure mode is worse than the user's catch suggests — a memory-built map can reference items that don't exist, and Phase 2 silently fails to fetch them.
+- **Neuroloom, Phase 2 Batch 1:** All four dispatched subagents completed full analysis (25+ patterns each, dismissals defended, integration plans drafted) but hit Edit permission denial on the target files — tool permissions didn't inherit from the main-thread grant across the Agent boundary. The assistant recovered by (a) using `SendMessage` to resume each stuck subagent rather than re-dispatching, preserving the analysis work, and (b) having the subagents emit the enriched body as text, with the main thread applying the write.
+- **Neuroloom, frontmatter corruption risk:** Agent files had inconsistent YAML escape styles (`\n` vs `\\n`). The main-thread writeback used a read-original + write-body-only + `head -N + blank + body` merge to preserve original frontmatter bytes rather than re-serializing.
+- **Neuroloom, token efficiency:** Inlining the full 6-dimension lens into 32 dispatch prompts was wasteful. The assistant wrote the lens once to `/tmp/enrich_agent_brief.md` and referenced the path in each dispatch.
+- **Neuroloom, description drift:** Three agents (build-engineer, dx-engineer, software-architect) had bodies that outgrew their frontmatter `description` lines after enrichment. User asked for description updates as a manual follow-up.
+
+**Changes made:**
+
+1. **`skills/enrich-agent/SKILL.md` — Phase 1 Step 1:** Replaced the "single directory fetch" bullet with a specific `gh api repos/.../git/trees/...` recipe and added an explicit paragraph warning that the inventory must come from an actual source listing, not training-data recall. Named the failure mode — memory-built maps reference nonexistent items, breaking Phase 2 silently.
+2. **`skills/enrich-agent/SKILL.md` — Phase 2 Step 2:** Changed "the full lens inlined verbatim" into a choice — inline for small fan-outs (≤5), or write to a shared brief file and reference the path for larger ones. Preserves lens fidelity at scale without 32× redundancy.
+3. **`skills/enrich-agent/SKILL.md` — New Phase 2 Step 4 "Handle write-back failures (staging fallback)":** Documents the permission-denial recovery pattern: resume via `SendMessage` (don't re-dispatch — 20–50min of analysis lost per target), have the subagent emit the body as text, apply writes from main thread, preserve frontmatter bytes via concat-merge rather than YAML re-serialization, and test permissions with a 1–2 target pilot before fanning out 10+ targets.
+4. **`skills/enrich-agent/SKILL.md` — New Phase 2 Step 6 "Check for description drift":** Post-enrichment scan for frontmatter-body drift; flag for user, do not auto-rewrite (description encodes user's intent for scope, which is authoritative).
+5. **`skills/enrich-agent/SKILL.md` — Red Flags:** Revised the "too-long prompt" entry to reflect the inline-vs-shared-brief choice. Added three new entries: memory-generated Phase 1 inventories, re-dispatching instead of resuming on write failure, and auto-rewriting descriptions on drift.
+
+**Design choices worth noting:**
+
+- **Resume, don't re-dispatch.** The permission failure mode is asymmetric — the subagent has already done the expensive work (full 7-step workflow including the 6-dimension extraction and the dismissal defense). Re-dispatching is cheap in tokens but catastrophic in latency: each target takes 2–5 minutes to re-run. `SendMessage` with a terse "emit as text" instruction takes seconds.
+- **Concat-merge frontmatter, don't re-serialize.** YAML libraries normalize escape styles. Agents in the same repo sometimes use different styles deliberately (or accidentally). Re-serialization would silently rewrite the frontmatter of every touched file, creating a diff that's impossible to review. The `head -N + blank + body` pattern guarantees byte-for-byte frontmatter preservation.
+- **Description drift is flagged, not fixed.** Auto-rewriting descriptions to match body growth would let the extraction yield dictate scope — which inverts the authority relationship. The user sets scope; extraction serves it. A drifted description is a signal to re-examine both (did the body grow appropriately, or did the scope actually shift?), not a field to auto-update.
+- **"Do not WebFetch each file" is not "do not fetch anything."** The original phrasing optimized for one failure mode (fetching 184 files) and missed the larger one (inventing the map from memory). The revised guidance names the inventory sources explicitly — tree API, glob, single tree-page fetch — so the "cheap listing" step has a concrete shape rather than an absence-of-action framing.
+
+**Rationale:** First-use feedback is the richest signal the skill will ever get — users discover the gaps by running into them. The initial bulk-mode spec got the two-phase shape right (the orchestration worked cleanly; 31/32 agents enriched with no re-runs, batches of 4 completed without rate limits), but four specific friction points surfaced in under 24 hours of use. Folding them back immediately prevents the second team to use bulk mode from rediscovering the same failures.
+
+**Update (same day) — findings from Sleeved's successful re-run:** After the failed Sleeved attempt (hallucinated Phase 1) was caught and abandoned, a fresh session ran bulk mode end-to-end against 25 Sleeved agents across 7 batches: 3,205 insertions / 416 deletions, 230 sources fetched, ~800+ patterns integrated, no permission-wall failures. Two new findings came out of that successful run:
+
+- **Dynamic path discovery.** Dispatched subagents discovered that `wshobson/agents` uses `plugins/<category>/agents/<name>.md` rather than flat root, and that one file is `architect-review.md` (not the expected `architect-reviewer.md`). Subagents recovered by falling back to `gh api repos/.../contents/PATH` to resolve the actual paths. This needs to be in the dispatch prompt — otherwise a 404 on any source URL looks like a permanent skip.
+- **Project-specific anchors drive extraction yield.** Subagents consistently produced high-yield extractions because the dispatch prompts included Sleeved's specific tech (GameAdapter, Firestore `publicDeckIndex`, WS_ACTIONS, Chakra v2, Zustand selectors, `.mts` NodeNext, Data Pipeline Integrity rule). Reframed and adjacent patterns land concretely when there are project-specific hooks to map them onto; without anchors, subagents extract generic patterns that don't specialize.
+
+**Changes from this update:**
+
+6. **`skills/enrich-agent/SKILL.md` — Phase 2 Step 2 dispatch-prompt contents:** Added two new required elements: a path-discovery fallback instruction (subagent falls back to `gh api contents` on 404 before skipping a source), and a project-anchors section (list project-specific technologies, libraries, data stores, conventions, rules — pulled from `CLAUDE.md`, the target's existing body, or `ops/sdlc/knowledge/`; do not invent). Also adjusted the report format to distinguish 404-then-discovered from genuinely-missing sources.
+7. **`skills/enrich-agent/SKILL.md` — Red Flags:** Added "This source URL 404'd, I'll skip it" (counter: try `gh api contents` first) and "I'll dispatch the lens alone and let subagents anchor patterns to whatever" (counter: include project anchors from authoritative sources).
+
+---
+
+## 2026-04-23: Bulk mode for sdlc-enrich-agent [scale-out]
+
+**Origin:** Session where the user had just initialized a fresh project with ~15 agents and wanted to evaluate two external subagent repos (VoltAgent's `awesome-claude-code-subagents` and `wshobson/agents`) against every local agent. The existing single-agent enrichment workflow assumed one target and a small, pre-curated source list — running it 15× by hand, deciding per-agent which of two repos' dozens of subagents to pass in, was not going to happen. The user proposed a two-phase structure: a cheap main-thread relevance map, then parallel dispatched enrichment. Generalized that into the skill so it's the documented path next time.
+
+**What happened:** Added a Bulk Mode section to `skills/enrich-agent/SKILL.md` that handles two cases with one structure — many sources fanned out to one target (typically when sources are repo collections), and many sources fanned out to many targets. Phase 1 runs in the main thread and produces a relevance-mapping table using generous inclusion (include anything remotely relevant; err on over-assignment). Phase 2 dispatches general-purpose subagents in batches of 3–4, each running Steps 1–7 with the full 6-dimension lens inlined in the prompt and editing the target file directly.
+
+**Changes made:**
+
+1. **`skills/enrich-agent/SKILL.md`** — Extended frontmatter description with bulk-mode triggers ("enrich all agents", "evaluate all our subagents against these", repo trees / directories as sources). Added three bulk-mode invocation forms to the Arguments block (`bulk <sources>`, `bulk <agent-list> <sources>`, and auto-detected single-target with collections). Added a Modes subsection clarifying when each path applies. Added a Bulk Mode Preconditions bullet. Added a full Bulk Mode section after Red Flags covering Phase 1 (inventory, list targets, build mapping table with generous inclusion, present for approval), Phase 2 (batch size 3–4, dispatch general-purpose agents with the 6 dimensions inlined, edit directly rather than returning plans, aggregate reports), a collapsed variant for single-target-plus-collections, and seven bulk-specific red flags.
+
+**Design choices worth noting:**
+
+- **Generous inclusion over precise categorization.** Phase 1 deliberately over-assigns. The cost of reading an irrelevant source in Phase 2 is one extraction pass producing zero patterns; the cost of skipping a source is losing every pattern it would have yielded, permanently. The asymmetry makes over-inclusion the right default.
+- **Inline the lens into dispatched prompts.** Dispatched subagents don't have access to the skill file, so the full 6 dimensions are inlined verbatim. Terse prompts produce terse extractions; prompt length is a one-time cost per dispatch, and lens fidelity is what makes the skill's output valuable.
+- **Phase 2 edits, doesn't plan.** The plan was the Phase 1 relevance map, which the user approved. Returning N plans for review after Phase 2 is not reviewable in practice — N is large precisely because bulk mode exists. Trust the lens.
+- **Batch size 3–4, not "all targets in parallel".** Bounded by WebFetch rate limits and by the cognitive cost of aggregating parallel reports. 3–4 is the sweet spot where throughput is real but aggregation stays tractable.
+- **Single-target-plus-collections still uses Phase 1.** Repo collections contain dozens of items; most don't apply to any given target. Without Phase 1 narrowing, Steps 1–7's "read the full source" instruction blows out the context. The mapping-then-extract shape is what makes repo-scale sources tractable at all.
+
+**Rationale:** Enrichment that doesn't scale to freshly-initialized projects is enrichment that doesn't get done. The single-agent workflow is the right primitive — Steps 1–7, the 6-dimension lens, the dismissal defense — but it needs an orchestration layer that turns "I have N agents and two source repos" into bounded, reviewable work. Bulk mode adds that layer without diluting the primitive: Phase 2 subagents still run the full workflow, just with narrower source lists and in parallel.
+
+---
+
 ## 2026-04-22: Lite Graduation phase in sdlc-initialize [on-ramp]
 
 **Origin:** Follow-up to the same-day `BOOTSTRAP-LITE.md` addition. The lite bootstrap's `GRADUATION.md` originally claimed `Bootstrap SDLC` would "detect and merge the lite install in place" — but `sdlc-initialize` had no such logic. First person to graduate would hit that gap and either lose lite customizations (discipline entries, changelog history) or have to merge by hand.
