@@ -230,6 +230,50 @@ Verify the installation script handles all framework files correctly.
 
 **Method:** Read `setup.sh` and trace its copy logic. Compare against manifest entries. Flag any manifest file that wouldn't be copied by the current script logic.
 
+## Dimension 10: Cross-Skill DRY
+
+Detect substantive prose duplicated verbatim or near-verbatim across sibling skills. This is the dimension that catches drift like the historical `sdlc-plan` / `sdlc-lite-plan` divergence (same framing sentences, ADR immutability rules, and reinforcement paragraphs that only appeared in one of the two skills despite applying universally).
+
+**Scope:**
+- `skills/*/SKILL.md`
+- `skills/*/references/*.md`
+
+**What to detect:**
+
+1. **Verbatim paragraph duplication** — a paragraph (≥2 sentences or ≥100 chars) appears in 2+ SKILL.md files. Use shingle-style grep: pick the longest distinctive substring (8-12 words, no boilerplate punctuation) from each candidate paragraph and grep across the corpus.
+2. **Near-verbatim conceptual duplication** — the same load-bearing concept appears with slightly different wording in 2+ skills (e.g., one says "ADRs are immutable", another says "Do not edit prior ADRs"). Detect by grepping for distinctive concept anchors ("immutable", "ensures that", "is to X what", "must not edit") and reporting clusters where the same anchor produces multiple-but-non-identical hits.
+3. **Reinforcement-paragraph drift** — same framing/reinforcement paragraph appears in only one of two sibling skills where both apply (e.g., a tier-pair like `sdlc-plan` and `sdlc-lite-plan`, or any pair sharing the same prefix-family).
+4. **Trigger phrase overlap** — frontmatter trigger phrases overlap between skills without explicit anti-trigger acknowledgement.
+
+**Scoping rules (avoid noise):**
+- Ignore matches inside fenced code blocks (` ``` `)
+- Ignore canonical phrasing-contract lines (`consult [sdlc-root]/...`, `update [sdlc-root]/...`, `Read [sdlc-root]/knowledge/architecture/agent-communication-protocol.yaml`) — those ARE the shared form and are validated separately by the phrasing contract
+- Ignore single-line pointers (`Read [sdlc-root]/process/...`, `Consult [sdlc-root]/...`) — those are the correct extraction pattern
+- Ignore `## Red Flags` table cells (red flags often share boilerplate wording legitimately) unless the entire row is identical
+- Ignore matches in process/changelog/knowledge files cited as quotation
+- Skip pairs where one skill is the canonical source and the other is a documented adapter or variant (look for explicit `tier:` or `variant_of:` markers in frontmatter, or comments noting the relationship)
+
+**Recommendation format (for each finding):**
+
+```
+DUPLICATION: {short summary}
+  Files: skills/skill-A/SKILL.md:42, skills/skill-B/SKILL.md:88
+  Block: "{first 60 chars}..."
+  Recommended target: [sdlc-root]/{process|knowledge}/{topic}.{md|yaml}
+  Action: extract once; replace both call sites with one-line pointer
+```
+
+**Severity:**
+- **Major** — verbatim duplication of ≥3 sentences, OR a load-bearing principle worded differently across siblings (the kind of drift that becomes load-bearing if not unified)
+- **Minor** — single-paragraph overlap, near-verbatim conceptual cluster
+- **Info** — trigger phrase overlap when anti-triggers exist but could be tightened
+
+**Method (lightweight):**
+1. Build a list of distinctive 8-12-word phrases from each `skills/*/SKILL.md` (skip code blocks, frontmatter, pointer lines)
+2. Grep each phrase across `skills/*/SKILL.md` and `skills/*/references/*.md`
+3. For phrases hitting ≥2 files, read each hit's surrounding paragraph and classify (verbatim vs near-verbatim vs scoping-rule false positive)
+4. Group findings by likely extraction target
+
 ## Step 11: Interactive Triage
 
 After presenting the audit report, run an interactive triage session for all promotion candidates identified during the audit (from Dimension 6 parking lot entries).
@@ -333,6 +377,14 @@ Promoted: N | Deferred: N | Skipped: N
 - Unhandled manifest files: [list or none]
 - Path mapping issues: [list or none]
 - Missing directory creation: [list or none]
+
+### Dimension 10: Cross-Skill DRY
+- Verbatim paragraph duplications: [count and locations, or none]
+- Near-verbatim conceptual clusters: [count and locations, or none]
+- Reinforcement-paragraph drift (one of N siblings has it, others don't): [list or none]
+- Trigger phrase overlaps without anti-trigger acknowledgement: [list or none]
+
+For each finding, include the recommended extraction target (`process/`, `knowledge/`, or new shared doc).
 
 ### Triage Results
 | # | Entry | Decision | Target |

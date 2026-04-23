@@ -69,6 +69,24 @@ Determine the file type from its location and content:
 - [ ] All referenced files (`references/`, `scripts/`) actually exist
 - [ ] No duplicated content between SKILL.md and reference files
 
+### Cross-Skill DRY (overlap with sibling skills)
+
+For each substantive prose block in the skill (≥2 sentences or ≥100 chars, excluding code fences, frontmatter, and one-line pointers to `process/` / `knowledge/`), grep `.claude/skills/*/SKILL.md` for the same or near-same content. Findings to surface:
+
+- [ ] **Verbatim duplication** — paragraph appears word-for-word in another skill. Recommendation: extract to `[sdlc-root]/process/{topic}.md` (universal protocol), `[sdlc-root]/knowledge/{domain}/{topic}.yaml` (domain rule), or a new shared doc; reference from both via one-line pointer.
+- [ ] **Near-verbatim duplication** — same concept worded slightly differently across 2+ skills (e.g., "ADRs are immutable" vs. "Do not edit prior ADRs"). Either unify wording or document why they should differ in DRY notes.
+- [ ] **Trigger overlap** — proposed trigger phrases or anti-triggers conflict with another skill's triggers. Recommend tightening anti-triggers.
+- [ ] **Reinforcement-paragraph drift** — same framing sentence ("X is to Y what A is to B") or reinforcement clause ("This ensures that...") appears in only one of two sibling skills where both apply.
+
+**Scoping rules (to avoid noise):**
+- Ignore matches inside fenced code blocks (` ``` `)
+- Ignore matches in frontmatter `description:` blocks (trigger phrase lists are expected to repeat across siblings only when intentional anti-trigger)
+- Ignore canonical phrasing-contract lines (e.g., `consult [sdlc-root]/knowledge/agent-context-map.yaml`) — those ARE the shared form
+- Ignore lines that are themselves pointers (`Read [sdlc-root]/...`, `Consult [sdlc-root]/...`)
+- A single shared sentence (<2 sentences total) is not a finding unless it's a load-bearing framing or rule
+
+Severity: **major** for verbatim duplication ≥3 sentences; **minor** for near-verbatim or single-paragraph overlap. Always include the recommended extraction target in the finding.
+
 ### Phrasing Contract (for skills referencing the knowledge layer)
 Skills that reference the knowledge layer MUST use canonical phrasings from `[sdlc-root]/process/knowledge-routing.md` § "Standard Phrases" and must NOT use forms listed in § "Forbidden Phrasings". These exact phrases let adapter plugins (e.g., `neuroloom-sdlc-plugin`) transform knowledge access reliably at install time.
 

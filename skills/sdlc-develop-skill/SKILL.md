@@ -6,9 +6,12 @@ description: >
   domain-specific), frontmatter generation with trigger phrases and anti-triggers, type-appropriate
   body scaffolding, Red Flags table, and Integration section. MODIFY mode reads an existing skill,
   identifies changes, auto-wraps custom content in PROJECT-SECTION markers, and warns if changes
-  target framework sections that will be overwritten on next migration. Enforces single-line YAML
-  descriptions, verb-first naming, manager-rule references for agent-dispatching skills, and
-  mandatory sections. Dispatches sdlc-reviewer for quality gate.
+  target framework sections that will be overwritten on next migration. Both modes run a DRY audit:
+  scans sibling skills for content overlap and proposes extraction (shared reference, knowledge
+  store, or process doc with one-line pointers) instead of duplicating prose. When the user
+  modifies multiple skills in one invocation, detects shared changes and centralizes them.
+  Enforces single-line YAML descriptions, verb-first naming, manager-rule references for
+  agent-dispatching skills, and mandatory sections. Dispatches sdlc-reviewer for quality gate.
   Triggers on "create a new skill", "new skill", "add a skill", "scaffold a skill",
   "I need a skill for", "make a skill", "modify a skill", "update a skill", "customize a skill",
   "/sdlc-develop-skill", "/sdlc-create-skill".
@@ -46,6 +49,28 @@ Clarify with the user:
   - **Domain-specific** — focused on a specific technical domain (e.g., sdlc-tests-create, sdlc-tests-run)
 - **What triggers this skill?** (natural language phrases users would say)
 - **What should NOT trigger this skill?** (anti-triggers — which existing skills handle adjacent concerns)
+
+### 1.5. DRY Audit (overlap with existing skills)
+
+Before scaffolding, scan for content overlap with sibling skills. Skipping this step is the most common source of long-term drift — the same framing sentence, principle, or warning ends up duplicated across two or three skills, then evolves independently.
+
+1. **Scan triggers** — grep `.claude/skills/*/SKILL.md` for the proposed trigger phrases and adjacent concepts. If another skill claims overlapping triggers, refine anti-triggers or merge.
+2. **Scan body content** — for each existing skill in the same family (sibling orchestrators, sibling utilities, etc.), identify any section the new skill would also need. Candidates for sharing:
+   - Universal principles (e.g., "ADRs are immutable", "agents see only their dispatch context")
+   - Cross-skill protocols (manager rule, review-fix loop, phrasing contract)
+   - Shared methodology that applies to a tier (e.g., both `sdlc-plan` and `sdlc-lite-plan` need ADR immutability rules)
+3. **Choose the extraction target:**
+
+| Shared content type | Extract to | Reference from skill via |
+|---------------------|-----------|--------------------------|
+| Universal SDLC principle, cross-skill protocol | `[sdlc-root]/process/{topic}.md` | One-line pointer: "Read and follow `[sdlc-root]/process/{topic}.md`." |
+| Domain knowledge consumed by multiple skills | `[sdlc-root]/knowledge/{domain}/{topic}.yaml` | Phrasing-contract lookup |
+| Detailed methodology used by 2+ skills in same family | New shared doc under `[sdlc-root]/process/` (NOT `references/` — those are per-skill) | One-line pointer |
+| Single-skill detail that bloats SKILL.md | The skill's own `references/` | `## Additional Resources` link |
+
+4. **Default to extraction** when content would appear verbatim (or near-verbatim) in 2+ skills. Inline duplication is acceptable only when (a) the content is short (≤2 sentences), (b) the framings genuinely differ between tiers, AND (c) you can articulate why divergence is desirable. Document the "why" in the Integration section's `DRY notes`.
+
+5. **If extraction is needed but out of scope** for this invocation, surface it: "This skill duplicates {content} from {sibling skills}. Recommend extracting to {target} in a follow-up." Do not silently re-duplicate.
 
 ### 2. Name Generation
 
@@ -177,8 +202,20 @@ Safely modify an existing skill with migration-aware wrapping. This mode reads t
 ### M1. Read and Analyze
 
 1. Read the existing skill's `SKILL.md`
-2. All skills in `.claude/skills/` are framework-installed from cc-sdlc — direct edits to framework sections will be overwritten on next `sdlc-migrate`
-3. Warn the user accordingly before making changes
+2. If the user names multiple skills (or "all the planning skills", "both X and Y"), read them all in parallel before proposing edits
+3. All skills in `.claude/skills/` are framework-installed from cc-sdlc — direct edits to framework sections will be overwritten on next `sdlc-migrate`
+4. Warn the user accordingly before making changes
+
+### M1.5. DRY Audit (cross-skill drift detection)
+
+Before applying any edit, run the same overlap scan as CREATE step 1.5 — but in MODIFY mode the questions are slightly different:
+
+1. **Single-skill modification** — for each section the user wants to change, grep sibling skills for the same concept. If the change adds a sentence/paragraph that already exists elsewhere (or *should* exist elsewhere), flag it: "This addition restates content already in {sibling skill}. Options: (a) extract to shared location and pointer-reference from both, (b) leave divergent and document why in DRY notes, (c) update both in this invocation."
+2. **Multi-skill modification** — when the user is changing 2+ skills in one invocation:
+   - Detect when the same content is being added/changed in multiple targets. Default action: write it once to a shared location (`[sdlc-root]/process/{topic}.md` or knowledge store) and have each skill reference it.
+   - Detect when one skill is being brought into alignment with a sibling that already has the content. Default action: extract from the source skill first, then point both at the extracted location — do not copy-paste forward.
+   - When you must edit the same section across N skills, propose the extraction *first* and only inline if the user explicitly declines.
+3. **Surface unjustified drift** — if grep reveals the same concept worded differently across skills (e.g., one says "ADRs are immutable", another says "Do not edit prior ADRs"), report it. The user may want to unify wording even if it's outside the requested change.
 
 ### M2. Classify the Change
 
@@ -233,10 +270,15 @@ Dispatch the `sdlc-reviewer` subagent on the modified skill file. Present its fi
 | "SKILL.md can be as long as needed" | Target 1,500-3,000 words for SKILL.md body. Move detailed content to references/. |
 | "I'll edit a framework skill directly without markers" | Framework sections are overwritten on migration. Use MODIFY mode to auto-wrap project-specific additions. |
 | "The user wants to modify a skill, I'll just edit it" | Check if it's a framework skill first. If so, classify the change and apply appropriate protection. |
+| "I'll write the same paragraph in both skills — they're related" | Default to extraction. Verbatim or near-verbatim content in 2+ skills drifts independently within weeks. Put it once in `[sdlc-root]/process/` or a knowledge store and reference it. |
+| "The user is editing 3 skills, I'll just apply the same change to each" | Multi-skill changes are the strongest signal that content belongs in one shared location. Propose extraction first, then have each skill reference it. |
+| "I'll inline this because the wording is *slightly* different in each tier" | Only acceptable if you can articulate why divergence is desirable AND document it in DRY notes. Otherwise the difference is drift, not design. |
+| "Skipping the DRY audit — this is a small skill" | Small skills accrete duplicated framing too. The audit is grep-fast; skipping it is how `sdlc-plan` and `sdlc-lite-plan` ended up with three duplicated paragraphs. |
 
 ## Integration
 
 - **Feeds into:** The created/modified skill becomes part of the project's skill library
-- **Uses:** `sdlc-reviewer` (quality gate), existing skills in `.claude/skills/` (as reference patterns)
+- **Uses:** `sdlc-reviewer` (quality gate), existing skills in `.claude/skills/` (as reference patterns), `[sdlc-root]/process/` and `[sdlc-root]/knowledge/` (as extraction targets for shared content)
 - **Complements:** `sdlc-create-agent` (agents vs skills), `sdlc-review` (review existing skills)
-- **Does NOT replace:** Direct editing of project-owned skills (this adds convention enforcement and migration protection)
+- **Does NOT replace:** Direct editing of project-owned skills (this adds convention enforcement, migration protection, and DRY discipline)
+- **DRY discipline:** CREATE step 1.5 and MODIFY step M1.5 enforce overlap scans before any write. Extraction targets, in priority order: `[sdlc-root]/process/{topic}.md` (universal protocols), `[sdlc-root]/knowledge/{domain}/{topic}.yaml` (domain rules), per-skill `references/` (single-skill detail). Inline duplication requires a documented justification in the skill's `DRY notes`.

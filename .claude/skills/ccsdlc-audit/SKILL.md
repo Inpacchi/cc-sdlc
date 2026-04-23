@@ -4,7 +4,9 @@ description: >
   Unified auditing skill for the cc-sdlc framework source repo with two modes: compliance and
   improvement. Compliance mode audits manifest completeness, cross-reference consistency, stale
   references, changelog freshness, knowledge store conventions, discipline health, skill/agent
-  convention compliance, and setup.sh correctness. Improvement mode analyzes sessions and/or
+  convention compliance, setup.sh correctness, and cross-skill DRY (verbatim or near-verbatim
+  prose duplicated across sibling skills that should be extracted to a shared location).
+  Improvement mode analyzes sessions and/or
   commits to identify framework gaps — skill deficiencies, knowledge store gaps, process doc
   issues, and structural problems. Both modes can run against the current session or be fed a
   previous session or commit range. Triggers on "sdlc audit", "audit the framework", "run a
@@ -74,6 +76,7 @@ DISPATCH AUDITOR → REPORT → TRIAGE → FIX
 7. **Skill convention compliance** — Frontmatter format (folded scalar descriptions), required sections, anti-triggers
 8. **Agent convention compliance** — Proper frontmatter, tools lists, when-to-use descriptions
 9. **Setup.sh correctness** — Installation script copies all manifest files, agent paths go to `.claude/agents/`
+10. **Cross-skill DRY** — Substantive prose blocks (paragraphs, framing sentences, principles) duplicated verbatim or near-verbatim across sibling skills. Findings recommend extraction targets (`process/`, `knowledge/`) so both skills can reference one source.
 
 ### Compliance with Session/Commit Input
 

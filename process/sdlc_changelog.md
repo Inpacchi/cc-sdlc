@@ -34,6 +34,36 @@ Each entry contains:
 
 ---
 
+## 2026-04-22: DRY lens in sdlc-reviewer + Dimension 10 (Cross-Skill DRY) in ccsdlc-audit [drift-prevention]
+
+**Origin:** Follow-up to the same-day `sdlc-develop-skill` DRY audit. Adding the audit at write time catches drift introduced going forward; the matching read-time gates needed it too — sdlc-reviewer (the per-skill quality gate) and ccsdlc-audit (the framework-source compliance check that sweeps the whole repo periodically). Without these, write-time DRY discipline is bypassed any time someone hand-edits a skill, and existing accumulated drift never surfaces.
+
+**Changes made:**
+
+1. **`agents/sdlc-reviewer.md`** (also affects `.claude/agents/sdlc-reviewer.md` via hardlink) — Added a `Cross-Skill DRY (overlap with sibling skills)` checklist subsection under Skill-Specific Checks → Content Quality. Reviewer now greps `.claude/skills/*/SKILL.md` for verbatim paragraph duplication, near-verbatim conceptual clusters, trigger overlap, and reinforcement-paragraph drift; reports each with the recommended extraction target. Includes scoping rules (ignore code fences, ignore canonical phrasing-contract lines, ignore one-line pointers, ignore tier/variant pairs) so the lens doesn't fire on legitimate shared form. Severity scale: major for verbatim ≥3 sentences, minor for near-verbatim, info for trigger overlap with anti-trigger acknowledgement.
+2. **`.claude/skills/ccsdlc-audit/SKILL.md`** — Added Dimension 10 (Cross-Skill DRY) to the Audit Dimensions summary list and updated the description so the new dimension surfaces at trigger time.
+3. **`.claude/skills/ccsdlc-audit/references/compliance-methodology.md`** — Full Dimension 10 methodology (scope, what to detect, scoping rules, recommendation format with extraction target, severity scale, lightweight detection method using shingle-style grep) and added Dimension 10 to the Report Format template.
+
+**Rationale:** The DRY discipline added to `sdlc-develop-skill` only fires at write time. A reviewer dispatched after every create/modify closes the per-skill loop; an audit dimension that scans the whole skill corpus closes the framework-wide loop and catches existing drift that predates the new gates. The historical `sdlc-plan` / `sdlc-lite-plan` divergence — three duplicated paragraphs, three more single-sided framings — would have surfaced as a Dimension 10 finding the first time the audit ran.
+
+The agent change is hardlinked between `agents/` (target install) and `.claude/agents/` (framework-dev) so both contexts stay in sync; one edit covers both. ccsdlc-audit is framework-dev only (`.claude/skills/`) and not tracked in `skeleton/manifest.json`, so no manifest update was needed. Skipped `/sdlc-audit` (the target-project version) — most target projects have too few skills for cross-skill drift to matter, and a noisy duplication check there would create more false positives than it catches.
+
+---
+
+## 2026-04-22: DRY audit step in sdlc-develop-skill (CREATE 1.5 / MODIFY M1.5) [drift-prevention]
+
+**Origin:** User-reported drift between `sdlc-plan` and `sdlc-lite-plan` — the same framing sentence ("ADRs are to technical work what DRs are to strategic work"), the same ADR-immutability note, and the same "this ensures decisions reach worker agents" reinforcement appeared in only one of the two skills despite applying universally. Investigation showed the duplication was authored without a scan for sibling overlap, and the divergence had no design justification.
+
+**Changes made:**
+
+1. **`skills/sdlc-develop-skill/SKILL.md`** — Added a `1.5. DRY Audit` step in CREATE mode and a parallel `M1.5. DRY Audit` step in MODIFY mode. Both grep sibling skills for content overlap before any write, classify the shared content (universal protocol → `process/`, domain rule → `knowledge/`, single-skill detail → `references/`), and default to extraction with one-line pointers rather than inline duplication. MODIFY mode additionally handles multi-skill invocations: when the user is changing 2+ skills in one pass, the skill proposes extraction first and only inlines if the user explicitly declines. Added a cross-skill drift detector that surfaces the same concept worded differently across siblings even when outside the requested change.
+2. **`skills/sdlc-develop-skill/SKILL.md`** — Added 4 red flags covering the most common DRY failure modes (duplicating "related" paragraphs, applying the same change to N skills without extraction, inlining "slightly different" wording without justification, skipping the audit on small skills) and updated the Integration section's `DRY discipline` note to make the extraction-target priority order explicit.
+3. **`skills/sdlc-develop-skill/SKILL.md`** — Updated frontmatter description so the DRY audit appears in the trigger-time summary (the description is the primary signal agents use to decide whether to invoke).
+
+**Rationale:** Skill prose duplication is invisible at write time and corrosive at read time — the two copies drift independently within weeks, and the divergence then becomes load-bearing ("the user expects the wording to differ here"). Catching duplication at the moment of authoring is far cheaper than reconciling it during a later audit. The audit is grep-fast, so the cost of running it is negligible compared to the cost of letting drift accumulate.
+
+---
+
 ## 2026-04-22: Compact table-based PRE-GATE / POST-GATE format for sdlc-execute and sdlc-lite-execute [output-format]
 
 **Origin:** User feedback during a live `/sdlc-lite-execute` run — the stacked PRE-GATE / POST-GATE blocks (Pattern search → Dependencies → File-conflict check → Data sources → Expected counts → Design Decisions → Agent, then build / planned / actual / deviations per phase) produced walls of mostly-routine text ("codebase only", "no overlap", "will be referenced by agent") and jammed the actually-interesting design decisions into semicolon-chained single lines, which then broke across terminal soft-wraps ("_codw orchestrator", "(org tudios)", "ru Phase 4."). POST-GATE mixed ✓ status, test counts, regressions, stub audits, and deviations into flowing prose so anomalies didn't pop.
@@ -68,6 +98,47 @@ Each entry contains:
 
 **Rationale:** The Manager Rule is about domain judgment, not just editing. A plan body contains phase structure, implementation guidance, and acceptance criteria — all domain judgment artifacts the worker agent produced. Transcribing that through the manager (even verbatim) creates an opportunity for silent drift (reformatting, section reordering, accidental truncation) and masks the actual boundary the rule is enforcing. Making the writer save its own output eliminates the transcription hop. The manager's only contact with the file becomes (a) appending the reviews summary — explicit mechanical metadata — and (b) reading the file for plan-mode handoff.
 
+---
+
+## 2026-04-22: Adopt skills, templates, knowledge, and discipline insights from neuroloom
+
+**Origin:** User requested a survey of `~/Projects/neuroloom` (a downstream cc-sdlc consumer) to identify content worth promoting upstream. Survey identified two new skills, two new templates, a new knowledge domain, a generic agent suggestion, a missing CLAUDE-SDLC section, and ~12 generic discipline insights buried in neuroloom's parking lots.
+
+**What happened:** Neuroloom had accumulated framework-shaped content (incident workflow skill, reference-doc creation skill, decision-record template, reference-doc template, search-knowledge store, dx-engineer agent role) and parking-lot insights (async session safety, advisory-lock + connection pooling, multi-tenant CTE isolation, ORM `onupdate` hooks, etc.) that were generic enough to benefit any cc-sdlc consumer but currently only existed downstream. None of these had been promoted; on next migration they would be lost or re-derived.
+
+**Changes made:**
+
+1. **`skills/sdlc-debug-incident/SKILL.md`** (new) — Two-phase incident workflow (TRIAGE → CLOSEOUT). Replaces neuroloom's hardcoded agent matrix with a reference to `[sdlc-root]/process/agent-selection.yaml` so the skill stays consistent with planning/review when projects add domain agents. Auto-detects mode from incident doc state; hands off remediation to `sdlc-plan` / `sdlc-lite-plan`.
+
+2. **`skills/sdlc-create-reference-doc/SKILL.md`** (new) — Author + review-quorum workflow for internal developer-facing reference docs (event schemas, API surfaces, pipeline stage inventories). Strict template compliance, mandatory `path:line` anchors, registers in `docs/reference/_index.md`. Agent matrix references `agent-selection.yaml` rather than hardcoding roles.
+
+3. **`templates/decision_record_template.md`** (new) — Lightweight ADR with `expiration / revisit conditions` and `depends_on / informs` traceability. Distinguishes from generic ADRs by capturing when to re-evaluate and which deliverables/decisions it depends on or informs.
+
+4. **`templates/reference_doc_template.md`** (new) — Companion to `sdlc-create-reference-doc`. Frontmatter schema (title, slug, category, owner_agent, audience, last_verified_commit, last_verified_date, related_deliverables) plus fixed section order (Summary, Key Concepts, Reference, Examples, Gotchas, Related Code, Related Docs, Change Log).
+
+5. **`knowledge/search/`** (new directory, 8 files) — Generic IR/RAG knowledge: retrieval-strategy-patterns, ingestion-pipeline-patterns, vector-index-tuning-patterns, retrieval-evaluation-patterns, multi-strategy-retrieval-patterns, evidence-combination-frameworks, score-transform-catalog, plus README. Excluded neuroloom-specific files (`hindsight-algorithm-reference.md`, `temporal-supersession-demotion-patterns.md`). Wired to `ml-engineer` in `agent-context-map.yaml`.
+
+6. **`agents/AGENT_SUGGESTIONS.md`** — Added `dx-engineer` entry for projects shipping public SDKs, CLIs, MCP servers, plugins, or anything with external developers as the primary user. Covers SDK API design, CLI ergonomics, error message clarity, quickstart flows, package publishing pipelines, and friction audits.
+
+7. **`CLAUDE-SDLC.md`** — Added `Commit Message Format` section. Codifies conventional-commits prefix style, prohibits hard-wrapping body text at 72 chars (GitHub-first reading model), allows intentional line breaks for meaning.
+
+8. **`process/commands.md`** — Registered both new skills under a new `Incidents & Reference Docs` section.
+
+9. **`disciplines/architecture.md`** — Added 4 generic parking-lot insights (async session/connection factory pattern, advisory lock + connection pool race, lazy initialization defensiveness, "metadata-only" flag enforcement).
+
+10. **`disciplines/data-modeling.md`** — Added 4 generic parking-lot insights (multi-tenant isolation at every CTE hop, LEFT JOIN ON-vs-WHERE filter placement, ORM-enabled DML still firing `onupdate`, idle-in-transaction COMMIT discipline).
+
+11. **`disciplines/testing.md`** — Added 2 generic parking-lot insights (test name vs scenario consistency, stub fixtures must match live API shape).
+
+12. **`disciplines/observability.md`** — Added 1 generic parking-lot insight (absence-of-logs monitors need a guaranteed signal floor).
+
+13. **`disciplines/coding.md`** — Added 1 generic parking-lot insight (logger backend choice changes `extra=` semantics).
+
+14. **`skeleton/manifest.json`** — Registered the two new skills, two new templates, the `knowledge/search/` directory, and all 8 search knowledge files.
+
+15. **`knowledge/agent-context-map.yaml`** — Wired `ml-engineer` to the new search knowledge files (search-engineer doesn't exist as a default cc-sdlc role).
+
+**Rationale:** Three categories of value were on the table — (a) skills filling real gaps cc-sdlc didn't have (incident response, reference doc creation), (b) templates / knowledge that benefit any project of sufficient complexity (decision records, IR/RAG patterns), and (c) parking-lot insights extracted from neuroloom's accumulated experience that generalize to any production system. The plugin-creation playbook was deliberately skipped — too neuroloom-plugin-specific to be useful as-is, would require a from-scratch generic rewrite. The `claude-code-plugin-creation` and bulk-discipline-merge were both deferred. Substituting `agent-selection.yaml` for the hardcoded agent matrix in both new skills is the key generalization — neuroloom hardcoded its agent roster (search-engineer, payments-engineer, etc.) into the skills directly, which would have made them brittle on any other project. References to `agent-selection.yaml` keep them adaptive.
 
 ---
 
