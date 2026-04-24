@@ -283,7 +283,36 @@ This migration skill is responsible for **consuming** markers: extracting, prese
 >
 > Log a `checkpoint: point_of_no_return` event to the transaction log immediately before the first file write.
 
-### 2.0 Bundle Detection
+### 2.0 Load Contract Changes
+
+Read `skeleton/contract_changes.yaml` from the cc-sdlc source.
+
+**If the file is absent** (the upstream cc-sdlc predates the contract-changes system): skip this step entirely. `pending_changes` is empty. §4.3a falls back to its inherent path-integrity and convention checks with no rename set. §4.5 does not update `last_applied_contract_id`. §4.7 is skipped. Log `CONTRACT CHANGES: not present in upstream — skipping contract-driven steps`.
+
+Otherwise, read `.sdlc-manifest.json` → `last_applied_contract_id` (treat as `"0000"` if absent — this covers projects installed before contract_changes.yaml existed).
+
+Select entries with `id` > `last_applied_contract_id`. Call this set **pending_changes**. It drives:
+
+- §2.0a bundle detection (entries with `type: bundle_debut`)
+- §2.1a upstream-deletion exemptions (bundle skill paths are exempt regardless of contract entry; see below)
+- §4.3a CLAUDE.md compatibility check (entries with `type: rename_skill`)
+- §4.5 manifest update (entries with `type: manifest_field_added`; also persists `last_applied_contract_id`)
+- §4.7 bundle offer (entries with `type: bundle_debut` not yet installed)
+
+Log the selection so CD can see what's being applied:
+
+```
+CONTRACT CHANGES SINCE 0005:
+  0006 rename_skill          Merge review-commit + review-diff into sdlc-review-code
+  0007 manifest_field_added  Introduce optional skill bundles (installed_bundles)
+  0008 bundle_debut          Debut design bundle
+```
+
+If pending_changes is empty, log `CONTRACT CHANGES: up to date` and skip the §4.3a contract-driven rename step (it has nothing to do). The rest of §4.3a (path integrity, convention checks) still runs.
+
+**Unknown entry types:** If an entry's `type` isn't one of the defined values, log a warning and skip it. Do not fail the migration — schema-forward compatibility lets adapter plugins extend the set.
+
+### 2.0a Bundle Detection
 
 Before any file copying, compute the **effective install set** for this project — the default `source_files` list plus any opt-in bundles the project has already adopted.
 
@@ -859,16 +888,22 @@ The project's `CLAUDE.md` contains CLAUDE-SDLC.md content — skill names, proce
 
 **Check for:**
 
-1. **Skill name references (guarded renames)** — verify all skill names mentioned in CLAUDE.md (`sdlc-plan`, `sdlc-execute`, `sdlc-lite-plan`, `sdlc-lite-execute`, `sdlc-idea`, `sdlc-initialize`, `sdlc-reconcile`, `sdlc-review-code`, `sdlc-review-fix`, `sdlc-develop-skill`, `sdlc-create-agent`, `sdlc-review`) still match the actual skill directory names in `.claude/skills/`. Check for renamed skills: `diff-review` → `sdlc-review-diff` → `sdlc-review-code`, `commit-review` → `sdlc-review-commit` → `sdlc-review-code`, `sdlc-review-diff` → `sdlc-review-code`, `sdlc-review-commit` → `sdlc-review-code`, `commit-fix` → `sdlc-review-fix`, `sdlc-create-skill` → `sdlc-develop-skill`
+1. **Skill name references (guarded renames)** — driven by `skeleton/contract_changes.yaml`. Read that file from the cc-sdlc source. Select entries with `type: rename_skill` and `id` > the project's `last_applied_contract_id` (stored in `.sdlc-manifest.json`; treat as `"0000"` if absent). Process selected entries in id order; each entry contributes `from → to` pairs to the rename set. If the project's `last_applied_contract_id` is absent, apply the full rename set — this covers projects installed before contract_changes.yaml existed.
 
-   **Guarded rename rule:** Before renaming any skill reference in the project's CLAUDE.md or other files:
+   For every accumulated rename pair, sweep CLAUDE.md and other project references.
+
+   **Guarded rename rule:** Before rewriting any skill reference in the project's CLAUDE.md or other files:
    1. Build the project's actual skill inventory: `ls .claude/skills/`
-   2. Only rename if the target skill directory exists in the project
-   3. If the target doesn't exist (e.g., the project hasn't received the new skill yet), log a warning instead of renaming:
+   2. Only rewrite if the target skill directory exists in the project
+   3. If the target doesn't exist (e.g., the project hasn't received the new skill yet), log a warning instead of rewriting:
       ```
       GUARDED RENAME SKIPPED: [old-name] → [new-name] — target directory does not exist in project
       ```
    This prevents renaming references to skills that don't exist in the project, which causes silent process failures.
+
+   **Chained renames:** If a skill was renamed multiple times (e.g., `diff-review` → `sdlc-review-diff` → `sdlc-review-code`), contract_changes.yaml has a separate entry per hop. Applying entries in id order walks the chain automatically — no special-case logic needed.
+
+   **Do NOT hardcode rename pairs in this skill.** Every rename goes in contract_changes.yaml. If you find yourself wanting to add a special case here, add it to the YAML instead.
 
 2. **Agent name references in dispatching skills (guarded renames)** — skills that dispatch subagents (`sdlc-review-code`, `sdlc-review-fix`, `sdlc-execute`, `sdlc-lite-execute`, `sdlc-plan`, `sdlc-lite-plan`) contain agent names in their examples and dispatch logic. If the upstream cc-sdlc uses different agent names than the project (e.g., `frontend-developer` vs `frontend-engineer`), do NOT rename the project's references to match upstream.
 
@@ -928,9 +963,12 @@ After migration, update `.sdlc-manifest.json`:
 2. **Add missing fields** if the manifest predates this migration:
    - `sdlc_root`: set to `[sdlc-root]` detected in pre-flight
    - `installed_files`: back-fill if absent (hash every file in `skeleton/manifest.json` source_files at its installed path; mark `installed_at: "backfilled-{CURRENT_VERSION}"`)
-   - `installed_bundles`: back-fill from the §2.0 detection result (empty array if no bundles detected)
+   - `installed_bundles`: back-fill from the §2.0a detection result (empty array if no bundles detected)
+   - `last_applied_contract_id`: if absent, back-fill to `"0000"` before consuming pending_changes; if already set, leave untouched until step 5 below
+   - **Any field added by a `manifest_field_added` contract entry in pending_changes** — apply its `default` value
 3. **Refresh `installed_files` hashes.** For every file the migration just touched — direct copies, content-merges, drift resolutions — recompute SHA-256 of the final on-disk content and update the corresponding entry. For drift cases where CD chose "keep mine", record the current hash so the next migration sees a clean baseline. For files CD chose to overwrite with upstream, the new hash reflects the upstream content. This keeps drift detection accurate for the next migration.
 4. **Update `installed_bundles`** to include any bundles CD accepted in §4.7.
+5. **Update `last_applied_contract_id`** to the newest `id` in `contract_changes.yaml`. Do this only after §4.3a, §4.7, and every other pending-change consumer has run successfully — if any of them failed, leave the old id so the next migration retries.
 
 ```bash
 # Read existing manifest
@@ -1020,15 +1058,21 @@ echo "$MANIFEST" > .sdlc-manifest.json
 1. Commit the migration
 ```
 
-### 4.7 Offer Uninstalled Bundles
+### 4.7 Offer Newly Debuted Bundles
 
-After the migration report, check whether any `manifest.bundles` entries were detected as **not installed** in §2.0. For each such bundle, surface it to CD with `AskUserQuestion`:
+After the migration report, surface any `bundle_debut` entry in **pending_changes** whose bundle isn't already installed. Only debut entries pending for this migration trigger the offer — bundles CD previously declined (debut entry is no longer pending because `last_applied_contract_id` has advanced past it) are not re-offered. This prevents nagging every migration about the same bundle.
 
-> The `[bundle-name]` bundle (`[bundle.description]`) is available but not installed in this project. Install it now?
+For each such bundle:
+
+> New bundle available since your last migration: **`[bundle.name]`** — [bundle.description]
 >
 > Skills it would add: [list bundle.skills]
+>
+> Install it now?
 
-If CD accepts: copy the bundle's skills into the project (same direct-copy flow as §2.1), and log the install in the migration report. If CD declines: do nothing — the prompt does not persist; it will be offered again on the next migration.
+If CD accepts: copy the bundle's skills into the project (same direct-copy flow as §2.1), append the bundle name to `installed_bundles`, and log the install in the migration report.
+
+If CD declines: do nothing. The debut entry will be marked consumed when §4.5 advances `last_applied_contract_id`, so this bundle won't be offered again automatically. CD can still opt in later by editing `.sdlc-manifest.json` → `installed_bundles` manually, which §2.0a will honor on the next migration.
 
 Do **not** auto-install bundles. Do **not** remove installed bundles the project chose to adopt.
 

@@ -13,7 +13,7 @@ This is the **source repository** for the cc-sdlc framework. It contains SDLC sk
 | `knowledge/` | Domain knowledge stores (installed to target's `ops/sdlc/knowledge/`) |
 | `disciplines/` | Discipline parking lots (installed to target's `ops/sdlc/disciplines/`) |
 | `plugins/` | Required/optional plugin setup guides (installed to target's `ops/sdlc/plugins/`) |
-| `skeleton/` | `manifest.json` — canonical directory structure and file list |
+| `skeleton/` | `manifest.json` — canonical directory structure and file list. `contract_changes.yaml` — structured, append-only record of changes requiring active migration behavior (renames, bundle debuts, manifest field additions). Consumed by `sdlc-migrate`; not installed into projects. |
 | `CLAUDE-SDLC.md` | SDLC content merged into target project's CLAUDE.md during initialization (not a separate file) |
 | `BOOTSTRAP.md` | One-file bootstrap — curl this, say "Bootstrap SDLC", framework installs itself |
 | `skills/sdlc-migrate/` | Skill for content-aware framework updates to existing projects |

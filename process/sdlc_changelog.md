@@ -34,6 +34,45 @@ Each entry contains:
 
 ---
 
+## 2026-04-23: Structured contract changes replace hardcoded migration lists [contract-change]
+
+**Origin:** While landing the review-commit/review-diff merge and the bundle mechanism (same-day changelog entries below), the guarded-rename list in `sdlc-migrate` §4.3a grew another chain: `diff-review` → `sdlc-review-diff` → `sdlc-review-code`, plus `commit-review` → `sdlc-review-commit` → `sdlc-review-code`. CD asked whether hardcoded rename chains in the migration skill were the right design. They aren't — the list grows forever, every migration run has to consider every rename in history regardless of the project's starting version, and the same information already lives narratively in the changelog.
+
+**What happened:** The framework had three parallel rename-tracking surfaces that were drifting out of alignment: (1) the changelog's prose entries tagged `[contract-change]`, (2) a hardcoded bullet list of rename pairs inside `sdlc-migrate` §4.3a, and (3) the Neuroloom adapter's own hardcoded rename mentions. No single source of truth, no version-bounded scope, and no mechanism to stop re-applying old migrations against projects that already received them.
+
+**Changes made:**
+
+1. **`skeleton/contract_changes.yaml`** — NEW. Structured, append-only record of cc-sdlc changes that require active migration behavior. Schema documented in the file header. Types defined today: `rename_skill`, `rename_agent` (future-proof), `bundle_debut`, `manifest_field_added`, `other`. Each entry has a zero-padded numeric `id`, a date, a title, a `changelog_ref` pointing at the prose entry, and type-specific fields. Backfilled with eight entries: five historical renames (sdlc- prefix first wave, review verb-first, full sdlc- prefix completion, sdlc-create-skill rename, sdlc-design-brand-asset rename), plus today's review-commit/review-diff merge, `installed_bundles` field addition, and design bundle debut.
+
+2. **`skills/sdlc-migrate/SKILL.md` new §2.0 "Load Contract Changes"** — Runs first in Phase 2. Reads `contract_changes.yaml` from the cc-sdlc source, filters entries with `id > last_applied_contract_id` (from `.sdlc-manifest.json`; treats missing as `"0000"`), produces the **pending_changes** set that drives subsequent phases. Logs what's being applied. Unknown entry types are warned and skipped, not fatal — forward-compat for adapter-extended types.
+
+3. **`skills/sdlc-migrate/SKILL.md` §2.0a (renumbered from §2.0)** — Bundle Detection continues to run, now positioned after contract loading. Still supports both the authoritative `installed_bundles` field and the file-existence fallback for pre-bundles installs.
+
+4. **`skills/sdlc-migrate/SKILL.md` §4.3a** — Hardcoded rename chain deleted. Replaced with: "Read `contract_changes.yaml`, filter `type: rename_skill` entries in pending_changes, accumulate `from → to` pairs, apply the guarded-rename rule per pair. Do NOT hardcode rename pairs in this skill. If you find yourself wanting to add a special case here, add it to the YAML instead." Chained renames (e.g., `diff-review` → `sdlc-review-diff` → `sdlc-review-code`) walk automatically because entries apply in id order.
+
+5. **`skills/sdlc-migrate/SKILL.md` §4.5 manifest update** — Added `last_applied_contract_id` handling: back-fill to `"0000"` if absent, then advance to the newest id in `contract_changes.yaml` only after all pending-change consumers completed successfully. Any `manifest_field_added` entry in pending_changes contributes its field + default to the back-fill set.
+
+6. **`skills/sdlc-migrate/SKILL.md` §4.7** — Changed from "offer every uninstalled bundle every migration" to "offer only bundles whose `bundle_debut` entry is in pending_changes." Prevents nagging about the same bundle forever once CD has declined; debuts get exactly one prompt per project.
+
+7. **`skills/sdlc-initialize/SKILL.md`** — `.sdlc-manifest.json` schema gains `last_applied_contract_id`. At install time, the init sets this to the newest entry id in the fetched `contract_changes.yaml`, so new projects start caught up — migrate won't re-apply historical renames meant for older projects.
+
+**Neuroloom adapter changes:**
+
+8. **`neuroloom-sdlc-plugin/skills/sdlc-migrate/SKILL.md`** — Bundle Awareness section's "Rename handling" paragraph rewritten to describe the contract_changes.yaml algorithm instead of naming specific rename pairs. Manifest field table updated to include `last_applied_contract_id`.
+
+9. **`neuroloom-sdlc-plugin/skills/sdlc-initialize/SKILL.md`** — Manifest example and field docs updated with `last_applied_contract_id`.
+
+**Design choices worth noting:**
+
+- **Zero-padded numeric ids, not dates or semver.** Dates collide (two entries on 2026-04-23). Semver requires cc-sdlc to maintain a release cadence that ties to migration semantics rather than marketing. Sequential ids let ordering be mechanical and enforceable (sort check passes in validation), and `last_applied_contract_id` is trivially comparable.
+- **Append-only with a hard "never edit past entries" rule.** A project migrating from id `0003` in 2029 still needs entries `0004` through whatever is current at that time to apply correctly. Edit-in-place would silently change what older projects receive. The discipline is the same as DB migrations: once shipped, an entry is frozen.
+- **`changelog_ref` on every entry.** The narrative source of truth remains the prose changelog — machine-readable contract_changes.yaml is an index into it, not a replacement. Every `[contract-change]`-tagged changelog entry should have a corresponding YAML entry, and vice versa. That pairing is enforceable by an audit check (future work).
+- **Unknown types warn instead of failing.** Adapters (Neuroloom, future ones) may extend the schema with backend-specific types (e.g., Neuroloom might want `phrasing_contract_change` with canonical/replacement pairs). Failing on unknown types would block legitimate adapter extensions; warning lets them land cleanly.
+
+**Rationale:** The immediate payoff is that the rename list in `sdlc-migrate` stops growing — every future rename goes in `contract_changes.yaml` and never touches the skill body. The deeper payoff is that adapter plugins and core migrate now have one place to look for "what behavioral changes happened between these two cc-sdlc versions," replacing the ad-hoc changelog-grepping that the adapter's `supported_ccsdlc_version` gate currently does. Tagged `[contract-change]` because adapter maintainers need to consume `last_applied_contract_id` from `.sdlc-manifest.json` and the `contract_changes.yaml` schema on their next sync.
+
+---
+
 ## 2026-04-23: Merge review-commit + review-diff → sdlc-review-code [contract-change]
 
 **Origin:** Framework review surfaced that `review-commit` and `review-diff` were near-identical — same agent selection, same lenses, same output — split only by target (committed vs uncommitted). The duplication meant every change to the review loop had to land in two places.

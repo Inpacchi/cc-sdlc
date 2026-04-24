@@ -1,0 +1,165 @@
+# cc-sdlc Contract Changes
+#
+# Structured record of breaking-or-behavioral changes in cc-sdlc that require
+# active migration work in downstream projects beyond simple direct-copy.
+#
+# sdlc-migrate consumes this file. On every migration run:
+#
+#   1. Read this file from the cc-sdlc source (it is not installed into projects).
+#   2. Read the project's `.sdlc-manifest.json` → `last_applied_contract_id`.
+#   3. For each entry with `id` > last_applied_contract_id, apply it.
+#   4. Update `last_applied_contract_id` to the newest entry's id.
+#
+# sdlc-initialize sets `last_applied_contract_id` to the newest entry's id at
+# install time, so new projects start already caught up.
+#
+# -------------------------------------------------------------------------
+# Authoring rules
+# -------------------------------------------------------------------------
+#
+# - Append only. Never edit or remove a past entry — older projects still
+#   need them on their first migration after a long pause.
+# - IDs are zero-padded 4-digit integers, strictly increasing. Use the next
+#   unused number, regardless of date.
+# - Every entry has a `changelog_ref` pointing to the corresponding prose
+#   entry in `process/sdlc_changelog.md` (the narrative source of truth).
+# - Pair every changelog entry tagged `[contract-change]` with an entry here.
+# - If an entry's intent can't be encoded in one of the defined types, use
+#   `type: other` with a clear `notes` block; treat that as a schema debt
+#   signal — the next time the same shape recurs, add a dedicated type.
+#
+# -------------------------------------------------------------------------
+# Entry types
+# -------------------------------------------------------------------------
+#
+# rename_skill
+#   renames: list of [from, to] pairs. Both are skill directory names
+#     (without `skills/` prefix, without `/SKILL.md` suffix).
+#     Multiple `from` values mapping to the same `to` means a merge.
+#   scope: which reference sites migrate must rewrite. Defaults to
+#     [directory, claude_md_reference, skill_body_reference] if omitted.
+#
+# rename_agent
+#   renames: list of [from, to] pairs. Agent names (without `.md`).
+#
+# bundle_debut
+#   bundle: { name, description, skills } — matches the shape in
+#     skeleton/manifest.json → bundles.
+#   Informational: the real bundle definition lives in manifest.bundles.
+#   Listed here so migrate can surface "this bundle was introduced since
+#   your last migration — want to adopt it?" in §4.7.
+#
+# manifest_field_added
+#   file: which manifest (.sdlc-manifest.json is the only one today).
+#   field: field name to add.
+#   default: default value to back-fill when absent.
+#
+# other
+#   notes: free-text description of the change and what migrate must do.
+#   Prefer this over stretching a defined type.
+#
+# -------------------------------------------------------------------------
+
+schema_version: 1
+
+changes:
+
+  - id: "0001"
+    date: "2026-03-23"
+    title: "sdlc- prefix first wave"
+    type: rename_skill
+    renames:
+      - [ad-hoc-planning,  sdlc-lite-plan]
+      - [ad-hoc-execution, sdlc-lite-execute]
+      - [sdlc-planning,    sdlc-plan]
+      - [sdlc-execution,   sdlc-execute]
+      - [ad-hoc-review,    review-diff]
+    changelog_ref: "2026-03-23: Rename Skills for Consistent sdlc- Prefix"
+
+  - id: "0002"
+    date: "2026-03-25"
+    title: "Review skill verb-first rename"
+    type: rename_skill
+    renames:
+      - [diff-review,   review-diff]
+      - [commit-review, review-commit]
+      - [commit-fix,    review-fix]
+    changelog_ref: "2026-03-25: Review skill renames — verb-first naming convention"
+
+  - id: "0003"
+    date: "2026-03-30"
+    title: "Complete sdlc- prefix rename for all remaining skills"
+    type: rename_skill
+    renames:
+      - [enrich-agent,      sdlc-enrich-agent]
+      - [research-external, sdlc-research-external]
+      - [review-commit,     sdlc-review-commit]
+      - [review-diff,       sdlc-review-diff]
+      - [review-fix,        sdlc-review-fix]
+      - [design-consult,    sdlc-design-consult]
+    changelog_ref: "2026-03-30: Complete sdlc- prefix rename for all remaining skills"
+    notes: >
+      Some projects may still have the unprefixed skill directories on disk
+      from prior installs; migrate rewrites references and handles directory
+      removal via the normal §2.1a "upstream deleted" flow.
+
+  - id: "0004"
+    date: "2026-04-07"
+    title: "sdlc-create-skill → sdlc-develop-skill"
+    type: rename_skill
+    renames:
+      - [sdlc-create-skill, sdlc-develop-skill]
+    changelog_ref: "2026-04-07: Migration Protection via PROJECT-SECTION Markers + Skill Rename"
+
+  - id: "0005"
+    date: "2026-04-14"
+    title: "design-brand-asset → sdlc-design-brand-asset"
+    type: rename_skill
+    renames:
+      - [design-brand-asset, sdlc-design-brand-asset]
+    changelog_ref: "2026-04-14: Rename design-brand-asset to sdlc-design-brand-asset"
+
+  - id: "0006"
+    date: "2026-04-23"
+    title: "Merge review-commit + review-diff into sdlc-review-code"
+    type: rename_skill
+    renames:
+      - [sdlc-review-diff,   sdlc-review-code]
+      - [sdlc-review-commit, sdlc-review-code]
+    changelog_ref: "2026-04-23: Merge review-commit + review-diff → sdlc-review-code"
+    notes: >
+      Both old skills map to the same new one. Migrate installs
+      sdlc-review-code once, removes both old directories via §2.1a, and
+      rewrites references at both source names to the single new name.
+      Neuroloom: if either old skill had MCP-injected customizations,
+      re-inject them into sdlc-review-code before removing the source
+      directories, or log TRANSFORMATION_WARNING for CD.
+
+  - id: "0007"
+    date: "2026-04-23"
+    title: "Introduce optional skill bundles"
+    type: manifest_field_added
+    file: .sdlc-manifest.json
+    field: installed_bundles
+    default: []
+    changelog_ref: "2026-04-23: Optional skill bundles"
+    notes: >
+      Records which opt-in skill bundles the project adopted. sdlc-migrate
+      §2.0 back-fills via file-existence detection for projects installed
+      before this entry.
+
+  - id: "0008"
+    date: "2026-04-23"
+    title: "Debut design bundle"
+    type: bundle_debut
+    bundle:
+      name: design
+      description: UI/UX design consultation and brand asset generation.
+      skills:
+        - skills/design-consult/SKILL.md
+        - skills/sdlc-design-brand-asset/SKILL.md
+    changelog_ref: "2026-04-23: Optional skill bundles"
+    notes: >
+      Existing installs with either skill on disk are auto-detected as
+      having the bundle (see §2.0 fallback). New installs receive the
+      bundle prompt from sdlc-initialize Phase 1b.

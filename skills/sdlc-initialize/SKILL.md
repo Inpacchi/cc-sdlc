@@ -511,6 +511,7 @@ fi
   "file_count": <number of files installed>,
   "sdlc_root": "<SDLC_ROOT value from detection above>",
   "installed_bundles": ["design"],
+  "last_applied_contract_id": "<newest id in skeleton/contract_changes.yaml at install time>",
   "installed_files": {
     "ops/sdlc/process/overview.md":      { "sha256": "<hash>", "size": <bytes>, "installed_at": "<ISO timestamp>" },
     "ops/sdlc/knowledge/architecture/agent-communication-protocol.yaml": { "sha256": "<hash>", "size": <bytes>, "installed_at": "<ISO timestamp>" },
@@ -521,6 +522,8 @@ fi
 ```
 
 **`installed_bundles`:** List of opt-in bundle names the project accepted during initialization. Empty array if none accepted. `sdlc-migrate` uses this field as the authoritative signal for which bundles are installed; for projects installed before bundles existed, migrate falls back to file-existence detection.
+
+**`last_applied_contract_id`:** The id of the newest entry in `skeleton/contract_changes.yaml` at the time of this install. New projects start already caught up — `sdlc-migrate` will not re-apply historical renames and other one-shot migrations meant for older projects. Read this value from the cc-sdlc source when writing the manifest: parse `contract_changes.yaml`, take the last entry's `id`.
 
 **Hash generation:** SHA-256 of the file's content as written to disk.
 
