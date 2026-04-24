@@ -74,7 +74,8 @@
       "process/review-lenses.md",
       "process/debate-protocol.md",
       "process/team-communication-protocol.md",
-      "process/knowledge-routing.md"
+      "process/knowledge-routing.md",
+      "process/input-quality-gates.md"
     ],
     "templates": [
       "templates/spec_template.md",

@@ -34,6 +34,26 @@ Each entry contains:
 
 ---
 
+## 2026-04-24: Add input quality gates (FAR/FACTS) for plan and execution skills
+
+**Origin:** Research into RPI, BMAD, GSD, and SDD methodologies identified a gap in cc-sdlc: robust validation of artifact structure before downstream consumption. Discovery findings feed into specs, and plans feed into execution, but no structured rubric validates whether those inputs are well-formed before agents invest tokens on them. The FAR/FACTS validation pattern (Robinson, 2025; Horthy/HumanLayer, 2024) addresses this with dimensional scoring rubrics.
+
+**What happened:** Comparative analysis of 18 agent orchestration frameworks and 4 SDLC methodologies revealed that cc-sdlc's existing gates (DISCOVERY-GATE, PRE-GATE, POST-GATE, REVIEW-GATE) cover structural completeness and execution verification well, but lack input quality scoring — validating that research is evidence-grounded and plans are unambiguous before they propagate downstream.
+
+**Changes made:**
+
+1. **`process/input-quality-gates.md`** — NEW. Defines two soft gates: FAR (Factual ≥4, Actionable ≥3, Relevant ≥3) for scoring discovery findings before spec writing in `sdlc-plan`, and FACTS (Feasible, Atomic, Clear ≥3, Testable ≥3, Scoped; mean ≥3.0) for scoring plan phases before plan review in `sdlc-plan` and `sdlc-lite-plan`. Includes 0–5 scoring anchors for each dimension, output format examples, documented limitations (plan-reading illusion, no empirical threshold validation), and research citations. Adds per-dimension floors on Clarity and Testability — an original addition addressing a documented structural flaw in the original FACTS rubric where ambiguous phases get averaged away.
+
+2. **`skeleton/manifest.json`** — Added `process/input-quality-gates.md` to `source_files.process`.
+
+3. **`skills/sdlc-plan/SKILL.md`** — Wired FAR gate after DISCOVERY-GATE (MEDIUM/COMPLEX only, Step 1) and FACTS gate after plan completeness verification (Step 4), both as soft gates referencing the process doc.
+
+4. **`skills/sdlc-lite-plan/SKILL.md`** — Wired FACTS gate after plan completeness verification (Step 2), as a soft gate referencing the process doc.
+
+**Rationale:** Soft input quality gates catch structural deficiencies (unverified assumptions, ambiguous phases, unverifiable acceptance criteria) before they waste agent tokens downstream. By scoring before plan review rather than during it, the gates ensure reviewers evaluate well-formed plans rather than spending their context on structural issues. FAR applies only to MEDIUM/COMPLEX discoveries in `sdlc-plan`; FACTS applies to both full and lite plans. Execution skills do not need their own FACTS gate — plans are validated during planning, and existing PRE-GATE/POST-GATE cover execution-phase validation.
+
+---
+
 ## 2026-04-23: Structured contract changes replace hardcoded migration lists [contract-change]
 
 **Origin:** While landing the review-commit/review-diff merge and the bundle mechanism (same-day changelog entries below), the guarded-rename list in `sdlc-migrate` §4.3a grew another chain: `diff-review` → `sdlc-review-diff` → `sdlc-review-code`, plus `commit-review` → `sdlc-review-commit` → `sdlc-review-code`. CD asked whether hardcoded rename chains in the migration skill were the right design. They aren't — the list grows forever, every migration run has to consider every rename in history regardless of the project's starting version, and the same information already lives narratively in the changelog.
