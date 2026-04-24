@@ -418,6 +418,19 @@ Verify the source by checking for `skeleton/manifest.json`.
 
 Read `skeleton/manifest.json` from the cc-sdlc source. This manifest defines the canonical directory structure and file list.
 
+**Optional bundles.** Before copying, read `manifest.bundles`. For each bundle, ask CD whether to install it using `AskUserQuestion`:
+
+> Optional bundle available: **`[bundle-name]`** — [bundle.description]
+>
+> Skills it adds: [list bundle.skills]
+>
+> Install it?
+>
+> - Yes — include in this installation
+> - No — skip (you can add it later via `/sdlc-migrate`)
+
+Record the accepted bundles. The effective skills install set is `source_files.skills` ∪ (bundle.skills for every accepted bundle). Record accepted bundles in `.sdlc-manifest.json` under an `installed_bundles: []` field so `sdlc-migrate` can tell them apart from legacy installs that pre-date the bundles manifest.
+
 **Create directories:**
 ```
 For each directory in manifest.directories:
@@ -497,6 +510,7 @@ fi
   "install_date": "<ISO 8601 timestamp>",
   "file_count": <number of files installed>,
   "sdlc_root": "<SDLC_ROOT value from detection above>",
+  "installed_bundles": ["design"],
   "installed_files": {
     "ops/sdlc/process/overview.md":      { "sha256": "<hash>", "size": <bytes>, "installed_at": "<ISO timestamp>" },
     "ops/sdlc/knowledge/architecture/agent-communication-protocol.yaml": { "sha256": "<hash>", "size": <bytes>, "installed_at": "<ISO timestamp>" },
@@ -505,6 +519,8 @@ fi
   }
 }
 ```
+
+**`installed_bundles`:** List of opt-in bundle names the project accepted during initialization. Empty array if none accepted. `sdlc-migrate` uses this field as the authoritative signal for which bundles are installed; for projects installed before bundles existed, migrate falls back to file-existence detection.
 
 **Hash generation:** SHA-256 of the file's content as written to disk.
 

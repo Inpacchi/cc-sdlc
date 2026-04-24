@@ -34,6 +34,59 @@ Each entry contains:
 
 ---
 
+## 2026-04-23: Merge review-commit + review-diff → sdlc-review-code [contract-change]
+
+**Origin:** Framework review surfaced that `review-commit` and `review-diff` were near-identical — same agent selection, same lenses, same output — split only by target (committed vs uncommitted). The duplication meant every change to the review loop had to land in two places.
+
+**What happened:** The skills shared their entire review pipeline (step 2 onward). Only step 1 (gather the diff) and one line of step 5 (next-steps wording) actually differed between them. Keeping both as separate skills produced no user-facing benefit and made them a stable source of drift between siblings.
+
+**Changes made:**
+
+1. **`skills/sdlc-review-code/SKILL.md`** — NEW. Auto-detects target from `$ARGUMENTS`: no argument reviews uncommitted changes (with `git status` untracked warning); a commit ref reviews that commit; a range reviews the range. Single step 1 handles all three targets in a table. Steps 2–4 are the unified review pipeline. Step 5 conditionally includes the "commit first and re-run against HEAD" hint only when the target was uncommitted.
+2. **`skills/review-commit/`, `skills/review-diff/`** — Deleted.
+3. **`skeleton/manifest.json`** — Swapped the two old entries for `sdlc-review-code`.
+4. **`process/commands.md`** — Collapsed the two rows under Code Review into one describing the combined skill.
+5. **`process/review-lenses.md`, `process/review-fix-loop.md`, `process/agent-selection.yaml`** — Updated skill-name references to `sdlc-review-code`.
+6. **`skills/review-fix/SKILL.md`** — Precondition wording, the loop's "agent source" reference, and the Integration block updated to `sdlc-review-code`.
+7. **`skills/team-review-fix/SKILL.md`** — Anti-trigger, cost comparison, Integration siblings, and red-flags table updated to `sdlc-review-code`.
+8. **`skills/sdlc-tests-run/SKILL.md`, `skills/sdlc-debug-incident/SKILL.md`, `skills/sdlc-create-agent/SKILL.md`, `skills/sdlc-develop-skill/SKILL.md`, `skills/design-consult/SKILL.md`, `skills/sdlc-migrate/SKILL.md`** — Cross-references updated.
+9. **`skills/sdlc-migrate/SKILL.md` §4.3a** — Guarded-rename list extended: `sdlc-review-diff` → `sdlc-review-code`, `sdlc-review-commit` → `sdlc-review-code`. Existing `diff-review`/`commit-review` legacy paths still covered (chained through the new name).
+10. **`agents/sdlc-reviewer.md`, `.claude/skills/ccsdlc-create-skill/SKILL.md`, `knowledge/README.md`, `BOOTSTRAP-LITE.md`** — Example and reference strings updated.
+
+**Neuroloom adapter changes:**
+
+11. **`neuroloom-sdlc-plugin/skills/sdlc-migrate/SKILL.md`** — Example agent/skill lists updated to `sdlc-design-consult`, `sdlc-review-fix`, etc. Added a "Bundle Awareness" section at the top with explicit rename guidance for the `sdlc-review-commit` + `sdlc-review-diff` → `sdlc-review-code` merge: old skill directories appear as upstream-deleted, the merged skill is installed, MCP customizations in the old files must be re-injected into `sdlc-review-code` or logged as `TRANSFORMATION_WARNING` for CD.
+
+**Rationale:** Users invoke one skill instead of two; the framework maintains one review pipeline instead of two near-identical ones. The `$ARGUMENTS`-based target detection is the minimum viable dispatch surface and mirrors how `team-review-fix` already handles multi-target arguments. Tagged `[contract-change]` because adapter plugins maintain a rename-mapping table — the adapter's Pattern Mapping doesn't change, but the adapter's migrate needs to know the old skill paths now resolve to a single new one.
+
+---
+
+## 2026-04-23: Optional skill bundles [contract-change]
+
+**Origin:** `design-consult` and `sdlc-design-brand-asset` are only useful for projects that actually design UI or brand assets — dead weight for backend-only projects. Rather than carving out a separate channel per niche, introduced a general `bundles` mechanism so additional opt-in groups (testing infrastructure, incident playbook extensions, etc.) can follow the same pattern.
+
+**What happened:** The two design skills were in the default install set. For non-UI projects they produced trigger-phrase noise and install bloat. The fix had to preserve existing installs (projects that already have them keep them), offer clean opt-in at init, and propagate upstream updates to projects that did adopt.
+
+**Changes made:**
+
+1. **`skeleton/manifest.json`** — New `bundles` section listing the `design` bundle (`skills/design-consult/SKILL.md`, `skills/sdlc-design-brand-asset/SKILL.md`). Removed those two entries from the default `source_files.skills` list.
+2. **`skills/sdlc-initialize/SKILL.md` Phase 1b** — Added an "Optional bundles" step that iterates `manifest.bundles` and prompts CD with `AskUserQuestion` for each. Accepted bundles union into the effective install set. Accepted bundle names persist to `.sdlc-manifest.json` → `installed_bundles`.
+3. **`skills/sdlc-initialize/SKILL.md` §1b manifest spec** — Added `installed_bundles` to the `.sdlc-manifest.json` example and documented its purpose.
+4. **`skills/sdlc-migrate/SKILL.md` new §2.0 "Bundle Detection"** — Runs before §2.1 direct-copy. Reads `installed_bundles` from `.sdlc-manifest.json` as the authoritative signal; falls back to file-existence detection for pre-bundles installs. Builds the effective skills list. Exempts installed bundle skills from §2.1a upstream-deletion removal. Installed bundles propagate upstream updates via §2.1 direct-copy.
+5. **`skills/sdlc-migrate/SKILL.md` new §4.7 "Offer Uninstalled Bundles"** — After the migration report, offers any not-installed bundles to CD via `AskUserQuestion`. Never auto-installs; never removes.
+6. **`skills/sdlc-migrate/SKILL.md` §4.5** — Added `installed_bundles` to the manifest-update field list (back-fill from §2.0, append §4.7 acceptances).
+7. **`skills/design-consult/SKILL.md`, `skills/sdlc-design-brand-asset/SKILL.md`** — Integration block now notes "Installed via: the `design` bundle (opt-in during `/sdlc-initialize`). Not part of the default install."
+8. **`process/commands.md`** — Design section header renamed to "Design (optional bundle)" with a one-line preamble explaining opt-in via initialize.
+
+**Neuroloom adapter changes:**
+
+9. **`neuroloom-sdlc-plugin/skills/sdlc-migrate/SKILL.md`** — New "Bundle Awareness" section at the top of the skill documenting the detection + preservation + offer flow. Manifest field table updated to include `installed_bundles`.
+10. **`neuroloom-sdlc-plugin/skills/sdlc-initialize/SKILL.md` §5b** — Added "Optional bundles" prompt step mirroring cc-sdlc. Manifest example updated with `installed_bundles`.
+
+**Rationale:** Bundles let the framework grow opt-in surface without polluting the default install or requiring per-project pruning. The decision to gate on manifest data (not directory structure) keeps the file layout identical for adapters and tooling — anything that globs `skills/*/SKILL.md` still sees every skill; only the installer consults `bundles` to decide what to copy. Tagged `[contract-change]` so adapter maintainers pick up the `installed_bundles` field and the bundle-aware migrate behavior on their next upstream sync.
+
+---
+
 ## 2026-04-23: Bulk mode refinements from first real runs [field-learning]
 
 **Origin:** Same-day follow-up. Bulk mode was applied immediately in `~/Projects/sleeved` and `~/Projects/neuroloom` (32 agents across 8 batches of 4 against `VoltAgent/awesome-claude-code-subagents` + `wshobson/agents`). Analysis of the session logs surfaced four friction points the initial spec didn't cover. Folded them back into the skill before the second use rediscovers them.

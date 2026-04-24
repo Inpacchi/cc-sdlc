@@ -188,12 +188,9 @@
     "skills": [
       "skills/sdlc-lite-execute/SKILL.md",
       "skills/sdlc-lite-plan/SKILL.md",
-      "skills/review-diff/SKILL.md",
+      "skills/sdlc-review-code/SKILL.md",
       "skills/review-fix/SKILL.md",
-      "skills/review-commit/SKILL.md",
       "skills/sdlc-tests-create/SKILL.md",
-      "skills/design-consult/SKILL.md",
-      "skills/sdlc-design-brand-asset/SKILL.md",
       "skills/sdlc-archive/SKILL.md",
       "skills/sdlc-execute/SKILL.md",
       "skills/sdlc-plan/SKILL.md",
@@ -232,5 +229,15 @@
       "plugins/lsp-setup.md"
     ],
     "optional_plugins": []
+  },
+  "bundles": {
+    "_comment": "Opt-in skill bundles. sdlc-initialize prompts CD during setup; skills are installed only if the bundle is accepted. sdlc-migrate preserves existing installs and offers any missing bundles without removing skills the project already has.",
+    "design": {
+      "description": "UI/UX design consultation and brand asset generation.",
+      "skills": [
+        "skills/design-consult/SKILL.md",
+        "skills/sdlc-design-brand-asset/SKILL.md"
+      ]
+    }
   }
 }

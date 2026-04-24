@@ -1,27 +1,43 @@
 ---
-name: sdlc-review-commit
+name: sdlc-review-code
 description: >
-  Review a commit with domain agents — checks for overengineering, unnecessary code, DRY violations,
-  and architecture adherence. Triggers on "review this commit", "check commit", "review HEAD",
-  "/sdlc-review-commit", "review the last commit", "code review".
-  Do NOT use for uncommitted changes — use sdlc-review-diff for that.
+  Review code changes with domain agents — checks for overengineering, unnecessary code, DRY violations,
+  and architecture adherence. Target auto-detects from arguments: no argument reviews uncommitted changes,
+  a commit ref reviews that commit, a range reviews the range.
+  Triggers on "review this commit", "review HEAD", "review the last commit", "code review",
+  "review uncommitted changes", "check my diff", "review before committing", "diff review",
+  "review working tree", "look at my changes", "/sdlc-review-code".
+  Do NOT fix findings in this skill — use sdlc-review-fix for that.
+  Do NOT use for reviewing skill/agent files — use sdlc-review for that.
 ---
 
-# Review Commit
+# Review Code
 
-Review a commit (or range) with relevant domain agents. The review prioritizes catching overengineered solutions and unnecessary code alongside standard quality checks.
+Review code changes with relevant domain agents. Prioritizes catching overengineered solutions and unnecessary code alongside standard quality checks.
 
-**Argument:** `$ARGUMENTS` (commit ref, default: HEAD)
+**Argument:** `$ARGUMENTS` (optional) — commit ref, commit range, or empty.
 
 ## Steps
 
-### 1. Resolve the Commit
+### 1. Resolve Target
 
-Use the argument as the commit ref. If no argument is provided, default to `HEAD`.
+Parse `$ARGUMENTS` to determine what to review:
 
-Run `git show --stat {ref}` to get the list of changed files and a summary. Then run `git show {ref}` to get the full diff.
+| Argument | Target | How to Gather |
+|----------|--------|---------------|
+| None | Uncommitted changes (staged + unstaged) | `git diff HEAD --stat`, `git diff HEAD`, `git status -s` |
+| Commit ref (e.g., `HEAD`, `abc1234`) | That commit | `git show --stat {ref}`, `git show {ref}` |
+| Commit range (e.g., `abc..def`, `HEAD~3..HEAD`) | Range diff | `git diff --stat {range}`, `git diff {range}` |
 
-If the ref is invalid, tell the user and stop.
+**Uncommitted mode — empty diff check:** If there are no uncommitted changes, stop:
+
+> No uncommitted changes to review.
+
+**Uncommitted mode — untracked files:** If `git status -s` shows untracked files that look like new source files (not build artifacts, `.env`, or `node_modules`), warn:
+
+> Note: {N} untracked files not included in the diff — `git add` them first if they should be reviewed.
+
+**Ref mode — invalid ref:** If the ref or range is invalid, tell the user and stop.
 
 ### 2. Identify Relevant Domain Agents
 
@@ -35,7 +51,7 @@ Follow `[sdlc-root]/process/agent-selection.yaml` for dispatch rules:
 Output a checklist before dispatching:
 
 ```
-Reviewing commit {short-sha}: {commit subject}
+Reviewing {target description}
 Files changed: N
 
 Dispatching reviewers:
@@ -48,6 +64,11 @@ Not dispatching:
 - ui-ux-designer — logic-only changes, no visual modifications
 ```
 
+Where `{target description}` is:
+- `uncommitted changes` (no argument)
+- `commit {short-sha}: {commit subject}` (commit ref)
+- `range {range}: {N} commits` (commit range)
+
 Dispatch ALL listed agents in parallel. Each agent receives the full diff and is asked to review using the lenses defined in `[sdlc-root]/process/review-lenses.md` (all lenses apply to code review — see applicability table). Each agent reviews through their domain expertise but applies all applicable lenses.
 
 ### 4. Collect and Present Findings
@@ -55,9 +76,9 @@ Dispatch ALL listed agents in parallel. Each agent receives the full diff and is
 Collect all findings. Present them in a single structured report:
 
 ```markdown
-## Commit Review: {short-sha}
+## Code Review: {target description}
 
-**{commit subject}**
+{commit subject if applicable}
 {N} files changed | Reviewed by {N} domain agents
 
 ### Findings
@@ -87,13 +108,18 @@ After presenting the report:
 >
 > Run `/sdlc-review-fix` to fix all findings.
 
-Do NOT fix anything in this command. Do NOT offer partial fix options. The review command only reviews — `/sdlc-review-fix` handles all fixes.
+If the target was uncommitted changes, also include:
+
+> Or commit first and run `/sdlc-review-code HEAD` for a post-commit review.
+
+Do NOT fix anything in this skill. Do NOT offer partial fix options. The review skill only reviews — `/sdlc-review-fix` handles all fixes.
 
 ## Red Flags
 
 | Thought | Reality |
 |---------|---------|
 | "The diff is small, skip some lenses" | Small diffs produce the subtlest bugs |
+| "Just do a quick glance, we're about to commit" | Quick glances miss type safety and contract issues. Run the full workflow. |
 | "Agent fixed the issue during review" | Report only — fixes go through `sdlc-review-fix` |
 | "This is just a refactor, no review needed" | Refactors need architecture and DRY lens review |
 | "Skip Tier 2, it's a small commit" | Read the diff content. Small commits introduce new patterns more often than expected. |
@@ -102,5 +128,5 @@ Do NOT fix anything in this command. Do NOT offer partial fix options. The revie
 
 ## Integration
 - **Feeds into:** `sdlc-review-fix` (if findings need fixing)
-- **Siblings:** `sdlc-review-diff` (same lenses, targets working tree), `sdlc-team-review-fix` (same lenses + inter-agent debate + persistent team fix lifecycle)
+- **Siblings:** `sdlc-team-review-fix` (same lenses + inter-agent debate + persistent team fix lifecycle — higher cost, use for high-stakes changes)
 - **Shared reference:** Agent selection in `[sdlc-root]/process/agent-selection.yaml`, lenses in `[sdlc-root]/process/review-lenses.md`

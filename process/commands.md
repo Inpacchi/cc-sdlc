@@ -66,12 +66,13 @@ The standard deliverable lifecycle: **ideation → plan → execute**. Most work
 
 | Command | Action |
 |---------|--------|
-| `/sdlc-review-diff` | Review staged or unstaged diff for quality, correctness, and convention compliance |
-| `/sdlc-review-fix` | Review-fix loop — review code, present findings, fix approved items |
-| `/sdlc-review-commit` | Review a specific commit or commit range for quality and convention compliance |
+| `/sdlc-review-code` | Review code with domain agents. No argument reviews uncommitted changes; a commit ref or range reviews that target. |
+| `/sdlc-review-fix` | Review-fix loop — fixes the findings from the most recent `/sdlc-review-code` |
 | `/sdlc-team-review-fix` | Unified team review + fix lifecycle with persistent teammates. Requires `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` |
 
-## Design
+## Design (optional bundle)
+
+Installed only when CD opts into the `design` bundle during `/sdlc-initialize`.
 
 | Command | Action |
 |---------|--------|

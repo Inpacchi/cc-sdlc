@@ -167,7 +167,7 @@ Most agents are multiple types. A `db-engineer` is a reviewer (catches schema is
        - index strategy
        - query patterns
    ```
-   This single entry covers all review skills (`review-diff`, `review-commit`, `team-review-fix`)
+   This single entry covers all review skills (`sdlc-review-code`, `team-review-fix`)
 
 2. **`sdlc-plan` agent table** — Add a row with:
    - Agent name and domain description

@@ -22,7 +22,7 @@ Determine the file type from its location and content:
 - [ ] Name does not conflict with other skills/agents (scan `.claude/skills/` for skills, `.claude/agents/` for agents)
 
 ### Naming
-- [ ] Name uses verb-first pattern where applicable (e.g., `sdlc-review-commit` not `commit-review`)
+- [ ] Name uses verb-first pattern where applicable (e.g., `sdlc-review-code` not `code-review`)
 - [ ] Name is descriptive (not generic like "helper" or "util")
 
 ### Changelog

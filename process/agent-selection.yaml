@@ -1,6 +1,6 @@
 # Agent Selection Rules
 # Defines which agents to dispatch based on file scope and work characteristics.
-# Used by: review-diff, review-commit, team-review-fix, sdlc-tests-create, sdlc-tests-run, sdlc-plan, sdlc-create-agent, sdlc-initialize
+# Used by: sdlc-review-code, team-review-fix, sdlc-tests-create, sdlc-tests-run, sdlc-plan, sdlc-create-agent, sdlc-initialize
 #
 # Project-specific: Customize agent names and dispatch triggers for your stack.
 # Use /sdlc-create-agent to add new agents.

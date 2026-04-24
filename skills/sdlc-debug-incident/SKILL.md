@@ -325,7 +325,7 @@ STOP. Do not auto-archive. Archival to `docs/chronicle/{concept}/` happens later
 - **Depends on:** An observable incident signal — user report, alert, or visible service degradation. Does not run speculatively.
 - **Feeds into:** `sdlc-lite-plan` and `sdlc-plan` for remediation deliverables. `sdlc-archive` eventually, when all related deliverables complete.
 - **Uses:** `debug-specialist` agent (primary diagnostic during TRIAGE), domain specialists per `[sdlc-root]/process/agent-selection.yaml`, `code-reviewer` for CLOSEOUT review, and project observability tooling (whatever your stack uses) via the corresponding MCPs or CLI access.
-- **Complements:** `sdlc-audit` (proactive systemic review — different trigger, different purpose), `review-diff` (code-level review), `sdlc-playbook-generate` (turns a resolved incident + its remediation into a reusable playbook — runs AFTER CLOSEOUT).
+- **Complements:** `sdlc-audit` (proactive systemic review — different trigger, different purpose), `sdlc-review-code` (code-level review), `sdlc-playbook-generate` (turns a resolved incident + its remediation into a reusable playbook — runs AFTER CLOSEOUT).
 - **Does NOT replace:**
   - The `debug-specialist` agent itself, which can still be dispatched directly for non-incident debugging (e.g., a failing test).
   - `sdlc-plan` / `sdlc-lite-plan`, which own remediation planning. This skill hands off to them.

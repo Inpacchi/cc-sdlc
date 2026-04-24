@@ -283,6 +283,30 @@ This migration skill is responsible for **consuming** markers: extracting, prese
 >
 > Log a `checkpoint: point_of_no_return` event to the transaction log immediately before the first file write.
 
+### 2.0 Bundle Detection
+
+Before any file copying, compute the **effective install set** for this project — the default `source_files` list plus any opt-in bundles the project has already adopted.
+
+**Process:**
+
+1. Read `skeleton/manifest.json` from the cc-sdlc source.
+2. Read `.sdlc-manifest.json` from the project. If it has an `installed_bundles` array, treat that as the authoritative list of installed bundles.
+3. **Fallback for pre-bundles installs:** If `installed_bundles` is missing (projects installed before the bundles manifest existed), for each bundle in `manifest.bundles` check whether **any** of its listed skill paths exist as installed skills in the project. If yes, mark the bundle as **installed** and append it to `installed_bundles` — the migrate's §4.5 manifest update will persist this.
+4. Build the effective skills list: `source_files.skills` ∪ (bundle.skills for every installed bundle).
+5. Log the detection result to the migration report:
+   ```
+   BUNDLE DETECTION
+   - design: installed (source: installed_bundles | file-existence fallback)
+   - testing: not installed
+   ```
+
+**Rules:**
+
+- **Never remove** installed bundle skills, even when a bundle is detected as only partially installed (e.g., `design-consult/` exists but `sdlc-design-brand-asset/` does not). The project chose its subset; migration preserves that choice.
+- Bundle skill paths are **exempt from §2.1a "Remove Deleted and Moved Files"** — they are not considered upstream-deleted even though they live outside `source_files.skills`.
+- Bundle skills are **eligible for §2.1 direct-copy updates**: if the bundle is installed, its skill files propagate upstream changes the same way `source_files` skills do.
+- Bundles not installed in the project are **not** copied during §2.1 — they are offered at the end of migration (§4.7).
+
 ### 2.1 Direct Copy Files
 
 For files with no project customizations, copy directly from cc-sdlc to the project's `[sdlc-root]/` directory:
@@ -835,7 +859,7 @@ The project's `CLAUDE.md` contains CLAUDE-SDLC.md content — skill names, proce
 
 **Check for:**
 
-1. **Skill name references (guarded renames)** — verify all skill names mentioned in CLAUDE.md (`sdlc-plan`, `sdlc-execute`, `sdlc-lite-plan`, `sdlc-lite-execute`, `sdlc-idea`, `sdlc-initialize`, `sdlc-reconcile`, `sdlc-review-diff`, `sdlc-review-commit`, `sdlc-review-fix`, `sdlc-develop-skill`, `sdlc-create-agent`, `sdlc-review`) still match the actual skill directory names in `.claude/skills/`. Check for renamed skills: `diff-review` → `sdlc-review-diff`, `commit-review` → `sdlc-review-commit`, `commit-fix` → `sdlc-review-fix`, `sdlc-create-skill` → `sdlc-develop-skill`
+1. **Skill name references (guarded renames)** — verify all skill names mentioned in CLAUDE.md (`sdlc-plan`, `sdlc-execute`, `sdlc-lite-plan`, `sdlc-lite-execute`, `sdlc-idea`, `sdlc-initialize`, `sdlc-reconcile`, `sdlc-review-code`, `sdlc-review-fix`, `sdlc-develop-skill`, `sdlc-create-agent`, `sdlc-review`) still match the actual skill directory names in `.claude/skills/`. Check for renamed skills: `diff-review` → `sdlc-review-diff` → `sdlc-review-code`, `commit-review` → `sdlc-review-commit` → `sdlc-review-code`, `sdlc-review-diff` → `sdlc-review-code`, `sdlc-review-commit` → `sdlc-review-code`, `commit-fix` → `sdlc-review-fix`, `sdlc-create-skill` → `sdlc-develop-skill`
 
    **Guarded rename rule:** Before renaming any skill reference in the project's CLAUDE.md or other files:
    1. Build the project's actual skill inventory: `ls .claude/skills/`
@@ -846,7 +870,7 @@ The project's `CLAUDE.md` contains CLAUDE-SDLC.md content — skill names, proce
       ```
    This prevents renaming references to skills that don't exist in the project, which causes silent process failures.
 
-2. **Agent name references in dispatching skills (guarded renames)** — skills that dispatch subagents (`sdlc-review-commit`, `sdlc-review-diff`, `sdlc-review-fix`, `sdlc-execute`, `sdlc-lite-execute`, `sdlc-plan`, `sdlc-lite-plan`) contain agent names in their examples and dispatch logic. If the upstream cc-sdlc uses different agent names than the project (e.g., `frontend-developer` vs `frontend-engineer`), do NOT rename the project's references to match upstream.
+2. **Agent name references in dispatching skills (guarded renames)** — skills that dispatch subagents (`sdlc-review-code`, `sdlc-review-fix`, `sdlc-execute`, `sdlc-lite-execute`, `sdlc-plan`, `sdlc-lite-plan`) contain agent names in their examples and dispatch logic. If the upstream cc-sdlc uses different agent names than the project (e.g., `frontend-developer` vs `frontend-engineer`), do NOT rename the project's references to match upstream.
 
    **Guarded rename rule for agents:** Before renaming any agent reference in a dispatching skill:
    1. Build the project's actual agent inventory: `ls .claude/agents/`
@@ -904,7 +928,9 @@ After migration, update `.sdlc-manifest.json`:
 2. **Add missing fields** if the manifest predates this migration:
    - `sdlc_root`: set to `[sdlc-root]` detected in pre-flight
    - `installed_files`: back-fill if absent (hash every file in `skeleton/manifest.json` source_files at its installed path; mark `installed_at: "backfilled-{CURRENT_VERSION}"`)
+   - `installed_bundles`: back-fill from the §2.0 detection result (empty array if no bundles detected)
 3. **Refresh `installed_files` hashes.** For every file the migration just touched — direct copies, content-merges, drift resolutions — recompute SHA-256 of the final on-disk content and update the corresponding entry. For drift cases where CD chose "keep mine", record the current hash so the next migration sees a clean baseline. For files CD chose to overwrite with upstream, the new hash reflects the upstream content. This keeps drift detection accurate for the next migration.
+4. **Update `installed_bundles`** to include any bundles CD accepted in §4.7.
 
 ```bash
 # Read existing manifest
@@ -993,6 +1019,18 @@ echo "$MANIFEST" > .sdlc-manifest.json
 ### Next Steps
 1. Commit the migration
 ```
+
+### 4.7 Offer Uninstalled Bundles
+
+After the migration report, check whether any `manifest.bundles` entries were detected as **not installed** in §2.0. For each such bundle, surface it to CD with `AskUserQuestion`:
+
+> The `[bundle-name]` bundle (`[bundle.description]`) is available but not installed in this project. Install it now?
+>
+> Skills it would add: [list bundle.skills]
+
+If CD accepts: copy the bundle's skills into the project (same direct-copy flow as §2.1), and log the install in the migration report. If CD declines: do nothing — the prompt does not persist; it will be offered again on the next migration.
+
+Do **not** auto-install bundles. Do **not** remove installed bundles the project chose to adopt.
 
 ---
 

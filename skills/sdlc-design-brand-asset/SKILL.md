@@ -327,5 +327,6 @@ Use this structure for each asset:
 - **Depends on:** Brand context (CLAUDE.md, existing assets, color palette)
 - **Feeds into:** Asset creation in design tools or AI image generators, then frontend agent for implementation
 - **Uses:** Brand context from project, existing asset inventory
-- **Complements:** `design-consult` (design direction), brand-related agents (brand decisions)
-- **Does NOT replace:** `design-consult` (UI/UX design), brand agents (brand strategy), frontend agent (code implementation)
+- **Complements:** `sdlc-design-consult` (design direction), brand-related agents (brand decisions)
+- **Does NOT replace:** `sdlc-design-consult` (UI/UX design), brand agents (brand strategy), frontend agent (code implementation)
+- **Installed via:** The `design` bundle (opt-in during `/sdlc-initialize`). Not part of the default install.

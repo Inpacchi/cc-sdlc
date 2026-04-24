@@ -234,8 +234,7 @@ grep -r '`sdet`\|`architect`\|`backend-developer`\|`frontend-developer`' .claude
 Key files that reference `sdet` (your testing agent name will differ):
 - `.claude/skills/sdlc-tests-run/SKILL.md`
 - `.claude/skills/sdlc-tests-create/SKILL.md`
-- `.claude/skills/review-commit/SKILL.md`
-- `.claude/skills/review-diff/SKILL.md`
+- `.claude/skills/sdlc-review-code/SKILL.md`
 - `.claude/skills/sdlc-plan/SKILL.md`
 
 ### Step 3: Update discipline references

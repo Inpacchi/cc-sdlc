@@ -122,4 +122,4 @@ Then invoke `AskUserQuestion` to escalate to CD — do not type the escalation a
 |-------|------------|-------|
 | `sdlc-execute` | Plan's agent assignment table | Full review with result doc output |
 | `sdlc-lite-execute` | Plan's agent assignment table | Same loop, result doc saved to sdlc-lite/ |
-| `sdlc-review-fix` | Original `/sdlc-review-commit` agent list | Loop starts after initial fix dispatch |
+| `sdlc-review-fix` | Original `/sdlc-review-code` agent list | Loop starts after initial fix dispatch |

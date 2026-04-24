@@ -7,7 +7,7 @@ description: >
   within one persistent team.
   Triggers on "team review", "deep review", "review and fix with team", "/team-review-fix",
   "team review this commit", "team review these files".
-  Do NOT use for quick reviews — use sdlc-review-diff or sdlc-review-commit.
+  Do NOT use for quick reviews — use sdlc-review-code.
   Do NOT use without CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1.
 ---
 
@@ -15,7 +15,7 @@ description: >
 
 Review any target with a persistent agent team, resolve conflicts through organic debate with an architect mediator, and fix all findings using the same team. No fresh agent spawning between phases. The team stays alive through all rounds and is cleaned up at the end.
 
-**Cost:** 3-6x more tokens than `review-diff` + `review-fix`. Use when finding accuracy and fix quality matter more than speed — complex changes, security-critical code, architectural decisions, cross-domain work.
+**Cost:** 3-6x more tokens than `sdlc-review-code` + `sdlc-review-fix`. Use when finding accuracy and fix quality matter more than speed — complex changes, security-critical code, architectural decisions, cross-domain work.
 
 **Argument:** `$ARGUMENTS` (optional — commit ref, file paths, directory, or description of what to review)
 
@@ -48,7 +48,7 @@ Parse the `$ARGUMENTS` to determine what to review:
 
 Validate the target has reviewable content. If empty, tell the user and stop.
 
-For uncommitted changes, also run `git status -s` to check for untracked files. Warn about untracked source files as in `review-diff`.
+For uncommitted changes, also run `git status -s` to check for untracked files. Warn about untracked source files as in `sdlc-review-code`.
 
 ### Step 2: Select Teammates
 
@@ -391,9 +391,9 @@ Do NOT commit automatically — wait for the user to confirm.
 
 | Thought | Reality |
 |---------|---------|
-| "The diff is small, use review-diff instead" | Small diffs are fine for team-review-fix if the changes are high-stakes |
+| "The diff is small, use sdlc-review-code instead" | Small diffs are fine for team-review-fix if the changes are high-stakes |
 | "Skip debate, agents agree" | The architect decides if debate is needed. Let the protocol run. |
-| "Agent teams aren't enabled, I'll simulate with subagents" | No. Subagent dispatch is `review-diff` + `review-fix`. This skill requires real agent teams for inter-agent communication. |
+| "Agent teams aren't enabled, I'll simulate with subagents" | No. Subagent dispatch is `sdlc-review-code` + `sdlc-review-fix`. This skill requires real agent teams for inter-agent communication. |
 | "Just fix it myself instead of dispatching a fixer" | Manager rule. Fixers fix. You orchestrate. |
 | "Spawn a fresh agent for this fix" | Use the existing fixer teammate via SendMessage. That's the whole point of persistent teammates. |
 | "Spawn all fixers upfront so they're ready" | Fixers spawn in Step 6a after review converges. Spawning upfront wastes tokens on idle teammates that may never be needed. |
@@ -410,7 +410,7 @@ Do NOT commit automatically — wait for the user to confirm.
 ## Integration
 
 - **Depends on:** `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` environment variable
-- **Does NOT replace:** `sdlc-review-diff`, `sdlc-review-commit`, `sdlc-review-fix` — those remain as lighter-weight subagent alternatives
+- **Does NOT replace:** `sdlc-review-code`, `sdlc-review-fix` — those remain as lighter-weight subagent alternatives
 - **Replaces:** `sdlc-review-team` (unified review+fix lifecycle within a single agent team)
 - **Shared references:**
   - Agent selection: `[sdlc-root]/process/agent-selection.yaml`

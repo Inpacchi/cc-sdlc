@@ -43,7 +43,7 @@ Create or modify SDLC skills following cc-sdlc conventions. Scaffold new skills 
 Clarify with the user:
 - **What does this skill do?** (one sentence)
 - **What skill type?**
-  - **Orchestration** — dispatches domain agents, has agent selection criteria, review loops (e.g., sdlc-plan, sdlc-execute, sdlc-review-commit)
+  - **Orchestration** — dispatches domain agents, has agent selection criteria, review loops (e.g., sdlc-plan, sdlc-execute, sdlc-review-code)
   - **Utility** — step-by-step procedure, may or may not dispatch agents (e.g., sdlc-archive, sdlc-reconcile, sdlc-ingest)
   - **Exploration** — open-ended flow, no hard gates, user-directed iteration (e.g., sdlc-idea, sdlc-design-consult)
   - **Domain-specific** — focused on a specific technical domain (e.g., sdlc-tests-create, sdlc-tests-run)
@@ -76,7 +76,7 @@ Before scaffolding, scan for content overlap with sibling skills. Skipping this 
 
 Generate a name following conventions:
 - Format: `lowercase-with-hyphens`, 2-4 words
-- Verb-first preferred (e.g., `sdlc-review-commit`, not `commit-review`)
+- Verb-first preferred (e.g., `sdlc-review-code`, not `code-review`)
 - Must not conflict with existing skills
 
 Scan `.claude/skills/` to list existing skill names. Present the proposed name and confirm no conflicts.
@@ -262,7 +262,7 @@ Dispatch the `sdlc-reviewer` subagent on the modified skill file. Present its fi
 | "This skill doesn't need anti-triggers" | Every skill needs anti-triggers to prevent overlap with siblings. |
 | "Red flags are optional for utility skills" | Every skill type needs a Red Flags table. No exceptions. |
 | "I'll skip the Integration section — this skill is standalone" | No skill is standalone. Every skill feeds into or complements others. |
-| "The name should describe the noun first" | Verb-first naming: `sdlc-review-commit`, not `commit-review`. |
+| "The name should describe the noun first" | Verb-first naming: `sdlc-review-code`, not `code-review`. |
 | "This orchestration skill doesn't need the Manager Rule" | If it dispatches agents, it MUST reference manager-rule.md. |
 | "I'll use custom phrasing like 'check' or 'look at' for knowledge lookups" | Use the exact phrases from the phrasing contract. Custom wording breaks adapter transformers. |
 | "I'll add an inline adapter conditional" | Core skills must not know about adapters. The adapter transforms phrases at install time — inline conditionals in core files are redundant and make the phrasing contract harder to maintain. |

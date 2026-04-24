@@ -20,7 +20,7 @@ Say **"Bootstrap SDLC Lite"** or **"Initialize SDLC Lite"** in Claude Code.
 
 ## What this does NOT install
 
-Everything else. If you later want chronicles, playbooks, full spec/plan/execute with specs, test skills, audit skills, research/ingest, review-commit/review-diff, accessibility/security/performance agents, or the full agent-context-map — run the full `Bootstrap SDLC` afterwards. See **Graduation Path** at the bottom.
+Everything else. If you later want chronicles, playbooks, full spec/plan/execute with specs, test skills, audit skills, research/ingest, the `sdlc-review-code` review loop, accessibility/security/performance agents, or the full agent-context-map — run the full `Bootstrap SDLC` afterwards. See **Graduation Path** at the bottom.
 
 ## Source
 
@@ -550,7 +550,7 @@ Lite gives you: 3 agents, plan/execute loop, starter knowledge store, 3 discipli
 Full SDLC adds:
 - **Specs** — `sdlc-plan` writes a spec before the plan; lite skips specs entirely
 - **More agents** — sdet, accessibility-auditor, security-engineer, performance-engineer, debug-specialist, db-engineer, etc. (see full `knowledge/agent-context-map.yaml`)
-- **Review skills** — `/review-commit`, `/review-diff`, `/review-fix` — formal review loops over git ranges
+- **Review skills** — `/sdlc-review-code`, `/sdlc-review-fix` — formal review loops over git ranges or uncommitted changes
 - **Test skills** — `/sdlc-tests-create`, `/sdlc-tests-run` — structured test authoring and verification
 - **Audit skill** — `/sdlc-audit` — compliance + improvement audits of the framework and your sessions
 - **Research/ingest** — `/ccsdlc-research`, `/sdlc-ingest` — pull external knowledge into the store
