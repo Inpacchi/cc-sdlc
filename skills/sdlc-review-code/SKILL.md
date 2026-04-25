@@ -188,19 +188,60 @@ If the target was uncommitted changes, also include:
 
 Do NOT fix anything in this skill. Do NOT offer partial fix options. The review skill only reviews — `/sdlc-review-fix` handles all fixes.
 
-### 6. Extract Reusable Patterns (Optional but Encouraged)
+### 6. Log Recurring Patterns
 
-After presenting the report, scan findings for patterns that recur across files or represent a general class of mistake the codebase has seen before. If any pattern qualifies, note it at the bottom of the report:
+After presenting the report, scan findings for patterns that recur across files or represent a general class of mistake. If any pattern qualifies, log it to the **recurring patterns file** at `docs/reviews/recurring-patterns.yaml`.
+
+**Step 6a. Read the log.** If `docs/reviews/recurring-patterns.yaml` exists, read it. If it doesn't exist, create it with the seed structure:
+
+```yaml
+# Recurring review patterns — clustered by agent judgment.
+# sdlc-audit Dimension 6l scans this file for threshold breaches.
+patterns: []
+```
+
+**Step 6b. Match or create clusters.** For each pattern worth capturing from this review:
+
+1. Read existing cluster slugs and descriptions in the file.
+2. Use judgment: does this pattern match an existing cluster? Same root cause class, same lens, same kind of mistake — even if the specific file or manifestation differs.
+3. **If match found:** append a new occurrence entry to that cluster.
+4. **If no match:** create a new cluster with a descriptive slug, description, lens category, and the first occurrence.
+
+**Step 6c. Write the log.** Write the updated YAML file. The diff will appear as an uncommitted change the user can inspect before committing.
+
+**Cluster entry format:**
+
+```yaml
+patterns:
+  - slug: {kebab-case-identifier}
+    description: "{one-line description of the recurring pattern}"
+    lens: {security|correctness|architecture|DRY|type-safety|overengineering|test-quality|contract}
+    first_seen: YYYY-MM-DD
+    occurrences:
+      - date: YYYY-MM-DD
+        commit: {short-sha}
+        manifestation: "{what specifically was found in this review}"
+        files: [{path/to/affected/file}]
+    promoted: false
+```
+
+**Step 6d. Surface in the report.** After logging, add a section to the report output:
 
 ```markdown
 ### Patterns Worth Capturing
 
-[If one or more findings represent a recurring class of issue, list them here for knowledge-store capture. Examples: "tenant filter missing on 3 query sites — candidate for knowledge store entry", "lazy relationship accessed outside async context (2nd occurrence this sprint)". If no recurring patterns identified, omit this section.]
+| Pattern | Occurrences | Status |
+|---------|-------------|--------|
+| {slug} — {description} | {N} (first: {date}, latest: this review) | {new / recurring / at threshold} |
+
+[If no patterns identified, omit this section.]
 ```
 
-This is the knowledge-sharing function of review. A one-off finding is a fix. A finding that recurs across commits is a gap in the team's shared understanding — it belongs in `[sdlc-root]/knowledge/` as a documented anti-pattern, not in every individual review as a repeated finding. Flag it here; use `sdlc-ingest` to formalize it into the knowledge store.
+Mark patterns "at threshold" when they reach 3+ occurrences — these are candidates for knowledge-store promotion via `sdlc-audit`.
 
-Do NOT ingest directly from within this skill — surface the pattern and let the user decide whether it warrants a knowledge-store entry.
+**Slug consistency:** The file itself is the slug registry. Reading existing slugs and descriptions before writing is sufficient for agent judgment to reuse the right slug. When uncertain whether a finding matches an existing cluster, prefer creating a new cluster — false splits are easier to merge than false merges are to untangle.
+
+Do NOT ingest into the knowledge store from within this skill. Do NOT create parking-lot entries. The pattern log feeds `sdlc-audit` Dimension 6l, which handles promotion recommendations.
 
 ## Red Flags
 

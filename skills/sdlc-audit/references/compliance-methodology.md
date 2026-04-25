@@ -9,7 +9,7 @@ Full methodology for SDLC compliance auditing. Covers all 9 audit dimensions, re
 3. **Orphan Detection**: List files in `docs/current_work/` and `docs/chronicle/` not accounted for in catalog
 4. **Git Cross-Reference**: Check recent commits for untracked substantial work
 5. **Freshness Check**: Assess CLAUDE.md files and memory files for accuracy
-6. **Knowledge Layer Scan**: Audit disciplines, knowledge stores, triage status, wiring, context map, playbooks, usage, staleness by age, cross-file contradictions, coverage gaps
+6. **Knowledge Layer Scan**: Audit disciplines, knowledge stores, triage status, wiring, context map, playbooks, usage, staleness by age, cross-file contradictions, coverage gaps, review pattern recurrence
 7. **Migration Integrity**: Verify manifest version, file completeness, content-merge, stale references
 8. **Agent Memory Mining**: Scan agent memories for recurring patterns worth promoting
 9. **Recommendation Follow-Through**: Check whether previous audit recommendations were acted on
@@ -258,6 +258,52 @@ ORPHANED KNOWLEDGE FILES
 ```
 
 Prune candidates are surfaced in step 11 (triage) alongside promotion candidates. See "Prune Triage" section below.
+
+### 6l. Review Pattern Recurrence Detection
+
+Scan `docs/reviews/recurring-patterns.yaml` for pattern clusters that have crossed the recurrence threshold, indicating they should be promoted to knowledge-store entries.
+
+**If the file does not exist:** skip this sub-dimension with a note: "No review pattern log found — Step 6 of sdlc-review-code has not been exercised yet or the project predates this feature."
+
+**Step 6l.1 — Read and validate the log:**
+
+Read `docs/reviews/recurring-patterns.yaml`. Validate basic structure: top-level `patterns` key is a list, each entry has `slug`, `description`, `lens`, `first_seen`, `occurrences` (list), and `promoted` (boolean).
+
+**Step 6l.2 — Scan for threshold breaches:**
+
+For each cluster where `promoted: false`:
+
+1. Count occurrences within the sliding window (default: 30 days from audit date).
+2. If count >= 3: flag as a **promotion candidate**.
+3. If count >= 2: flag as **watch** (approaching threshold — Info severity).
+
+**Step 6l.3 — Cross-reference against existing knowledge:**
+
+For each promotion candidate, check whether a knowledge-store entry already covers the pattern:
+- Search `[sdlc-root]/knowledge/` YAML files for the cluster's slug, description keywords, or lens area.
+- If a matching entry exists, the cluster should be marked `promoted: true` rather than creating a duplicate. Flag as "already covered — mark as promoted."
+
+**Step 6l.4 — Cross-reference against discipline parking lots:**
+
+Check whether any discipline parking-lot entry (`[sdlc-root]/disciplines/*.md`) already captures the same pattern. If so, note the existing entry — promotion may mean graduating the parking-lot entry rather than creating new knowledge.
+
+**Output format:**
+
+```
+REVIEW PATTERN RECURRENCE
+  Promotion candidates (3+ occurrences in 30-day window):
+    - missing-tenant-filter (4 occurrences, first: 2026-03-15, lens: security)
+      Files affected: [list of unique files across occurrences]
+      Suggested knowledge area: [sdlc-root]/knowledge/architecture/ or coding/
+
+  Watch list (2 occurrences, approaching threshold):
+    - lazy-relationship-outside-async (2 occurrences, first: 2026-04-15, lens: correctness)
+
+  Already promoted: {N} clusters marked promoted: true
+  Total clusters: {N}
+```
+
+Promotion candidates from 6l are surfaced in step 11 (interactive triage) alongside promotion candidates from 6c and prune candidates from 6k. The triage workflow is the same: CD decides whether to promote, defer, or dismiss. On promotion, the cluster's `promoted` field is set to `true` and a `knowledge_entry` field is added with the path to the new knowledge file.
 
 ## Dimension 7: Migration Integrity
 

@@ -111,7 +111,7 @@ Action Items
 ### 3. Triage
 
 After presenting the audit report, run an interactive triage session if there are:
-- **Promotion candidates** (from Dimensions 6c and 8) — parking lot entries or agent memories worth promoting to knowledge stores
+- **Promotion candidates** (from Dimensions 6c, 6l, and 8) — parking lot entries, recurring review patterns, or agent memories worth promoting to knowledge stores
 - **Prune candidates** (from Dimension 6k) — orphaned knowledge files not wired to any agent
 
 See `references/compliance-methodology.md` step 11 for the full workflow.

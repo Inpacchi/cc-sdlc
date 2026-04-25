@@ -34,6 +34,24 @@ Each entry contains:
 
 ---
 
+## 2026-04-24: Persistent review pattern log with recurrence detection
+
+**Origin:** Idea brief "Persist Review Findings for Cross-Review Pattern Detection" — review-commit Step 6 surfaced patterns in conversation only; no durable evidence base existed for cross-review recurrence detection.
+
+**What happened:** sdlc-review-code Step 6 ("Patterns Worth Capturing") was a conversation-only output — patterns evaporated on context clear, making the knowledge-sharing step aspirational without an evidence base. Meanwhile, discipline parking lots accumulated entries from individual reviews with no mechanism to detect that the same pattern had been flagged multiple times. The fix: a clustered YAML log at `docs/reviews/recurring-patterns.yaml` where Step 6 appends structured pattern entries using agent judgment for cluster matching, and a new sdlc-audit sub-dimension (6l) that scans for threshold breaches and surfaces promotion candidates during interactive triage.
+
+**Changes made:**
+
+1. **`skills/sdlc-review-code/SKILL.md`** — Rewrote Step 6 from conversation-only pattern surfacing to a read-match-write workflow against `docs/reviews/recurring-patterns.yaml`. Steps: 6a (read/create log), 6b (match existing clusters or create new), 6c (write updated YAML), 6d (surface in report with occurrence counts and threshold status). Defined cluster entry format (slug, description, lens, first_seen, occurrences list, promoted flag). Added slug consistency guidance.
+2. **`skills/sdlc-audit/references/compliance-methodology.md`** — Added Dimension 6l (Review Pattern Recurrence Detection): reads the pattern log, scans for clusters with 3+ occurrences in a 30-day sliding window, cross-references against existing knowledge stores and parking lots, surfaces promotion candidates in step 11 triage. Updated Dimension 6 summary line.
+3. **`skills/sdlc-audit/SKILL.md`** — Updated triage section to include Dimension 6l promotion candidates alongside 6c and 8.
+4. **`skeleton/manifest.json`** — Added `docs/reviews` directory, `docs/reviews/recurring-patterns.yaml` seed file with empty-patterns template.
+5. **`process/sdlc_changelog.md`** — This entry.
+
+**Rationale:** The pattern log closes the evidence gap in the review → knowledge-store pipeline. A one-off finding is a fix; a finding that recurs 3+ times across reviews is a knowledge-store gap. The YAML log provides the evidence base for automated recurrence detection without requiring full review report persistence — only structured pattern entries, not prose. Agent judgment at write time (not cold parsing at audit time) is the matching strategy because the reviewing agent has maximum context about what it's flagging.
+
+---
+
 ## 2026-04-24: Port multi-agent review, parallel execution, and incident investigation enrichments
 
 **Origin:** Neuroloom commit `ee6de37` — triage exercise enrichments from wshobson/agents knowledge-store sessions. Evaluated for portability; generic patterns extracted, project-specific content (Axiom APL queries, Railway references, ARQ-specific examples, neuroloom monorepo boundaries, pgvector/HNSW details) stripped or replaced with generic equivalents.
