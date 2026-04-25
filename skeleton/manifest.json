@@ -89,7 +89,8 @@
       "templates/sdlc_lite_result_template.md",
       "templates/postmortem_template.md",
       "templates/decision_record_template.md",
-      "templates/reference_doc_template.md"
+      "templates/reference_doc_template.md",
+      "templates/incident-runbook-template.md"
     ],
     "_templates_note": "templates/*.md are installed to child projects. templates/optional/ is source-only (conditional CLAUDE.md appendices read during initialization).",
     "templates_optional_source_only": [

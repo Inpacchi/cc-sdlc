@@ -180,6 +180,34 @@ Agent: [agent-name]
 
 **File-Conflict Gate (parallel phases only):** Before dispatching two or more phases simultaneously, list every file each phase will modify. If any file appears in more than one phase, those phases MUST run sequentially — dispatch the first phase, wait for POST-GATE to pass, then dispatch the second. Do not rely on the plan's dependency table alone; verify file overlap yourself.
 
+**Parallel Phase Ownership Decomposition.** When the plan specifies two or more phases that can run in parallel, the File-Conflict Gate above is necessary but not sufficient — also verify each phase has a coherent ownership cluster. Use this decomposition lens before dispatching parallel phases:
+
+| Ownership model | When to use | Typical agent assignment |
+|-----------------|-------------|--------------------------|
+| **By package** (monorepo boundary) | Default for full-stack features — each phase owns one package or top-level directory | One domain agent per package |
+| **By layer within a package** | When a single-package feature has clean vertical layers and one agent per layer makes sense | db-architect (models/migrations), backend-developer (routes/services), sdet (tests/) |
+| **By module/feature** | When touching multiple independent features within one package | One domain agent per feature subdirectory |
+| **Vertical slice** | One agent owns end-to-end for a narrow user-facing capability (UI + API + tests) | Single domain agent (rare — prefer horizontal layer) |
+| **Horizontal layer** | One agent owns their layer across all features in the phase | One domain agent per layer |
+
+The project's agent split typically implies the right ownership model. When unsure, default to horizontal-layer — it matches most domain-agent configurations.
+
+**Barrel-file / index-file rule.** Files that aggregate exports or imports for many siblings (`__init__.py`, `index.ts`, barrel files, router registration files, config aggregators) are implicit conflict hotspots — multiple phases may each want to add an entry. For any parallel-phase set, list every barrel file each phase would modify. If two phases touch the same barrel file, designate one phase as the owner and have the other phase's agent request the entry via the dispatch prompt — not by editing. Alternative: collapse the barrel edits into a small, sequenced coda phase the manager runs after both parallel phases pass their POST-GATE.
+
+**Interface-contract boundary.** When parallel phases consume each other's output (frontend consumes backend's API schema; workers consume a table shape; one service consumes another's contract), the contract must be frozen before the downstream phase dispatches. Contract surfaces include: request/response schemas (the authoritative source for downstream types), data models + migrations (the canonical data shape), and generated types (if the plan specifies generated types, the producing phase must complete before the consuming phase dispatches). File overlap is not the same as logical dependency — two phases can touch entirely different files yet still have a semantic dependency through a contract surface.
+
+When the plan has a parallel phase set where one phase defines a contract and another consumes it, split the work: dispatch the contract-producing phase first, verify the contract file exists and is coherent, then dispatch the consumers in parallel.
+
+**Plan parallelization signals.** Before dispatching a parallel phase set from the plan, verify these signals are all true. If any is false, dispatch sequentially and note why in the PRE-GATE:
+
+1. No file appears in more than one phase (File-Conflict Gate above).
+2. No barrel/index file is modified by more than one phase, or the barrel-file coda pattern above applies.
+3. No phase consumes a contract artifact produced by another phase in the same wave (contract-producing phases go first).
+4. Phases have distinct agent owners — two phases assigned to the same agent cannot run in parallel regardless of file non-overlap, because a single agent session cannot be dispatched twice concurrently.
+5. No phase produces a side effect (migration run, seed execution, cache prime) that another phase in the same wave depends on implicitly.
+
+**Decomposition-wrong-mid-stream.** If during execution you discover the plan's parallel decomposition was unsafe (agents are blocking on each other, unexpected file overlap surfaces, a contract boundary was missed), stop new dispatch. Output a `REVISE_PLAN` triage for the remaining phases per the PRE-GATE protocol and wait for CD confirmation. Do not silently serialize a planned-parallel set — that hides the planning defect from the discipline capture and lets the same mistake recur.
+
 **Data Source Extraction (mandatory):** Read the plan's phase description and extract EVERY data source mentioned — external repos, APIs, URLs, documents, AND codebase files. List them all in the PRE-GATE block. If the plan says data comes from an external source, the dispatch prompt MUST tell the agent to fetch from that source. Omitting an external data source from the dispatch prompt causes agents to hallucinate values instead of reading from the defined source.
 
 **EXECUTE**: Dispatch assigned agent(s) per plan. Never narrate readiness ("Ready to dispatch") and pause for confirmation; the plan is already approved. The dispatch prompt must include:
@@ -465,6 +493,11 @@ When the deliverable is complete, the "Let's organize the chronicles" command mo
 | "The user asked about the server code — I'll just fix it while I'm here" | Domain crossing. Dispatch the relevant domain agent for that scope. Read domain boundaries in agent definitions. |
 | "I'll commit the code now and the docs separately" | Documentation artifacts (result docs, catalog updates, discipline entries, archive moves) ship in the same commit as the work they describe. Separate doc commits fragment the history and break bisectability. |
 | "I know how this library works" | Verify external library APIs via Context7 before writing integration code. |
+| "These parallel phases don't overlap on files, dispatch them both" | File non-overlap is necessary, not sufficient. Also check: barrel/index files, contract artifacts (schemas, generated types), shared agent ownership, implicit side-effect ordering. See Parallel Phase Ownership Decomposition. |
+| "Both phases need to add an entry to the barrel/index file — they can each edit it" | Barrel files are single-owner. Designate one phase as owner and pass the other's required entry via the dispatch prompt, or collapse the barrel edits into a sequenced coda phase. |
+| "Frontend phase and backend phase touch different files, so they can run in parallel" | Logical dependency ≠ file overlap. If frontend consumes backend's schemas or generated types, backend produces the contract first. Dispatch the contract-producing phase, verify the artifact, then dispatch consumers. |
+| "The parallel decomposition isn't working — I'll just serialize what's left and keep going" | Silent serialization hides the planning defect. Emit `REVISE_PLAN` triage and wait for CD. The discipline entry protects the next deliverable. |
+| "Two phases are both assigned to the same agent but touch different files — run them in parallel" | A single agent session cannot be dispatched twice concurrently. Two phases sharing an agent owner must sequence, regardless of file non-overlap. |
 
 ## Integration
 

@@ -34,6 +34,25 @@ Each entry contains:
 
 ---
 
+## 2026-04-24: Port multi-agent review, parallel execution, and incident investigation enrichments
+
+**Origin:** Neuroloom commit `ee6de37` — triage exercise enrichments from wshobson/agents knowledge-store sessions. Evaluated for portability; generic patterns extracted, project-specific content (Axiom APL queries, Railway references, ARQ-specific examples, neuroloom monorepo boundaries, pgvector/HNSW details) stripped or replaced with generic equivalents.
+
+**What happened:** Three skills received substantial enrichments in the neuroloom project that turned out to be mostly generic process improvements wearing project-specific clothes. The code review skill gained multi-reviewer coordination patterns (scope discipline, deduplication, severity calibration, constructive framing). The execution skill gained parallel ownership decomposition patterns (barrel-file rule, contract-boundary rule, parallelization signals). The incident skill gained a structured hypothesis-investigation protocol, evidence strength classification, findings arbitration, first-response checklists, severity quick-reference, on-call handoff template, blameless framing discipline, SMART action items, "Where We Got Lucky" concept, postmortem reusability discipline, and appendix schema. A new incident runbook template was created for projects to scaffold project-specific incident playbooks.
+
+**Changes made:**
+
+1. **`skills/sdlc-review-code/SKILL.md`** — Added scope discipline before dispatch (agent concern-overlap avoidance), test quality lens (behavior vs implementation testing, determinism), commit message quality lens (conventional-commits, intent over mechanics), finding deduplication merge-rules table, severity calibration (impact x likelihood criteria), report framing discipline (nit:/question/declarative forms), agent coverage summary table, Step 6 "Patterns Worth Capturing" knowledge-sharing hint, 5 new red flags
+2. **`skills/sdlc-execute/SKILL.md`** — Added parallel phase ownership decomposition (5 ownership models, barrel-file rule, interface-contract boundary, 5 parallelization signals, decomposition-wrong recovery protocol), 5 new red flags
+3. **`skills/sdlc-debug-incident/SKILL.md`** — Added hypothesis investigation dispatch template with confirming/falsifying evidence structure, evidence strength reference (direct/correlational/testimonial/absence), T2a first-response checklist concept with runbook lookup, T2b severity quick-reference, T2c on-call handoff bullet template, T3a hypothesis generation with 6 failure-mode categories, T5a findings arbitration protocol (categorize/rank/classify/log), C2 timeline discipline (state transitions vs tasks, detection gap), C3 blameless framing discipline (reject/use-instead table, framing test, root cause vs contributing factor, 5 Whys with person-level stop, SMART action items, "Where We Got Lucky", postmortem reusability), C4 appendix schema (A1-A5), C6 self-review lens additions, 13 new red flags
+4. **`templates/incident-runbook-template.md`** — New template for project-specific incident runbooks (symptom class, recommended agents, knowledge context, non-destructive first-response steps, severity/escalation table, rollback path, key decisions, reference incidents)
+5. **`skeleton/manifest.json`** — Registered `templates/incident-runbook-template.md` in `source_files.templates`
+6. **`process/sdlc_changelog.md`** — This entry
+
+**Rationale:** These patterns are generic process improvements: multi-reviewer coordination, parallel execution safety, and structured incident investigation. They were validated through real incident triage sessions in a production project. Porting them to the base framework ensures all child projects benefit on next migration. Project-specific content (specific APL queries, infrastructure references, project-specific severity triggers) was stripped — projects add those via PROJECT-SECTION blocks.
+
+---
+
 ## 2026-04-24: Add sdlc-port-opencode skill (cross-platform compatibility)
 
 **Origin:** CD request to make the SDLC framework work with OpenCode agents alongside Claude Code.

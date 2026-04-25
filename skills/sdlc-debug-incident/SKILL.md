@@ -63,10 +63,54 @@ Every agent dispatched during TRIAGE must receive:
 1. **The symptom** — what the user sees or what the monitoring reported. Exact error messages, latency numbers, service IDs, timestamps.
 2. **The classification so far** — what's been ruled in and what's been ruled out.
 3. **The domain lens** — what this specific agent should look at (not the whole system).
-4. **Output format** — a structured finding: observation / impact / suggested next step.
+4. **Output format** — a structured finding using the evidence report format below. The report format is what makes arbitration tractable when multiple agents return simultaneously.
 5. **Return budget** — "under 600 words." Agents default to verbose; incidents need density.
 
 Dispatch prompts describe *what to investigate and why*. Agents decide *how*. Do not tell an agent what the root cause is — let them find it independently and converge. Parallel independent investigations are more valuable than one agent being given the answer.
+
+### Hypothesis Investigation Dispatch Template
+
+When dispatching an agent to investigate a specific hypothesis, structure the prompt to include **what counts as confirming evidence and what counts as falsifying evidence** before the agent begins. Spelling out falsification criteria before dispatch prevents agents from treating absence-of-disconfirmation as confirmation.
+
+Include these fields in every hypothesis-targeted dispatch prompt:
+
+```
+Hypothesis: {clear, falsifiable statement}
+Failure mode category: {Logic Error | Data Issue | State Problem | Integration Failure | Resource Issue | Environment}
+Files / services to examine: {specific paths or services, not "the whole codebase"}
+
+Confirming evidence — if you find any of these, the hypothesis is supported:
+1. {observable condition with a specific code path or metric}
+2. {observable condition}
+
+Falsifying evidence — if you find any of these, the hypothesis is wrong:
+1. {observable condition that would rule it out}
+2. {observable condition}
+
+Return your findings in this format (under 600 words total):
+- Verdict: Confirmed | Falsified | Inconclusive
+- Confidence: High (>80%) | Medium (50-80%) | Low (<50%)
+- Confirming evidence: list each with file:line citation
+- Contradicting evidence: list each with file:line citation (include even if verdict is Confirmed — contradicting evidence on a confirmed hypothesis means the causal chain is incomplete)
+- Causal chain: numbered steps from root cause to observed symptom
+- Additional observations: anything discovered that may be relevant to other hypotheses — do not discard it
+- Recommended fix: only if Confirmed; otherwise leave blank
+```
+
+**Why file:line citations are mandatory:** Evidence without a code location is testimonial evidence — weak and unverifiable. "The connection pool can exhaust" is a hypothesis, not evidence. "`src/db/session.py:47` creates a new engine per request rather than using the module-level singleton" is evidence.
+
+### Evidence Strength Reference
+
+Not all evidence carries equal weight. When logging findings and comparing across parallel investigations, classify each piece:
+
+| Evidence type | Strength | Example |
+|---------------|----------|---------|
+| **Direct** | Strong | Code at `file.py:line` shows the bug; query plan output shows sequential scan where index should be used |
+| **Correlational** | Medium | Error rate spiked after commit `abc123`; latency climbed when worker count increased |
+| **Testimonial** | Weak | "It works on my machine"; "this endpoint has always been slow" |
+| **Absence** | Variable | No tenant filter found in the query — strong when the absence is the entire causal chain; weak when the code path is complex |
+
+A high-confidence verdict requires multiple pieces of direct evidence and a clear causal chain. Medium-confidence (correlational + some direct) warrants continued investigation, not declaration of root cause.
 
 ---
 
@@ -93,7 +137,7 @@ Pick 3–5 agents per incident based on the symptom. Over-dispatch (10 agents fo
 ### Workflow
 
 ```
-CAPTURE SYMPTOM → CLASSIFY SEVERITY → CREATE/OPEN DOC → SELECT AGENTS → DISPATCH IN PARALLEL → LOG FINDINGS → IDENTIFY CAUSE → RECOMMEND DELIVERABLES → HANDOFF
+CAPTURE SYMPTOM → CLASSIFY SEVERITY → CREATE/OPEN DOC → FIRST RESPONSE → GENERATE HYPOTHESES → SELECT AGENTS → DISPATCH IN PARALLEL → LOG FINDINGS → ARBITRATE RESULTS → IDENTIFY CAUSE → RECOMMEND DELIVERABLES → HANDOFF
 ```
 
 ### Steps
@@ -159,9 +203,85 @@ related_deliverables: []  # filled in as deliverables get created
 - {question}
 ```
 
+### T2a. First Response Checklist
+
+Before selecting agents or generating hypotheses, run the first-response checklist for the incident class. These steps take 3-5 minutes and accomplish two things: they preserve evidence before any mitigation disturbs the system state, and they often narrow the hypothesis space enough that one or two agents can handle what would otherwise need five.
+
+**Why run this before T3/T3a?** Hypothesis generation without first-response evidence is speculation. These diagnostic reads are non-destructive — they produce data, they don't change state. Running them first means agents receive a richer dispatch prompt with observed data rather than inferring from symptom description alone.
+
+**Evidence before mitigation.** Before restarting any service or rolling back any deployment, snapshot: current logs, active connection counts, container memory / process stats, pending job queue depth. Take 90 seconds to capture them — once you restart, the evidence is gone and RCA depends entirely on what was already logged.
+
+#### Runbook lookup
+
+Match the symptom to the right playbook in `[sdlc-root]/playbooks/`. Each incident-class playbook (files matching `incident-*.md`) contains the non-destructive first-response steps, agent dispatch list, escalation triggers, and rollback path for that incident class. See `[sdlc-root]/templates/incident-runbook-template.md` for the format when creating new runbooks.
+
+If no playbook matches: skip T2a and proceed directly to T3 (Select Agents). After the incident closes, open an idea brief proposing a new playbook for the unmatched failure class — recurring patterns deserve their own runbook.
+
+---
+
+### T2b. Severity Classification Quick-Reference
+
+The skill references `[sdlc-root]/process/incident_response.md` for the full SEV-1 to SEV-4 definitions. These quick-reference triggers let you classify in the first 5 minutes without looking up the process doc:
+
+| Severity | Trigger | Response posture |
+|----------|---------|-----------------|
+| **SEV-1** | Service fully down for all users; data loss or corruption actively occurring; authentication broken; container restart-looping with no recovery window | Immediate response regardless of time of day. Incident commander designated within 5 minutes. Status page updated within 15 minutes. |
+| **SEV-2** | Core feature path broken for all users; significant latency degradation (p95 > 3x baseline); critical background workers completely down | Within-hour response. Hourly updates to stakeholders. Status page updated if externally visible. |
+| **SEV-3** | Single endpoint degraded; isolated tenant affected; non-critical feature broken; performance regression not yet user-impacting | Business-hours response. Document in incident doc, no status page update required. |
+| **SEV-4** | Cosmetic, logging noise, non-blocking developer friction, single test flake | Next business-day response. Optional incident doc if learnings exist. |
+
+**When uncertain, classify higher.** The cost of over-classifying a SEV-2 as SEV-1 is 30 minutes of heightened attention. The cost of under-classifying a SEV-1 as SEV-2 is a slow response while users experience an outage.
+
+**Incident command structure for SEV-1 and SEV-2:** At these severities, separate three roles: Incident Commander (owns decisions and external communication), Technical Lead (drives diagnosis and fixes), Communications Lead (owns status page and stakeholder cadence). A single person filling all three roles will drop comms at the worst moment.
+
+### T2c. On-Call Handoff Bullets
+
+When the incident crosses a context boundary (shift change, handoff to a domain specialist, or escalation), include these bullets in the handoff message so the incoming responder has full orientation without reading the full doc:
+
+```
+Incident: {slug} ({date})
+Severity: SEV-{N}
+Service: {service-name}
+Started: {timestamp} | Detected: {timestamp}
+Status: {triage-active | remediation-scoped}
+
+Current best hypothesis: {H? — description} [{confirmed | plausible | inconclusive}]
+Ruled out: {H? — one line each}
+
+Evidence snapshot taken: {yes/no — what was captured}
+Last action: {what was done and when}
+Next action: {what is in flight or waiting}
+
+Rollback path available: {yes/no — description}
+Outstanding questions: {one per line}
+
+Incident doc: docs/current_work/incidents/incident_{date}_{slug}.md
+```
+
+This is not a summary of the doc — it's the minimum orientation payload for a responder who hasn't read the doc yet. Every field matters. Empty fields are answered by "unknown — check the doc," not omitted.
+
 ### T3. Select Agents
 
 Use `[sdlc-root]/process/agent-selection.yaml` to map symptom → specialist. Start with `debug-specialist` + 2–4 domain specialists from the matching `dispatch_when` triggers. State the selection explicitly in the doc under "Dispatched Agents" before dispatching.
+
+### T3a. Generate Hypotheses Before Dispatching
+
+Before dispatching agents, draft the initial hypothesis list in the doc. Dispatching without hypotheses sends agents on open-ended explorations; dispatching with hypotheses sends agents to test specific falsifiable claims.
+
+Use these six failure-mode categories as a brainstorm scaffold. Not every category will produce a hypothesis for every incident — that is fine. Work through each one and ask: given the symptom, is a plausible cause in this category possible?
+
+| Category | What to ask for this incident |
+|----------|-------------------------------|
+| **Logic Error** | Is there a conditional, loop, or algorithm that could produce this symptom with the observed inputs? |
+| **Data Issue** | Could the data shape, type, encoding, or null/absent field cause this? Is a tenant-isolation filter missing? |
+| **State Problem** | Could a race condition, stale cache, or shared-state mutation produce this? Is a sync primitive wrong? |
+| **Integration Failure** | Could an API contract mismatch, env var absence, or version incompatibility between services cause this? |
+| **Resource Issue** | Could connection pool exhaustion, fd leak, memory growth, or cache eviction cause this? |
+| **Environment** | Could a deploy, config change, dependency version, or platform difference cause this? |
+
+Write each hypothesis as a **falsifiable statement**, not a description: "the worker engine is being created at module-load time rather than in the startup hook, causing it to be invalid after the event loop restarts" is falsifiable; "something is wrong with the worker" is not.
+
+Aim for 3-5 hypotheses before dispatching. Each agent in T4 will be assigned one or two hypotheses to test. Hypotheses across agents should be *independent* — if H1 and H2 both point at the same code path, merge them into one.
 
 ### T4. Dispatch in Parallel
 
@@ -172,6 +292,47 @@ Dispatch all selected agents in a single message with multiple tool calls so the
 As each agent returns, append a timestamped entry to the Findings Log. Update the Hypotheses section: move anything confirmed to a "leading hypothesis" position, move anything falsified to Ruled Out with the evidence that falsified it.
 
 **Do not delete hypotheses**, even wrong ones. The ruled-out list is future-you's context for the next similar incident.
+
+### T5a. Arbitrate Parallel Results
+
+When two or more agents have returned findings on the same incident, don't just log them sequentially and pick the most recent — arbitrate systematically.
+
+**Step 1: Categorize each verdict**
+
+For each hypothesis under investigation, classify the combined evidence from all relevant agents:
+
+| Category | Meaning |
+|----------|---------|
+| **Confirmed** | High confidence (>80%), multiple direct evidence pieces, clear causal chain, no material contradicting evidence |
+| **Plausible** | Medium confidence (50-80%), some direct evidence, reasonable causal chain, minor ambiguities or one contradicting piece |
+| **Falsified** | Direct evidence contradicts the hypothesis; move to Ruled Out with the evidence that falsified it |
+| **Inconclusive** | Insufficient direct evidence; neither confirmed nor falsified — warrants targeted follow-up, not declaration |
+
+**Step 2: Rank confirmed and plausible hypotheses**
+
+If multiple hypotheses reach Confirmed or Plausible status, rank them by:
+
+1. Confidence level (high beats medium)
+2. Number of direct-evidence pieces with file:line citations
+3. Completeness of causal chain (can you trace the path step-by-step from cause to observed symptom?)
+4. Absence of contradicting evidence
+
+**Step 3: Determine root cause classification**
+
+| Situation | What to do |
+|-----------|-----------|
+| One hypothesis is Confirmed, high confidence | Declare as proximate cause. Check Contributing Factors separately. |
+| One hypothesis is Plausible, none Confirmed | Flag as leading candidate, not confirmed. Dispatch targeted follow-up (see T6). |
+| Two or more hypotheses Confirmed | Check whether they are causally related (one enabling the other) or independent. Related: compound cause. Independent: usually a sign that one confirmation is actually medium-confidence. |
+| No hypotheses Confirmed or Plausible | All inconclusive or falsified. Generate new hypotheses (loop back to T3a) or escalate per T6. |
+
+**Step 4: Log the arbitration decision** in the Findings Log:
+
+```
+{timestamp} — Arbitration: H{N} Confirmed (high confidence, direct evidence at {file:line}); H{M} Falsified (contradicted by {evidence}); H{P} Inconclusive (insufficient evidence — follow-up needed on {specific question})
+```
+
+**Cross-hypothesis spillover:** When an agent's "Additional observations" field contains something relevant to another hypothesis, add it to the Findings Log immediately. Don't defer — these observations are often the thread that unravels the actual cause.
 
 ### T6. Converge or Re-Dispatch
 
@@ -250,6 +411,23 @@ Enrich with:
 - Deployment / config-change events (cross-reference `git log` against the window)
 - Resolution timestamp (when the remediation was deployed or the mitigation was applied)
 
+**Timeline content discipline — what belongs in the timeline vs. the appendix:**
+
+The timeline is the **public-facing chronological narrative** — it answers "what happened and when?" for anyone reading the postmortem cold. The appendix is the **investigator's scratch pad** preserved for future engineers. Keep them distinct:
+
+| Belongs in timeline | Belongs in appendix |
+|---------------------|---------------------|
+| Deployment events, rollbacks, config changes | Full agent dispatch prompts and responses |
+| First detection of symptom (alert, user report) | Ruled-out hypotheses with falsification evidence |
+| Incident declaration and severity transitions | Raw diagnostic output (query plans, connection snapshots) |
+| Key diagnostic findings (e.g., "identified missing tenant filter") | Metrics graph links and data exports |
+| Mitigation applied and its effect | Intermediate investigation logs |
+| Resolution confirmed | Supporting queries used during investigation |
+
+A timeline row is a *state transition* (the system or the response changed), not a *task* (what someone did). "14:45 — @alice checked the job queue" is a task; "14:45 — Job queue depth confirmed at 847 queued jobs; worker service running normally" is a state transition. State transitions belong; tasks do not.
+
+**Detection Gap subsection:** After the timeline table, add a `### Detection Gap` paragraph: how long between incident start (`started_at`) and first detection (`detected_at`), and whether that gap was avoidable. This is the metric that drives alerting improvements.
+
 ### C3. Restructure to Postmortem
 
 Load `[sdlc-root]/templates/postmortem_template.md`. Keep the incident doc in place; restructure its body to match the template sections:
@@ -264,9 +442,113 @@ Load `[sdlc-root]/templates/postmortem_template.md`. Keep the incident doc in pl
 - **Action Items** — table mapping each item to its Deliverable ID. Every row must have a `Deliverable ID` column value — either `D{NN}`, `housekeeping`, or `backlog`.
 - **Lessons Learned** — systemic insights, not "don't do the bad thing again." 5-8 items.
 
+#### Blameless Framing Discipline
+
+**This is not optional.** A postmortem written with blame framing will be hidden and never referenced again. A blameless postmortem will be read, cited, and prevent the next incident.
+
+The test is simple: replace "the engineer" with "the system." If the sentence still makes sense and describes a real problem, it's a system problem. If it falls apart, you were blaming a person.
+
+**Language patterns to reject → patterns to use instead:**
+
+| Reject | Use instead |
+|--------|-------------|
+| "X failed to check Y before deploying" | "Y was unchecked at deploy time; the deploy pipeline had no gate requiring Y" |
+| "The on-call engineer missed the alert" | "The alert fired at 02:30 UTC; the alert routing policy did not escalate until 03:00; the gap was 30 minutes" |
+| "Nobody noticed the filter was missing" | "The filter was absent in the query; no isolation audit existed for this code path" |
+| "The worker was misconfigured" | "The registration used a data structure that silently dropped the second entry" |
+| "The developer didn't understand the async lifecycle" | "The async session was closed before relationship traversal; the error was not caught in staging because the test fixture used synchronous sessions" |
+
+**The framing test in practice:** After writing each sentence in Root Cause, Contributing Factors, and Lessons Learned, ask: *Does this sentence lead to "fire/retrain/blame the person" or "fix/add/improve the system"?* If the former, rewrite it.
+
+**Blameless does not mean consequences-free.** Identifying that a system allowed a mistake does not prevent human accountability for decisions made in that system. Blamelessness is about the *postmortem document* — its job is to improve systems. Personnel decisions are separate and made elsewhere.
+
+#### Root Cause vs. Contributing Factor Discipline
+
+The distinction matters because they drive different action items.
+
+- **Root cause (proximate):** The single condition whose absence would have prevented the incident from occurring. There is exactly one, even if it is uncomfortable to name it.
+
+- **Contributing factors:** Conditions that allowed the root cause to exist or to persist undetected. There can be many. Each one should be distinct — if two contributing factors trace to the same underlying condition, merge them.
+
+**5 Whys applied carefully:** Ask "why?" for each contributing factor until you reach a system-level answer. Stop before you reach a person-level answer. The stopping criterion is: *"Would this cause have existed regardless of which individual was involved?"*
+
+| Depth | Question | Acceptable stopping point? |
+|-------|----------|---------------------------|
+| 1 | Why did the incident occur? | No — this is the symptom |
+| 2 | Why did [root cause] exist? | Sometimes — if the answer is a missing system check |
+| 3 | Why did [system check] not exist? | Usually — this is the system-level finding |
+| 4 | Why was [system check] not built? | Edge cases — if it reveals a missing process |
+| 5+ | Why did [person] not build it? | Stop here — you've reached a person, not a system |
+
+#### Action Item SMART Discipline
+
+Every action item in the postmortem table must be usable as-is for writing a deliverable description in `sdlc-plan` or `sdlc-lite-plan`. A vague action item produces a vague plan.
+
+**SMART criteria for postmortem action items:**
+
+| Criterion | What it means | Bad example | Good example |
+|-----------|---------------|-------------|--------------|
+| **Specific** | Names the exact thing to build or fix | "Improve isolation" | "Add tenant filter assertion to all query call sites in the affected service files" |
+| **Measurable** | Defines done — a test, a metric, an audit result | "Better monitoring" | "Alert fires within 2 minutes when queue depth exceeds threshold; verified by load test" |
+| **Assigned** | Names the deliverable tier and which agent owns implementation | "Engineering to fix" | "D{NN} — `sdlc-lite` — `backend-developer` + `data-architect`" |
+| **Realistic** | Can be scoped as a single deliverable | "Rewrite the entire service" | "Add warm-up check to service startup; block requests until ready" |
+| **Time-bound** | Has a relative deadline or blocking condition | (no date) | "Before next production deploy; blocks D{NN+1}" |
+
+In the action items table, include columns: `Priority | Action | Deliverable ID | Tier | Owner Agent | Blocking`. The `Blocking` column captures whether this action blocks another deliverable — this is what sdlc-plan needs to sequence work.
+
+**Orphan action items are failures.** An action item without a Deliverable ID means it will never be done. Assign `housekeeping` if it is too small for a deliverable, `backlog` if it is real but deliberately deferred, or `D{NN}` if it maps to a specific deliverable. There is no fourth option.
+
+#### "Where We Got Lucky" Section
+
+Add this as a subsection within Lessons Learned. It documents conditions that were favorable during this incident but cannot be relied upon next time. This is not the same as "What Went Well" — "went well" means the team did something right; "got lucky" means the environment was merciful.
+
+Examples:
+- "The incident occurred during business hours; an identical incident overnight would have required a paged response with a smaller team."
+- "The data leak returned data from only one other tenant, which happened to be a test account. If the order had been reversed, a real tenant's data would have been exposed."
+- "The queue had no in-flight jobs at the time of failure, so no work was lost. A failure during active processing would have required manual recovery."
+
+Naming lucky conditions is blameless — it acknowledges that the outcome could have been worse *without* implying the team was negligent. It also drives the most concrete action items: reduce exposure to the luck condition.
+
+#### Postmortem Reusability Discipline
+
+Three things make a postmortem reusable:
+
+**1. Cross-reference related incidents.** At the end of the Appendix (A5), reference any prior incident with a similar symptom or root cause. If the current incident is a recurrence, note what action items from the prior incident were not completed — those are the direct cause of the recurrence.
+
+**2. Searchable terminology.** The Summary and Root Cause sections should use canonical terminology for the failure class (e.g., "connection pool exhaustion" not "db issues", "tenant isolation violation" not "data bleed"). Consistent terminology means searching the incident archive finds the full history of each failure class.
+
+**3. Periodic cross-incident pattern review.** After 4+ postmortems exist, the incident archive should be reviewed periodically: which root cause categories recur, which action items were never closed, which lucky conditions are still present. Note this in C8 (Handoff to Archival): when archiving, check for pattern recurrence across the archive.
+
 ### C4. Preserve Hypothesis Log as Appendix
 
 Do NOT delete the Hypotheses, Ruled Out, or Dispatched Agents sections from TRIAGE. Move them to an `## Appendix: Investigation Log` at the end. That content is the reusable learning — future you on a similar incident will mine it.
+
+Structure the appendix with these subsections:
+
+```markdown
+## Appendix: Investigation Log
+
+### A1. Hypotheses Investigated
+{Original H1, H2, ... list with final status per hypothesis}
+
+### A2. Ruled Out
+{Each ruled-out hypothesis with the evidence that falsified it and timestamp}
+
+### A3. Dispatched Agents
+{The Dispatched Agents table from TRIAGE, with key findings preserved}
+
+### A4. Supporting Data
+{Links or inline snippets of:
+- Metrics graphs at time of incident
+- Query plan output if the investigation included query analysis
+- Connection/process state snapshots taken during incident
+- Any other raw diagnostic data captured during T2a first-response checklists}
+
+### A5. Related Incidents
+{Links to prior postmortems with similar symptom or root cause class}
+```
+
+The appendix is read by two audiences: (1) the engineer investigating *the next* incident with a similar symptom, who will scan A2 to skip ruled-out hypotheses and A1 to find the confirmed cause; (2) the future engineer doing a periodic pattern review, who will scan A5 cross-references across incidents. Write each section for those readers, not as a dump of the raw triage log.
 
 ### C5. Update Frontmatter
 
@@ -282,9 +564,14 @@ Dispatch `code-reviewer` on the final postmortem with the following lens:
 
 - Every action item has an owner and a deliverable ID
 - Root cause is specific, not vague ("a bug" is not a root cause per `[sdlc-root]/process/incident_response.md`)
-- Contributing factors are distinct from root cause
-- No blame assignment — focus is on systems, not people
+- Contributing factors are distinct from root cause and from each other
+- No blame assignment — focus is on systems, not people (apply the framing test: does the sentence lead to "fix the system" or "fix the person"?)
 - Lessons learned are generalizable — they would help on *a different* incident
+- Action items are SMART: specific (names the code path or system), measurable (defines done), assigned (deliverable tier + agent), realistic (single deliverable scope), time-bound (has a deadline or blocking condition)
+- "Where We Got Lucky" is present and distinct from "What Went Well"
+- Timeline rows are state transitions, not task logs; Detection Gap subsection is present
+- Appendix A5 cross-references prior incidents with similar symptom class
+- No rejected blameless-framing patterns: scan for "failed to", "didn't check", "missed the", "nobody noticed" — each instance should be rewritten as a system condition
 
 Apply findings before marking closeout complete.
 
@@ -316,6 +603,18 @@ STOP. Do not auto-archive. Archival to `docs/chronicle/{concept}/` happens later
 | "I'll use a different template — the project's is too long" | Use `[sdlc-root]/templates/postmortem_template.md` verbatim. Consistency across incidents makes the chronicle searchable. |
 | "The kernel OOM-killed us, so there's nothing to investigate — just restart" | SIGKILL leaves no trace, but the conditions that led to the kill are everywhere else: traffic patterns, resource curves, config state. Run TRIAGE. |
 | "This is the same as last month's incident, copy-paste the old doc" | New doc, reference the old one. A fresh investigation might find that the cause is different even if the symptom matches. Copying hides regressions in root-cause understanding. |
+| "Agent H1 returned first and it looks right — close investigation" | Wait for all dispatched agents to return before arbitrating (T5a). A parallel investigation that returns second with contradicting evidence is the whole value of parallel dispatch. |
+| "Two agents confirmed different hypotheses — pick the one I find more intuitive" | Apply the arbitration protocol (T5a). Confidence level, evidence count, causal chain completeness, and absence of contradicting evidence are the ranking criteria — not intuition. |
+| "I'll skip the first-response checklist and go straight to hypothesis generation" | The runbook checklists (T2a) are non-destructive reads that take 3-5 minutes and produce evidence that makes hypothesis generation faster and more accurate. Skipping them means agents get symptom descriptions instead of observed data. |
+| "I need to run this mitigation immediately — the incident is active" | Every destructive command (kill connections, rollback, scale-down) requires a dry-run count check first. Running it wrong during an incident adds a secondary incident on top of the first. Verify count, then execute. |
+| "I'll figure out the on-call handoff later once things settle" | The handoff bullets (T2c) should be ready before they're needed, not after. A handoff written under pressure with no template is how critical context gets dropped between responders. |
+| "The postmortem says 'the team failed to add a filter' — that's just what happened" | That is blame framing. Rewrite: "The filter was absent; no audit existed in the CI pipeline or review checklist for this code path." The system allowed the omission — name the system gap, not the omission. |
+| "I have a root cause and three contributing factors — one action item will fix everything" | Root cause and contributing factors drive distinct action items. A contributing factor that was not addressed directly will be the root cause of the next incident. Each contributing factor needs its own SMART action item or an explicit decision to accept the risk. |
+| "The action item is 'improve monitoring' — that's good enough" | That is not a SMART action item. It names no specific code path, no measurable done-state, no deliverable tier, no assigned agent. Be specific about what to build, how to verify it works, and who owns it. |
+| "We got lucky, but that's fine — the incident resolved cleanly" | Lucky conditions that remain unaddressed are incidents waiting to happen. Document the lucky condition in "Where We Got Lucky" and create a SMART action item to eliminate reliance on that luck, or a documented risk-acceptance decision. |
+| "The 5 Whys led me to 'the developer was unfamiliar with the pattern' — that's the root cause" | You went one level too deep. A person is not a root cause. Back up one level to the system-level finding: "The pattern was not documented in the codebase; tests used a fixture that masked the violation." |
+| "I'll skip the 'Related Incidents' appendix section — this is a one-off" | Every incident feels like a one-off until you search the archive and find three prior incidents with the same root cause class. Write the cross-reference, even if it says "no prior incidents found." |
+| "The timeline has a row for every action the on-call engineer took — this is thorough" | Timeline rows should be state transitions (system state changed, incident state changed), not task logs (person did a thing). Move task logs to the appendix. |
 | "I'll hardcode the agent matrix in this skill" | No — the matrix lives in `agent-selection.yaml` so it stays consistent with planning and review. If a project adds a new domain agent, it shows up in incident triage automatically. |
 
 ---
