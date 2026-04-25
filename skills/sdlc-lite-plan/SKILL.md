@@ -17,6 +17,21 @@ Domain worker agents write the plan and review it. You are the manager and never
 
 **This skill produces the plan. It does NOT execute it.** Execution happens via `sdlc-lite-execute`.
 
+## Definition of Done
+
+A lite plan is "done" when a fresh agent — given only the plan file and the current codebase — can execute it without coming back to the planner with questions.
+
+Concretely, the saved plan file must let a reader answer:
+
+1. **What is being built?** — scope, files touched, constraints (with concrete values, not placeholders)
+2. **Why this approach?** — either a cited codebase precedent, or a brief comparison of 2 options with tradeoffs and the selected one justified
+3. **How is it sequenced?** — ≤4 phases with dependencies and per-phase **outcomes** (what must be true when the phase is done), not just task lists
+4. **How do we know it worked?** — per-phase acceptance criteria plus an overall post-execution review gate
+5. **What decisions are still open?** — DECIDE items marked explicitly (`USER DECISION NEEDED: ...`), never left as prose ambiguity
+6. **What did domain experts push back on?** — Worker Agent Reviews section with bracketed agent names and concrete feedback, appended after review converges
+
+If any of these six are missing or vague, the plan is not done — regardless of which steps below were followed. The Steps section exists to make these outcomes reliable; when a step conflicts with an outcome (e.g. the plan demonstrably satisfies 1–6 but a step prescribes further work), surface the conflict rather than forcing the step.
+
 ## When This Applies
 
 The trigger is **complexity**, not file count. Use SDLC-Lite when the work:
@@ -81,6 +96,8 @@ Follow the state machine in `[sdlc-root]/process/deliverable_lifecycle.md`. When
 Read and follow `[sdlc-root]/process/manager-rule.md` — the canonical definition of this rule. It applies unconditionally for the entire session.
 
 ## Steps
+
+These steps exist because LLMs reliably fail the Definition of Done without scaffolding — writers drift into HOW-only plans, skip cross-domain review, summarize when asked to present verbatim, and quietly absorb revision work the writing agent should own. Follow the steps. But the steps are guardrails, not the product: the product is a plan that satisfies outcomes 1–6 above.
 
 ### 0. Register Deliverable ID
 

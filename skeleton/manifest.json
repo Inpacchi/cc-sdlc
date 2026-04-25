@@ -216,7 +216,8 @@
       "skills/research-external/SKILL.md",
       "skills/team-review-fix/SKILL.md",
       "skills/sdlc-debug-incident/SKILL.md",
-      "skills/sdlc-create-reference-doc/SKILL.md"
+      "skills/sdlc-create-reference-doc/SKILL.md",
+      "skills/sdlc-port-opencode/SKILL.md"
     ],
     "agents": [
       "agents/AGENT_TEMPLATE.md",

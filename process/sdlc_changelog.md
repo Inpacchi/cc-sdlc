@@ -34,6 +34,39 @@ Each entry contains:
 
 ---
 
+## 2026-04-24: Add sdlc-port-opencode skill (cross-platform compatibility)
+
+**Origin:** CD request to make the SDLC framework work with OpenCode agents alongside Claude Code.
+
+**What happened:** The framework is tightly coupled to Claude Code's tool names and directory conventions (`.claude/`, `CLAUDE.md`, `Agent` tool dispatch, `SendMessage`, `AskUserQuestion`). OpenCode uses a parallel structure (`.opencode/`, `AGENTS.md`, different agent dispatch) but shares the same file-operation tools (`Read`, `Write`, `Edit`, `Bash`, `Glob`, `Grep`). A new utility skill was created to bridge the gap — it surveys the existing Claude Code installation, creates a parallel `.opencode/` structure, generates `AGENTS.md` from `CLAUDE.md`, adapts agent/skill definitions with a tool-mapping table, scaffolds `opencode.json`, and documents compatibility gaps. Critically, it does NOT duplicate the shared `[sdlc-root]` content — process docs, knowledge stores, and disciplines are used as-is by both tools.
+
+**Changes made:**
+
+1. **`skills/sdlc-port-opencode/SKILL.md`** — New utility skill with 8-step workflow (survey → scaffold → AGENTS.md → adapt agents → adapt skills → config → gaps → report), tool mapping table, compatibility gaps template, and 10 red flags
+2. **`skeleton/manifest.json`** — Registered `skills/sdlc-port-opencode/SKILL.md` in `source_files.skills`
+3. **`process/commands.md`** — Added "Cross-Platform" section with `/sdlc-port-opencode` command
+4. **`process/sdlc_changelog.md`** — This entry
+
+**Rationale:** As the SDLC framework matures, cross-platform compatibility becomes valuable. Rather than forking the entire framework for each AI coding tool, this skill creates a thin adaptation layer that maps tool interfaces while sharing the content layer. The parallel-not-replacement approach means Claude Code users lose nothing, and the `[sdlc-root]` DRY principle keeps process knowledge in one place.
+
+---
+
+## 2026-04-24: Add Definition of Done block to sdlc-lite-plan (outcome-first framing pilot)
+
+**Origin:** CD-led design discussion on management-by-task vs management-by-outcome in the SDLC. Observation: planning/execution skills lead with procedure and bury the artifact contract, leaving the model without a north star when a step doesn't fit. Proposal: hoist a crisp "what does done look like?" block to the top of each plan/execute skill and reframe the procedural steps as guardrails serving that outcome.
+
+**What happened:** `sdlc-lite-plan` was chosen as the pilot because there's a real artifact (`neuroloom/docs/current_work/sdlc-lite/d107_sdlc_hooks_python_plan.md`) to measure the framing against. The skill previously required a reader to traverse ~300 lines of procedure to reconstruct what makes a lite plan valuable. Six outcomes were extracted from that artifact and the existing skill body (scope, approach justification, sequencing, acceptance criteria, open decisions, expert pushback) and hoisted into a new Definition of Done block. The Steps section got a short preamble framing the steps as guardrails — not the product — so the model has a north star when a step conflicts with a satisfied outcome.
+
+**Changes made:**
+
+1. **`skills/sdlc-lite-plan/SKILL.md`** — Added `## Definition of Done` block after the "produces the plan, does not execute it" line and before `## When This Applies`. Added a 2-sentence preamble to `## Steps` explaining that steps are guardrails serving the DoD, not the product itself. No procedural content was removed; the Manager Rule, count-must-match checklist discipline, FACTS gate, and re-review triggers all remain intact.
+
+**Rationale:** Task-management is the right default for execution skills (model discipline collapses without procedural scaffolding) but planning skills benefit from an explicit artifact contract at the top — when a step doesn't fit the plan's shape, the model can reason against the outcome rather than force the step or freeze. This is a pilot on one skill, deliberately additive (not a refactor) so it can be reverted cleanly. If the pattern holds up in use, candidates for the same treatment: `sdlc-plan` (heavier, more procedural weight to rebalance) and `sdlc-lite-execute` / `sdlc-execute` (where the DoD would be "a working change committed + a result doc that a future reader can understand without context").
+
+**Open question / watch item:** The DoD and the Steps can drift. If a step changes but the DoD isn't revisited, the model gets conflicting signals. Consistency-check protocol in CLAUDE.md may need a rule: any edit to a Steps section in a skill that has a DoD block must re-read the DoD and confirm or update. Not adding that rule today — want to see if drift actually happens first.
+
+---
+
 ## 2026-04-24: Add input quality gates (FAR/FACTS) for plan and execution skills
 
 **Origin:** Research into RPI, BMAD, GSD, and SDD methodologies identified a gap in cc-sdlc: robust validation of artifact structure before downstream consumption. Discovery findings feed into specs, and plans feed into execution, but no structured rubric validates whether those inputs are well-formed before agents invest tokens on them. The FAR/FACTS validation pattern (Robinson, 2025; Horthy/HumanLayer, 2024) addresses this with dimensional scoring rubrics.

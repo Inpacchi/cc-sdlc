@@ -79,6 +79,12 @@ Installed only when CD opts into the `design` bundle during `/sdlc-initialize`.
 | `/sdlc-design-consult` | Consult domain design agents on UX, visual design, or interaction patterns |
 | `/sdlc-design-brand-asset` | Generate specs for visual brand assets — dimensions, colors, positioning, AI image prompts |
 
+## Cross-Platform
+
+| Command | Action |
+|---------|--------|
+| `/sdlc-port-opencode` | Adapt existing cc-sdlc installation for OpenCode — creates `.opencode/` structure, `AGENTS.md`, adapted agents/skills, and `opencode.json` alongside the Claude Code setup |
+
 ## Testing
 
 | Command | Action |
