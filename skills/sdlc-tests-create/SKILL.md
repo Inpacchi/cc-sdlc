@@ -114,7 +114,7 @@ Coverage Map — {N} functions inventoried, {M} gaps identified ({K} critical)
 
 ## Step 2: Domain Expert Gap Analysis
 
-**Dispatch ALL relevant domain agents to audit the coverage map.** The SDET knows testing patterns but doesn't have deep domain knowledge of (for example) webhook lifecycle, subscription state machines, or recovery flows. Domain experts catch gaps the SDET would miss. Each agent's perspective matters — do not subset. See AOP2 (decompose by concern for review work) and AOP5 (group sizing) in `[sdlc-root]/knowledge/architecture/agent-orchestration-patterns.yaml`.
+**Dispatch ALL relevant domain agents to audit the coverage map.** The SDET knows testing patterns but doesn't have deep domain knowledge of (for example) webhook lifecycle, subscription state machines, or recovery flows. Domain experts catch gaps the SDET would miss. Each agent's perspective matters — do not subset. Read `[sdlc-root]/knowledge/architecture/agent-orchestration-patterns.yaml` for AOP2 (decompose by concern for review work) and AOP5 (group sizing).
 
 ### Which agents to dispatch
 

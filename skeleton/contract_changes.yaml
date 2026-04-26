@@ -163,3 +163,20 @@ changes:
       Existing installs with either skill on disk are auto-detected as
       having the bundle (see §2.0 fallback). New installs receive the
       bundle prompt from sdlc-initialize Phase 1b.
+
+  - id: "0009"
+    date: "2026-04-25"
+    title: "Phrasing contract compliance — 12 non-canonical refs fixed to canonical"
+    type: other
+    changelog_ref: "2026-04-25: Fix 12 phrasing contract violations across 7 skills"
+    notes: >
+      12 knowledge-layer references across 7 skills were rewritten from
+      non-canonical verbs ("Use the template from", "Evaluate against",
+      "Reference", "See X in", "audit against") to canonical "Read ... and"
+      form. Two parenthetical refs extracted to standalone sentences. One
+      bare path normalized to [sdlc-root]. One directory ref replaced with
+      context-map consult. No new patterns introduced — existing adapter
+      transformers now match where they previously missed. Adapter action:
+      none required (beneficial, not breaking), but bump
+      supported_ccsdlc_version after verifying no new forbidden phrases
+      leaked in.

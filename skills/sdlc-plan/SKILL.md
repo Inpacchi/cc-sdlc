@@ -272,7 +272,7 @@ The primary domain agent writes the core spec. Other relevant agents contribute 
 1. Consult `[sdlc-root]/knowledge/agent-context-map.yaml` for the agent's mapped files
 2. Check whether **any** knowledge file in the project has `spec_relevant: true`. If none do, load ALL mapped files (the project hasn't configured spec-relevance yet — preserve current behavior).
 3. If at least one file is tagged `true`: read each mapped YAML file's top-level `spec_relevant` field. Include only files where `spec_relevant: true` — skip files where `spec_relevant: false` or the field is absent.
-4. The testing paradigm (`[sdlc-root]/knowledge/testing/testing-paradigm.yaml`) is included at spec time regardless of its `spec_relevant` tag — the Testing Strategy section below depends on it.
+4. Read `[sdlc-root]/knowledge/testing/testing-paradigm.yaml` and include it at spec time regardless of its `spec_relevant` tag — the Testing Strategy section below depends on it.
 
 This filtering reduces context load during spec writing by excluding implementation-detail knowledge (code patterns, debugging guides, deployment patterns) that does not inform **what** to build. At plan time (Step 4), ALL mapped files load for each dispatched agent — no `spec_relevant` filtering.
 
@@ -284,7 +284,7 @@ Reference the template at `[sdlc-root]/templates/spec_template.md`. Required fie
 - Data model changes
 - Interface/adapter changes required
 - Depends on (other deliverable IDs)
-- Testing strategy — informed by the testing paradigm (`[sdlc-root]/knowledge/testing/testing-paradigm.yaml`, loaded at spec time per rule 4 above): unit tests for pure logic, integration tests for I/O boundaries, E2E for critical user flows. Identify which code layers the feature introduces and match test types accordingly.
+- Testing strategy — informed by `[sdlc-root]/knowledge/testing/testing-paradigm.yaml` (loaded at spec time per rule 4 above): unit tests for pure logic, integration tests for I/O boundaries, E2E for critical user flows. Identify which code layers the feature introduces and match test types accordingly.
 - Success criteria
 - Constraints
 - Open questions / unknowns — explicitly state what the spec does NOT know yet. Each unknown is a risk; the plan must address or accept each one.

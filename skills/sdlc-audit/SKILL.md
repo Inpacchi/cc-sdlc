@@ -63,7 +63,7 @@ DISPATCH AUDITOR → REPORT → TRIAGE → FIX
 
 ### 1. Dispatch Auditor
 
-Dispatch the `sdlc-compliance-auditor` subagent to perform the 9-dimension scan. Use the subagent dispatch template from `[sdlc-root]/knowledge/architecture/agent-orchestration-patterns.yaml` § dispatch_prompt_templates — objective: "Scan all 9 compliance dimensions and return structured findings"; acceptance criteria: "Return per-dimension score (0-10), overall score, categorized findings with severity, and promotion candidates for knowledge/discipline stores."
+Dispatch the `sdlc-compliance-auditor` subagent to perform the 9-dimension scan. Read `[sdlc-root]/knowledge/architecture/agent-orchestration-patterns.yaml` and use the subagent dispatch template from § dispatch_prompt_templates — objective: "Scan all 9 compliance dimensions and return structured findings"; acceptance criteria: "Return per-dimension score (0-10), overall score, categorized findings with severity, and promotion candidates for knowledge/discipline stores."
 
 **Audit Dimensions (summary):**
 
@@ -149,7 +149,7 @@ LOCATE → EXTRACT → CATEGORIZE → PROPOSE → (optional) APPLY → CHANGELOG
 - Gotchas encountered that no knowledge file warned about
 - Agent dispatches that lacked necessary context
 
-**Skill deficiencies** — specific skill behaviors that produced suboptimal results. Evaluate against `[sdlc-root]/knowledge/dx/skill-quality-rubrics.yaml` (SQR-01–SQR-10) for concrete scoring:
+**Skill deficiencies** — specific skill behaviors that produced suboptimal results. Read `[sdlc-root]/knowledge/dx/skill-quality-rubrics.yaml` and evaluate against SQR-01–SQR-10 for concrete scoring:
 - Steps in a skill workflow that were skipped or done out of order
 - Missing phases that the work required
 - Agent recommendations in skills that were wrong for the task

@@ -34,6 +34,27 @@ Each entry contains:
 
 ---
 
+## 2026-04-25: Fix 12 phrasing contract violations across 7 skills
+
+**Origin:** Knowledge store compliance audit (Tier 4) — systematic scan of all skills for phrasing contract violations: non-canonical verbs, parenthetical knowledge references, bare paths, and imprecise directory references.
+
+**What happened:** The phrasing contract (`process/knowledge-routing.md` § "Standard Phrases") requires canonical verbs (`Read`, `consult`, `update`) and prohibits parenthetical knowledge file references. Audit found 12 remaining violations across 7 skills after Tier 1 and Tier 2 fixes.
+
+**Changes made:**
+
+1. **`skills/sdlc-audit/SKILL.md`** — Fixed 2 non-canonical verbs: "Use the subagent dispatch template from" → "Read ... and use the subagent dispatch template from"; "Evaluate against" → "Read ... and evaluate against".
+2. **`skills/sdlc-review/SKILL.md`** — Fixed 1 non-canonical verb: "Use the subagent dispatch template from" → "Read ... and use the subagent dispatch template from".
+3. **`skills/sdlc-create-agent/SKILL.md`** — Fixed 1 non-canonical verb: "Reference the canonical protocol in" → "Read ... for the canonical protocol".
+4. **`skills/sdlc-develop-skill/SKILL.md`** — Fixed 2 non-canonical verbs: "apply the SQR-01/SQR-02 mental test from" → "read ... and apply the SQR-01/SQR-02 mental test"; "audit against" → "Read ... and audit against".
+5. **`skills/sdlc-tests-create/SKILL.md`** — Fixed 1 non-canonical verb: "See AOP2...and AOP5...in" → "Read ... for AOP2...and AOP5".
+6. **`skills/sdlc-plan/SKILL.md`** — Fixed 2 parenthetical knowledge references: extracted `testing-paradigm.yaml` path from parentheses into canonical "Read" sentence (line 275) and moved path before parenthetical clarification (line 287).
+7. **`skills/sdlc-idea/SKILL.md`** — Fixed 1 imprecise directory reference: "Read relevant methodology files in `[sdlc-root]/knowledge/`" → "Consult `[sdlc-root]/knowledge/agent-context-map.yaml` to identify relevant methodology files".
+8. **`skills/enrich-agent/SKILL.md`** — Fixed 1 bare path: `` `ops/sdlc/knowledge/` `` → `` `[sdlc-root]/knowledge/` ``.
+
+**Rationale:** Adapter plugins (e.g., neuroloom-sdlc-plugin) pattern-match on canonical verb + path combinations to transform file-based knowledge references into backend-native calls. Non-canonical verbs, parenthetical paths, and bare paths bypass the transformer and leak file-based references into adapter-based projects. These 12 fixes close all known phrasing contract violations. [contract-change]
+
+---
+
 ## 2026-04-25: Wire knowledge routing into 3 Tier-2 quality-gate skills
 
 **Origin:** Knowledge store compliance audit (continued) — after fixing Tier-1 orchestration skills, audited Tier-2 quality-gate skills that dispatch agents without their knowledge context.

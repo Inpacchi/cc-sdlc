@@ -93,7 +93,7 @@ The description MUST include:
 
 **Activation framing rule:** Use imperative/mandatory language in descriptions and trigger phrases. Advisory framing ("Best practices for X", "Guidance on X") causes agents to skip the skill — empirically measured at ~10% activation rate. Mandatory framing ("Rules that MUST be followed when working on X", "Required steps for X") achieves 57-83% activation. The description is the primary signal agents use to decide whether to invoke the skill — treat it as a trigger, not a summary. (Evidence: Tessl controlled experiment, 30 trials per configuration — `[sdlc-root]/knowledge/coding/context-engineering-patterns.yaml`, activation_engineering section.)
 
-**Triggering accuracy validation:** Before finalizing the description, apply the SQR-01/SQR-02 mental test from `[sdlc-root]/knowledge/dx/skill-quality-rubrics.yaml`: write 5 prompts that should trigger the skill and 5 that should not. If 3+ of either set misfire, rewrite the trigger contexts.
+**Triggering accuracy validation:** Before finalizing the description, read `[sdlc-root]/knowledge/dx/skill-quality-rubrics.yaml` and apply the SQR-01/SQR-02 mental test: write 5 prompts that should trigger the skill and 5 that should not. If 3+ of either set misfire, rewrite the trigger contexts.
 
 Template:
 
@@ -192,7 +192,7 @@ Generate:
 
 ### 9. Quality Gate
 
-Dispatch the `sdlc-reviewer` subagent on the created skill file. Present its findings. Fix any convention violations before finalizing. Also audit against `[sdlc-root]/knowledge/dx/skill-quality-rubrics.yaml` — check SQR-04 (scope calibration line counts), SQR-05 (progressive disclosure to references/), SQR-06 (directive density), and SQR-07 (anti-pattern flags: OVER_CONSTRAINED, EMPTY_DESCRIPTION, MISSING_TRIGGER, BLOATED_SKILL, ORPHAN_REFERENCE).
+Dispatch the `sdlc-reviewer` subagent on the created skill file. Present its findings. Fix any convention violations before finalizing. Read `[sdlc-root]/knowledge/dx/skill-quality-rubrics.yaml` and audit against SQR-04 (scope calibration line counts), SQR-05 (progressive disclosure to references/), SQR-06 (directive density), and SQR-07 (anti-pattern flags: OVER_CONSTRAINED, EMPTY_DESCRIPTION, MISSING_TRIGGER, BLOATED_SKILL, ORPHAN_REFERENCE).
 
 ---
 

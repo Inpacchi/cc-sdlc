@@ -97,7 +97,7 @@ anti-patterns, and domain-specific guidance relevant to your work.
 ```
 
 #### 3c. Communication Protocol
-Reference the canonical protocol in `[sdlc-root]/knowledge/architecture/agent-communication-protocol.yaml`. Add domain-specific handoff fields.
+Read `[sdlc-root]/knowledge/architecture/agent-communication-protocol.yaml` for the canonical protocol. Add domain-specific handoff fields.
 
 #### 3d. Core Principles
 Generate 2-4 concern areas with concrete principles. Each principle has a rationale. Principles are domain-specific, not generic platitudes.

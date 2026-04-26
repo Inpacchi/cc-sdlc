@@ -138,7 +138,7 @@ During or after questioning, specific unknowns may emerge that require research:
 
 **Library/API verification** — If the idea involves external libraries or services, verify capabilities via Context7 (`mcp__context7__resolve-library-id` → `mcp__context7__query-docs`). Do NOT assume library capabilities from training data.
 
-**Knowledge store consultation** — Read relevant methodology files in `[sdlc-root]/knowledge/` that define how the project approaches this domain (e.g., testing paradigm for test-related ideas, data modeling patterns for schema ideas).
+**Knowledge store consultation** — Consult `[sdlc-root]/knowledge/agent-context-map.yaml` to identify which methodology files are relevant to the domain being explored, then read those files. They define how the project approaches this domain (e.g., testing paradigm for test-related ideas, data modeling patterns for schema ideas).
 
 Share research findings with the user as they come in. New information often shifts the conversation.
 

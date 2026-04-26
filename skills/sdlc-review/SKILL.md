@@ -49,7 +49,7 @@ If no target can be identified:
 
 #### 2. Dispatch Reviewer
 
-Dispatch the `sdlc-reviewer` subagent with the target file path. Use the subagent dispatch template from `[sdlc-root]/knowledge/architecture/agent-orchestration-patterns.yaml` § dispatch_prompt_templates — objective: "Review {file path} for cc-sdlc convention compliance"; acceptance criteria: "Return structured findings with severity (critical/major/minor), the specific convention violated, and the suggested fix."
+Dispatch the `sdlc-reviewer` subagent with the target file path. Read `[sdlc-root]/knowledge/architecture/agent-orchestration-patterns.yaml` and use the subagent dispatch template from § dispatch_prompt_templates — objective: "Review {file path} for cc-sdlc convention compliance"; acceptance criteria: "Return structured findings with severity (critical/major/minor), the specific convention violated, and the suggested fix."
 
 #### 3. Present Findings
 
