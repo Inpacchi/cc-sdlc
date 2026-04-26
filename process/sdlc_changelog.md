@@ -34,6 +34,22 @@ Each entry contains:
 
 ---
 
+## 2026-04-25: Wire knowledge store references into 3 Tier-1 orchestration skills
+
+**Origin:** Knowledge store compliance audit — audited all 29 skills against 59 knowledge YAML files. Found that 49% of knowledge files had zero skill-level references (reachable only through agent self-lookup) and 5 dispatching skills skipped the `agent-context-map.yaml` consult entirely.
+
+**What happened:** The "belt-and-suspenders" model (skills inject knowledge into dispatch prompts AND agents self-consult the context map) was missing the suspenders for critical orchestration skills. `sdlc-execute`, `sdlc-lite-plan`, and `sdlc-debug-incident` — three of the most-used dispatch-heavy skills — had zero or minimal knowledge injection.
+
+**Changes made:**
+
+1. **`skills/sdlc-execute/SKILL.md`** — Added `Consult [sdlc-root]/knowledge/architecture/agent-orchestration-patterns.yaml` with AOP1/AOP8/AOP9/AOP10 references in the dispatch section. Matches sibling `sdlc-lite-execute` which already had this.
+2. **`skills/sdlc-lite-plan/SKILL.md`** — Added AOP consult (AOP5/AOP6/AOP9) and cross-domain knowledge injection instruction with `agent-context-map.yaml` consult in the Agent Dispatch Protocol. Was the only dispatching skill with zero knowledge references.
+3. **`skills/sdlc-debug-incident/SKILL.md`** — Added cross-domain knowledge injection instruction with `agent-context-map.yaml` consult in the Agent Dispatch Protocol. Same-domain knowledge (debugging-methodology, error-cascade, etc.) is handled by agent self-consultation via their Knowledge Context sections. Fixed non-canonical phrasing in Additional Resources section.
+
+**Rationale:** AOP patterns are manager knowledge — they guide how the skill structures dispatches, not what agents know. Cross-domain injection (via agent-context-map consult) fills the gap when agents work outside their primary domain. Same-domain knowledge is the agent's responsibility through self-consultation.
+
+---
+
 ## 2026-04-25: Apply DS1/DS4/DS7 insight-first output pattern across 9 skills
 
 **Origin:** Data-storytelling audit of all skill output templates against DS1–DS7 rules. Found 3 systemic patterns: label-style headers (DS4, 8 skills), data dump before rollup (DS7.1 + DS1, 6 skills), missing call to action (DS7.5, 3 skills).

@@ -111,6 +111,10 @@ This ID will be used in the plan filename (`dNN_{slug}_plan.md`).
 
 Dispatch prompts must pass through all relevant context — outcomes, constraints, and any implementation guidance that would help the agent succeed. Never narrate readiness ("Ready to dispatch") and wait for user confirmation. Dispatch immediately when context is ready.
 
+Consult `[sdlc-root]/knowledge/architecture/agent-orchestration-patterns.yaml` for dispatch discipline — especially AOP5 (right-size the agent group), AOP6 (match specialization to domain), and AOP9 (dispatch prompts must include acceptance criteria, owned files, constraints, and out-of-scope).
+
+**Cross-domain knowledge injection:** When dispatching a worker agent into a domain outside its primary expertise, consult `[sdlc-root]/knowledge/agent-context-map.yaml` for the relevant domain agent's mapped knowledge files and include them in the dispatch prompt.
+
 **Library verification (MANDATORY when external libraries are involved):** You MUST verify API capabilities via Context7 BEFORE dispatching the plan-writing agent.
 
 1. **Resolve library ID:** `mcp__context7__resolve-library-id` for each external library

@@ -69,6 +69,8 @@ Every agent dispatched during TRIAGE must receive:
 
 Dispatch prompts describe *what to investigate and why*. Agents decide *how*. Do not tell an agent what the root cause is — let them find it independently and converge. Parallel independent investigations are more valuable than one agent being given the answer.
 
+**Cross-domain knowledge injection:** When an agent investigates outside its primary domain (e.g., `debug-specialist` tracing into payment logic, `performance-engineer` examining data-layer queries), consult `[sdlc-root]/knowledge/agent-context-map.yaml` for the other domain's agent and include those knowledge files in the dispatch prompt.
+
 ### Hypothesis Investigation Dispatch Template
 
 When dispatching an agent to investigate a specific hypothesis, structure the prompt to include **what counts as confirming evidence and what counts as falsifying evidence** before the agent begins. Spelling out falsification criteria before dispatch prevents agents from treating absence-of-disconfirmation as confirmation.
@@ -639,7 +641,7 @@ STOP. Do not auto-archive. Archival to `docs/chronicle/{concept}/` happens later
 - `[sdlc-root]/process/incident_response.md` — severity classification (SEV-1 to SEV-4), triage workflow, postmortem principles, deliverable lifecycle connection. Read before TRIAGE if you haven't recently.
 - `[sdlc-root]/templates/postmortem_template.md` — the canonical postmortem structure. CLOSEOUT output conforms to this template.
 - `[sdlc-root]/process/agent-selection.yaml` — domain-to-agent mapping used during T3. Single source of truth shared with planning and review skills.
-- `[sdlc-root]/knowledge/architecture/debugging-methodology.yaml` — structured investigation methodology. The `debug-specialist` agent uses this; TRIAGE prompts should reference it when dispatching.
+- `[sdlc-root]/knowledge/architecture/debugging-methodology.yaml` — structured investigation methodology used by `debug-specialist`. Injected into TRIAGE dispatch prompts per the knowledge injection protocol above.
 - `[sdlc-root]/process/manager-rule.md` — required reading. You orchestrate; agents investigate.
 - `[sdlc-root]/process/collaboration_model.md` — ask-user gates in this skill follow this doc.
 - `[sdlc-root]/process/deliverable_lifecycle.md` — canonical state transitions for deliverables and the incident doc itself.
