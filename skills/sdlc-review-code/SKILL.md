@@ -47,6 +47,8 @@ Follow `[sdlc-root]/process/agent-selection.yaml` for dispatch rules:
 - Tier 2 (structural agents) — dispatch only when warranted
 - Selection process at the end of the file
 
+**Knowledge routing:** After selecting agents, consult `[sdlc-root]/knowledge/agent-context-map.yaml` for each selected agent's entry. Include their mapped knowledge files in the dispatch prompt so agents receive domain context alongside the diff. Read `[sdlc-root]/knowledge/coding/code-quality-principles.yaml` and include it in every `code-reviewer` dispatch — it is the code-reviewer's primary quality reference and applies to every review.
+
 ### 3. Dispatch Review Agents
 
 Output a checklist before dispatching:
@@ -95,7 +97,7 @@ The commit message is part of the deliverable — it is the primary record of *w
 
 > **Commit message check:** Verify the subject line uses conventional-commits format (`type(scope): imperative verb`), stays under ~72 characters, and describes the *what* at a summary level. Verify the body explains the *why* — not just what the code does (the diff shows that), but what reasoning led to this approach. Flag a missing body on any commit that introduces a non-trivial design choice as `minor` with category `commit-quality`. Flag a subject line that describes implementation mechanics rather than intent (e.g., "add variable X" vs. "prevent tenant ID from leaking into log output") as `minor`.
 
-Dispatch ALL listed agents in parallel. Each agent receives the full diff and is asked to review using the lenses defined in `[sdlc-root]/process/review-lenses.md` (all lenses apply to code review — see applicability table) plus the pre-dispatch test-quality and commit-message lenses above. Each agent reviews through their domain expertise but applies all applicable lenses. Use the full dispatch template from `[sdlc-root]/knowledge/architecture/agent-orchestration-patterns.yaml` § dispatch_prompt_templates: objective = "Review {target} through your {domain} lens"; owned files = "Read-only — do not modify files"; acceptance criteria = "Return structured findings per the finding format below with severity and category"; out-of-scope = "Do not fix issues — report only. Do not duplicate the {other-agent} lens."
+Dispatch ALL listed agents in parallel. Each agent receives the full diff and is asked to review using the lenses defined in `[sdlc-root]/process/review-lenses.md` (all lenses apply to code review — see applicability table) plus the pre-dispatch test-quality and commit-message lenses above. Each agent reviews through their domain expertise but applies all applicable lenses. Read `[sdlc-root]/knowledge/architecture/agent-orchestration-patterns.yaml` and use the dispatch template from § dispatch_prompt_templates: objective = "Review {target} through your {domain} lens"; owned files = "Read-only — do not modify files"; acceptance criteria = "Return structured findings per the finding format below with severity and category"; out-of-scope = "Do not fix issues — report only. Do not duplicate the {other-agent} lens."
 
 ### 4. Collect and Present Findings
 
@@ -264,3 +266,4 @@ Do NOT ingest into the knowledge store from within this skill. Do NOT create par
 - **Feeds into:** `sdlc-review-fix` (if findings need fixing)
 - **Siblings:** `sdlc-team-review-fix` (same lenses + inter-agent debate + persistent team fix lifecycle — higher cost, use for high-stakes changes)
 - **Shared reference:** Agent selection in `[sdlc-root]/process/agent-selection.yaml`, lenses in `[sdlc-root]/process/review-lenses.md`
+- **Knowledge routing:** `[sdlc-root]/knowledge/agent-context-map.yaml` (dispatch-time injection), `[sdlc-root]/knowledge/coding/code-quality-principles.yaml` (code-reviewer primary), `[sdlc-root]/knowledge/architecture/agent-orchestration-patterns.yaml` (dispatch template)

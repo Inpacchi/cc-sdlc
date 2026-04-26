@@ -34,6 +34,22 @@ Each entry contains:
 
 ---
 
+## 2026-04-25: Wire knowledge routing into 3 Tier-2 quality-gate skills
+
+**Origin:** Knowledge store compliance audit (continued) — after fixing Tier-1 orchestration skills, audited Tier-2 quality-gate skills that dispatch agents without their knowledge context.
+
+**What happened:** Three skills that dispatch agents for review, design, and documentation had missing or minimal knowledge injection. `sdlc-review-code` always dispatches `code-reviewer` (mapped to 15 knowledge files) but injected none. `design-consult` dispatches `ui-ux-designer` (mapped to 8 design files) but only referenced 2. `sdlc-create-reference-doc` dispatches author + review quorum with zero knowledge routing.
+
+**Changes made:**
+
+1. **`skills/sdlc-review-code/SKILL.md`** — Added `agent-context-map.yaml` consult in Step 2 with instruction to include each agent's mapped knowledge files at dispatch time. Added explicit `code-quality-principles.yaml` injection for `code-reviewer` (its primary quality reference). Fixed non-canonical verb "Use the full dispatch template from" → "Read ... and use the dispatch template from". Updated Integration section.
+2. **`skills/design-consult/SKILL.md`** — Expanded Step 2d from 2 design knowledge files to all 8 (`accessibility-testability-principles`, `component-patterns`, `interaction-animation`, `interaction-patterns`, `visual-design-rules`, `layout-principles` added alongside existing `ux-modeling-methodology` and `ascii-conventions`). Added `agent-context-map.yaml` consult in Step 3 before dispatch. Updated Integration section.
+3. **`skills/sdlc-create-reference-doc/SKILL.md`** — Added `agent-context-map.yaml` consult in Agent Dispatch Protocol section. Added `developer-documentation-patterns.yaml` (DDP-01–DDP-08) injection for author dispatch. Added knowledge routing to Step 3 (Author Dispatch) with new item 7 for domain knowledge files. Added context-map consult to Step 4 (Review Quorum) for reviewer dispatch. Updated Integration section.
+
+**Rationale:** Quality-gate skills (review, design consultation, doc creation) produce better outputs when dispatched agents have their domain knowledge. Without skill-level injection, these agents relied entirely on self-lookup — which is the single-point-of-failure the belt-and-suspenders model exists to avoid. The phrasing contract verb fix (`Read ... and use` vs. `Use ... from`) ensures adapter plugins can transform the reference correctly.
+
+---
+
 ## 2026-04-25: Wire knowledge store references into 3 Tier-1 orchestration skills
 
 **Origin:** Knowledge store compliance audit — audited all 29 skills against 59 knowledge YAML files. Found that 49% of knowledge files had zero skill-level references (reachable only through agent self-lookup) and 5 dispatching skills skipped the `agent-context-map.yaml` consult entirely.

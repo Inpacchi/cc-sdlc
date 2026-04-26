@@ -103,8 +103,15 @@ Check the SDLC knowledge layer for context that should inform the design:
 2. **SDLC-Lite work**: Check `docs/current_work/sdlc-lite/` for plans touching the same UI surface
 3. **Archived decisions**: Check `docs/chronicle/` for past design decisions
 4. **Design discipline**: Read `[sdlc-root]/disciplines/design.md` — UX modeling pipeline, parking lot items, trajectory
-5. **UX methodology**: Read `[sdlc-root]/knowledge/design/ux-modeling-methodology.yaml`
-6. **ASCII conventions**: Read `[sdlc-root]/knowledge/design/ascii-conventions.yaml`
+5. **Design knowledge** — Read the full design knowledge store for principles to include in the context brief:
+   - Read `[sdlc-root]/knowledge/design/ux-modeling-methodology.yaml` for the UX modeling pipeline
+   - Read `[sdlc-root]/knowledge/design/ascii-conventions.yaml` for wireframe notation rules
+   - Read `[sdlc-root]/knowledge/design/accessibility-testability-principles.yaml` for accessibility and testability criteria
+   - Read `[sdlc-root]/knowledge/design/component-patterns.yaml` for component structure and composition rules
+   - Read `[sdlc-root]/knowledge/design/interaction-animation.yaml` for motion and transition principles
+   - Read `[sdlc-root]/knowledge/design/interaction-patterns.yaml` for interaction state and micro-interaction patterns
+   - Read `[sdlc-root]/knowledge/design/visual-design-rules.yaml` for color, typography, and visual hierarchy rules
+   - Read `[sdlc-root]/knowledge/design/layout-principles.yaml` for layout grid and spacing systems
 
 #### 2e. Compile the Context Brief
 
@@ -116,6 +123,8 @@ Synthesize all research into a structured brief for the designer. This brief IS 
 - SDLC context (prior decisions, constraints, established patterns)
 
 ### 3. Dispatch the Designer
+
+Consult `[sdlc-root]/knowledge/agent-context-map.yaml` for the `ui-ux-designer` entry and include the mapped knowledge files in the dispatch prompt. The design knowledge files read in Step 2d supply the theory content; the context-map ensures the agent receives its full knowledge context.
 
 Dispatch the `ui-ux-designer` agent with this structure:
 
@@ -289,7 +298,7 @@ Do NOT start implementing. The design consultation ends with a direction and a h
 
 - **Feeds into:** `sdlc-lite-plan` or `sdlc-plan` (for implementation)
 - **Uses:** `ui-ux-designer` agent, WebSearch (for design research), Playwright MCP (for visual mockups)
-- **SDLC knowledge:** `[sdlc-root]/knowledge/design/`, `[sdlc-root]/disciplines/design.md`
+- **Knowledge routing:** `[sdlc-root]/knowledge/agent-context-map.yaml` (dispatch-time injection), all 8 files under `[sdlc-root]/knowledge/design/`, `[sdlc-root]/disciplines/design.md`
 - **Complements:** `sdlc-idea` (conceptual exploration) — `sdlc-design-consult` explores visual direction, `sdlc-idea` explores conceptual direction. An idea brief from `sdlc-idea` can feed into `sdlc-design-consult` when the concept needs visual exploration.
 - **Does NOT replace:** `sdlc-review-code` (code review), `accessibility-auditor` (WCAG compliance on implemented code)
 - **Installed via:** The `design` bundle (opt-in during `/sdlc-initialize`). Not part of the default install.

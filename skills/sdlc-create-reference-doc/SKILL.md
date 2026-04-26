@@ -67,6 +67,8 @@ Read and follow `[sdlc-root]/process/manager-rule.md`. The skill does not hand-w
 
 Dispatch prompts describe WHAT the doc must contain and WHY. HOW to structure sentences, which analogies to pick, which examples to include — those are the author-agent's domain. Pass full scope context (subject, audience, template path, related code anchors) into every dispatch.
 
+**Knowledge routing:** Before dispatching any agent (author or reviewer), consult `[sdlc-root]/knowledge/agent-context-map.yaml` for that agent's entry and include the mapped knowledge files in the dispatch prompt. Read `[sdlc-root]/knowledge/dx/developer-documentation-patterns.yaml` and include it in the author dispatch — it contains documentation architecture patterns (DDP-01 through DDP-08) that directly inform reference doc structure and quality.
+
 ---
 
 ## Steps
@@ -108,6 +110,8 @@ Quick mapping guidance:
 
 ### 3. Author Dispatch
 
+Consult `[sdlc-root]/knowledge/agent-context-map.yaml` for the primary author's entry. Include the author's mapped knowledge files in the dispatch prompt so domain patterns inform the draft. Read `[sdlc-root]/knowledge/dx/developer-documentation-patterns.yaml` and include it — it defines doc architecture patterns that apply to every reference doc.
+
 The dispatch prompt must include:
 
 1. **Scope statement** — subject, audience, category, output path.
@@ -116,12 +120,13 @@ The dispatch prompt must include:
 4. **Audience framing** — "Agents are the primary reader. Favor structure (tables, frontmatter, fixed section order, `path:line` anchors) over prose. A coding agent reading this doc should be able to answer 'how does X work' and 'where do I go in the codebase to change Y' without grepping."
 5. **Related deliverables** — D-numbers + result doc paths to read for context.
 6. **Plain-language rule for domain terms** — every domain-specific term used in the doc must be defined on first use with a plain-language explanation and a concrete example or analogy. Reference docs are teaching artifacts as much as reference artifacts.
+7. **Domain knowledge files** — the author's mapped files from the context-map plus `developer-documentation-patterns.yaml`. Instruction: "Before drafting, read these files for relevant patterns and conventions."
 
 Author output: a complete Markdown file at `docs/reference/{category}/{slug}.md` that (a) validates against the template's frontmatter schema, (b) has every mandatory section filled, (c) contains at least one `path:line` anchor in **Related Code**, and (d) records at least one entry in **Change Log**.
 
 ### 4. Review Quorum
 
-Dispatch every agent in the quorum **in parallel** (single message, multiple Agent tool calls). Each agent reviews under its own lens — see `[sdlc-root]/process/review-lenses.md` for the canonical per-agent review lens definitions. Pass the lens reference into every reviewer's dispatch prompt so reviewers know which checks are theirs vs. adjacent domains'.
+Dispatch every agent in the quorum **in parallel** (single message, multiple Agent tool calls). For each reviewer, consult `[sdlc-root]/knowledge/agent-context-map.yaml` for that reviewer's entry and include their mapped knowledge files in the dispatch prompt. Each agent reviews under its own lens — see `[sdlc-root]/process/review-lenses.md` for the canonical per-agent review lens definitions. Pass the lens reference and mapped knowledge files into every reviewer's dispatch prompt so reviewers know which checks are theirs vs. adjacent domains'.
 
 - **Primary-domain reviewers** (not the author) — technical accuracy, completeness of coverage, correctness of examples, currency of gotchas.
 - **code-reviewer** — template compliance (frontmatter schema, section presence, section order), `path:line` anchor accuracy (the line ranges must actually contain what the doc claims), broken internal links, markdown validity.
@@ -231,6 +236,7 @@ Write for an agent that has never seen this code before. If a human reads it too
 - **Depends on:** at least one code artifact to reference (the skill documents existing systems, not proposed ones — proposed systems use `sdlc-plan` / `sdlc-lite-plan`).
 - **Feeds into:** `docs/reference/_index.md` catalog; future coding-agent investigations into the documented system.
 - **Uses:** domain agents (as author and reviewers), `code-reviewer` (template + anchor verification), `[sdlc-root]/templates/reference_doc_template.md`, `[sdlc-root]/process/agent-selection.yaml`.
+- **Knowledge routing:** `[sdlc-root]/knowledge/agent-context-map.yaml` (dispatch-time injection for author and reviewers), `[sdlc-root]/knowledge/dx/developer-documentation-patterns.yaml` (author dispatch).
 - **Complements:** `sdlc-create-agent` (agent definitions), `sdlc-develop-skill` (skill definitions), `sdlc-lite-plan` / `sdlc-plan` (produces result docs that reference docs often cite).
 - **Does NOT replace:** SDLC result docs (deliverable-bound, archived with the deliverable), customer-facing product docs (project-specific docs site), runbooks (alert-triggered procedural).
 - **DRY notes:** a reference doc often cites an SDLC result doc (e.g. "the schema was introduced in D122 — see `docs/current_work/sdlc-lite/completed/d122_.._result.md`"). The reference doc is the long-lived source of truth; the result doc is the deliverable-bound narrative. If content has to live in exactly one place, pick the reference doc.
