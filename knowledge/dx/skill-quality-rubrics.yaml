@@ -1,0 +1,339 @@
+# Skill Quality Rubrics
+# Consumed by: dx-engineer (SKILL.md authoring), orchestrator (skill review gates)
+# Covers: How to measure, evaluate, and improve the quality of SKILL.md files
+# Source: plugin-eval/skills/evaluation-methodology/SKILL.md + references/rubrics.md
+#   (wshobson/agents, PluginEval 1.0, 2026)
+#
+# DOMAIN ANALOGY — "What is this measuring, exactly?"
+# ──────────────────────────────────────────────────────────────────────────────
+# A SKILL.md is like a job description posted on a notice board in an office
+# where "Claude" is the only employee reading it. If the job description says
+# "Help with evaluations" (vague), Claude doesn't know when to volunteer.
+# If it says "Write YAML quality rules when incoming content has testable assertions"
+# (specific trigger), Claude knows exactly when to pick up that task.
+#
+# Triggering accuracy is the "does the notice board description cause the right
+# person to raise their hand?" problem. Orchestration fitness is the "does the
+# task description define work, not management?" problem. Both compound:
+# a skill that fires at the wrong time AND does supervisor work is doubly broken.
+# ──────────────────────────────────────────────────────────────────────────────
+
+id: skill-quality-rubrics
+name: "Skill Quality Rubrics"
+description: |
+  Structured rubrics for evaluating SKILL.md quality across ten dimensions.
+  Covers triggering accuracy, orchestration fitness, output quality, scope
+  calibration, progressive disclosure, token efficiency, and anti-pattern flags.
+pattern: rules
+category: dx
+spec_relevant: false
+project_applicability:
+  relevant_when: "Writing or reviewing a SKILL.md file for the SDLC framework"
+  action_if_irrelevant: remove
+last_updated: 2026-04-25
+
+rules:
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # DIMENSION 1 — TRIGGERING ACCURACY (weight: 0.25 — highest)
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  - rule_id: SQR-01
+    name: triggering-accuracy-description-structure
+    description: |
+      Every SKILL.md description must contain "Use this skill when..." or
+      "Use when..." followed by at least three concrete, distinct trigger
+      contexts separated by commas or "or". A description that only names
+      the domain without stating when to use the skill cannot be autonomously
+      invoked.
+    rationale: |
+      The description field is the routing signal — it's what Claude Code's
+      plugin system uses to decide which skill to invoke. A passive description
+      ("A skill about changelog automation") gives zero routing information.
+      A trigger-phrase description ("Use when setting up changelog generation,
+      interpreting a low score, or standardizing commit conventions") gives
+      Claude Code three distinct decision points. At weight 0.25 in the
+      composite score, triggering accuracy delivers more improvement-per-hour
+      than all lower-weighted dimensions combined. Fix this first.
+      Analogy: the description is the alarm condition — "ring when smoke
+      detected, carbon monoxide rises, or temperature exceeds 75°C." Without
+      explicit conditions, the alarm never fires (or always fires).
+    checklist:
+      - "Does the description contain 'Use this skill when' or 'Use when'?"
+      - "Are at least three specific, distinct trigger contexts listed?"
+      - "Are contexts discriminative — would they distinguish this skill from adjacent skills?"
+      - "Is 'proactively' included if the skill should auto-activate without explicit user request?"
+      - "Is the total description under 200 characters for clean CLI display?"
+    anti_patterns:
+      - "description: 'changelog-automation' — just the skill name, no trigger signal"
+      - "description: 'Use when evaluating things' — trigger phrase present but generic, maps to everything"
+      - "description: 'A comprehensive methodology for...' — passive, names domain but no conditional framing"
+    source: "plugin-eval/skills/evaluation-methodology/SKILL.md + references/rubrics.md"
+    spec_relevant: false
+
+  - rule_id: SQR-02
+    name: triggering-accuracy-mental-test
+    description: |
+      Before publishing a SKILL.md, write 5 prompts that should trigger the
+      skill and 5 prompts that should not. Verify the description discriminates
+      correctly. If 3+ of the should-trigger prompts would not match, rewrite
+      the trigger contexts. If 3+ of the should-not-trigger prompts would match,
+      tighten the specificity.
+    rationale: |
+      Trigger accuracy is an F1 problem: precision (not firing on wrong prompts)
+      and recall (firing on all right prompts) both matter. The 10-prompt mental
+      test is a concrete way to make an abstract routing question falsifiable.
+      It's the difference between "I think this sounds right" and "I have evidence
+      it works." A skill that fires too broadly pollutes unrelated sessions with
+      irrelevant context; one that fires too narrowly is invisible to users who
+      need it.
+    checklist:
+      - "Have you written 5 should-trigger prompts and verified each would activate the skill?"
+      - "Have you written 5 should-not-trigger prompts and verified each would NOT activate?"
+      - "Does your description disambiguate from adjacent sibling skills?"
+    source: "plugin-eval/skills/evaluation-methodology/references/rubrics.md"
+    spec_relevant: false
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # DIMENSION 2 — ORCHESTRATION FITNESS (weight: 0.20 — second highest)
+  # ═══════════════════════════════════════════════════════════════════════════
+  #
+  # DOMAIN ANALOGY — "Worker vs Supervisor"
+  # A skill is like a sous chef in a kitchen: it gets an order ("make the
+  # béchamel"), executes it, and returns the result ("here is the béchamel").
+  # A supervisor skill is like a head chef who says "you make the béchamel,
+  # you make the pasta, I'll coordinate." SKILL.md files should be sous chefs —
+  # they do the work; the orchestrator (agent or Claude Code) handles dispatch.
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  - rule_id: SQR-03
+    name: orchestration-fitness-worker-contract
+    description: |
+      Every SKILL.md must define an explicit input/output contract. The "Input"
+      section documents what the skill receives; the "Output" or "Returns"
+      section documents what it produces, with enough structure that a calling
+      agent can parse the result without additional context. The skill must not
+      contain decision-tree routing to other skills or agents.
+    rationale: |
+      A skill without an input/output contract is a black box — the calling
+      agent cannot reliably compose it with other skills. An orchestrator skill
+      (one that dispatches to other skills) belongs in the agent layer, not the
+      skill layer. Mixing worker and orchestrator logic in a SKILL.md is the
+      most common structural flaw in skill authoring. The cost is high: it
+      creates coupling between skills that should be independent, makes the
+      SKILL.md context-heavy (it has to describe multiple workflows), and
+      breaks reusability (the skill can only be used in its one specific flow).
+    checklist:
+      - "Does the SKILL.md have an explicit Input section describing what it receives?"
+      - "Does the SKILL.md have an explicit Output or Returns section with a schema or template?"
+      - "Is the output format structured (JSON schema, typed fields, or clearly specified Markdown)?"
+      - "Does the skill avoid 'orchestrate', 'coordinate', 'dispatch', 'manage workflow' in instruction text?"
+      - "Does the skill avoid 'if X, call skill Y; if Z, call agent W' conditional routing?"
+      - "Are code blocks present showing concrete worker behavior (not calling other skills)?"
+    anti_patterns:
+      - "'You will assess the situation and call the appropriate specialist' — this is orchestrator language"
+      - "Output described as 'a comprehensive report' with no structure specification"
+      - "Related skills section that implies the skill will call them (not just 'see also')"
+    source: "plugin-eval/skills/evaluation-methodology/SKILL.md + references/rubrics.md"
+    spec_relevant: false
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # DIMENSION 3 — SCOPE CALIBRATION (weight: 0.12 — fourth highest)
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  - rule_id: SQR-04
+    name: scope-calibration-line-count-targets
+    description: |
+      SKILL.md line count should fall within the sweet spot for its category.
+      Files shorter than 100 lines are stubs; files longer than 800 lines
+      without a references/ directory are bloated. Use the category norms table
+      to calibrate target size.
+    rationale: |
+      Too short: the skill provides no actionable guidance — the model must
+      improvise, producing inconsistent output. Too long without references/:
+      every invocation loads the entire file into context, wasting tokens on
+      content needed only for edge cases. The right size is "exactly as large
+      as the primary execution path requires, with supporting material in
+      references/." Think of it as a paper instruction manual vs. a quick-start
+      card: the quick-start card (SKILL.md) handles 80% of cases; the manual
+      (references/) handles the rest, and you only read it when you need it.
+    category_targets:
+      reference_documentation: "200–500 lines + references/ for extended material"
+      workflow_process: "150–300 lines"
+      code_generator: "100–200 lines + references/ for templates"
+      diagnostic_debugging: "200–400 lines"
+      integration_configuration: "150–350 lines"
+      coordination_planning: "100–200 lines"
+    checklist:
+      - "Is SKILL.md within the target line range for its category?"
+      - "If over 800 lines, is there a references/ directory with non-empty files?"
+      - "If under 100 lines, does it still cover the full primary execution path?"
+      - "Is every section earning its place (no filler headings, no repetitive bullet points)?"
+    anti_patterns:
+      - "Creating a stub SKILL.md and planning to expand later — publish when content is ready"
+      - "Padding with background theory the model already knows from training"
+      - "Adding 'Overview' and 'Introduction' headings that restate the description without adding guidance"
+    source: "plugin-eval/skills/evaluation-methodology/SKILL.md + references/rubrics.md"
+    spec_relevant: false
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # DIMENSION 4 — PROGRESSIVE DISCLOSURE (weight: 0.10)
+  # ═══════════════════════════════════════════════════════════════════════════
+  #
+  # DOMAIN ANALOGY — "The Lean Main Street vs. Reference Archive"
+  # Progressive disclosure in a SKILL.md works like a city's main street vs.
+  # its library. Main street (SKILL.md) has the essentials: the bakery, the
+  # pharmacy, what you need most days. The library (references/) has the deep
+  # stacks: the specialized journals, the historical records, edge-case material.
+  # You don't put the library on main street — that would make main street
+  # unusable. You put a sign pointing to the library when needed.
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  - rule_id: SQR-05
+    name: progressive-disclosure-references-directory
+    description: |
+      Any SKILL.md that contains supporting material not on the primary
+      execution path (extended rubrics, large reference tables, configuration
+      examples, historical context) must move that material to a references/
+      directory. The SKILL.md links to references/ files using standard Markdown
+      links. The references/ files must be non-empty and must exist (no dead links).
+    rationale: |
+      Loading a 1,000-line SKILL.md on every invocation when only 300 lines are
+      relevant to the task wastes ~700 lines of context on every call. For a
+      skill invoked 100 times, that's 70,000 wasted lines of context. The
+      references/ pattern is the SKILL.md equivalent of on-demand loading: the
+      main file is fast and lean; detail is fetched only when needed. The static
+      analyzer awards a 0.15–0.25 bonus for having a non-empty references/
+      directory, making this one of the cheapest progressive-disclosure wins
+      available.
+    checklist:
+      - "Does any non-primary-path content exist in SKILL.md that could move to references/?"
+      - "If references/ exists, are all referenced files non-empty?"
+      - "Are there no broken markdown links to references/ files that don't exist?"
+      - "Does SKILL.md include a 'Related' or 'References' section linking to references/ files?"
+    source: "plugin-eval/skills/evaluation-methodology/SKILL.md"
+    spec_relevant: false
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # DIMENSION 5 — TOKEN EFFICIENCY (weight: 0.06)
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  - rule_id: SQR-06
+    name: token-efficiency-directive-density
+    description: |
+      The density of MUST/ALWAYS/NEVER in a SKILL.md must stay below one
+      directive per 10 lines. Files with more than 15 total occurrences trigger
+      the OVER_CONSTRAINED anti-pattern penalty. Audit every directive: if it
+      is not a genuine safety or correctness requirement, replace it with
+      explanatory framing.
+    rationale: |
+      Overuse of MUST/ALWAYS/NEVER signals that the author is trying to
+      micromanage every output rather than providing principled guidance.
+      It also bloats the file: directives are verbose and repetitive. Model
+      flexibility drops when instructions are too prescriptive — the model
+      treats every constraint as equally important, which makes it brittle on
+      edge cases where the "rule" is actually a guideline. Reserve hard
+      constraints for genuine requirements ("NEVER expose raw database errors
+      to API responses"); replace soft preferences with rationale ("Prefer
+      tables for parameter documentation because they are machine-parseable").
+    checklist:
+      - "Is the total count of MUST/ALWAYS/NEVER under 15 occurrences in the SKILL.md?"
+      - "Is the ratio of directives to lines below 1 per 10 lines?"
+      - "Have you replaced soft-preference directives with rationale-based guidance?"
+    anti_patterns:
+      - "MUST ALWAYS include X, ALWAYS check Y, NEVER skip Z — three directives for one workflow step"
+      - "Using NEVER for preferences ('NEVER use passive voice') vs. requirements ('NEVER expose API keys')"
+    source: "plugin-eval/skills/evaluation-methodology/SKILL.md"
+    spec_relevant: false
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # ANTI-PATTERN FLAGS
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  - rule_id: SQR-07
+    name: anti-pattern-flags-complete-reference
+    description: |
+      Five structural anti-patterns are automatically detectable in any SKILL.md.
+      Audit all five before publishing a SKILL.md.
+    rationale: |
+      Anti-patterns compound. Fixing them is the fastest way to improve a
+      SKILL.md because they are deterministic and require no LLM evaluation —
+      static analysis catches them in under 2 seconds.
+    flags:
+      OVER_CONSTRAINED:
+        trigger: "More than 15 occurrences of MUST, ALWAYS, or NEVER"
+        fix: "Audit every directive. Replace soft preferences with rationale. Target fewer than 10 per 100 lines."
+      EMPTY_DESCRIPTION:
+        trigger: "frontmatter description field is fewer than 20 characters"
+        fix: "Write 60–120 characters: 'Use this skill when...' + 2+ concrete contexts"
+      MISSING_TRIGGER:
+        trigger: "description does not contain 'use when', 'use this skill when', 'use proactively', or 'trigger when' (case-insensitive)"
+        fix: "Prepend 'Use this skill when...' to the description. The routing model needs an explicit trigger cue."
+      BLOATED_SKILL:
+        trigger: "SKILL.md exceeds 800 lines AND no references/ directory exists"
+        fix: "Create references/ directory. Move rubrics, extended examples, configuration reference there. Link from SKILL.md."
+      ORPHAN_REFERENCE:
+        trigger: "SKILL.md links to references/filename but that file does not exist"
+        fix: "Create the missing reference file or remove the dead link."
+    checklist:
+      - "Is directive count (MUST/ALWAYS/NEVER) under 15?"
+      - "Is the description field at least 20 characters?"
+      - "Does the description contain an explicit trigger phrase?"
+      - "If over 800 lines, does references/ exist with non-empty files?"
+      - "Do all markdown links to references/ resolve to existing non-empty files?"
+    source: "plugin-eval/skills/evaluation-methodology/SKILL.md"
+    spec_relevant: false
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # ROBUSTNESS AND STRUCTURAL COMPLETENESS
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  - rule_id: SQR-09
+    name: robustness-troubleshooting-section
+    description: |
+      Every SKILL.md must include a Troubleshooting or Edge Cases section
+      covering at least three failure modes. Each failure mode must state what
+      the skill returns or does when it cannot complete its task.
+    rationale: |
+      A skill that only documents the happy path fails silently in production.
+      Troubleshooting sections are the skill-layer equivalent of error recovery
+      in the SDK: developers (and models) need to know what happens when inputs
+      are malformed, dependencies are unavailable, or the task is outside scope.
+      Three failure modes is a minimum floor — it covers the most common issues
+      without inflating the SKILL.md size. If there are more than 6 distinct
+      failure modes, move the extended list to references/troubleshooting.md.
+    checklist:
+      - "Does the SKILL.md have a Troubleshooting or Edge Cases section?"
+      - "Does it cover at least three distinct failure modes?"
+      - "Does each failure mode state what the skill does when it cannot complete?"
+    source: "plugin-eval/skills/evaluation-methodology/SKILL.md"
+    spec_relevant: false
+
+  - rule_id: SQR-10
+    name: structural-completeness-minimum-sections
+    description: |
+      A structurally complete SKILL.md has at minimum: one H1 title, at least
+      four H2/H3 section headings, three code blocks with language tags, one
+      Examples section showing representative inputs and expected outputs, and
+      one Troubleshooting section. These are the static analysis checks — they
+      can be verified without LLM evaluation.
+    rationale: |
+      Structural completeness is a lightweight proxy for "does this SKILL.md
+      have the basic components of a useful document?" It's weight 0.03 in the
+      composite — low — but violations often indicate deeper problems. A SKILL.md
+      with no code blocks probably has no concrete examples; one with no
+      Troubleshooting probably has no edge-case coverage. Think of it as the
+      structural integrity check a building inspector runs before looking at
+      finer details: if the framing is missing, nothing else matters.
+    minimum_requirements:
+      h2_h3_headings: 4
+      code_blocks_with_language_tags: 3
+      examples_section: true
+      troubleshooting_section: true
+    checklist:
+      - "Does the SKILL.md have at least 4 distinct H2 or H3 headings?"
+      - "Are there at least 3 code blocks, each with a language tag?"
+      - "Is there an Examples section with at least one realistic input/output pair?"
+      - "Is there a Troubleshooting section?"
+    source: "plugin-eval/skills/evaluation-methodology/SKILL.md"
+    spec_relevant: false

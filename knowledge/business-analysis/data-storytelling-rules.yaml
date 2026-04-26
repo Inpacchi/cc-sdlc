@@ -1,0 +1,225 @@
+# Data Storytelling Rules
+# Frameworks for transforming data into decision-driving narratives for executive and investor audiences.
+# Extracted from wshobson/agents business-analytics plugin (data-storytelling skill).
+# Last updated: 2026-04-22
+
+id: data-storytelling-rules
+name: "Data Storytelling Rules"
+description: >
+  Rules for structuring data presentations as narratives: setup-conflict-resolution arc,
+  insight-first headline discipline, three-pillar structure (data, narrative, visuals),
+  progressive reveal technique, uncertainty acknowledgment, and anti-patterns to avoid.
+  Applies to investor presentations, board decks, executive summaries, and analytical reports.
+pattern: entries
+category: business-analysis
+spec_relevant: false
+project_applicability:
+  relevant_when: "Presenting analytics to stakeholders, building investor decks, or writing data-driven reports"
+  action_if_irrelevant: keep
+last_updated: 2026-04-24
+
+# -----------------------------------------
+# DS1: Insight-First Structure
+# -----------------------------------------
+
+insight_first:
+  rule_id: DS1
+  name: "Lead with insight, not data"
+  rule: >
+    Every data presentation must open with the insight (the "so what"), not the
+    methodology, context, or raw data. The narrative arc is: Hook (the surprising
+    insight) → Context (baseline and background) → Rising action (supporting data
+    points) → Climax (the key finding) → Resolution (recommendations) → Call to
+    action (the specific ask). Do not build to the insight — lead with it.
+    Example: "We're losing $2.4M annually to preventable churn" opens a churn
+    analysis; the retention curves and segmentation data follow to support it.
+  rationale: >
+    Executives and investors make decisions, not analyses. When you bury the
+    insight at slide 8, you've lost most of the room by slide 3. Opening with
+    the insight does two things: it answers the "why am I looking at this?" question
+    immediately, and it frames every subsequent data point as evidence for a
+    conclusion rather than a collection of observations. Think of a news article
+    — the headline is the insight; the paragraphs below are the evidence.
+  checklist:
+    - "Does the presentation open with the key insight, not context or methodology?"
+    - "Is the call to action explicit and specific (a decision, not a general direction)?"
+    - "Does every supporting data point connect back to the opening insight?"
+  source: "wshobson/agents:business-analytics/skills/data-storytelling"
+
+# -----------------------------------------
+# DS2: Three-Pillar Mandate
+# -----------------------------------------
+
+three_pillar_mandate:
+  rule_id: DS2
+  name: "Every data story needs all three pillars: data, narrative, visuals"
+  rule: >
+    A complete data story requires all three pillars: (1) Data — the evidence:
+    numbers, trends, and comparisons that form the factual basis, (2) Narrative —
+    the meaning: context, causation, implications, and the "so what" that turns
+    numbers into decisions, (3) Visuals — the clarity: charts, diagrams, and
+    highlights that make patterns visible at a glance. A presentation with data
+    but no narrative is a spreadsheet. A narrative with no data is opinion. A
+    visual with no narrative context is decoration.
+  rationale: >
+    Each pillar serves a different cognitive need. Data satisfies the skeptic
+    ("show me the evidence"). Narrative satisfies the decision-maker ("tell me
+    what it means"). Visuals satisfy the pattern-recognizer ("let me see the shape
+    of it"). Removing any one pillar cuts off a third of your audience. A deck
+    that is all charts and no narrative leaves every reader to form their own
+    conclusion — which means they will often form the wrong one.
+  checklist:
+    - "Does the presentation include all three pillars (numbers, narrative, visuals)?"
+    - "Does every chart have a narrative caption explaining what the viewer should notice?"
+    - "Does every narrative claim have a data point or range supporting it?"
+  source: "wshobson/agents:business-analytics/skills/data-storytelling"
+
+# -----------------------------------------
+# DS3: Setup-Conflict-Resolution Arc
+# -----------------------------------------
+
+setup_conflict_resolution:
+  rule_id: DS3
+  name: "Structure analysis as setup-conflict-resolution"
+  rule: >
+    Structure every analytical story as Setup → Conflict → Resolution: Setup
+    establishes the baseline and context ("here is where we were / what we expected"),
+    Conflict introduces the tension or problem ("here is what the data actually shows,
+    and it differs from the expectation or creates a decision"), Resolution delivers
+    the insight and recommended action ("here is what it means and what we should do").
+    This three-act structure works for any analysis type: problem-solution stories
+    (churn analysis, conversion problems), trend stories (performance shifts over time),
+    and comparison stories (deciding between options).
+  rationale: >
+    The setup-conflict-resolution arc is how humans are wired to process information.
+    A problem without context has no weight. A conflict without a setup has no stakes.
+    A resolution without a conflict has no urgency. The arc creates the emotional
+    engagement that turns a data presentation into a decision-driving event. Without
+    it, a slide deck is just a series of observations — with it, it becomes an argument
+    that the audience can accept or challenge.
+  checklist:
+    - "Is there an explicit setup (baseline / context) before the key finding?"
+    - "Is there a conflict or tension (what the data reveals that differs from expectation)?"
+    - "Does the resolution include a specific recommendation or decision, not just a finding?"
+  source: "wshobson/agents:business-analytics/skills/data-storytelling"
+
+# -----------------------------------------
+# DS4: Headline Formula
+# -----------------------------------------
+
+headline_formula:
+  rule_id: DS4
+  name: "Headlines combine specific number + business impact"
+  rule: >
+    Every slide, section, and report headline must combine a specific number with
+    business impact. Formula: [Specific Number] + [Business Impact] + [Actionable
+    Context]. Bad: "Q4 Sales Analysis." Good: "Q4 Sales Beat Target by 23% —
+    Driven by Enterprise Segment." Bad: "Customer Churn Report." Good: "We're
+    Losing $2.4M to Preventable Churn." The headline is a complete thought that
+    can stand alone — someone who reads only the headlines should be able to
+    reconstruct the argument.
+  rationale: >
+    Vague headlines ("Marketing Performance") force the reader to do analytical
+    work that the presenter should have done. Specific headlines ("Content Marketing
+    Delivers 4x ROI vs. Paid") give the reader the conclusion and let the chart
+    confirm it. For investor decks, board reports, and executive summaries, assume
+    the reader will scan headlines before reading content — those headlines are the
+    argument. A scan of the headlines should tell the full story.
+  checklist:
+    - "Does every major section headline include a specific number?"
+    - "Can someone reconstruct the main argument by reading only the headlines?"
+    - "Is the headline phrased as a conclusion, not a category label?"
+  source: "wshobson/agents:business-analytics/skills/data-storytelling"
+
+# -----------------------------------------
+# DS5: Progressive Reveal Technique
+# -----------------------------------------
+
+progressive_reveal:
+  rule_id: DS5
+  name: "Layer complexity through progressive reveal"
+  rule: >
+    Build complex visualizations by progressive reveal: introduce the simplest
+    version first (e.g., a single trend line), then add layers in subsequent
+    sections (growth rate overlay, segment breakdown, market share). Each
+    additional layer adds exactly one new dimension of insight. In a written
+    report, this means ordering sections from simple to complex; never present
+    the fully layered chart first without establishing the baseline interpretation.
+    Example sequence in a report: Section 1 "Revenue is growing" (single line
+    chart) → Section 2 "But growth is slowing" (add growth rate overlay) →
+    Section 3 "Driven by one segment" (add segment breakdown) → Section 4
+    "Which is saturating" (add market share) → Section 5 "We need new segments"
+    (add opportunity zones).
+  rationale: >
+    Cognitive load is cumulative. A chart with five overlaid data series is
+    incomprehensible to a cold reader. The progressive reveal solves this by
+    establishing the baseline interpretation before adding complexity — each new
+    layer is understood relative to what the reader just accepted. Think of a
+    magic trick: the setup is simple, the complication deepens it, and the reveal
+    lands because the audience has been led there step by step.
+  checklist:
+    - "Is each chart introduced in its simplest form before adding layers?"
+    - "Does each added layer convey exactly one new insight?"
+    - "Is the final (most complex) visualization justified by the preceding buildup?"
+  source: "wshobson/agents:business-analytics/skills/data-storytelling"
+
+# -----------------------------------------
+# DS6: Uncertainty Acknowledgment
+# -----------------------------------------
+
+uncertainty_acknowledgment:
+  rule_id: DS6
+  name: "Acknowledge uncertainty with ranges and confidence levels"
+  rule: >
+    When data is incomplete, the sample is small, or the relationship is correlational
+    (not causal), state it explicitly with the appropriate qualifier. Use confidence
+    levels ("With 95% confidence, we can say..."), sample sizes ("The sample of 500
+    shows..."), and correlation caveats ("While correlation is strong, causation
+    requires..."). Present estimates as ranges, not point estimates: "Impact estimate:
+    $400K–$600K," not "$500K." Never present uncertain findings with false precision
+    just to look confident — experienced audiences recognize it immediately and lose
+    trust in all the numbers.
+  rationale: >
+    Acknowledging uncertainty is not weakness — it is the signal of an analyst who
+    knows what the data does and doesn't support. Sophisticated stakeholders (investors,
+    board members, experienced executives) have seen enough overconfident analyses to
+    treat false precision as a red flag. A range with a stated confidence level is more
+    credible than a single number with no qualification. The goal is decision-making
+    under uncertainty, not the pretense of certainty.
+  checklist:
+    - "Are uncertain findings presented as ranges with confidence levels or sample sizes?"
+    - "Are correlational claims distinguished from causal claims?"
+    - "Is there a limitations section or explicit caveat where the data has gaps?"
+  source: "wshobson/agents:business-analytics/skills/data-storytelling"
+
+# -----------------------------------------
+# DS7: Anti-Patterns — Data Storytelling
+# -----------------------------------------
+
+data_storytelling_anti_patterns:
+  rule_id: DS7
+  name: "Data storytelling anti-patterns"
+  rule: >
+    Avoid these common data presentation failures:
+    1. Data dump: Showing all available data without curation. Every data point
+       in a presentation must earn its place — if it doesn't support the main
+       insight, cut it.
+    2. Buried insight: Placing the key finding at the end after extensive context.
+       Audiences stop listening before they reach it.
+    3. Jargon mismatch: Using technical terminology with a non-technical audience,
+       or dumbing down for a sophisticated audience. Match vocabulary to the room.
+    4. Methodology-first: Explaining how the analysis was done before saying what
+       it found. Executives don't care how — they care what and what to do about it.
+    5. Missing call to action: Ending with "here's what the data shows" without a
+       specific, actionable next step. Every analysis must answer "so what do we do?"
+  rationale: >
+    Each anti-pattern has a specific failure mode: data dump overwhelms the signal
+    with noise; buried insight loses the audience before the payoff; jargon mismatch
+    alienates; methodology-first bores executives and signals the analyst is more
+    interested in showing their work than helping a decision; missing call to action
+    leaves the audience with a question instead of a next step.
+  checklist:
+    - "Has data been curated — only evidence that supports the main insight is shown?"
+    - "Is there a specific call to action at the end (decision, budget, priority)?"
+    - "Is the analysis vocabulary appropriate for the target audience?"
+  source: "wshobson/agents:business-analytics/skills/data-storytelling"

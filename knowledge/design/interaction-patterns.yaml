@@ -1,0 +1,772 @@
+# Interaction Patterns — Cross-Project
+# States, micro-interactions, animations, easing, gestures, scroll behavior.
+# Source: Bulk ingestion from UI/UX design YouTube transcripts (2026-03-23)
+
+spec_relevant: false
+
+name: Interaction Patterns
+description: Interaction design rules covering states, animations, easing, gestures, and feedback patterns
+category: design
+
+rules:
+  - rule_id: IA1
+    name: four-minimum-states
+    description: |
+      Every interactive element must define at least four visual states: default,
+      hover, active/pressed, and disabled. Elements that trigger network requests
+      must also define a loading state with a spinner or skeleton indicator.
+    rationale: |
+      Missing states create dead-feeling interfaces. A button that looks identical
+      on hover and press gives no feedback that the user's input was received.
+      Loading states prevent duplicate submissions and signal progress.
+    checklist:
+      - "Does every clickable element have visually distinct default, hover, active, and disabled states?"
+      - "Do network-triggering elements show a loading state that disables re-submission?"
+    anti_pattern: |
+      A button that only changes color on hover but has no pressed state, no disabled
+      styling, and no loading indicator when submitting a form.
+    source: "UI/UX interaction states fundamentals"
+
+  - rule_id: IA2
+    name: input-focus-error-states
+    description: |
+      All form inputs must define focus, error (with inline error message), and
+      optionally warning states. Focus state uses a visible ring or border change.
+      Error messages appear directly below the field, not in a distant toast or alert.
+    rationale: |
+      Users need to know which field is active (focus) and what went wrong (error).
+      Distant error messages force users to map an error back to its source field,
+      increasing cognitive load and correction time.
+    checklist:
+      - "Does every input show a visible focus ring or border change on focus?"
+      - "Do validation errors display inline beneath the offending field?"
+      - "Is the error message specific enough to guide correction (not just 'Invalid input')?"
+    anti_pattern: |
+      A form that shows a single banner at the top saying "Please fix errors below"
+      without highlighting which fields are invalid or what the specific errors are.
+    source: "Form UX best practices"
+
+  - rule_id: IA3
+    name: micro-interactions-confirm-actions
+    description: |
+      Completed actions must produce a micro-interaction that confirms what happened.
+      Examples: a "Copied!" chip after clipboard copy, a heart icon filling with a
+      badge count increment after favoriting, a checkmark animation after saving.
+      State changes alone (e.g., toggling a boolean) are insufficient — the transition
+      itself must communicate the outcome.
+    rationale: |
+      State changes show "something happened"; micro-interactions confirm "what
+      happened." Without confirmation, users second-guess whether their action
+      registered, leading to repeated clicks and frustration.
+    checklist:
+      - "Does every user-initiated action produce a visible confirmation of the outcome?"
+      - "Is the confirmation specific to the action (not a generic 'Success')?"
+    anti_pattern: |
+      A bookmark button that changes from outline to filled with no animation,
+      no tooltip, and no count update — the user clicks and nothing visibly responds
+      for 200ms until the icon silently swaps.
+    source: "Micro-interaction design patterns"
+
+  - rule_id: IA4
+    name: optimistic-ui
+    description: |
+      Apply state changes to the UI immediately on user action, before the server
+      responds. Revert the change only if the request fails, showing an error
+      notification. Pair with a subtle loading indicator (e.g., opacity reduction
+      or spinner on the affected element) for actions where failure is more likely.
+    rationale: |
+      Most requests succeed. Waiting 200-500ms for a server round-trip before
+      reflecting the change creates unnecessary perceived latency. Optimistic
+      updates make the interface feel instant.
+    checklist:
+      - "Does the UI update immediately on user action without waiting for server response?"
+      - "Does the UI revert gracefully with an error message if the request fails?"
+      - "Is there a subtle loading indicator for higher-risk operations?"
+    anti_pattern: |
+      A like button that disables itself, shows a spinner, waits for a 200 OK,
+      then updates the count — adding 300ms of dead time to a near-certain success.
+    source: "Optimistic UI patterns"
+
+  - rule_id: IA5
+    name: container-signals-weight
+    description: |
+      Use popovers for simple contextual information (definitions, previews, quick
+      actions). Use modals for complex or blocking interactions that require focus
+      (confirmations, multi-step forms). Use full page navigation for permanent
+      content that deserves its own URL and scroll position.
+    rationale: |
+      The container type signals the weight and permanence of the action to the user.
+      A popover says "glance and go." A modal says "pause and decide." A new page
+      says "this is a destination." Mismatching container to weight confuses
+      expectations.
+    checklist:
+      - "Are simple contextual reveals (tooltips, previews) using popovers, not modals?"
+      - "Are blocking decisions (delete confirmation, payment) using modals, not inline UI?"
+      - "Does permanent, linkable content live on its own page with a URL?"
+    anti_pattern: |
+      Opening a full-screen modal to show a 3-line definition, or using an inline
+      accordion to collect payment details that require focused attention.
+    source: "Information hierarchy and container patterns"
+
+  - rule_id: IA6
+    name: toast-for-non-blocking-confirmations
+    description: |
+      Use toast notifications for non-blocking confirmations, especially when a modal
+      closes or a background process completes. Toasts should support progressive
+      states: loading (spinner + "Saving..."), success (checkmark + "Saved"), and
+      error (warning icon + message). Animate entrance from a consistent edge and
+      auto-dismiss success toasts after 3-5 seconds.
+    rationale: |
+      Toasts bridge the feedback gap when the originating UI element is gone (modal
+      closed) or the action happened in the background. Progressive state toasts
+      keep users informed without blocking their workflow.
+    checklist:
+      - "Do background processes surface completion via toast, not silent success?"
+      - "Do toasts support loading, success, and error states with distinct icons?"
+      - "Do success toasts auto-dismiss within 3-5 seconds?"
+      - "Do error toasts persist until manually dismissed?"
+    anti_pattern: |
+      A modal that closes after form submission with no subsequent feedback — the
+      user doesn't know if the save succeeded until they manually refresh.
+    source: "Toast notification UX patterns"
+
+  - rule_id: IA7
+    name: never-linear-easing
+    description: |
+      Never use linear easing for UI animations. Use ease-out (deceleration) for
+      elements entering the viewport. Use ease-in-out for elements transitioning
+      between states. Use ease-in (acceleration) only for elements exiting the
+      viewport. Recommended curve: cubic-bezier(0.4, 0, 0.2, 1) for general
+      transitions, cubic-bezier(0, 0, 0.2, 1) for entrances.
+    rationale: |
+      Nothing in the physical world moves at constant speed. Linear easing feels
+      robotic and artificial. Easing curves communicate tone — a decelerating
+      entrance feels like arriving; an accelerating exit feels like departing.
+    checklist:
+      - "Are all CSS transitions and keyframe animations using non-linear easing?"
+      - "Do entrance animations use ease-out or a deceleration curve?"
+      - "Do exit animations use ease-in or an acceleration curve?"
+    anti_pattern: |
+      A sidebar that slides in with `transition: transform 300ms linear` — it moves
+      at constant speed, stopping abruptly instead of decelerating into position.
+    source: "Animation easing fundamentals"
+
+  - rule_id: IA8
+    name: bounce-overshoot-carousels
+    description: |
+      Swipeable card carousels must include slight overshoot and elastic settling
+      at the end of a swipe. The card should travel past its snap point by 5-10%
+      of the card width, then spring back. Use a spring or elastic easing curve
+      (e.g., cubic-bezier(0.34, 1.56, 0.64, 1) for the settle phase).
+    rationale: |
+      Physical momentum makes interactions feel tangible. Slight overshoot followed
+      by elastic settling mimics real-world physics (inertia + friction), making
+      the carousel feel responsive rather than mechanical.
+    checklist:
+      - "Does the carousel overshoot the snap point slightly before settling?"
+      - "Is the overshoot subtle (5-10% of card width) rather than exaggerated?"
+      - "Does the spring-back use an elastic easing curve?"
+    anti_pattern: |
+      A carousel that snaps rigidly to each card position with no overshoot —
+      it feels like clicking through slides rather than physically swiping.
+    source: "Gesture physics and spring animations"
+
+  - rule_id: IA9
+    name: slow-minimal-looped-animations
+    description: |
+      Animations that loop indefinitely must be slow (cycle duration >= 3 seconds)
+      and minimal (affecting only opacity, subtle position shift, or gentle glow
+      pulse). They run in peripheral vision and must not demand attention. Respect
+      prefers-reduced-motion by pausing or removing looped animations entirely.
+    rationale: |
+      Fast or complex looping animations create visual noise and fatigue. Users
+      cannot suppress awareness of rapid motion in their peripheral vision, leading
+      to distraction and reduced focus on primary content.
+    checklist:
+      - "Are looped animations running at >= 3 second cycle duration?"
+      - "Do looped animations affect only subtle properties (opacity, gentle glow)?"
+      - "Are looped animations paused or removed when prefers-reduced-motion is set?"
+    anti_pattern: |
+      A pulsing notification badge that scales up and down every 500ms with a bright
+      color flash — it dominates peripheral attention and causes visual fatigue.
+    source: "Ambient animation guidelines"
+
+  - rule_id: IA10
+    name: mouse-tracking-touch-fallback
+    description: |
+      Any interaction that relies on mouse tracking or hover state (cursor-following
+      effects, hover-reveal content, parallax on mouse move) must have a touch
+      device fallback. Hover-revealed content must be accessible via tap. Mouse-
+      tracking visual effects should degrade to static or scroll-based alternatives
+      on touch devices.
+    rationale: |
+      Hover is invisible on touch devices. Content or functionality hidden behind
+      hover states is inaccessible to the majority of mobile users. Touch fallbacks
+      ensure feature parity across input methods.
+    checklist:
+      - "Does hover-revealed content have a tap-to-toggle alternative on touch devices?"
+      - "Do mouse-tracking visual effects degrade gracefully on touch (static or scroll-based)?"
+      - "Is @media (hover: hover) used to scope hover-only interactions?"
+    anti_pattern: |
+      A portfolio site where project descriptions only appear on mouse hover over
+      thumbnails — mobile users see only images with no way to access the text.
+    source: "Touch device interaction parity"
+
+  - rule_id: IA11
+    name: animate-in-swipe-direction
+    description: |
+      Content must animate in the direction of the swipe gesture. A left swipe
+      brings new content from the right. A right swipe brings content from the left.
+      Upward swipe brings content from below. The departing content exits in the
+      swipe direction. Both entering and exiting content must animate simultaneously.
+    rationale: |
+      Directional consistency builds a spatial mental model. Users perceive content
+      as existing in a spatial plane — breaking directional expectations causes
+      cognitive dissonance and disorientation.
+    checklist:
+      - "Does new content enter from the opposite side of the swipe direction?"
+      - "Does departing content exit in the direction of the swipe?"
+      - "Do entering and exiting content animate simultaneously, not sequentially?"
+    anti_pattern: |
+      A swipe-left gesture that causes the current card to fade out and the next
+      card to fade in from below — the spatial metaphor is broken.
+    source: "Directional animation consistency"
+
+  - rule_id: IA12
+    name: swipe-needs-tap-alternative
+    description: |
+      Every swipe gesture must have a visible tap or button alternative. Swipe
+      actions are invisible affordances — new users do not know they exist. Provide
+      arrow buttons, dot indicators, or explicit action buttons that perform the
+      same function as the swipe.
+    rationale: |
+      Swipe is a learned gesture with no visual signifier. Button alternatives
+      ensure discoverability for first-time users and provide an accessible
+      alternative for users with motor impairments who cannot perform swipe gestures.
+    checklist:
+      - "Does every swipeable element have visible tap/button controls for the same action?"
+      - "Are the button alternatives visible by default (not hidden behind a long-press)?"
+    anti_pattern: |
+      A to-do list where the only way to delete an item is swipe-to-delete, with no
+      visible delete button — new users have no way to discover the delete action.
+    source: "Gesture discoverability"
+
+  - rule_id: IA13
+    name: swipe-to-confirm-irreversible
+    description: |
+      High-impact irreversible actions (delete account, publish to production,
+      transfer ownership) should use a swipe-to-confirm slider instead of a simple
+      button click or tap. The slider must travel at least 80% of its track width
+      to trigger. Include a label on the track (e.g., "Slide to delete") and a
+      distinct color change on completion.
+    rationale: |
+      Accidental activation of a swipe slider is nearly impossible — the user must
+      perform a deliberate, sustained physical gesture. The effort required matches
+      the gravity of the action, unlike a single tap that can happen accidentally.
+    checklist:
+      - "Do irreversible high-impact actions use a swipe-to-confirm slider?"
+      - "Does the slider require >= 80% travel to trigger?"
+      - "Does the slider show clear labeling of what will happen on completion?"
+      - "Does the slider visually change state (color, icon) on successful confirmation?"
+    anti_pattern: |
+      A "Delete Account" action protected only by a confirmation dialog with a red
+      button — users can still accidentally tap confirm, especially on mobile.
+    source: "Destructive action confirmation patterns"
+
+  - rule_id: IA14
+    name: one-surprise-per-page
+    description: |
+      Limit unexpected or novel interactions to one per page. The surprise interaction
+      must be well-crafted, purposeful, and enhance the experience (e.g., a drag-to-
+      reveal, a physics-based element, a contextual animation). Multiple surprise
+      interactions on the same page create chaos and undermine predictability.
+    rationale: |
+      Predictable interfaces are invisible — users accomplish tasks without thinking
+      about the tool. A single well-placed surprise rewards exploration and creates
+      delight. Multiple surprises fragment attention and make the interface feel
+      unpredictable rather than delightful.
+    checklist:
+      - "Is there at most one novel/unexpected interaction on this page?"
+      - "Does the surprise interaction serve a clear purpose beyond novelty?"
+      - "Does the page remain fully functional if the user ignores the surprise?"
+    anti_pattern: |
+      A landing page with parallax scroll, mouse-tracking eyes, a shake-to-reveal
+      section, and a drag-to-unlock CTA — every section demands discovery of a new
+      interaction paradigm.
+    source: "Novelty budget in interaction design"
+
+  - rule_id: IA15
+    name: slide-direction-semantics
+    description: |
+      Slide-up animations indicate temporary, dismissible content (bottom sheets,
+      action menus, notifications). Lateral slide animations indicate navigational
+      progress (page transitions, wizard steps, carousel cards). Do not mix these
+      semantics — a navigation action should never slide up, and a temporary overlay
+      should never slide laterally.
+    rationale: |
+      Consistent directional semantics build a spatial mental model. Users learn
+      that "up from bottom = temporary, can dismiss" and "left/right = moving
+      through content." Breaking these conventions forces users to re-learn the
+      interface on every screen.
+    checklist:
+      - "Do temporary/dismissible overlays animate upward from the bottom?"
+      - "Do navigational transitions animate laterally?"
+      - "Are directional semantics consistent across all screens in the application?"
+    anti_pattern: |
+      A wizard that slides each step up from the bottom instead of laterally — users
+      feel like they're stacking overlays rather than progressing through steps.
+    source: "Directional animation semantics"
+
+  - rule_id: IA16
+    name: preloader-under-three-seconds
+    description: |
+      Preloader/splash animations must complete in under 2-3 seconds. For content-
+      heavy pages, begin animating background elements and layout structure immediately
+      while data loads, then transition content in as it arrives. Never show a static
+      spinner for more than 2 seconds — use skeleton screens or progressive reveal.
+    rationale: |
+      Users bounce after 3 seconds of perceived inactivity. Animated skeleton screens
+      and progressive reveals create the perception of speed even when data is still
+      loading. Static spinners provide no sense of progress and feel slower than they
+      are.
+    checklist:
+      - "Does the preloader/splash complete in under 3 seconds?"
+      - "Are skeleton screens or progressive reveals used instead of static spinners for content loading?"
+      - "Does layout structure appear immediately while data loads asynchronously?"
+    anti_pattern: |
+      A 5-second branded splash animation that plays in full before showing any
+      content, followed by a second loading spinner while data fetches.
+    source: "Perceived performance and loading patterns"
+
+  - rule_id: IA17
+    name: animations-must-serve-function
+    description: |
+      Every animation must serve one of three functions: introduce the product or
+      feature (onboarding, first-run), guide user attention to a relevant element
+      (notification badge, new content indicator), or provide spatial context
+      (transition direction, element origin). If you cannot articulate which function
+      an animation serves, remove it.
+    rationale: |
+      Decorative animations consume performance budget, increase cognitive load,
+      and slow down repeat users. Functional animations earn their cost by improving
+      comprehension, reducing errors, or creating spatial understanding.
+    checklist:
+      - "Can you state which of the three functions (introduce, guide, contextualize) this animation serves?"
+      - "Would removing this animation reduce user comprehension or increase errors?"
+      - "Does this animation add value on the 100th view, not just the first?"
+    anti_pattern: |
+      A dashboard where every card bounces in with a staggered delay on every page
+      load — decorative the first time, actively annoying on every subsequent visit.
+    source: "Functional animation principles"
+
+  - rule_id: IA18
+    name: button-micro-animations
+    description: |
+      Buttons must have hover and press micro-animations. Prefer CSS transforms
+      over color-only changes: scale down to 0.95-0.97 on press for a tactile feel.
+      On hover, use subtle transform effects (translateY(-1px), slight scale up) or
+      text/icon slide. Transition duration: 100-150ms for press, 200ms for hover.
+    rationale: |
+      Transform-based animations feel more tactile than color swaps because they
+      simulate physical depression. Scale-down on press mimics a real button being
+      pushed. Transform animations also perform better (GPU-composited) than color
+      transitions.
+    checklist:
+      - "Do buttons scale down slightly (0.95-0.97) on active/pressed state?"
+      - "Do buttons have a hover effect using transforms (not just color change)?"
+      - "Are press transitions fast (100-150ms) and hover transitions moderate (200ms)?"
+    anti_pattern: |
+      A button whose only hover effect is changing background from blue to dark-blue,
+      with no transform — it feels flat and unresponsive compared to a button that
+      depresses on click.
+    source: "Button interaction micro-animation patterns"
+
+  - rule_id: IA19
+    name: load-more-over-infinite-scroll
+    description: |
+      Prefer explicit "Load More" buttons over infinite scroll for paginated content.
+      Load More preserves the user's scroll position, allows reaching the page footer,
+      and gives users control over when to fetch more data. Use infinite scroll only
+      for continuous browsing feeds (social media, image galleries) where reaching
+      the footer is not expected.
+    rationale: |
+      Infinite scroll traps users — they cannot reach the footer (navigation, legal
+      links, contact info) and lose their position if they navigate away and return.
+      Load More gives explicit control and preserves the page as a bounded document.
+    checklist:
+      - "Is paginated content using a 'Load More' button rather than infinite scroll?"
+      - "If infinite scroll is used, is it for a continuous browsing context with no footer dependency?"
+      - "Can users reach the page footer without scrolling past all content?"
+    anti_pattern: |
+      An e-commerce product listing with infinite scroll — users can never reach the
+      footer to find return policy, contact info, or sitemap links.
+    source: "Pagination and scroll patterns"
+
+  - rule_id: IA20
+    name: no-scroll-jacking
+    description: |
+      Do not override native scroll behavior (scroll-jacking). No custom scroll
+      speeds, no scroll-snap that forces section-by-section navigation, no scroll-
+      triggered animations that pause scrolling. Exception: scroll-snap is acceptable
+      for explicit carousel/slider components where the user expects snap behavior.
+    rationale: |
+      Scroll-jacking breaks user expectations, causes motion sickness and
+      disorientation, creates accessibility issues with assistive technology, and
+      makes content unreachable for keyboard-only users. The scroll wheel is the
+      most-used input on desktop — overriding it breaks the most fundamental
+      interaction.
+    checklist:
+      - "Does the page use native scroll behavior without custom speed or hijacking?"
+      - "Are scroll-snap properties limited to explicit carousel/slider components?"
+      - "Can keyboard-only users scroll through all content without being trapped?"
+    anti_pattern: |
+      A marketing site that hijacks scroll to animate between full-screen sections,
+      requiring exactly one scroll event per section — users cannot skim or scroll
+      at their own pace.
+    source: "Scroll behavior and accessibility"
+
+  - rule_id: IA21
+    name: ai-response-streaming
+    description: |
+      AI-generated responses must stream word-by-word or chunk-by-chunk as they
+      are produced. Show a thinking/processing indicator with descriptive steps
+      ("Searching knowledge base...", "Drafting response...", "Reviewing...") before
+      and during generation. Use a blinking cursor or subtle animation at the
+      insertion point to indicate ongoing generation.
+    rationale: |
+      Streaming turns perceived delay into anticipation — users read along as content
+      appears rather than staring at a spinner. Descriptive thinking steps make the
+      AI feel collaborative and transparent rather than opaque. The experience
+      transforms waiting into engagement.
+    checklist:
+      - "Are AI responses streamed incrementally rather than delivered as a complete block?"
+      - "Is there a thinking indicator with descriptive step labels during processing?"
+      - "Is there a visual cursor or animation at the insertion point during streaming?"
+    anti_pattern: |
+      An AI chat that shows a generic spinner for 8 seconds, then dumps a complete
+      5-paragraph response all at once — the wait feels interminable and the response
+      overwhelming.
+    source: "AI interaction and streaming UX patterns"
+
+  - rule_id: IA22
+    name: hover-reveals-contextual-media
+    description: |
+      On desktop, hovering over reference text (links, terms, citations) can reveal
+      contextual media (images, previews, definitions) near the cursor without
+      consuming layout space. The revealed content must follow the cursor at a fixed
+      offset, appear within 150ms, and disappear immediately on mouse leave. Must
+      not obscure the text being hovered.
+    rationale: |
+      Hover-reveal delivers richer information on demand without cluttering the
+      default layout. The page remains clean for scanning while offering depth for
+      users who want it. This is strictly a progressive enhancement — content must
+      be accessible without hovering (see IA10 for touch fallback).
+    checklist:
+      - "Does the hover-reveal appear within 150ms of hover?"
+      - "Does the revealed content follow the cursor without obscuring the hovered text?"
+      - "Is the revealed content accessible via an alternative interaction on touch devices?"
+      - "Does the revealed content disappear immediately on mouse leave?"
+    anti_pattern: |
+      A hover preview that appears after a 500ms delay, is positioned at a fixed
+      page location instead of near the cursor, and persists after the mouse leaves
+      the trigger area.
+    source: "Hover-reveal progressive enhancement"
+
+  - rule_id: IA23
+    name: reduce-options-hicks-law
+    description: |
+      The primary interaction on any screen should require near-zero decision-making.
+      Limit visible primary actions to 1-2 choices. Secondary and tertiary actions
+      must be visually deprioritized (smaller, lower contrast, grouped in overflow
+      menus). Apply progressive disclosure — show advanced options only when the user
+      explicitly requests them.
+    rationale: |
+      Hick's Law: decision time increases logarithmically with the number of choices.
+      Reducing visible options reduces cognitive load and speeds up the primary task.
+      Users who need advanced options can find them; users who don't are not
+      overwhelmed by them.
+    checklist:
+      - "Are there 1-2 or fewer primary action buttons visible on this screen?"
+      - "Are secondary actions visually deprioritized (smaller, subdued color, overflow menu)?"
+      - "Are advanced options hidden behind progressive disclosure (expandable section, 'More' menu)?"
+    anti_pattern: |
+      A toolbar with 12 equally-styled buttons where the primary action (Save) has
+      the same visual weight as rarely-used actions (Export as CSV, Print, Share via
+      email) — the user must scan all 12 to find what they need.
+    source: "Hick's Law and cognitive load reduction"
+
+  - rule_id: IA24
+    name: scroll-over-tap-for-review
+    description: |
+      For stat-review, recap, or summary content, use scroll-based presentation
+      rather than tap-through slides or step-by-step carousels. Scrolling allows
+      variable-speed consumption, easy re-finding of earlier content, and natural
+      spatial orientation. Tap-through forces sequential, fixed-pace consumption.
+    rationale: |
+      Scrolling gives users control over speed — they can skim headers, slow down
+      on interesting data, and scroll back to compare. Tap-through forces equal time
+      on every slide and makes it hard to find a specific stat seen two screens ago.
+      Scroll position provides spatial memory ("it was near the top").
+    checklist:
+      - "Is review/recap/summary content presented as a scrollable page rather than tap-through slides?"
+      - "Can users scroll back to re-find earlier content without stepping through all intermediate screens?"
+      - "Can users consume content at variable speed (skim or deep-read)?"
+    anti_pattern: |
+      A year-in-review feature presented as 20 tap-through slides with forced
+      animations between each — users cannot skim, cannot go back easily, and
+      abandon before reaching the end.
+    source: "Content consumption and scroll vs. tap patterns"
+
+  - rule_id: IA25
+    name: mobile-primary-actions-bottom
+    description: |
+      On mobile viewports, place primary action buttons and navigation at the bottom
+      of the screen within the natural thumb reach zone. Secondary actions and
+      navigation can remain at the top. The most-used action should be at the bottom-
+      center of the screen. Avoid placing critical actions in the top corners of
+      mobile layouts.
+    rationale: |
+      Thumb reach zone studies show that the bottom-center of the screen is the
+      easiest area to reach on mobile devices held in one hand. The top corners are
+      the hardest to reach, requiring hand repositioning. Placing primary actions at
+      the bottom reduces physical effort and accidental drops.
+    checklist:
+      - "Are primary action buttons positioned at the bottom of the screen on mobile viewports?"
+      - "Is the most-used action at bottom-center within the natural thumb zone?"
+      - "Are critical actions absent from the top corners of the mobile layout?"
+    anti_pattern: |
+      A mobile app with the primary "Create" button in the top-right corner and
+      navigation tabs at the top — users must stretch or reposition their grip for
+      every primary action.
+    source: "Mobile thumb zone and ergonomic placement"
+
+  - rule_id: IA26
+    name: hover-must-increase-prominence
+    description: |
+      Hover effects on interactive elements must increase visual prominence: lighter
+      shade, glow, slight scale-up, underline, or color shift toward the brand
+      accent. Never reduce prominence on hover (fading out, reducing opacity,
+      shrinking, graying out). The browser already signals clickability with a hand
+      cursor; CSS hover should amplify that invitation, not counteract it.
+    rationale: |
+      Hover communicates "this is active and ready to be clicked." Reducing
+      prominence on hover sends the opposite signal — the element appears to retreat
+      or deactivate, discouraging the click. This anti-pattern was observed in
+      AI-generated navigation menus where menu items faded out on hover, making them
+      harder to read at the moment the user wanted to click. Complements VD16
+      (consistent element state colors) with a specific directional constraint.
+    checklist:
+      - "Do all hover effects increase the visual prominence of the hovered element?"
+      - "Is no element fading out, shrinking, or reducing opacity on hover?"
+      - "Does the hover effect make the element feel more clickable, not less?"
+    anti_pattern: |
+      Navigation items that fade from white to 50% opacity on hover, making them
+      harder to read at the exact moment the user is trying to click — the element
+      disappears into the background instead of inviting interaction.
+    source: "The Good, Bad, and Ugly of AI-Assisted Design (YC Design Review)"
+
+  - rule_id: IA27
+    name: no-essential-functionality-behind-hover
+    description: |
+      Do not hide essential functionality, primary navigation, or critical
+      information behind hover states. Hover is appropriate for progressive
+      enhancement (contextual previews per IA22, additional metadata) but not for
+      core actions, disclosure arrows, navigation options, or information needed to
+      use the product. Users should not have to "hover hunt" to discover what a
+      tool can do. Additionally, hover has no equivalent on mobile (long-press never
+      caught on as a discovery mechanism).
+    rationale: |
+      The trend toward "clean" interfaces that hide tools and buttons behind hover
+      prioritizes aesthetics over usability. Users want their computer to be "a
+      bicycle for the mind" — a tool — not a minimalist content display. Hiding
+      functionality behind hover means users must explore every element to discover
+      capabilities, and mobile users lose access entirely. This anti-pattern was
+      specifically called out as increasingly common in AI-generated interfaces.
+    checklist:
+      - "Is all primary functionality visible without hovering?"
+      - "Can users identify available actions without exploring hover states?"
+      - "Is hover-revealed content strictly supplementary (previews, metadata), not essential?"
+      - "Does the interface remain fully functional on touch devices without hover?"
+    anti_pattern: |
+      A project management tool where the delete button, edit button, and status
+      dropdown only appear when hovering over a row — users must hover every row to
+      discover what actions are available, and mobile users cannot access them at all.
+    source: "The Good, Bad, and Ugly of AI-Assisted Design (YC Design Review)"
+
+  - rule_id: IA28
+    name: fade-in-must-not-hide-content
+    description: |
+      If using scroll-triggered fade-in animations on page sections, the content
+      must be fully visible by the time the section enters the viewport center. Fast-
+      scrolling users must not scroll past sections that are still fading in. Tie
+      animations to scroll position (intersection observer at a low threshold), not
+      to fixed timers. Better yet, show content immediately and use fade-in only for
+      polish on first appearance — never let the animation delay information delivery.
+    rationale: |
+      Fade-in sections create a "molasses" effect where scrolling feels sluggish and
+      content arrives late. Combined with scroll-jacking (IA20), they make it
+      impossible to skim a page quickly. Observed in multiple AI-built sites where
+      FAQ sections appeared to have only one item because the rest hadn't faded in
+      yet, and fast-scrolling users missed entire sections that were still animating
+      above the viewport.
+    checklist:
+      - "Is fade-in triggered by intersection observer (not a fixed timer)?"
+      - "Is content fully visible before the section scrolls to viewport center?"
+      - "Can a fast-scrolling user see all content without waiting for animations?"
+      - "Does the page make sense with animations disabled (prefers-reduced-motion)?"
+    anti_pattern: |
+      A FAQ section with timer-based fade-ins where scrolling quickly shows only the
+      first question — the remaining questions haven't faded in yet, making the FAQ
+      appear empty and the page feel broken for impatient users.
+    source: "The Good, Bad, and Ugly of AI-Assisted Design (YC Design Review)"
+
+  - rule_id: IA29
+    name: keyboard-path-for-every-pointer-action
+    description: |
+      Every pointer-only interaction — drag, hover-reveal, click, context menu,
+      swipe gesture — must have a documented keyboard equivalent specified in the
+      same design spec. The keyboard path is not delegated to engineering.
+      Standard mappings: drag → arrow key + confirm (Enter); hover-reveal →
+      focus-reveal + dismiss (Esc); right-click context menu → application key
+      or Shift+F10; multi-select → Shift+click → Shift+arrow; marquee select →
+      keyboard region selection mode.
+    rationale: |
+      Keyboard access designed after the fact is remediation, not design. When
+      the keyboard path is specified alongside the pointer path, focus management,
+      tab order, and key bindings become part of the component contract rather
+      than engineering surprises. Think of a keyboard path like a ramp alongside
+      stairs — designed together, not added after the building is finished.
+    checklist:
+      - "Does every drag interaction have an arrow-key alternative documented in the spec?"
+      - "Does every hover-reveal interaction have a focus-reveal + dismiss path?"
+      - "Does every context menu have a keyboard trigger (application key or Shift+F10)?"
+      - "Does every multi-select interaction have a keyboard multi-select path?"
+      - "Is there no pointer-only interaction without a documented keyboard equivalent?"
+    anti_pattern: |
+      A spec showing a drag-to-reorder list with no mention of how keyboard users
+      reorder items — the engineer implements native browser drag-and-drop which
+      is not keyboard-accessible, and reorder is effectively pointer-only.
+    source: "wshobson/agents: accessibility-compliance (WCAG 2.1.1 all functionality keyboard accessible, Best Practice: keyboard-first design); wshobson/agents: interaction-design (Core Capabilities: keyboard navigation, focus indicators); specific key-mapping table (drag→arrow+Enter, hover-reveal→focus+Esc, context menu→Shift+F10) is ui-ux-designer domain knowledge"
+
+  - rule_id: IA30
+    name: modal-focus-management
+    description: |
+      On modal open: focus must move to the modal's first focusable element,
+      or to the modal heading/region (`tabindex="-1"`) if content is long or
+      primarily informational. Focus must be trapped within the modal — Tab
+      cycles through focusable elements inside the modal only, wrapping at
+      the last element. On modal close (any trigger: Esc, backdrop click, close
+      button, form submit): focus must return to the element that triggered the
+      modal. Specify the return target in the design spec.
+    rationale: |
+      Without focus trapping, keyboard users Tab out of the modal into obscured
+      background content, which is both confusing and the behavior defined as
+      a failure by WCAG 2.1 SC 2.1.2. Without focus return, keyboard users
+      lose their position in the page after every modal interaction. Imagine
+      reading a book, closing a footnote pop-up, and finding yourself on a
+      completely different page — that's the experience without focus return.
+    checklist:
+      - "Does the spec specify where focus moves on modal open (first focusable element or heading)?"
+      - "Is focus trap behavior noted (Tab wraps within modal, no escape to background)?"
+      - "Does the spec identify the return-focus target for every modal close trigger?"
+      - "Does Esc close the modal and return focus?"
+      - "Is backdrop-click-to-close handled (returns focus to trigger)?"
+    anti_pattern: |
+      A modal that opens and leaves focus in the background — keyboard users
+      cannot interact with the modal and must Tab through all background content
+      to eventually reach the modal buttons.
+    source: "wshobson/agents: accessibility-compliance (Pattern 2 Accessible Modal Dialog with FocusTrap, Escape key handler, aria-modal, aria-labelledby — directly in source); wshobson/agents: interaction-design does not discuss modals; focus return on close is domain knowledge extension of the accessible modal pattern"
+
+  - rule_id: IA31
+    name: async-navigation-focus-management
+    description: |
+      On async route transitions and dynamic content loads: focus must move to
+      the new primary heading or landmark region using a programmatic focus
+      call (`element.focus()` on a `tabindex="-1"` element). An `aria-live`
+      region must announce the page change to screen readers. Specify the
+      focus target in the design spec for every async transition — do not leave
+      the focus destination to the engineer's discretion.
+      For partial updates (adding a new memory card, updating a graph node):
+      if the update is user-initiated, focus stays on the trigger. If it is
+      system-initiated, an `aria-live="polite"` announcement is sufficient.
+    rationale: |
+      SPA route changes don't trigger native browser focus management (which
+      moves focus to the document top on real navigation). Without programmatic
+      focus placement, keyboard users continue from wherever they were before
+      navigation — often a button that no longer exists, creating a confusing
+      experience. The `aria-live` announcement is the screen-reader equivalent
+      of the browser's page-title update.
+    checklist:
+      - "Does the spec specify the focus target element for every route transition?"
+      - "Is the focus target a heading or landmark with tabindex='-1'?"
+      - "Is an aria-live announcement specified for every SPA navigation?"
+      - "Does the spec distinguish user-initiated vs. system-initiated updates?"
+      - "For system-initiated updates, is aria-live='polite' specified (not 'assertive')?"
+    anti_pattern: |
+      A single-page app where clicking a sidebar link changes the main panel
+      content but leaves focus on the sidebar link — keyboard users Tab from
+      the link into more sidebar items, never reaching the new content.
+    source: "WCAG 2.1 SC 4.1.3 / ARIA Authoring Practices Guide (SPA focus management on route transitions); wshobson/agents: accessibility-compliance does NOT address SPA route transitions, tabindex=-1 programmatic focus, or aria-live for navigation — this rule is ui-ux-designer domain knowledge of WCAG SPA patterns; neither interaction-design nor accessibility-compliance SKILL.md contains this content"
+
+  - rule_id: IA32
+    name: roving-tabindex-composite-widgets
+    description: |
+      Composite widgets with internal navigation — graph nodes, menu items,
+      tree items, tab lists, radio groups, toolbars — must use roving tabindex
+      rather than placing all items in the tab sequence. Pattern: only the
+      active/selected item has `tabindex="0"`. All other items have
+      `tabindex="-1"`. Arrow keys move focus and update which item has
+      `tabindex="0"`. Tab/Shift+Tab exit the widget entirely. This matches
+      ARIA's recommended patterns for listbox, tree, grid, and toolbar roles.
+    rationale: |
+      Without roving tabindex, a graph with 200 nodes puts 200 tab stops into
+      the page's tab order. A user pressing Tab to reach the sidebar must pass
+      through all 200 nodes. Roving tabindex makes the entire composite widget
+      a single tab stop, with internal navigation via arrow keys — like a
+      single button that opens a menu, not 20 separate buttons.
+    checklist:
+      - "Do graph nodes use roving tabindex (only selected node has tabindex='0')?"
+      - "Do toolbar buttons use roving tabindex (arrow keys within toolbar, Tab exits)?"
+      - "Do tab list tabs use roving tabindex?"
+      - "Is the pattern documented in the spec so the engineer implements it correctly?"
+      - "Does the spec note which key exits the widget (Tab) vs. navigates within it (arrows)?"
+    anti_pattern: |
+      A toolbar with 8 icon buttons all with `tabindex="0"` — 8 consecutive
+      tab stops for what should be a single stop in the page flow. Multiply
+      this by every toolbar on every page and the tab sequence becomes
+      impractical for keyboard users.
+    source: "ARIA Authoring Practices Guide — roving tabindex pattern for composite widgets; wshobson/agents: accessibility-compliance mentions keyboard navigation and focus trapping but does NOT contain the roving tabindex pattern or ARIA composite widget roles (listbox, tree, grid, toolbar); this rule is ui-ux-designer domain knowledge of ARIA keyboard interaction patterns"
+
+  - rule_id: IA33
+    name: reduced-motion-non-animated-fallback
+    description: |
+      Every animation in a spec must have a documented `prefers-reduced-motion:
+      reduce` variant. The fallback is not "disable the animation" — it is a
+      functional alternative that still communicates the state change.
+      Standard fallbacks by animation type:
+      - Layout transitions (panel slide, modal fade): instantaneous state change
+        + brief border emphasis pulse or box-shadow pulse (opacity only, no
+        transform) to signal the change.
+      - Loading skeletons: show skeleton immediately without shimmer animation.
+      - Graph physics: skip animation, render final positions directly.
+      - Glow pulse: keep static glow, remove keyframe animation.
+      - Page transitions: cross-fade at 0.01ms (effectively instant).
+    rationale: |
+      'Reduced motion' does not mean 'no motion' — it means 'less motion that
+      could cause discomfort.' Some people have vestibular disorders where
+      certain animations (large transforms, physics simulations, spinning)
+      cause genuine physical symptoms including dizziness and nausea. The
+      goal is to communicate the same information via a less physically
+      disruptive method — not to silently remove all feedback.
+    checklist:
+      - "Does every animated spec section include a 'prefers-reduced-motion: reduce' variant?"
+      - "Does the reduced-motion variant still communicate the state change (not silent)?"
+      - "Are layout transitions using instantaneous change + focus/border pulse as fallback?"
+      - "Is graph physics simulation skipped (not just slowed) for reduced-motion?"
+      - "Are glow pulse keyframe animations specifically noted as reduced-motion sensitive?"
+    anti_pattern: |
+      `@media (prefers-reduced-motion: reduce) { * { animation-duration: 0.01ms !important; } }`
+      — this silently removes all feedback. A modal that was supposed to fade in
+      now just instantly appears with no visual cue that a state change occurred.
+      Users with reduced-motion enabled lose all state-change communication.
+    source: "wshobson/agents: interaction-design (Accessibility Considerations section: @media prefers-reduced-motion:reduce CSS block, Framer Motion prefersReducedMotion example — directly in source); principle that fallback must still communicate state change is ui-ux-designer domain knowledge; Project-specific fallback taxonomy (graph physics, glow pulse, layout transitions) is domain knowledge"

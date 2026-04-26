@@ -1,192 +1,503 @@
 # Observability Patterns
-# Principles and patterns for instrumenting production systems so failures
-# can be diagnosed without reproducing them locally.
-# Last updated: 2026-04-21
+# Extracted from wshobson/agents:
+#   observability-monitoring/distributed-tracing   (OTel instrumentation, sampling, trace-log correlation)
+#   observability-monitoring/grafana-dashboards    (dashboard design principles — concepts only; Grafana config filtered)
+#   observability-monitoring/prometheus-configuration (metric naming, cardinality — concepts only; Prometheus config filtered)
+#   observability-monitoring/slo-implementation    (SLI/SLO definitions, error budget, multi-window burn-rate alerting)
+#   python-development/python-observability        (structlog, correlation ID, semantic log levels, golden signals)
+#
+#   structlog for Python, Railway PaaS (no Prometheus scraping). Grafana/Prometheus config
+#   specifics are filtered; concepts and vendor-agnostic patterns are extracted.
+# Last updated: 2026-04-24
 
 id: observability-patterns
 name: "Observability Patterns"
-description: "What to instrument, how to instrument it, and what agents should look for when diagnosing production issues"
+description: >
+  Vendor-agnostic observability patterns covering SLI/SLO definition, error budget policy,
+  multi-window burn-rate alerting, structured logging with structlog, correlation ID propagation,
+  OpenTelemetry distributed tracing, metric cardinality discipline, and dashboard design principles.
+  Grafana/Prometheus-specific config is excluded; concepts transfer to Axiom + OTel + Sentry stack.
 pattern: entries
 category: architecture
 spec_relevant: false
 project_applicability:
-  relevant_when: "Any system that runs in production and must be diagnosable after the fact"
-  action_if_irrelevant: remove
-last_updated: 2026-04-21
+  relevant_when: "Always relevant — all production services need observability"
+  action_if_irrelevant: keep
+last_updated: 2026-04-24
 
 # ─────────────────────────────────────────────
-# Core Principle — Three Pillars
+# Signal Frameworks: What to Measure First
 # ─────────────────────────────────────────────
+# Plain-language note: The RED and USE methods are frameworks for deciding *which metrics
+# to instrument first*, before worrying about tooling. Think of them as checklists for
+# "have I covered the bases?" RED is for request-serving code (like an API endpoint);
+# USE is for resource pools (like a database connection pool or memory).
 
-core_principle:
-  rule: >
-    Observability rests on three data types: logs (discrete events), metrics
-    (numeric time series), and traces (request flow across services). Each answers
-    a different question. A system missing any one of them has a blind spot.
-  what_each_answers:
-    logs: "What happened at this specific moment? (discrete, high-cardinality, expensive at scale)"
-    metrics: "What's happening across the fleet over time? (aggregated, low-cardinality, cheap at scale)"
-    traces: "Where did this request spend its time, and which service failed it?"
-  anti_pattern: "Relying on any single pillar for all diagnostics. Logs without metrics miss trends; metrics without logs miss root causes; traces without either miss context."
+signal_frameworks:
+  red_method:
+    applies_to: "Request-serving services — APIs, microservices, background job processors"
+    signals:
+      rate: "Requests per second arriving at the service"
+      errors: "Rate of requests that return an error (5xx, exception, timeout)"
+      duration: "Latency — how long each request takes (track percentiles: p50, p95, p99)"
+    why: >
+      These three signals together answer "is this service healthy right now?" without
+      ambiguity. Rate confirms traffic is flowing; errors flag failures; duration reveals
+      degradation before errors appear (slow queries often precede timeouts).
+    source: observability-monitoring/grafana-dashboards
 
-# ─────────────────────────────────────────────
-# What to Instrument
-# ─────────────────────────────────────────────
+  use_method:
+    applies_to: "Resources — connection pools, queues, memory, CPU"
+    signals:
+      utilization: "Percentage of time the resource is busy (e.g., 80% of DB connections in use)"
+      saturation: "Queue depth — how much work is waiting because the resource is full"
+      errors: "Failed resource operations (e.g., connection refused, pool timeout)"
+    why: >
+      USE answers "is this resource about to become a bottleneck?" Utilization near 100%
+      predicts saturation; saturation means requests are queueing; errors mean the resource
+      is already failing. Track these before a resource causes the RED signals to degrade.
+    source: observability-monitoring/grafana-dashboards
 
-golden_signals:
-  description: >
-    The "four golden signals" cover most operational questions. Every service
-    should expose these at minimum.
-  signals:
-    - name: "Latency"
-      what_to_measure: "Time to service a request. Track p50, p95, p99 separately — averages hide the tail."
-      why_it_matters: "Tail latency drives user experience. Average latency can look healthy while p99 is catastrophic."
-    - name: "Traffic"
-      what_to_measure: "Requests per second (or queue depth for async systems)"
-      why_it_matters: "Establishes the load context for every other signal."
-    - name: "Errors"
-      what_to_measure: "Error rate (absolute count and percentage). Distinguish user errors (4xx) from service errors (5xx)."
-      why_it_matters: "User errors indicate a UX or API contract issue; service errors indicate an operational issue."
-    - name: "Saturation"
-      what_to_measure: "How full the service's bottleneck resource is (CPU, memory, connection pool, queue depth)"
-      why_it_matters: "Saturation leads latency and errors — catching it first enables proactive scaling."
-
-# ─────────────────────────────────────────────
-# Logging Discipline
-# ─────────────────────────────────────────────
-
-logging_discipline:
-  levels:
-    error: "An operation failed and the user or system is affected. Must be actionable — include enough context to diagnose."
-    warn: "Something unexpected but recoverable. The system continued but a human should review."
-    info: "State transitions worth recording — start/end of significant operations, config changes, deployments."
-    debug: "Detailed execution flow, disabled by default in production. Useful when debug is explicitly enabled for a session."
-    trace: "Extremely verbose. Almost never enabled in production."
-
-  what_every_log_line_needs:
-    - "Timestamp (ISO 8601 with timezone)"
-    - "Severity level"
-    - "Service/component name"
-    - "Correlation ID (trace ID or request ID) for cross-service stitching"
-    - "User or tenant ID (if applicable)"
-    - "Structured fields (key=value or JSON) — not just free-form prose"
-
-  what_NOT_to_log:
-    - "Passwords, API keys, tokens, session cookies"
-    - "Full payment card numbers, SSNs, government IDs"
-    - "Personal health information or regulated data without explicit redaction"
-    - "Full request/response bodies by default — log schema, size, and key fields instead"
-    - "Repetitive success cases at INFO — they flood logs and bury real signals"
-
-  correlation_ids:
-    principle: "Every inbound request should receive a correlation ID at the edge and propagate it through every downstream call."
-    why: "Without correlation IDs, multi-service failures require manual timestamp matching across logs. With them, a single query returns the full request flow."
-    headers: "Common conventions: X-Request-ID, X-Correlation-ID, W3C traceparent (baggage for custom fields)"
+  four_golden_signals:
+    description: "Google SRE's original framework — a superset of RED that adds Saturation explicitly"
+    signals:
+      latency: "Time to serve a request — distinguish success vs error latency (slow errors distort success p99)"
+      traffic: "Demand on the system — requests/s, messages/s, transactions/s"
+      errors: "Rate of failed requests — explicit (5xx) and implicit (wrong answer, timeout)"
+      saturation: "How full the service is — the resource constraint closest to its limit"
+    priority: "Instrument all four before adding domain-specific metrics. A domain metric without clean golden signals is a measurement on a broken foundation."
+    source: python-development/python-observability
 
 # ─────────────────────────────────────────────
-# Metric Design
+# SLI / SLO / Error Budget Framework
 # ─────────────────────────────────────────────
+# Plain-language note:
+#   SLI (Service Level Indicator) = the actual measurement. "What fraction of search
+#     requests returned in under 800ms?" Think: reading the thermometer.
+#   SLO (Service Level Objective) = the target. "99.5% of requests must meet the SLI
+#     over 28 days." Think: the promised room temperature.
+#   Error Budget = how much failure you're allowed before the SLO is breached.
+#     If SLO = 99.5%, error budget = 0.5% = about 3.6 hours of downtime per month.
+#     Burn fast and you run out; burn slowly and you have room for risky deploys.
 
-metric_design:
-  cardinality_rule:
-    rule: "Keep label cardinality bounded. A metric with user_id as a label will have millions of time series."
-    safe_labels: "Service name, endpoint, HTTP status, region, tenant_type (not tenant_id)"
-    unsafe_labels: "User ID, request ID, trace ID, full URL path (any unbounded identifier)"
+sli_slo_framework:
+  sli_definition_rule:
+    principle: "An SLI describes something a user would notice if it broke. 'p95 search latency < 800ms' is an SLI. 'CPU < 70%' is not."
+    good_sli_types:
+      availability: "Fraction of requests that succeed (not 5xx)"
+      latency: "Fraction of requests that complete within a latency threshold"
+      durability: "Fraction of writes that are successfully stored and retrievable"
+      quality: "Fraction of requests that return a correct/useful result"
+    bad_sli_examples:
+      - "CPU utilization" — internal resource metric, not user-visible
+      - "Memory usage percent" — internal resource metric
+      - "Container restart count" — symptom, not user-facing outcome
+    source: observability-monitoring/slo-implementation
 
-  histograms_over_averages:
-    rule: "For latency and size distributions, record histograms not averages."
-    why: "Histograms let you compute p50/p95/p99 after the fact. Averages cannot be meaningfully aggregated across hosts and time."
+  slo_target_selection:
+    principle: "Don't aim for 100%. An SLO of 100% is indistinguishable from 'any failure is a crisis' and freezes development velocity."
+    guidance:
+      - "Start with current actual performance, then tighten by 0.1–0.5 percentage points"
+      - "Align with user expectations and competitor benchmarks, not with internal comfort"
+      - "99% = 7.2 h downtime/month; 99.9% = 43 min/month; 99.99% = 4.3 min/month"
+    availability_reference_table:
+      "99%": "7.2 hours/month | 3.65 days/year"
+      "99.9%": "43.2 minutes/month | 8.76 hours/year"
+      "99.95%": "21.6 minutes/month | 4.38 hours/year"
+      "99.99%": "4.32 minutes/month | 52.56 minutes/year"
+    review_cadence: "Review SLO compliance as part of deploy verification. Re-evaluate SLO targets when service architecture changes or after incidents."
+    source: observability-monitoring/slo-implementation
 
-  rate_not_count:
-    rule: "For most counters, track the rate (events per second) rather than the cumulative count."
-    why: "Rates are comparable across time windows and scale. Raw counters require delta calculations."
+  error_budget_policy:
+    formula: "Error Budget = 1 - SLO Target  (e.g., 99.9% SLO → 0.1% = 43.2 min/month budget)"
+    policy:
+      budget_100pct: "Normal development velocity — risky deploys allowed"
+      budget_50pct: "Consider postponing high-risk changes; review burn rate trend"
+      budget_10pct: "Freeze non-critical feature work; focus on stability"
+      budget_0pct: "Feature freeze; all hands on reliability; postmortem required"
+    why: >
+      The error budget converts an abstract reliability target into a concrete spending
+      account. Teams that have budget left can take risks; teams that have spent it must
+      earn it back. This creates a data-driven feedback loop between release pace and
+      reliability outcomes — no politics required.
+    checklist:
+      - "Is the error budget remaining tracked and visible to CD?"
+      - "Is the error budget policy documented and agreed upon before the first SLO breach?"
+      - "Does the team know today's budget remaining without having to query manually?"
+    source: observability-monitoring/slo-implementation
 
 # ─────────────────────────────────────────────
-# Distributed Tracing
+# Multi-Window Burn-Rate Alerting
 # ─────────────────────────────────────────────
+# Plain-language note:
+#   A threshold alert ("error rate > 1%") fires on every brief spike, including ones that
+#   consume almost no error budget. It also misses slow steady burns that will exhaust
+#   the budget over days. Burn-rate alerts ask a better question: "At this rate of
+#   consumption, how long until we exhaust the monthly budget?"
+#
+#   Multi-window = two windows. A SHORT window (5m or 1h) catches fast burns fast.
+#   A LONG window (6h or 3d) catches slow steady burns that the short window misses.
+#   Requiring BOTH to fire simultaneously eliminates most false positives.
+
+burn_rate_alerting:
+  burn_rate_definition: >
+    Burn rate = how fast you're consuming error budget relative to the budget renewal
+    rate. A burn rate of 1 means "consuming exactly as fast as the SLO allows."
+    A burn rate of 14.4 means "consuming 14.4x faster than allowed — you will exhaust
+    the monthly budget in 2 days instead of 30."
+
+  multi_window_pattern:
+    why: >
+      Single-window alerts fire on blips (false alarms) or miss slow burns (false
+      negatives). Two windows together catch fast and slow burns while suppressing noise.
+      The short window detects: fast incident that will blow the budget in hours.
+      The long window detects: sustained degradation that looks fine minute-to-minute
+      but will breach the SLO by month end.
+    fast_burn_window:
+      short_window: "5m (catches rapid onset)"
+      long_window: "1h (confirms it's not a momentary spike)"
+      burn_rate_threshold: 14.4
+      budget_consumed_if_fires_for_1h: "2%"
+      severity: critical
+    slow_burn_window:
+      short_window: "30m"
+      long_window: "6h"
+      burn_rate_threshold: 6.0
+      budget_consumed_if_fires_for_6h: "5%"
+      severity: warning
+
+  alert_design_rules:
+    - rule: "Pair every threshold alert with a burn-rate alert for the same signal"
+      why: "Threshold alerts catch absolute violations; burn-rate alerts catch relative budget erosion"
+    - rule: "Alert on burn rate, not on error rate percentage alone"
+      why: "1% error rate at 10 req/s is fine; 1% error rate at 10,000 req/s burns budget fast"
+    - rule: "Every alert must include a runbook link in its payload"
+      why: "An alert without a runbook is a page that depends on the right person being awake"
+    - rule: "An alert that fires without requiring human action is noise. Remove it."
+      why: "Alert fatigue is a reliability failure — noisy channels hide real incidents"
+    - rule: "Test that alerts fire on actual failure shapes before shipping them to production"
+      why: "An untested alert is a hope, not a control; verify with historical incident replay or synthetic events"
+
+  checklist:
+    - "Does this alert use multi-window burn rate (not a single threshold)?"
+    - "Is the short+long window combination calibrated to the SLO window?"
+    - "Is the runbook URL embedded in the alert payload?"
+    - "Was this alert verified to fire on a historical incident or synthetic event?"
+    - "Does every alert have a documented response procedure?"
+    source: observability-monitoring/slo-implementation
+
+# ─────────────────────────────────────────────
+# Structured Logging
+# ─────────────────────────────────────────────
+# Plain-language note:
+#   Structured logging means emitting logs as machine-readable key-value pairs (JSON)
+#   rather than plain prose. "Request completed in 45ms for user 123" is unstructured —
+#   a human can read it, but a query system can't reliably extract `duration_ms=45`.
+#   Structured: {"event": "request_completed", "duration_ms": 45, "user_id": "123"}.
+#   Now you can filter, aggregate, and alert on any field without regex.
+
+structured_logging:
+  structlog_configuration:
+    principle: "Configure structlog at application startup, before any loggers are created. Reconfiguring after logger creation has no effect on cached loggers."
+    required_processors:
+      - "structlog.contextvars.merge_contextvars — merges bound context variables into every log entry"
+      - "structlog.processors.add_log_level — ensures level field is always present"
+      - "structlog.processors.TimeStamper(fmt='iso') — ISO 8601 timestamps for Axiom parsing"
+      - "structlog.processors.StackInfoRenderer — captures stack info when requested"
+      - "structlog.processors.format_exc_info — formats exceptions as structured fields"
+      - "structlog.processors.JSONRenderer — final JSON serialization for production"
+    cache_logger: "Set cache_logger_on_first_use=True in production; reconfigure before first call"
+    local_dev: "Consider ConsoleRenderer for human-readable local output; switch to JSONRenderer in prod via LOG_FORMAT env var"
+  semantic_log_levels:
+    principle: "Use the level that matches the operational significance, not the severity of the data being logged."
+    levels:
+      DEBUG: "Development diagnostics — variable values, cache hits, internal state. Never in production default."
+      INFO: "Normal operational events — request start/end, job completion, state transitions."
+      WARNING: "Recoverable anomalies — retry attempts, fallback path used, approaching limits."
+      ERROR: "Failures requiring investigation — exceptions, service unavailable, data corruption."
+    anti_pattern: "Don't log expected behavior at ERROR. A user entering a wrong password is INFO. An auth service being unreachable is ERROR."
+    why: >
+      When ERROR is overused, on-call engineers stop reading ERROR logs. The level becomes
+      meaningless noise. When used correctly, ERROR = "someone needs to look at this soon."
+    checklist:
+      - "Are expected user errors (wrong password, not found, validation failure) logged at INFO or WARNING?"
+      - "Are ERROR logs reserved for unexpected failures that require investigation?"
+      - "Is DEBUG logging disabled by default in production (guarded by log level config)?"
+    source: python-development/python-observability
+
+  consistent_log_fields:
+    principle: "Every log entry should include a standard set of fields enabling filtering and correlation."
+    required_fields:
+      - "correlation_id (or trace_id) — to link all events in a single request"
+      - "service — which service emitted the log"
+      - "level — log level"
+      - "timestamp — ISO 8601"
+    recommended_fields:
+      - "tenant_id / workspace_id — for multi-tenant filtering"
+      - "user_id — where available and relevant"
+      - "operation — the named operation being performed (e.g., 'memory_search', 'arq_job_execute')"
+    why: "Without consistent fields, log filtering requires fragile regex. With them, `service=api AND correlation_id=X` gives you the full request trace instantly."
+    source: python-development/python-observability
+
+# ─────────────────────────────────────────────
+# Correlation ID Propagation
+# ─────────────────────────────────────────────
+# Plain-language note:
+#   A correlation ID is a single unique string (UUID) generated at the edge of your
+#   system (the first thing that receives a request) and passed through every downstream
+#   call, log entry, and span. It's a thread that lets you pull one request's journey
+#   out of millions of interleaved log lines. Like stamping every piece of mail in a
+#   shipment with the same package tracking number.
+
+correlation_id_propagation:
+  generation_rule: "Generate at request ingress (middleware). If an upstream service provides X-Correlation-ID header, use it; otherwise generate a new UUID4."
+  propagation_rules:
+    - "Bind to structlog context variables immediately (structlog.contextvars.bind_contextvars) so all subsequent log calls in the request context include it automatically"
+    - "Return X-Correlation-ID in the response headers so callers can correlate client-side"
+    - "Inject into all outbound HTTP headers when calling downstream services"
+    - "Include in all async job submissions (pass correlation_id as job argument)"
+  fastapi_middleware_pattern: |
+    async def correlation_middleware(request: Request, call_next):
+        cid = request.headers.get("X-Correlation-ID") or str(uuid.uuid4())
+        structlog.contextvars.bind_contextvars(correlation_id=cid)
+        response = await call_next(request)
+        response.headers["X-Correlation-ID"] = cid
+        structlog.contextvars.clear_contextvars()  # clear between requests
+        return response
+  arq_worker_pattern: "Pass correlation_id as a string argument to the ARQ job. Bind it to contextvars at job start, clear at job end."
+  checklist:
+    - "Does every API request have a correlation ID bound to structlog contextvars?"
+    - "Is X-Correlation-ID returned in response headers?"
+    - "Is the correlation ID passed to all downstream HTTP calls?"
+    - "Is it passed to ARQ jobs as an argument?"
+    - "Are contextvars cleared at request end to prevent cross-request leakage?"
+  source: python-development/python-observability
+
+# ─────────────────────────────────────────────
+# Metric Cardinality Discipline
+# ─────────────────────────────────────────────
+# Plain-language note:
+#   Cardinality is the number of distinct values a metric label can take. A metric
+#   with labels [method, endpoint, status] might have 3 × 20 × 5 = 300 distinct series.
+#   A metric with labels [user_id] in a system with 1 million users has 1,000,000 series.
+#   High cardinality explodes the storage backend (Prometheus, Axiom) and makes queries
+#   slow. It's the metrics equivalent of accidentally indexing a text blob column.
+
+metric_cardinality:
+  bounded_labels_rule:
+    rule: "All metric label values must be bounded to a small, known set. Never use user IDs, request IDs, session IDs, workspace IDs, or arbitrary strings as label values."
+    why: >
+      Each unique label value combination creates a new metric series. Unbounded labels
+      (user_id: 1M values) create 1M series per metric, overwhelming the storage backend
+      and making queries slow or impossible. Axiom's ingest costs scale with distinct
+      field values; cardinality explosions are both an operational and a cost problem.
+    good_labels: ["method (GET/POST/DELETE)", "endpoint (/memories/search)", "status_code (200/400/500)", "job_type", "error_class"]
+    bad_labels: ["user_id", "workspace_id", "memory_id", "request_id", "session_token", "arbitrary_tag_values"]
+    alternative_for_per_entity: "Log the entity ID as a structured log field; use Axiom to query per-entity behavior. Do not use metrics for per-entity analysis."
+    checklist:
+      - "Are all metric label values from a bounded, enumerable set?"
+      - "Are user IDs, workspace IDs, and entity IDs absent from metric labels?"
+      - "Is per-entity analysis routed to logs (Axiom) rather than metrics?"
+    source: python-development/python-observability
+
+  metric_naming_convention:
+    rule: "Name metrics as: {prefix}_{name}_{unit}  (e.g., http_request_duration_seconds, db_connections_used_total)"
+    components:
+      prefix: "Service or subsystem (http, db, arq, memory)"
+      name: "What is being measured (request_duration, connections_used, job_queue_depth)"
+      unit: "The unit as a suffix (seconds, bytes, total for counters)"
+    why: "Consistent naming makes metrics discoverable and prevents confusion when the same concept is measured differently by different engineers."
+    source: observability-monitoring/prometheus-configuration
+
+# ─────────────────────────────────────────────
+# OpenTelemetry Distributed Tracing
+# ─────────────────────────────────────────────
+# Plain-language note:
+#   Distributed tracing is like a GPS track log for a request that crosses multiple
+#   services. Each "span" is one segment of the journey (API handler, DB query, cache
+#   lookup). Spans are nested (parent-child), forming a tree called a "trace." The trace
+#   ID is the single key that links all spans from one request across all services.
+#
+#   The W3C traceparent header is the standard envelope for passing the trace ID across
+#   service boundaries via HTTP. OTel auto-instrumentation handles this for you on both
+#   inbound and outbound calls if configured correctly.
 
 distributed_tracing:
-  when_to_invest:
-    - "Request flows cross 3+ services"
-    - "Debugging latency issues requires knowing which hop is slow"
-    - "Dependencies between services aren't obvious from code"
+  trace_structure:
+    trace: "End-to-end request journey — all spans sharing one trace_id"
+    span: "Single operation within a trace — has a parent (except root), start time, duration, attributes, status"
+    context: "Metadata propagated between services — trace_id, span_id, trace flags"
+    baggage: "User-defined key-value pairs propagated with context — use sparingly; propagates to all downstream services"
 
-  sampling_strategy:
-    head_sampling: "Decide at request entry whether to trace. Simple but loses rare failures if they aren't sampled."
-    tail_sampling: "Buffer the full trace, decide at end (after seeing errors or latency). Catches rare failures at cost of memory."
-    recommendation: "Start with head sampling at 1-10%. Move to tail sampling if you find tracing is missing the failures you need."
+  otel_python_setup:
+    principle: "Configure TracerProvider once at startup with a BatchSpanProcessor. BatchSpanProcessor buffers spans and exports in background — SyncBatchProcessor blocks the request thread."
+    otlp_exporter: "Use OTLPSpanExporter with OTLP/gRPC or OTLP/HTTP endpoint. Axiom accepts OTLP traces at https://api.axiom.co/v1/traces with `Authorization: Bearer <api-token>` header."
+    resource_attributes: "Set SERVICE_NAME, SERVICE_VERSION, and DEPLOYMENT_ENVIRONMENT resource attributes at startup so all spans carry context about which service/version emitted them."
+    auto_instrumentation: "Use opentelemetry-instrumentation-fastapi and opentelemetry-instrumentation-sqlalchemy for automatic span creation on HTTP and DB calls. Reduces manual instrumentation burden."
+    source: observability-monitoring/distributed-tracing
 
-  span_attributes:
-    include:
-      - "Service name, operation name"
-      - "Start/end timestamps (automatic)"
-      - "Relevant IDs (tenant, business entity — with cardinality care)"
-      - "Error info if the span failed"
-      - "External call targets (URLs, DB table, queue name)"
-    avoid:
-      - "Full request bodies"
-      - "PII"
-      - "Large payloads — attach a size, not the payload"
+  w3c_context_propagation:
+    standard: "W3C traceparent + tracestate headers (not Jaeger-specific B3 headers)"
+    propagation_rule: "Use opentelemetry.propagate.inject(headers) for outbound HTTP calls. The FastAPI auto-instrumentation handles inbound extraction."
+    format: "traceparent: 00-{trace_id_32hex}-{span_id_16hex}-{flags}"
+    why: "W3C traceparent is the vendor-neutral standard. Using a vendor-specific format (Jaeger B3, AWS X-Ray) couples your instrumentation to a specific backend."
+    source: observability-monitoring/distributed-tracing
 
-# ─────────────────────────────────────────────
-# What Agents Should Look For (Diagnosis Playbook)
-# ─────────────────────────────────────────────
+  span_authoring_rules:
+    - rule: "Name spans with verb-noun format: 'search_memories', 'embed_text', 'arq_job_execute'"
+      why: "Consistent names enable span-level aggregation and alerting in Axiom"
+    - rule: "Add domain attributes to spans: memory_id, workspace_id, job_type, embedding_model"
+      why: "Attributes on spans enable filtering and drill-down without separate log queries"
+    - rule: "Record exceptions on spans with span.record_exception(exc) before re-raising"
+      why: "Exception details in the span enable root cause analysis without cross-referencing logs"
+    - rule: "Do NOT add user-controlled or high-cardinality values as span attributes that feed into aggregate queries"
+      why: "Same cardinality concern as metric labels — memory_id as a span attribute is fine for per-trace drill-down, not for aggregate analysis"
+    source: observability-monitoring/distributed-tracing
 
-diagnosis_playbook:
-  description: >
-    When an agent is dispatched to diagnose a production issue, this is the
-    rough order of investigation. Tailor to the specific system, but the
-    sequence is usually: traffic → errors → latency → saturation → logs.
-  steps:
-    - step: "1. Establish the time window"
-      what_to_look_for: "When did the issue start? Is it ongoing or resolved?"
-      data: "User reports, alert timestamps, deploy timeline"
-
-    - step: "2. Check error rates"
-      what_to_look_for: "Did error rate spike? On which endpoint/service? 4xx (client) or 5xx (server)?"
-      data: "Error count and error percentage metrics, segmented by endpoint and status code"
-
-    - step: "3. Check latency"
-      what_to_look_for: "Did p95/p99 latency spike? On which endpoint? Which downstream hop?"
-      data: "Latency histograms per endpoint, trace data for slow requests"
-
-    - step: "4. Check saturation"
-      what_to_look_for: "Is any bottleneck resource saturated? CPU, memory, connection pool, queue depth?"
-      data: "Resource metrics per host, queue depth metrics, connection pool utilization"
-
-    - step: "5. Check deployments and config changes"
-      what_to_look_for: "Did anything deploy or change near the issue start time?"
-      data: "Deployment log, config change audit, feature flag flips"
-
-    - step: "6. Sample specific failures in logs"
-      what_to_look_for: "Pick 3-5 failed requests by correlation ID. Read the full flow across services."
-      data: "Logs filtered by correlation ID and time range"
-
-    - step: "7. Correlate with upstream dependencies"
-      what_to_look_for: "Is the issue caused by a downstream dependency (DB, cache, third-party API)?"
-      data: "Dependency metrics, third-party status pages"
+  sampling_strategies:
+    principle: "Sample at 1–10% in production for high-traffic paths. Always sample errors (100% of error traces)."
+    strategies:
+      probabilistic: "Sample a fixed fraction of all traces — simple, predictable cost"
+      rate_limiting: "Sample at most N traces per second — bounds backend load regardless of traffic spikes"
+      parent_based: "Honor the sampling decision of the upstream service — ensures complete traces"
+    recommended: "ParentBased(root=TraceIdRatioBased(0.1)) — 10% of traces sampled, honoring upstream decisions"
+    error_sampling: "Override to always=true for traces that include an error span, regardless of root sampler decision"
+    why: >
+      Tracing every request at production scale overwhelms the backend and drives up
+      ingest costs. Sampling preserves statistical accuracy for latency analysis
+      (1% sample of 10K req/s gives 100 samples/s — more than enough for p95/p99
+      estimation). Always sampling errors ensures you never lose a failure trace.
+    checklist:
+      - "Is sampling rate set explicitly (not defaulting to 100%)?"
+      - "Are error traces sampled at 100% regardless of the probabilistic setting?"
+      - "Is the OTLP endpoint and auth token injected via env var, not hardcoded?"
+    source: observability-monitoring/distributed-tracing
 
 # ─────────────────────────────────────────────
-# Anti-Patterns
+# Log-Trace Correlation
+# ─────────────────────────────────────────────
+# Plain-language note:
+#   Correlation means you can jump from a log line to its trace, or from a trace to its
+#   logs. Without it, you have two parallel views of the same incident with no bridge
+#   between them. With it: see an ERROR log → click trace_id → see full request waterfall
+#   → see the DB query that was 800ms → done.
+
+log_trace_correlation:
+  rule: "Every structured log entry should include trace_id and span_id from the active OTel span."
+  implementation: |
+    # In a structlog processor or middleware:
+    from opentelemetry import trace
+
+    def inject_trace_context(_, __, event_dict):
+        span = trace.get_current_span()
+        ctx = span.get_span_context()
+        if ctx.is_valid:
+            event_dict["trace_id"] = format(ctx.trace_id, "032x")
+            event_dict["span_id"] = format(ctx.span_id, "016x")
+        return event_dict
+  axiom_note: "With trace_id in both logs and traces, Axiom can surface both in a single dataset query and allow correlation across views."
+  why: "Logs and traces answer different questions — logs have context, traces have causality. Linking them combines both without redundancy."
+  source: observability-monitoring/distributed-tracing
+
+# ─────────────────────────────────────────────
+# Dashboard Design Principles
+# ─────────────────────────────────────────────
+# Plain-language note:
+#   These principles come from the Grafana source but apply to any dashboarding tool
+#   including Axiom dashboards. The insight is about information architecture, not
+#   panel JSON.
+
+dashboard_design:
+  information_hierarchy:
+    principle: "Place the most critical information first — summary numbers at the top, trend lines in the middle, detail tables at the bottom."
+    levels:
+      top: "Critical metrics as single numbers — current SLO compliance, error budget remaining, active incidents"
+      middle: "Time-series trends — request rate, error rate, latency percentiles over the last 1–6 hours"
+      bottom: "Detail tables, heatmaps, per-service breakdowns for drill-down"
+    why: >
+      Operators reading a dashboard under pressure (incident, after-hours page) should
+      see the answer to "is there a problem?" within 3 seconds. If the critical metrics
+      are buried in row 8, the dashboard fails its primary job.
+    source: observability-monitoring/grafana-dashboards
+
+  dashboard_as_code:
+    principle: "Define dashboards in version-controlled configuration (Terraform, JSON, YAML) rather than clicking in the UI."
+    why: >
+      A UI-clicked dashboard drifts from reality silently. When someone edits a panel
+      to debug an incident and forgets to revert it, the team inherits a modified
+      dashboard that no longer matches the team's shared understanding. Version-controlled
+      dashboards can be reviewed, diffed, and rolled back like code.
+    source: observability-monitoring/grafana-dashboards
+
+  slo_dashboard_required_panels:
+    - "Current SLO compliance (single number + green/amber/red threshold coloring)"
+    - "Error budget remaining as percentage + countdown bar"
+    - "SLI trend over the SLO window (28 days)"
+    - "Burn rate over short and long windows side by side"
+    why: "The burn rate panels diagnose whether a current problem is acute (fast burn) or chronic (slow burn) — you cannot tell from compliance percentage alone."
+    source: observability-monitoring/slo-implementation
+
+# ─────────────────────────────────────────────
+# Synthetic Monitoring
+# ─────────────────────────────────────────────
+# Plain-language note:
+#   Real traffic tells you about problems after they happen (someone got a slow response).
+#   Synthetic monitoring runs artificial requests on a schedule, so you catch problems
+#   proactively — even at 3am when real traffic is low. Like a security guard walking
+#   the building on a set schedule, not just responding when the alarm goes off.
+
+synthetic_monitoring:
+  rule: "Run at least one end-to-end synthetic probe against production on a regular schedule (every 5 minutes for critical paths)."
+  why: >
+    Traffic-based monitoring misses degradation during low-traffic windows (nights,
+    weekends). A synthetic probe that creates → searches → deletes a memory will catch
+    database connectivity failures, search index corruption, and auth regressions
+    during any window — without waiting for real users to report the problem.
+# ─────────────────────────────────────────────
+# Timed Operations Pattern
 # ─────────────────────────────────────────────
 
-anti_patterns:
-  - pattern: "Logging everything at INFO"
-    why_bad: "INFO becomes noise; real signals drown. Storage cost balloons."
-    instead: "Use log levels meaningfully. Most success cases belong at DEBUG or not logged at all."
+timed_operations:
+  principle: "Wrap important operations (DB queries, external calls, embedding generation) with a timing context manager that logs both success duration and failure details."
+  python_pattern: |
+    from contextlib import contextmanager
+    import time
+    import structlog
 
-  - pattern: "Unbounded label cardinality in metrics"
-    why_bad: "Kills the time series database. One bad metric can take down the monitoring system."
-    instead: "Bound cardinality at metric design time. Use logs (high cardinality, queryable) for per-user insight."
+    logger = structlog.get_logger()
 
-  - pattern: "Dashboards without alerts"
-    why_bad: "Issues are only caught when someone happens to look."
-    instead: "For any signal worth dashboarding, define what 'bad' looks like and alert on it."
-
-  - pattern: "Alerts without runbooks"
-    why_bad: "On-call engineer gets paged, doesn't know what to do, escalates. Defeats the alert's purpose."
-    instead: "Every alert links to a runbook: what the alert means, how to verify, how to mitigate, when to escalate."
-
-  - pattern: "Instrumenting at the end of a project"
-    why_bad: "Retrofitting observability is expensive and often incomplete. The first production incident will find the gaps."
-    instead: "Instrument while building. Every new service ships with golden signals and a correlation ID from day one."
+    @contextmanager
+    def timed_operation(name: str, **extra_fields):
+        start = time.perf_counter()
+        logger.debug("operation.start", operation=name, **extra_fields)
+        try:
+            yield
+        except Exception as e:
+            elapsed_ms = (time.perf_counter() - start) * 1000
+            logger.error(
+                "operation.failed",
+                operation=name,
+                duration_ms=round(elapsed_ms, 2),
+                error_type=type(e).__name__,
+                error=str(e),
+                **extra_fields,
+            )
+            raise
+        else:
+            elapsed_ms = (time.perf_counter() - start) * 1000
+            logger.info(
+                "operation.completed",
+                operation=name,
+                duration_ms=round(elapsed_ms, 2),
+                **extra_fields,
+            )
+  why: >
+    Consistent timing wrapping ensures every important operation logs its duration,
+    regardless of success or failure. This feeds latency analysis in Axiom without
+    having to manually instrument every call site. The structured fields (operation,
+    duration_ms) are queryable directly.
+  checklist:
+    - "Are latency-sensitive operations (vector search, embedding calls, DB queries) wrapped with timed_operation or equivalent?"
+    - "Does the success path log duration_ms as a numeric field (not a string)?"
+    - "Does the error path log both duration_ms and error_type for correlation?"
+  source: python-development/python-observability

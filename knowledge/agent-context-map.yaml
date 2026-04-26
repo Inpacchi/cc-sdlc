@@ -26,6 +26,7 @@ mappings:
     - "[sdlc-root]/knowledge/architecture/token-economics.yaml"
     - "[sdlc-root]/knowledge/architecture/observability-patterns.yaml"
     - "[sdlc-root]/knowledge/architecture/performance-optimization-philosophy.yaml"
+    - "[sdlc-root]/knowledge/architecture/agent-orchestration-patterns.yaml"
 
   # ── Data / Database ────────────────────────────────────────────────
   data-architect:
@@ -55,6 +56,7 @@ mappings:
     - "[sdlc-root]/knowledge/design/accessibility-testability-principles.yaml"
     - "[sdlc-root]/knowledge/design/component-patterns.yaml"
     - "[sdlc-root]/knowledge/design/interaction-animation.yaml"
+    - "[sdlc-root]/knowledge/design/interaction-patterns.yaml"
     - "[sdlc-root]/knowledge/design/visual-design-rules.yaml"
     - "[sdlc-root]/knowledge/design/layout-principles.yaml"
     - "[sdlc-root]/knowledge/architecture/agent-communication-protocol.yaml"
@@ -64,6 +66,7 @@ mappings:
     - "[sdlc-root]/knowledge/design/ux-modeling-methodology.yaml"
     - "[sdlc-root]/knowledge/design/accessibility-testability-principles.yaml"
     - "[sdlc-root]/knowledge/design/component-patterns.yaml"
+    - "[sdlc-root]/knowledge/design/interaction-patterns.yaml"
     - "[sdlc-root]/knowledge/design/layout-principles.yaml"
     - "[sdlc-root]/knowledge/coding/typescript-patterns.yaml"
     - "[sdlc-root]/knowledge/architecture/agent-communication-protocol.yaml"
@@ -71,6 +74,7 @@ mappings:
   # ── Backend ────────────────────────────────────────────────────────
   backend-developer:
     - "[sdlc-root]/knowledge/coding/code-quality-principles.yaml"
+    - "[sdlc-root]/knowledge/coding/shell-patterns.yaml"
     - "[sdlc-root]/knowledge/architecture/technology-patterns.yaml"
     - "[sdlc-root]/knowledge/data-modeling/anti-patterns/common-modeling-mistakes.yaml"
     - "[sdlc-root]/knowledge/coding/typescript-patterns.yaml"
@@ -149,6 +153,7 @@ mappings:
   # ── Security ───────────────────────────────────────────────────────
   security-engineer:
     - "[sdlc-root]/knowledge/architecture/security-review-taxonomy.yaml"
+    - "[sdlc-root]/knowledge/business-analysis/gdpr-patterns.yaml"
     - "[sdlc-root]/knowledge/architecture/agent-communication-protocol.yaml"
     - "[sdlc-root]/knowledge/architecture/investigation-report-format.yaml"
 
@@ -181,6 +186,7 @@ mappings:
     - "[sdlc-root]/knowledge/architecture/agent-communication-protocol.yaml"
     - "[sdlc-root]/knowledge/architecture/deployment-patterns.yaml"
     - "[sdlc-root]/knowledge/architecture/observability-patterns.yaml"
+    - "[sdlc-root]/knowledge/coding/shell-patterns.yaml"
     - "[sdlc-root]/knowledge/testing/test-infrastructure-patterns.yaml"
 
   refactor-engineer:
@@ -229,6 +235,14 @@ mappings:
   # ── Business Analysis ──────────────────────────────────────────────
   business-analyst:
     - "[sdlc-root]/knowledge/business-analysis/requirements-feedback-loops.yaml"
+    - "[sdlc-root]/knowledge/business-analysis/data-storytelling-rules.yaml"
+    - "[sdlc-root]/knowledge/business-analysis/gdpr-patterns.yaml"
+    - "[sdlc-root]/knowledge/architecture/agent-communication-protocol.yaml"
+
+  # ── DX / Documentation ────────────────────────────────────────────
+  dx-engineer:
+    - "[sdlc-root]/knowledge/dx/skill-quality-rubrics.yaml"
+    - "[sdlc-root]/knowledge/dx/developer-documentation-patterns.yaml"
     - "[sdlc-root]/knowledge/architecture/agent-communication-protocol.yaml"
 
 # Unmapped agents (no relevant cross-project knowledge files yet):

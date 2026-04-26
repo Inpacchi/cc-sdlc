@@ -1,0 +1,390 @@
+# Agent Orchestration Patterns
+# Patterns for orchestrating multi-agent work — task decomposition, team
+# composition, dependency-graph design, workload balancing, and orchestrator
+# anti-patterns.
+# Sources:
+#   - wshobson/agent-teams/task-coordination-strategies
+#   - wshobson/agent-teams/team-composition-patterns
+# Last updated: 2026-04-25
+
+id: agent-orchestration-patterns
+name: "Agent Orchestration Patterns"
+description: "Patterns for decomposing work for agent dispatch, sizing agent groups, designing dependency graphs, balancing workload, and avoiding orchestration anti-patterns"
+pattern: rules
+category: architecture
+spec_relevant: false
+project_applicability:
+  relevant_when: "Orchestrator (main thread or sdlc-* skill) dispatches multiple agents to accomplish a deliverable"
+  action_if_irrelevant: keep
+last_updated: 2026-04-25
+
+# ─────────────────────────────────────────────
+# AOP1–AOP4: Task Decomposition Strategies
+# ─────────────────────────────────────────────
+
+rules:
+
+  - rule_id: AOP1
+    name: "Decompose by file ownership for parallelizable implementation"
+    description: |
+      When multiple agents will implement parts of a feature in parallel,
+      decompose the work by file or directory ownership. Each agent owns
+      a specific set of files; no two agents modify the same file
+      simultaneously. This eliminates merge conflicts and makes integration
+      a deterministic step rather than a manual reconciliation.
+
+      Concrete pattern:
+      - Agent A owns `api/services/foo_service.py` and its tests
+      - Agent B owns `web/src/features/foo/`
+      - Agent C owns `mcp/tools/foo_tool.py`
+      - Shared types live in a fourth file owned by exactly one agent;
+        the others read but do not modify
+
+      The dispatch prompt to each agent must explicitly list owned files
+      and shared-but-read-only files so the agent does not inadvertently
+      cross boundaries.
+    rationale: |
+      File ownership is the simplest decomposition that prevents conflicts.
+      It works because file boundaries are observable (the orchestrator
+      can verify post-dispatch with `git status`), reversible (one agent's
+      changes can be reverted without touching another's), and naturally
+      align with module boundaries in well-organized codebases.
+    checklist:
+      - "Does each parallel-dispatched agent have an explicit owned-files list in its dispatch prompt?"
+      - "Are shared types / interfaces owned by exactly one agent (or pre-existing)?"
+      - "Can the orchestrator verify post-dispatch that no agent modified another's owned files?"
+    anti_patterns:
+      - "Two agents both writing to the same router file in parallel — merge conflict at integration"
+      - "Implicit ownership ('whichever agent gets there first') — produces non-deterministic results"
+      - "Shared mutable types modified by multiple agents — silent contract drift"
+    source: "wshobson/agent-teams/task-coordination-strategies"
+
+  - rule_id: AOP2
+    name: "Decompose by concern for review and audit work"
+    description: |
+      When multiple agents will REVIEW (not implement) the same body of
+      work, decompose by concern, not by file. Each agent looks at all
+      changed files through one lens.
+
+      Standard concern decomposition:
+      - Security review (auth, input validation, secrets, injection vectors)
+      - Performance review (query patterns, N+1, hot paths, async safety)
+      - Architecture review (boundary respect, ADR conformance, pattern adherence)
+      - Code quality review (idioms, naming, clarity, test coverage)
+
+      Each review agent reads the full diff but reports only findings in
+      its concern. The orchestrator consolidates findings.
+    rationale: |
+      Reviews are cross-cutting — security issues can appear in any file,
+      so partitioning by file would miss them. Partitioning by concern
+      lets each agent specialize, while ensuring full coverage. The
+      consolidation step deduplicates findings that multiple agents
+      catch (a query in a security-sensitive path may surface in both
+      security and performance reviews — the orchestrator merges them).
+    checklist:
+      - "For multi-agent review, are concerns orthogonal (no two agents covering the same lens)?"
+      - "Does each reviewer see the full diff, not a partition of it?"
+      - "Does the orchestrator deduplicate findings before surfacing to the user?"
+    anti_patterns:
+      - "Multiple reviewers with the same concern — wasted tokens, duplicate findings"
+      - "Reviewer assigned only some files — security issues in unreviewed files slip through"
+      - "Findings surfaced as 'security-engineer's list, then code-reviewer's list' — consumer wants severity-grouped, not source-grouped"
+    source: "wshobson/agent-teams/task-coordination-strategies"
+
+  - rule_id: AOP3
+    name: "Decompose by competing hypothesis for debugging investigation"
+    description: |
+      When investigating a bug with multiple plausible root causes,
+      dispatch one agent per hypothesis. Each agent investigates its
+      assigned hypothesis exclusively and reports confirmation or
+      refutation with evidence. The orchestrator decides which
+      hypothesis wins based on evidence quality.
+
+      This parallelism shortens investigation time when hypotheses are
+      independent (no agent's work blocks another's). The 3-strike rule
+      applies per-hypothesis: an agent that produces no evidence after
+      3 distinct investigation steps reports the hypothesis as
+      unconfirmed and surfaces what was tried.
+    rationale: |
+      Sequential hypothesis testing is slow because each test takes
+      significant context-loading time. Parallel hypothesis testing
+      converges faster and produces a stronger evidence base — even
+      "ruled out" results are valuable because they prevent future
+      sessions from re-testing the same failed hypothesis.
+    checklist:
+      - "Does each debug agent investigate exactly one hypothesis?"
+      - "Are hypotheses independent (no shared assumed state)?"
+      - "Does each agent report evidence (file:line citations, log queries, metric snapshots), not just yes/no?"
+      - "Is the 3-strike rule applied per-hypothesis (agent abandons hypothesis after 3 strikes)?"
+    anti_patterns:
+      - "One agent investigating multiple hypotheses sequentially — slower than parallel and prone to confirmation bias"
+      - "Hypotheses that overlap ('it's a database issue' and 'it's a query issue' — these are not orthogonal)"
+      - "Ignoring 'ruled out' results — they should be persisted so future investigations skip them"
+    source: "wshobson/agent-teams/task-coordination-strategies"
+
+  - rule_id: AOP4
+    name: "Decompose by architectural layer for full-stack features"
+    description: |
+      When implementing a feature that spans backend + frontend (+ optional
+      additional layers like MCP, CLI, etc.), decompose by layer:
+      - One backend agent — services, routes, migrations, tests
+      - One frontend agent — components, hooks, query factories
+      - Additional layer agents as needed
+
+      The boundary between layers IS the API schema change. The
+      orchestrator must dispatch backend FIRST (to land the schema), then
+      consumer layers in parallel (both consume the schema). This is
+      the diamond pattern: one upstream task feeds two parallel downstream tasks.
+
+      If the schema is additive (no breaking change), backend can ship
+      independently of consumers. If breaking, consumers must update
+      in the same release window.
+    rationale: |
+      Layer-based decomposition matches the codebase structure and the
+      natural agent specialization (backend agents know ORM and API
+      frameworks; frontend agents know React and state management).
+      Forcing one agent to span layers loses the specialization benefit
+      and produces lower-quality output in the non-primary layer.
+    checklist:
+      - "For full-stack features, is the API schema landed before consumers are dispatched?"
+      - "Are consumer-layer agents dispatched in parallel only AFTER the contract is stable?"
+      - "Are breaking schema changes scoped to one release window with all consumers updating in lockstep?"
+    anti_patterns:
+      - "Backend and frontend dispatched in parallel from the start — frontend builds against an unstable contract"
+      - "One agent doing backend + frontend — quality drops in the non-primary layer"
+      - "Breaking schema change shipped without coordinated consumer updates — clients break"
+    source: "wshobson/agent-teams/task-coordination-strategies"
+
+# ─────────────────────────────────────────────
+# AOP5–AOP7: Group Sizing & Composition
+# ─────────────────────────────────────────────
+
+  - rule_id: AOP5
+    name: "Right-size the agent group — start small, expand only if proven necessary"
+    description: |
+      The cost of adding agents to a dispatch grows superlinearly:
+      coordination overhead, finding deduplication, conflicting
+      recommendations, longer time to consolidated answer. Start with
+      the smallest group that covers the required dimensions, and only
+      expand if evidence shows insufficient coverage.
+
+      Heuristic table:
+
+      | Complexity   | Group size | Use when                                                     |
+      | ------------ | ---------- | ------------------------------------------------------------ |
+      | Simple       | 1          | Single-domain task, isolated change                          |
+      | Moderate     | 2          | Single-domain task with one cross-cutting concern            |
+      | Complex      | 3          | Multi-domain task OR three orthogonal review concerns        |
+      | Very complex | 4-5        | Full-stack feature OR comprehensive audit OR systemic debug  |
+
+      Beyond 5 agents in one round, the consolidation overhead almost
+      always exceeds the parallelism benefit — split into sequential
+      rounds with intermediate consolidation.
+    rationale: |
+      Each agent dispatch consumes context tokens (dispatch prompt) and
+      produces output tokens (findings) that the orchestrator must read
+      and consolidate. The orchestrator's context budget is finite. A
+      6-agent dispatch can produce more output than the orchestrator can
+      cleanly read, leading to summary loss. Smaller groups, when
+      sufficient, produce higher-fidelity consolidation.
+    checklist:
+      - "Has the orchestrator chosen the smallest group that covers all required concerns?"
+      - "Can the orchestrator state in one sentence what each agent uniquely contributes?"
+      - "If group size > 5, is the work split into sequential rounds with intermediate consolidation?"
+    anti_patterns:
+      - "Defaulting to a 'standard 4-agent review' regardless of change size"
+      - "Adding agents to 'be thorough' without a specific gap they fill"
+      - "Dispatching the same set of reviewers for trivial diffs and architectural changes alike"
+    source: "wshobson/agent-teams/team-composition-patterns"
+
+  - rule_id: AOP6
+    name: "Match agent specialization to dispatch domain"
+    description: |
+      Specialized agents (search-engineer, db-engineer, software-architect,
+      backend-engineer, etc.) outperform general-purpose agents for tasks
+      in their domain. The orchestrator must match dispatch to specialization,
+      not default to a generalist when a specialist exists.
+
+      Two failure modes from mismatched dispatch:
+      1. Generalist asked to do specialist work — output is technically
+         correct but misses domain-specific nuances.
+      2. Specialist asked to do general work — output is over-fit to the
+         specialist's lens and misses cross-cutting concerns.
+
+      The agent-context-map.yaml defines which knowledge files each agent
+      consumes; this is the source of truth for which specialist owns
+      which domain.
+    rationale: |
+      Agent specialization exists because domain knowledge does not
+      generalize for free. A backend-engineer agent has loaded ORM and
+      API framework knowledge; a software-architect has loaded ADR
+      practice and system design patterns. Sending the wrong agent
+      means the loaded knowledge is wrong knowledge.
+    checklist:
+      - "Does the orchestrator consult agent-context-map.yaml when choosing which agent to dispatch?"
+      - "When uncertain between two specialists, does the orchestrator dispatch both with non-overlapping concerns rather than guessing?"
+      - "Are general-purpose agents reserved for genuinely cross-cutting work (research, idea exploration) and not implementation in a specialized domain?"
+    anti_patterns:
+      - "Dispatching backend-engineer for search-tuning work that should go to search-engineer"
+      - "Dispatching software-architect for implementation work — architects design, they do not implement"
+      - "Defaulting to general-purpose when a specialist would do the work better"
+    source: "wshobson/agent-teams/team-composition-patterns"
+
+  - rule_id: AOP7
+    name: "Read-only vs read-write capability matching"
+    description: |
+      Agents have implicit capability scopes derived from their persona:
+      - Read-only agents (research-analyst, exploration agents) can search
+        and analyze but should not be assigned implementation work
+      - Read-write agents (backend-engineer, frontend-engineer, etc.) can
+        modify files and are appropriate for implementation
+      - Review agents (code-reviewer, security-engineer) can read AND can
+        modify files when fixing issues, but their primary mode is read-only
+        analysis
+
+      The orchestrator must not assign implementation work to read-only
+      agents and must not assume review agents will implement (they
+      report; the orchestrator dispatches an implementer to fix).
+    rationale: |
+      Capability mismatches produce two specific failures:
+      1. Read-only agent asked to implement → no file changes, just analysis,
+         which the orchestrator may mistake for "done"
+      2. Reviewer asked to implement after their review → reviewers' primary
+         lens is critique, not creation; reviewer-as-implementer often
+         produces over-cautious or over-engineered code
+
+      Keeping the lanes separate maintains specialization and produces
+      cleaner orchestration logs.
+    checklist:
+      - "Does the dispatch match the agent's primary capability (read-only for analysis, read-write for implementation)?"
+      - "After a review surfaces issues, is a separate implementer dispatched to fix (not the reviewer)?"
+      - "Is research dispatched to research agents, not to implementation agents who happen to be 'available'?"
+    anti_patterns:
+      - "Dispatching a research agent to 'also implement the changes you find'"
+      - "Asking the security-engineer to fix the vulnerabilities they identified — fix should go to backend-engineer with security context"
+      - "Treating read-only output as completed work — verify file changes before marking done"
+    source: "wshobson/agent-teams/team-composition-patterns"
+
+# ─────────────────────────────────────────────
+# AOP8–AOP10: Dependency Graph & Workload Discipline
+# ─────────────────────────────────────────────
+
+  - rule_id: AOP8
+    name: "Design wide-shallow dependency graphs, not deep chains"
+    description: |
+      When tasks have dependencies, prefer wide-shallow graphs (many
+      independent tasks fanning into one integration step) over deep
+      chains (each task waiting for the previous to complete). The
+      critical path of a deep chain is the sum of every task's duration;
+      the critical path of a wide graph is the longest single task plus
+      integration.
+
+      Patterns:
+
+        Independent (best parallelism):
+          A ─┐
+          B ─┼─→ Integration
+          C ─┘
+
+        Diamond (one upstream, parallel midstream, one integration):
+                  ┌→ B ─┐
+          A ──────┤     ├──→ D
+                  └→ C ─┘
+
+        Sequential chain (avoid when possible):
+          A → B → C → D
+    rationale: |
+      Deep chains accumulate latency and create single points of failure
+      (one task stalls and everything behind it stalls too). Wide graphs
+      isolate failure: one task's stall does not block independent peers.
+      The diamond pattern is the standard for full-stack features (one
+      backend schema change, then parallel frontend + consumer consumption).
+    checklist:
+      - "Has the orchestrator drawn the dependency graph before dispatching?"
+      - "Is the critical path explicitly identified (longest chain)?"
+      - "Are unnecessary blockedBy edges removed (only true dependencies remain)?"
+      - "Are parallel-eligible tasks actually dispatched in parallel?"
+    anti_patterns:
+      - "Sequential dispatch when tasks are independent — wastes wall-clock time"
+      - "Deep chains where each task adds a small dependency — accumulates latency and stall risk"
+      - "Circular dependencies (A blocks B blocks A) — deadlock"
+    source: "wshobson/agent-teams/task-coordination-strategies"
+
+  - rule_id: AOP9
+    name: "Dispatch prompts must include acceptance criteria, not just objectives"
+    description: |
+      Every dispatch prompt to an agent must include:
+      1. **Objective** — one sentence describing the goal
+      2. **Owned files** — explicit list of files the agent may modify
+      3. **Constraints** — library versions, conventions, fitness functions to respect
+      4. **Acceptance criteria** — observable conditions for "done"
+      5. **Out of scope** — explicit list of work the agent should NOT do
+
+      Without acceptance criteria, agents over- or under-deliver. Without
+      out-of-scope, agents drift into adjacent work that the orchestrator
+      did not authorize. Both produce work the orchestrator has to
+      partially revert.
+    rationale: |
+      The orchestrator and the agent are working from a shared contract.
+      The dispatch prompt IS that contract. Vague prompts produce work
+      that may be technically valid but misaligned with the broader plan.
+      Explicit acceptance criteria let the orchestrator verify completion
+      objectively (run a test, observe a behavior, check a file) rather
+      than reading the agent's prose summary and trusting it.
+    checklist:
+      - "Does every dispatch prompt include all 5 sections (objective, owned files, constraints, acceptance criteria, out of scope)?"
+      - "Are acceptance criteria observable (a test passes, a file exists, a behavior occurs) — not subjective?"
+      - "Is 'out of scope' specific enough to prevent the most likely scope-drift?"
+    anti_patterns:
+      - "Dispatch prompt that says 'implement the feature' with no constraint or scope"
+      - "Acceptance criteria that say 'good code' or 'tests pass' without specifying which tests"
+      - "Missing 'out of scope' — agent helpfully refactors adjacent code that was working"
+    source: "wshobson/agent-teams/task-coordination-strategies"
+
+  - rule_id: AOP10
+    name: "Workload monitoring — detect imbalance and idle agents"
+    description: |
+      During multi-round orchestration, the orchestrator must monitor
+      agent progress and detect imbalance signals:
+
+      | Signal                            | Action                          |
+      | --------------------------------- | ------------------------------- |
+      | One agent stuck on one task       | Check in; offer help; reassign  |
+      | All agents blocked                | Resolve the blocker first       |
+      | One agent has 3x others' work     | Split task or reassign          |
+      | Agent reports BLOCKED             | Resolve blocker before more     |
+      | Agent finishes early, others busy | Assign next task or stand down  |
+
+      In a centralized-orchestrator model, "monitoring" means reading
+      each dispatched agent's structured handoff and adjusting the next
+      round of dispatches accordingly. The orchestrator IS the visibility.
+    rationale: |
+      Imbalance compounds: one agent stuck on a hard task while others
+      idle wastes the parallelism investment. The orchestrator's job is
+      not just to dispatch — it is to observe, rebalance, and unblock.
+      Without active workload management, multi-agent dispatch degrades
+      to "fastest agent wins, slowest agent stalls everything."
+    checklist:
+      - "Does the orchestrator read every agent's structured handoff before deciding the next round?"
+      - "Are BLOCKED signals resolved before dispatching dependent work?"
+      - "When one agent is stuck on a hypothesis (3 strikes), is the work reassigned or scope cut?"
+      - "Are idle agents either given new work or formally stood down (no implicit holding pattern)?"
+    anti_patterns:
+      - "Dispatching the next round without reading prior round's handoffs"
+      - "Ignoring BLOCKED signals and dispatching downstream work that depends on the blocked output"
+      - "Letting stuck investigations consume token budget while ignoring the 3-strike rule"
+    source: "wshobson/agent-teams/task-coordination-strategies"
+
+# ─────────────────────────────────────────────
+# Maintenance
+# ─────────────────────────────────────────────
+
+maintenance:
+  add_when: >
+    A new orchestration pattern emerges from sdlc-execute or sdlc-plan
+    work that proves repeatedly useful or repeatedly avoided. Add as
+    AOP-N with rationale and checklist.
+  boundary_rule: >
+    Specific agent-to-knowledge-file mappings live in
+    [sdlc-root]/knowledge/agent-context-map.yaml, not here. This file
+    captures the orchestration patterns; the map captures the wiring.

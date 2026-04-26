@@ -34,6 +34,33 @@ Each entry contains:
 
 ---
 
+## 2026-04-25: Upstream knowledge intake from neuroloom commit add42269
+
+**Origin:** Bulk ingestion of ~290 rules from wshobson/agents third-party skills triage. Identified general-purpose knowledge worth pulling into the base framework.
+
+**What happened:** Reviewed all 62 files changed in the neuroloom ingestion commit and classified each as GENERAL, SEMI-GENERAL, or PROJECT-SPECIFIC. Pulled 7 new knowledge files, 1 new discipline, and merged 3 significantly expanded existing files into cc-sdlc base. All neuroloom-specific references stripped.
+
+**Changes made:**
+
+1. **`knowledge/coding/shell-patterns.yaml`** — NEW (526 lines). Defensive Bash patterns: strict mode, error trapping, variable safety, idempotency, ShellCheck config. Wired to backend-developer, build-engineer.
+2. **`knowledge/architecture/agent-orchestration-patterns.yaml`** — NEW (400 lines). 10 rules (AOP1–AOP10) for multi-agent task decomposition, group sizing, dependency graphs, dispatch prompts. Wired to architect.
+3. **`knowledge/dx/skill-quality-rubrics.yaml`** — NEW (352 lines). 10-dimension skill evaluation framework (SQR-01–SQR-10): triggering accuracy, orchestration fitness, scope calibration, anti-pattern flags. Wired to dx-engineer.
+4. **`knowledge/dx/developer-documentation-patterns.yaml`** — NEW (286 lines). Doc architecture, getting-started guides, code example validation, internal doc authoring standards (DDP-01–04), changelog discipline (DDP-05–08). Wired to dx-engineer.
+5. **`knowledge/business-analysis/data-storytelling-rules.yaml`** — NEW (225 lines). Insight-first narrative structure (DS1–DS7), three-pillar mandate, headline formula, progressive reveal, uncertainty acknowledgment. Wired to business-analyst.
+6. **`knowledge/business-analysis/gdpr-patterns.yaml`** — NEW (260 lines). GDPR compliance patterns (G1–G7): legal basis, data subject rights, consent management, retention, breach notification. Wired to business-analyst, security-engineer.
+7. **`knowledge/design/interaction-patterns.yaml`** — NEW (773 lines, 33 rules IA1–IA33). States, micro-interactions, easing, gestures, scroll behavior, accessibility (focus management, reduced motion, roving tabindex). Wired to ui-ux-designer, frontend-developer.
+8. **`knowledge/dx/README.md`** — NEW. DX knowledge store index with file catalog and ID sequences.
+9. **`disciplines/dx.md`** — NEW. DX discipline parking lot with deferred items (changelog tooling, Elo ranking, static anti-pattern checks).
+10. **`knowledge/coding/code-quality-principles.yaml`** — EXPANDED (101→~500 lines). Added: async blocking I/O, bare exception handling, double retry anti-pattern, batch partial failure, Protocol structural typing, explicit __all__, asynccontextmanager acquired flag, ExitStack, git force-with-lease, git worktrees.
+11. **`knowledge/testing/advanced-test-patterns.yaml`** — EXPANDED (373→~930 lines). Added: Playwright CI configuration, custom test fixtures, waiting strategies, Page Object vs Screenplay patterns, test factory patterns, accessibility testing, visual regression.
+12. **`knowledge/architecture/observability-patterns.yaml`** — EXPANDED (193→~550 lines). Added: RED/USE signal frameworks, SLI/SLO/error budget framework, multi-window burn-rate alerting, structured logging with structlog, correlation ID propagation, metric cardinality discipline, dashboard design principles.
+13. **`skeleton/manifest.json`** — Added dx/ directory, all 7 new knowledge files, dx discipline to source_files.
+14. **`knowledge/agent-context-map.yaml`** — Wired new files to 7 roles: architect, ui-ux-designer, frontend-developer, backend-developer, build-engineer, security-engineer, business-analyst, dx-engineer (new).
+
+**Rationale:** The neuroloom commit represented a curated ingestion of ~290 rules from 151 third-party skill definitions. Many of the resulting knowledge files are domain-general (shell scripting, GDPR compliance, interaction design, agent orchestration) and belong in the base framework rather than being locked in one downstream project. Pulling them upstream ensures all cc-sdlc adopters benefit.
+
+---
+
 ## 2026-04-24: Persistent review pattern log with recurrence detection
 
 **Origin:** Idea brief "Persist Review Findings for Cross-Review Pattern Detection" — review-commit Step 6 surfaced patterns in conversation only; no durable evidence base existed for cross-review recurrence detection.

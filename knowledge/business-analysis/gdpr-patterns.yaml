@@ -1,0 +1,233 @@
+# GDPR Compliance Patterns
+# Privacy-by-design, consent management, data subject rights, retention, and breach notification.
+# Extracted from wshobson/agents hr-legal-compliance plugin (gdpr-data-handling skill).
+# Last updated: 2026-04-25
+
+id: gdpr-patterns
+name: "GDPR Compliance Patterns"
+description: >
+  Patterns for GDPR-compliant data handling: legal basis documentation, consent management,
+  data subject rights (access, erasure, portability, rectification), privacy-by-design data
+  minimization, data retention schedules, and 72-hour breach notification. Applies to any
+  system processing EU personal data.
+pattern: entries
+category: business-analysis
+spec_relevant: false
+project_applicability:
+  relevant_when: "Building features that process user data where EU customers may be involved"
+  action_if_irrelevant: keep
+last_updated: 2026-04-25
+
+# -----------------------------------------
+# G1: Legal Basis Documentation
+# -----------------------------------------
+
+legal_basis_documentation:
+  rule_id: G1
+  name: "Document legal basis for every processing activity"
+  rule: >
+    Every data processing activity must have a documented legal basis under GDPR
+    Article 6. The six lawful bases are: (1) Consent — freely given, specific,
+    informed, and unambiguous; (2) Contract — processing necessary to perform a
+    contract with the data subject; (3) Legal Obligation — required by law;
+    (4) Vital Interests — protecting life; (5) Public Interest — official functions;
+    (6) Legitimate Interests — balanced against data subject rights (requires a
+    documented Legitimate Interest Assessment, LIA). For SaaS products: core
+    product functionality is likely covered by Contract (the SaaS agreement).
+    Behavioral analytics and telemetry capture require either Consent or a
+    documented LIA. Processing Records of Activities (Article 30) must be
+    maintained documenting each processing activity, its purpose, legal basis,
+    data types, and retention period.
+  rationale: >
+    Processing without a documented legal basis is unlawful under GDPR regardless
+    of intent. Regulators and data subjects can request to see the legal basis at
+    any time. A "we assumed it was fine" defense does not hold. Documenting the
+    basis also forces the product team to reason explicitly about what data is
+    collected and why — which often reveals data being collected without a clear
+    purpose, a sign of over-collection.
+  checklist:
+    - "Is there a documented legal basis for each data processing activity?"
+    - "Are Records of Processing Activities (Article 30) maintained?"
+    - "Does behavioral analytics / telemetry capture have Consent or a documented LIA?"
+  source: "wshobson/agents:hr-legal-compliance/skills/gdpr-data-handling"
+
+# -----------------------------------------
+# G2: Data Subject Rights Response Deadlines
+# -----------------------------------------
+
+data_subject_rights:
+  rule_id: G2
+  name: "Respond to all data subject requests within 30 days"
+  rule: >
+    Organizations must respond to all data subject rights requests within 30 calendar
+    days. The six rights that must be fulfilled: (1) Access (Art. 15) — provide a
+    copy of all personal data held; (2) Rectification (Art. 16) — correct inaccurate
+    data; (3) Erasure (Art. 17) — delete personal data when no longer necessary
+    (the "right to be forgotten"); (4) Restriction (Art. 18) — limit processing
+    while a dispute is resolved; (5) Portability (Art. 20) — provide data in a
+    machine-readable format; (6) Object (Art. 21) — object to processing based on
+    legitimate interests. The 30-day deadline can be extended once by 2 additional
+    months for complex requests, but the data subject must be notified of the extension
+    within the initial 30-day window.
+  rationale: >
+    Missing the 30-day deadline is a GDPR violation independent of the underlying
+    request. Regulators have issued fines specifically for late responses, even when
+    the data was ultimately provided. Building the rights fulfillment workflow into
+    the product (not as a manual process) is the only reliable path — manual workflows
+    miss deadlines under volume.
+  checklist:
+    - "Is there a process to receive and track data subject requests with deadlines?"
+    - "Can the system produce a complete data export for portability requests?"
+    - "Does erasure delete all associated data (primary records, derived data, embeddings, logs)?"
+    - "Is there a notification mechanism for 30-day extension when needed?"
+  source: "wshobson/agents:hr-legal-compliance/skills/gdpr-data-handling"
+
+# -----------------------------------------
+# G3: Consent Management Requirements
+# -----------------------------------------
+
+consent_management:
+  rule_id: G3
+  name: "Consent must be granular, recorded, and withdrawable"
+  rule: >
+    GDPR consent must be: freely given (not bundled with terms of service), specific
+    (separate consent for each distinct purpose), informed (clear explanation of what
+    data is collected and why), and unambiguous (opt-in only — pre-checked boxes are
+    prohibited). Consent records must include: user ID, purpose, timestamp, source
+    (UI element), consent text version, and IP address. Consent must be as easy to
+    withdraw as it was to give. Necessary processing (contract performance) does not
+    require consent — only additional purposes (analytics, marketing, model training)
+    require it. Do not combine consent for necessary and optional processing in a
+    single checkbox.
+  rationale: >
+    The most common GDPR consent violations are: pre-checked boxes (explicit prohibition),
+    bundled consent (agreeing to everything at once), and no withdrawal mechanism.
+    Each violation carries independent risk. The consent record is also the legal
+    proof — without a timestamped record tied to the specific consent text version,
+    the organization cannot demonstrate compliance.
+  checklist:
+    - "Are consent checkboxes opt-in (never pre-checked)?"
+    - "Is consent granular — separate for each processing purpose?"
+    - "Is each consent recorded with timestamp, version, and user identifier?"
+    - "Is there a visible consent withdrawal mechanism?"
+  source: "wshobson/agents:hr-legal-compliance/skills/gdpr-data-handling"
+
+# -----------------------------------------
+# G4: Data Retention Schedules
+# -----------------------------------------
+
+data_retention_schedules:
+  rule_id: G4
+  name: "Define and enforce retention periods for every data category"
+  rule: >
+    Every data category must have a defined retention period tied to its legal basis.
+    Reference retention periods: User accounts: 3 years after last activity (Contract).
+    Transaction records: 7 years for tax compliance (Legal Obligation). Marketing
+    consent records: 2 years (Consent). Support tickets: 2 years (Legitimate Interest).
+    Analytics / behavioral data: 1 year, with anonymization option (Consent). Data
+    retained beyond its retention period without a documented exception is a GDPR
+    violation. Retention enforcement must be automated — manual deletion schedules
+    fail under volume. Anonymization (replacing identifying fields with pseudonymous
+    identifiers) is an acceptable alternative to deletion for aggregated analytics data.
+  rationale: >
+    "We keep data indefinitely" is not a defensible retention policy under GDPR.
+    Data retained without purpose is excess data, and excess data is a liability —
+    it increases the blast radius of a breach. Defined retention periods also force
+    product decisions about data lifecycle management.
+  checklist:
+    - "Does every data category have a defined retention period with legal basis?"
+    - "Is retention enforcement automated (not manual)?"
+    - "Is there a documented policy for what happens to user data on account deletion or subscription cancellation?"
+  source: "wshobson/agents:hr-legal-compliance/skills/gdpr-data-handling"
+
+# -----------------------------------------
+# G5: Privacy by Design — Data Minimization
+# -----------------------------------------
+
+privacy_by_design:
+  rule_id: G5
+  name: "Collect only data necessary for stated purpose"
+  rule: >
+    Privacy by design requires: (1) Data minimization — collect only the fields
+    required for each specific purpose (not "we might use it later"); (2) Purpose
+    limitation — data collected for purpose A cannot be repurposed for purpose B
+    without a new legal basis; (3) Storage limitation — delete when no longer
+    needed for the stated purpose; (4) PII separation — personally identifiable
+    information should be encrypted separately from behavioral or analytical data,
+    with different access controls. For analytics: pseudonymize by default —
+    behavioral data should not be directly linkable to user identity in the analytics
+    layer. Generalize rather than collect precise data when precision isn't needed
+    (IP address → country code for geo-analytics).
+  rationale: >
+    Data minimization is simultaneously a legal requirement and a risk reduction
+    strategy. Every data point you don't collect is one you can't lose in a breach,
+    one you don't have to protect, and one you can't be fined for mishandling.
+    Purpose limitation prevents scope creep from eroding user trust even when
+    technically lawful.
+  checklist:
+    - "Is each collected field justified by a specific, documented processing purpose?"
+    - "Is PII stored separately with independent encryption?"
+    - "Is behavioral/analytics data pseudonymized at the point of collection?"
+    - "Are precise data points generalized where precision is not required for the purpose?"
+  source: "wshobson/agents:hr-legal-compliance/skills/gdpr-data-handling"
+
+# -----------------------------------------
+# G6: Breach Notification Timeline
+# -----------------------------------------
+
+breach_notification:
+  rule_id: G6
+  name: "Notify supervisory authority within 72 hours of breach discovery"
+  rule: >
+    On discovering a personal data breach: (1) Notify the relevant supervisory
+    authority within 72 hours of discovery — not 72 hours after the breach occurred,
+    but 72 hours after it was discovered. If the 72-hour deadline cannot be met,
+    provide a partial notification and explain the delay. (2) For high-severity
+    or sensitive-data breaches, also notify affected individuals "without undue
+    delay." (3) Document all breaches regardless of severity, including: breach ID,
+    discovery timestamp, data types affected, number of individuals affected, likely
+    causes, and remediation steps taken. Low-severity breaches that are unlikely to
+    result in risk to individuals must still be documented internally but do not
+    require authority notification.
+  rationale: >
+    The 72-hour rule is one of the most commonly violated GDPR requirements because
+    organizations spend the first 72 hours investigating rather than notifying. GDPR
+    explicitly accepts incomplete notifications — a partial notification within 72
+    hours followed by supplementary information is compliant. Waiting until the
+    investigation is complete before notifying is not.
+  checklist:
+    - "Is there a breach response procedure with a 72-hour notification clock?"
+    - "Is the supervisory authority notification process documented and tested?"
+    - "Are all data breaches (including low-severity) logged internally?"
+    - "Does the breach log capture: discovery time, data types, affected individuals, remediation?"
+  source: "wshobson/agents:hr-legal-compliance/skills/gdpr-data-handling"
+
+# -----------------------------------------
+# G7: GDPR Compliance Checklist for Product Launches
+# -----------------------------------------
+
+gdpr_launch_checklist:
+  rule_id: G7
+  name: "GDPR compliance checklist before launching EU-facing features"
+  rule: >
+    Before launching any feature that processes EU personal data, verify: Legal basis
+    — documented legal basis for each processing activity. Transparency — privacy
+    policy updated, processing purposes stated, retention periods disclosed. Data
+    subject rights — access, erasure, rectification, and portability workflows
+    implemented and tested with a real request. Security — encryption at rest and in
+    transit (TLS minimum), access controls in place, audit logging enabled for
+    data access and modifications. Breach response — breach detection mechanism
+    exists, 72-hour notification process documented. Documentation — Records of
+    Processing Activities (Article 30) updated for new feature. Consent — if
+    consent is the legal basis, consent mechanism meets G3 requirements.
+  rationale: >
+    GDPR compliance is not a one-time event — it must be built into the launch
+    checklist for every feature that adds new data processing. A feature that ships
+    without a documented legal basis or without a working erasure workflow is
+    immediately non-compliant on launch day.
+  checklist:
+    - "Is legal basis documented for all new processing in this feature?"
+    - "Is the privacy policy updated to reflect new processing?"
+    - "Are data subject rights workflows tested end-to-end for this feature's data?"
+    - "Is Article 30 Records of Processing Activities updated?"
+  source: "wshobson/agents:hr-legal-compliance/skills/gdpr-data-handling"

@@ -1,0 +1,333 @@
+# Developer Documentation Patterns
+# Consumed by: dx-engineer, technical writers
+# Covers: Doc architecture, code example validation, API reference, internal doc standards, changelog discipline
+# Sources: documentation-engineer, api-documenter, dx-optimizer, documentation-standards (wshobson)
+# Last updated: 2026-04-25
+
+id: developer-documentation-patterns
+name: "Developer Documentation Patterns"
+description: >
+  Patterns for developer-facing documentation: progressive disclosure architecture,
+  getting-started flow design, code example validation, API reference structure,
+  internal doc authoring standards, and changelog discipline.
+pattern: entries
+category: dx
+spec_relevant: false
+project_applicability:
+  relevant_when: "Writing SDK docs, API reference, getting-started guides, or internal technical docs"
+  action_if_irrelevant: keep
+last_updated: 2026-04-25
+
+# ─────────────────────────────────────────────────────────────────────────────
+# DOCUMENTATION ARCHITECTURE
+# ─────────────────────────────────────────────────────────────────────────────
+
+documentation_architecture:
+  principle: "Progressive disclosure — index → guide → reference"
+  layers:
+    - name: "Landing / README"
+      purpose: "30-second evaluation — what is this, one code example, install command"
+      content: "One-paragraph description, install command, 5-line quickstart, link to docs"
+    - name: "Getting Started guide"
+      purpose: "10-minute hands-on — install, auth, first operation, first query"
+      content: "Step-by-step tutorial with copy-paste code blocks. Every step produces visible output."
+    - name: "Concept guides"
+      purpose: "Understanding — how the system works, core abstractions, data model"
+      content: "Explanatory prose with diagrams and code examples. Not reference — conceptual."
+    - name: "API Reference"
+      purpose: "Lookup — every method, every parameter, every response type"
+      content: "Generated from OpenAPI spec or code annotations. Auto-updated on API changes."
+    - name: "Cookbook / Examples"
+      purpose: "Solve specific problems — task-oriented recipes for common use cases"
+      content: "Task-oriented snippets. Each one is self-contained and runnable."
+
+getting_started_guide:
+  structure:
+    - step: "Install"
+      content: "Package manager install command (pip, npm, etc.)"
+      validation: "Command must work in a fresh environment"
+    - step: "Authenticate"
+      content: "Get credentials, set as env var or pass to constructor"
+      validation: "Must show how to verify auth works"
+    - step: "First write operation"
+      content: "Create one resource via the API"
+      validation: "Must return the created resource with its ID"
+    - step: "First read operation"
+      content: "Query or search for the resource just created"
+      validation: "Must return the resource from the previous step"
+    - step: "Next steps"
+      content: "Links to advanced features and concept guides"
+      validation: "Links must resolve"
+  anti_patterns:
+    - "Don't require Docker or local infrastructure for the quickstart — use the managed cloud"
+    - "Don't start with configuration — start with a working example"
+    - "Don't explain architecture before showing results"
+    - "Don't require more than one file to get started"
+
+code_examples:
+  rules:
+    - "Every example must be self-contained — imports, auth, and the operation in one block"
+    - "Every example must produce visible output (print/console.log the result)"
+    - "Use realistic data, not 'foo'/'bar' — use domain-relevant examples"
+    - "Show examples in the project's primary languages"
+    - "Include error handling in examples where the error path is instructive"
+  validation:
+    principle: "Code examples are tests. If they break, the docs are wrong."
+    approaches:
+      - name: "Doctest-style"
+        description: "Embed examples in SDK docstrings, run as part of test suite"
+      - name: "Snippet extraction"
+        description: "Write examples as actual test files, extract into docs at build time"
+      - name: "CI validation"
+        description: "Run all published code examples against a test API instance in CI"
+    recommendation: >
+      Start with snippet extraction — examples live in examples/ as runnable files,
+      docs build process includes them. This ensures examples are always valid code.
+
+api_reference:
+  generation:
+    source: "OpenAPI spec or framework-generated schema"
+    enrichment: "Enrich via route docstrings and model field descriptions"
+    output: "Auto-generated reference pages"
+  structure_per_endpoint:
+    - "HTTP method + path"
+    - "One-line summary"
+    - "Description paragraph"
+    - "Authentication required (which methods)"
+    - "Request parameters (path, query, header) with types and descriptions"
+    - "Request body schema with example"
+    - "Response schema with example"
+    - "Error responses with examples"
+    - "Code examples in primary languages"
+
+writing_quality:
+  principle: "Task-based writing — frame docs around what the developer wants to accomplish, not what the product can do"
+  rules:
+    - "Lead with the task: 'Create a resource' not 'The POST /resources endpoint'"
+    - "Every page answers one question: 'How do I X?'"
+    - "Use second person ('you') not third person ('the user')"
+    - "Active voice always — 'Call client.resources.search()' not 'The search method can be called'"
+    - "One concept per paragraph. If a paragraph explains two things, split it."
+    - "Avoid jargon without definition — if you use a technical term, link to an explanation"
+  anti_patterns:
+    - "Don't describe features — describe tasks. 'Supports hybrid search' → 'Search by keyword and meaning'"
+    - "Don't front-load architecture — developers want results before understanding internals"
+    - "Don't use passive voice in instructions — 'The API key should be set' → 'Set your API key'"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# INTERNAL DOC AUTHORING STANDARDS (rules DDP-01 through DDP-04)
+# Source: documentation-standards/skills/hads/SKILL.md (HADS 1.0.0, 2026)
+# Application: SKILL.md files, knowledge stores, ADRs, runbooks —
+# not public product docs (which use framework-specific conventions).
+# ─────────────────────────────────────────────────────────────────────────────
+
+internal_doc_authoring:
+
+  rules:
+
+    - rule_id: DDP-01
+      name: ai-manifest-before-content
+      description: |
+        Every internal document that an AI agent will read must begin with an
+        explicit AI manifest section — a brief block placed before the first
+        content section — that tells the reader which blocks to read and which
+        to skip.
+      rationale: |
+        An AI reading a document without a manifest must parse the entire file
+        to understand relevance. An explicit manifest acts like a table of
+        contents for attention: it lets even small models know what is
+        authoritative, what is contextual, and what is unverified — reducing
+        context waste and preventing hallucination from partially-read files.
+      checklist:
+        - "Does the document have an 'AI READING INSTRUCTION' or equivalent manifest section?"
+        - "Does the manifest appear before the first content section (H2)?"
+        - "Does the manifest specify which block types to read for authoritative facts?"
+        - "Does the manifest appear within the first 30 lines?"
+      anti_patterns:
+        - "Assuming the reader will infer what is authoritative from prose structure"
+        - "Placing the manifest at the end of the document"
+      scope: "SKILL.md files, ADRs, runbooks, knowledge store entries — not public docs"
+      source: "documentation-standards/skills/hads/SKILL.md"
+      spec_relevant: false
+
+    - rule_id: DDP-02
+      name: semantic-block-type-discipline
+      description: |
+        Internal docs should separate content into semantically distinct block
+        types: authoritative facts (terse, bullet/table/code), contextual
+        narrative (history, rationale, examples), and known failures with fixes.
+        The target is: an agent reading only the authoritative-fact blocks gets
+        a complete and correct model of the subject.
+      rationale: |
+        Mixed prose — facts interleaved with history, rationale, and caveats —
+        forces the reader to parse everything to find ground truth. Semantic
+        separation lets agents skip non-essential content on a tight token
+        budget. It also imposes a useful authoring discipline: if you can't
+        express a fact in bullet/table/code under a fact-type block, it's
+        probably not a fact — it's an opinion or a recommendation.
+      checklist:
+        - "Are authoritative facts in terse bullet lists, tables, or code blocks?"
+        - "Is narrative context (history, rationale, analogies) clearly separated from facts?"
+        - "Can an agent read only the fact blocks and still get a correct model of the subject?"
+      anti_patterns:
+        - "Mixing rationale and fact in the same paragraph — forces agents to parse prose for ground truth"
+        - "Prose descriptions of things that should be tables (parameter lists, type enumerations)"
+      scope: "SKILL.md files, ADRs, runbooks — not public product docs"
+      source: "documentation-standards/skills/hads/SKILL.md"
+      spec_relevant: false
+
+    - rule_id: DDP-03
+      name: bug-blocks-for-hard-won-gotchas
+      description: |
+        Every verified failure mode with a confirmed fix must be captured in a
+        dedicated 'known failure' block — not buried in prose. Each block must
+        contain at minimum: the symptom (what the reader observes), the cause
+        (why it happens), and the fix (exactly what to do). Optionally: affected
+        versions and a workaround.
+      rationale: |
+        Gotchas discovered through painful debugging are the most valuable
+        content in any technical document. Prose buries them. A dedicated block
+        type makes them scannable and ensures an agent processing the document
+        always reads them before generating code or configuration.
+      checklist:
+        - "Are known failure modes in a dedicated block, not scattered through prose?"
+        - "Does each failure block include: symptom, cause, fix?"
+        - "Are failure blocks positioned near the relevant instructions, not only at the end?"
+      anti_patterns:
+        - "Burying gotchas in a 'Notes' section at the bottom of the doc"
+        - "Describing failure modes without providing the fix"
+      scope: "SKILL.md files, ADRs, runbooks"
+      source: "documentation-standards/skills/hads/SKILL.md"
+      spec_relevant: false
+
+    - rule_id: DDP-04
+      name: spec-blocks-prefer-tables-and-code-over-prose
+      description: |
+        Authoritative fact content must use the most information-dense format
+        available: tables for multi-field facts, code blocks for syntax and
+        examples, bullet lists for enumerated constraints. Prose is permitted
+        only when the fact requires sequential logic that a list or table cannot
+        capture. Target: no more than 2 sentences of prose per authoritative
+        fact block.
+      rationale: |
+        Tables, code blocks, and bullet lists are immediately parseable as
+        structured data. A parameter documented as "title (string, required):
+        The title" forces a parser to extract structure from prose. A
+        table row with [name | type | required | description] is already
+        structured. Dense formats compress the same information into fewer tokens.
+      checklist:
+        - "Are multi-field facts in tables rather than paragraph descriptions?"
+        - "Are syntax and examples in code blocks with language tags?"
+        - "Is prose in fact sections kept to 2 sentences maximum?"
+      scope: "SKILL.md files, internal technical reference docs"
+      source: "documentation-standards/skills/hads/SKILL.md"
+      spec_relevant: false
+
+# ─────────────────────────────────────────────────────────────────────────────
+# CHANGELOG DISCIPLINE (rules DDP-05 through DDP-08)
+# Source: documentation-generation/skills/changelog-automation/SKILL.md (2026)
+# ─────────────────────────────────────────────────────────────────────────────
+
+changelog_discipline:
+
+  rules:
+
+    - rule_id: DDP-05
+      name: conventional-commit-type-to-changelog-section-mapping
+      description: |
+        Every commit type maps to exactly one Keep-a-Changelog section (or is
+        excluded from the public changelog). Changelog automation must use this
+        mapping consistently.
+      rationale: |
+        Inconsistent mapping means "fix" commits appear as "Changed" in one
+        release and "Fixed" in the next — readers lose the signal. The mapping
+        is a contract between authors and readers.
+      mapping:
+        feat: "Added"
+        fix: "Fixed"
+        perf: "Changed"
+        refactor: "Changed (hidden from public changelog unless behavior-visible)"
+        revert: "Removed"
+        docs: "excluded (unless the doc change is the feature)"
+        style: "excluded"
+        test: "excluded"
+        chore: "excluded"
+        ci: "excluded"
+        build: "excluded"
+        "feat! or BREAKING CHANGE footer": "Changed (with migration guide link required)"
+      checklist:
+        - "Does every changelog entry map to Added / Changed / Deprecated / Removed / Fixed / Security?"
+        - "Are refactor/style/test/chore/ci/build entries excluded from the user-facing changelog?"
+        - "Do breaking changes (feat!) appear under Changed with a migration guide link?"
+      source: "documentation-generation/skills/changelog-automation/SKILL.md"
+      spec_relevant: false
+
+    - rule_id: DDP-06
+      name: unreleased-section-always-present
+      description: |
+        Every SDK CHANGELOG.md must have an [Unreleased] section at the top.
+        Changes are accumulated there during development and moved to a versioned
+        section at release time. The [Unreleased] section must include a diff URL
+        comparing the latest tag to HEAD.
+      rationale: |
+        Developers evaluating whether to upgrade look at the [Unreleased] section
+        to understand what's coming. Without it, they have no visibility into
+        in-progress changes. The diff URL makes it one click to see every commit
+        since the last release.
+      format: |
+        ## [Unreleased]
+
+        ### Added
+        - (new items go here)
+
+        [Unreleased]: https://github.com/org/repo/compare/v{latest}...HEAD
+      checklist:
+        - "Does CHANGELOG.md have an [Unreleased] section at the top?"
+        - "Does the [Unreleased] section have a diff URL pointing to HEAD?"
+        - "Is the diff URL updated when a new version is tagged?"
+      source: "documentation-generation/skills/changelog-automation/SKILL.md"
+      spec_relevant: false
+
+    - rule_id: DDP-07
+      name: one-logical-change-per-commit
+      description: |
+        Each commit must contain exactly one logical change. Do not mix feature
+        additions, bug fixes, and refactors in a single commit even if they
+        touch the same file. The test: the commit message must fit in one
+        Conventional Commits subject line without "and".
+      rationale: |
+        Mixed commits produce misleading changelogs. A commit tagged "feat" that
+        also fixes a bug and refactors a module makes it impossible to correctly
+        attribute changelog entries. Worse, if the feat needs to be reverted,
+        the bug fix and refactor revert with it. Single-purpose commits are also
+        easier to bisect when debugging.
+      checklist:
+        - "Does the commit subject fit on one line without 'and'?"
+        - "Does the commit type accurately describe all the changes in the commit?"
+        - "If reverting, does only the intended change revert?"
+      anti_patterns:
+        - "'feat: add search and fix auth token expiry' — two changes, two commits"
+        - "'chore: misc fixes' — no conventional type, no specificity"
+      source: "documentation-generation/skills/changelog-automation/SKILL.md"
+      spec_relevant: false
+
+    - rule_id: DDP-08
+      name: breaking-change-footer-and-migration-guide
+      description: |
+        Breaking changes must be declared in the commit using either a `!` after
+        the type/scope (e.g., `feat(sdk)!:`) or a `BREAKING CHANGE:` footer in
+        the commit body. Every commit declaring a breaking change must link to
+        a migration guide. The changelog entry must include the migration guide
+        URL in the Changed section.
+      rationale: |
+        A breaking change without a migration guide is a breaking change
+        delivered with a shrug. Consumers who upgrade and find their code broken
+        need an immediate path to fix it — not a hunt through commit messages.
+        The `!` convention in Conventional Commits automatically triggers MAJOR
+        version bump in automated tooling, ensuring SemVer is correct.
+      checklist:
+        - "Does the commit use `type!:` or a BREAKING CHANGE footer?"
+        - "Does the changelog entry for the breaking change link to a migration guide?"
+        - "Was the breaking change deprecation-warned in the prior minor version?"
+      source: "documentation-generation/skills/changelog-automation/SKILL.md"
+      spec_relevant: false

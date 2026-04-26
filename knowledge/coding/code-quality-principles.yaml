@@ -99,3 +99,396 @@ validation_gaps:
     When test data design reveals a validation gap, capture it as a finding in the
     test spec and surface it during plan review. The architect decides whether to
     fix (add validation) or accept (document the gap as intentional).
+
+# ─────────────────────────────────────────────
+# Shared Constants for Backend-Frontend Enums
+# ─────────────────────────────────────────────
+
+shared_enum_constants:
+  observation: >
+    Frontend components maintain private copies of type-to-color maps (TypeBadge,
+    GraphFilters, TypeDistribution) that drift when the backend enum changes. Any
+    "backend enum → frontend color" mapping should live in one shared constant file,
+    not be duplicated per-component.
+
+  pattern: >
+    When a backend StrEnum drives frontend display (colors, labels, icons), create a
+    single shared constant file that maps enum values to display properties. Components
+    import from the shared file, never maintain their own copies.
+
+  source: "D89 planning — coding discipline finding. Three components drifted during taxonomy refinement."
+
+# ─────────────────────────────────────────────
+# Python: Blocking I/O in Async Context
+# ─────────────────────────────────────────────
+
+async_blocking_io:
+  rule: >
+    Never call synchronous I/O inside an async function. A single blocking call
+    (time.sleep, requests.get, open() without aiofiles, psycopg2 queries) seizes
+    the entire event loop — all other coroutines freeze until the call returns.
+    This is the async equivalent of a traffic jam: one slow truck blocking every
+    lane of a motorway.
+
+  rationale: >
+    Python's asyncio event loop is single-threaded. When you await, you yield
+    control so other coroutines can run. A sync call does not yield — it holds
+    the thread until done. On a FastAPI server handling 100 concurrent requests,
+    one requests.get(timeout=30) inside an async handler will stall all 99
+    others for up to 30 seconds.
+
+  checklist:
+    - "Does any async function call time.sleep() instead of asyncio.sleep()?"
+    - "Does any async function use requests/urllib instead of httpx.AsyncClient?"
+    - "Does any async function open files with built-in open() instead of aiofiles?"
+    - "Does any async function use psycopg2 instead of asyncpg or SQLAlchemy async?"
+    - "If a truly sync-only library is used, is it wrapped in loop.run_in_executor()?"
+
+  detection: >
+    grep -rn "time\.sleep\|requests\.get\|requests\.post\|import psycopg2" in async
+    function bodies. LSP incomingCalls to find async callers of sync functions.
+
+  fix: >
+    Replace with async equivalents: asyncio.sleep, httpx.AsyncClient,
+    aiofiles.open, SQLAlchemy async engine. If no async alternative exists,
+    use `await asyncio.get_event_loop().run_in_executor(None, sync_fn)`.
+
+  source: "python-anti-patterns (wshobson), python-resource-management (wshobson)"
+
+# ─────────────────────────────────────────────
+# Python: Bare Exception Handling
+# ─────────────────────────────────────────────
+
+bare_exception_handling:
+  rule: >
+    Never catch `Exception` (or `BaseException`) and silently pass. Bare except
+    clauses are bug incubators — they swallow every failure including programming
+    errors, making the system appear healthy while bugs accumulate silently.
+
+  rationale: >
+    `except Exception: pass` is the code equivalent of disconnecting a smoke alarm.
+    The fire still happens; you just no longer know about it. In async services,
+    silent failures are especially dangerous because the caller receives no error
+    signal and may treat a failed operation as a success.
+
+  checklist:
+    - "Does any except clause catch Exception or BaseException without re-raising?"
+    - "Is the caught exception logged at minimum?"
+    - "Are only specific, expected exception types caught?"
+    - "Does the catch site distinguish retryable vs non-retryable failures?"
+
+  acceptable_exceptions:
+    - "Background cleanup in finally blocks (best-effort, log the failure)"
+    - "Top-level exception handlers that log and return structured error responses"
+    - "Test helpers that need to catch all exceptions for assertion purposes"
+
+  fix: |
+    # BAD
+    try:
+        process()
+    except Exception:
+        pass
+
+    # GOOD
+    try:
+        process()
+    except ConnectionError as e:
+        logger.warning("Connection failed", error=str(e))
+        raise RetryableError(str(e)) from e
+    except ValueError as e:
+        logger.error("Invalid input", error=str(e))
+        raise ValidationError(str(e)) from e
+
+  source: "python-anti-patterns (wshobson)"
+
+# ─────────────────────────────────────────────
+# Python: Double Retry Anti-Pattern
+# ─────────────────────────────────────────────
+
+double_retry:
+  rule: >
+    Implement retry logic at exactly one layer of the stack. Retrying at both
+    the application level (tenacity decorator) AND the HTTP client level (httpx
+    transport retries) produces exponential explosion: 3 application retries ×
+    3 client retries = 9 actual requests, with no coherent timeout strategy.
+
+  rationale: >
+    Think of a relay race where two runners both decide to re-run a leg they
+    think went wrong — the result is chaos, not better performance. Layered
+    retries also make observability harder: a single logical "failure" appears
+    as many requests in logs, masking true error rates.
+
+  checklist:
+    - "If a @retry decorator is on a function, does the HTTP client it calls also have retries configured?"
+    - "Is there a documented 'retry owner' for each external dependency?"
+    - "Are retry budgets (total attempts × timeout) bounded end-to-end?"
+
+  fix: >
+    Choose one retry layer. Configure transport-level retries on the HTTP client
+    and remove application-level @retry decorators that wrap the same call.
+    Or vice versa — but not both.
+
+  source: "python-anti-patterns (wshobson)"
+
+# ─────────────────────────────────────────────
+# Python: Batch Write Partial Failure Handling
+# ─────────────────────────────────────────────
+
+batch_partial_failure:
+  rule: >
+    Batch write operations must not abort on the first item failure and must
+    not hide partial success behind a top-level 200 OK. Return a structured
+    result with per-item status so callers know exactly what to retry.
+
+  rationale: >
+    A batch that stops on the first error means 99 items fail because item 1
+    had a validation issue. A batch that silently succeeds with 40% failure
+    means the caller retries everything, causing duplicate writes. Both are
+    wrong. The correct contract: process all items, collect results, return a
+    structured breakdown. Callers retry only the failed subset.
+
+  checklist:
+    - "Does any batch handler abort early on the first item error?"
+    - "Does any batch endpoint return HTTP 200 with silent per-item failures?"
+    - "Does the response body distinguish succeeded items from failed ones?"
+    - "Do failed items include enough information for the caller to retry selectively?"
+
+  fix: |
+    # Pattern: BatchResult with per-item status
+    @dataclass
+    class BatchResult:
+        succeeded: dict[int, Any]  # index → result
+        failed: dict[int, Exception]  # index → error
+
+    def process_batch(items: list[T]) -> BatchResult:
+        succeeded: dict[int, Any] = {}
+        failed: dict[int, Exception] = {}
+        for idx, item in enumerate(items):
+            try:
+                succeeded[idx] = process(item)
+            except Exception as e:
+                failed[idx] = e
+        return BatchResult(succeeded, failed)
+
+  source: "python-anti-patterns (wshobson)"
+
+# ─────────────────────────────────────────────
+# Python: Structural Typing with Protocol
+# ─────────────────────────────────────────────
+
+protocol_structural_typing:
+  rule: >
+    Use `typing.Protocol` to define interface contracts without requiring
+    inheritance. Dependencies should be typed against the protocol, not the
+    concrete implementation. This is Python's version of "program to an
+    interface" — and it requires no base class plumbing.
+
+  rationale: >
+    Protocol is structural typing: if a class has the right methods and
+    attributes, it satisfies the Protocol without any explicit declaration.
+    Like a power outlet — any plug with the right shape fits, regardless of
+    who made it. This makes testing trivial (inject a simple fake that
+    satisfies the Protocol) and production code flexible (swap implementations
+    without touching callers).
+
+    Analogy: Duck typing says "if it quacks, it's a duck." Protocols say
+    "here's the quacking contract — any class that satisfies it, quacks."
+    Protocols give duck typing static analysis verification.
+
+  checklist:
+    - "Are injected dependencies typed against a Protocol rather than a concrete class?"
+    - "Does each Protocol define the minimum surface needed by the caller (interface segregation)?"
+    - "Are test fakes/stubs structured as Protocol-satisfying objects, not Mock() chains?"
+
+  pattern: |
+    from typing import Protocol
+
+    class EmbeddingProvider(Protocol):
+        """Any class with this signature satisfies the protocol."""
+        async def embed(self, texts: list[str]) -> list[list[float]]: ...
+        async def embed_query(self, text: str) -> list[float]: ...
+
+    # Production
+    class OpenAIEmbedder:  # No inheritance needed
+        async def embed(self, texts: list[str]) -> list[list[float]]: ...
+        async def embed_query(self, text: str) -> list[float]: ...
+
+    # Test double
+    class FakeEmbedder:
+        async def embed(self, texts: list[str]) -> list[list[float]]:
+            return [[0.1] * 1536 for _ in texts]
+        async def embed_query(self, text: str) -> list[float]:
+            return [0.1] * 1536
+
+    # Service depends on Protocol, not concrete class
+    class MemoryService:
+        def __init__(self, embedder: EmbeddingProvider) -> None:
+            self._embedder = embedder
+
+  source: "python-type-safety (wshobson), python-design-patterns (wshobson)"
+
+# ─────────────────────────────────────────────
+# Python: Explicit Public API with __all__
+# ─────────────────────────────────────────────
+
+explicit_module_public_api:
+  rule: >
+    Every Python package's `__init__.py` must declare `__all__` listing only
+    the names intended for public consumption. Omitting `__all__` means all
+    non-underscore names are public by default — implementation details leak
+    into the module's surface area and any refactor risks breaking callers.
+
+  rationale: >
+    `__all__` is the package's front door. Without it, `from package import *`
+    pulls in everything — internal helpers, imported names from dependencies,
+    test utilities accidentally left in scope. With it, the public API is
+    explicit, auditable, and change-resistant.
+
+  checklist:
+    - "Does every package's __init__.py declare __all__?"
+    - "Are only intended public symbols listed (not internal helpers or re-exported deps)?"
+    - "Does the module's README or docstring match what __all__ exports?"
+
+  fix: |
+    # myapp/users/__init__.py
+    from .service import UserService
+    from .schemas import UserCreate, UserRead, UserUpdate
+    from .exceptions import UserNotFoundError, UserLimitError
+
+    __all__ = [
+        "UserService",
+        "UserCreate", "UserRead", "UserUpdate",
+        "UserNotFoundError", "UserLimitError",
+    ]
+    # _internal_helpers, imported ORM symbols, etc. — not listed
+
+  source: "python-project-structure (wshobson)"
+
+# ─────────────────────────────────────────────
+# Python: @asynccontextmanager Acquired Flag
+# ─────────────────────────────────────────────
+
+asynccontextmanager_acquired_flag:
+  rule: >
+    Any `@asynccontextmanager` that wraps a timed `acquire()` (e.g.,
+    `asyncio.wait_for(semaphore.acquire(), timeout=T)`) must track acquisition
+    success with an explicit `acquired = False` flag before the yield, and guard
+    the `finally` block's release on that flag. An unconditional `release()` in
+    finally releases a slot that was never taken when acquire() times out,
+    corrupting the semaphore counter and any active-slot gauge.
+
+  rationale: >
+    Think of a coat check: if you time out waiting for a ticket and leave,
+    the attendant should not return a coat to the rack on your behalf — there
+    is no coat, and "returning" it would corrupt the count of available hooks.
+    The `acquired` flag is the attendant's check: "did this person ever receive
+    a ticket?"
+
+  checklist:
+    - "Does every @asynccontextmanager with timed acquire() have an acquired=False flag?"
+    - "Is acquired set to True only after the acquire() succeeds?"
+    - "Does the finally block gate release() and counter decrements on if acquired:?"
+
+  canonical_pattern: |
+    @asynccontextmanager
+    async def _acquire_slot(self) -> AsyncGenerator[None, None]:
+        acquired = False
+        try:
+            await asyncio.wait_for(self._semaphore.acquire(), timeout=self._timeout)
+            acquired = True
+            self._active_slots += 1
+            yield
+        finally:
+            if acquired:
+                self._semaphore.release()
+                self._active_slots -= 1
+
+  project_reference: "D119 planning re-review — initial plan shipped without acquired flag; caught by backend-engineer."
+  source: "python-resource-management (wshobson)"
+
+# ─────────────────────────────────────────────
+# Python: ExitStack for Dynamic Resource Count
+# ─────────────────────────────────────────────
+
+exit_stack_dynamic_resources:
+  rule: >
+    When managing a dynamic number of resources (file handles, connections,
+    context managers determined at runtime), use `contextlib.ExitStack`
+    (sync) or `contextlib.AsyncExitStack` (async) rather than nested `with`
+    statements. Nesting scales poorly and makes cleanup order unpredictable
+    when the count varies.
+
+  rationale: >
+    A fixed `with open(f1), open(f2), open(f3):` only works when you know the
+    count at write time. For a list of paths loaded from config or a query result,
+    ExitStack is the only safe option — it registers each resource's cleanup
+    handler as it opens, and unwinds them all in LIFO order on exit, even if
+    some opened and others failed.
+
+  checklist:
+    - "When opening a list of resources, is ExitStack used instead of looping with try/finally?"
+    - "For async resources, is AsyncExitStack used instead of ExitStack?"
+    - "Are resources registered via stack.enter_context() / stack.enter_async_context()?"
+
+  pattern: |
+    from contextlib import AsyncExitStack
+
+    async def process_connections(hosts: list[str]) -> list[dict]:
+        async with AsyncExitStack() as stack:
+            connections = [
+                await stack.enter_async_context(connect_to_host(host))
+                for host in hosts
+            ]
+            return [await conn.fetch_data() for conn in connections]
+
+  source: "python-resource-management (wshobson)"
+
+# ─────────────────────────────────────────────
+# Git: --force-with-lease Over --force
+# ─────────────────────────────────────────────
+
+git_force_with_lease:
+  rule: >
+    Always use `git push --force-with-lease` instead of `git push --force`.
+    `--force-with-lease` fails if the remote branch has diverged since your
+    last fetch, preventing silent overwrites of collaborators' commits.
+    `--force` overwrites unconditionally.
+
+  rationale: >
+    `--force` is a sledgehammer. It says "replace whatever is there with what
+    I have." If a colleague pushed between your fetch and your force-push,
+    their commits vanish without warning. `--force-with-lease` is a lease on
+    the ref: "only replace if it still matches what I fetched." If the lease
+    breaks, the push is rejected — you get an error instead of a lost commit.
+
+  checklist:
+    - "Does any script or agent instruction use git push --force (without --lease)?"
+    - "Is --force-with-lease used for all force-push operations?"
+    - "Is there a branch safety backup before any interactive rebase?"
+
+  source: "git-advanced-workflows (wshobson)"
+
+# ─────────────────────────────────────────────
+# Git: Worktrees for Parallel Branch Work
+# ─────────────────────────────────────────────
+
+git_worktrees_parallel_work:
+  rule: >
+    Use `git worktree add` to work on multiple branches simultaneously without
+    stashing, switching, or losing working-directory state. Worktrees give each
+    branch its own directory on disk while sharing the same `.git` history.
+
+  rationale: >
+    Stash is fragile — a stash pop into the wrong branch can corrupt both.
+    Branch switching discards editor state and requires re-opening files.
+    Worktrees are the clean answer: each branch lives in its own folder, you
+    can run tests in one while editing in another, and cleanup is a single
+    `git worktree remove`. Especially useful for hotfixes that arrive while a
+    long-running feature is mid-implementation.
+
+  checklist:
+    - "Before stashing to switch branches for a hotfix, is worktree add considered instead?"
+    - "Are stale worktrees cleaned up with git worktree prune after merging?"
+    - "When using worktrees inside a monorepo with embedded subrepos, is the git -C <path> flag used to avoid ambiguous repo context?"
+
+  source: "git-advanced-workflows (wshobson)"

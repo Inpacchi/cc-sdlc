@@ -34,6 +34,7 @@
     "ops/sdlc/knowledge/product-research",
     "ops/sdlc/knowledge/testing",
     "ops/sdlc/knowledge/search",
+    "ops/sdlc/knowledge/dx",
     "ops/sdlc/playbooks",
     "ops/sdlc/templates"
   ],
@@ -115,7 +116,8 @@
       "disciplines/process-improvement.md",
       "disciplines/product-research.md",
       "disciplines/testing.md",
-      "disciplines/observability.md"
+      "disciplines/observability.md",
+      "disciplines/dx.md"
     ],
     "playbooks": [
       "playbooks/README.md",
@@ -144,8 +146,11 @@
       "knowledge/architecture/token-economics.yaml",
       "knowledge/architecture/observability-patterns.yaml",
       "knowledge/architecture/performance-optimization-philosophy.yaml",
+      "knowledge/architecture/agent-orchestration-patterns.yaml",
       "knowledge/business-analysis/README.md",
       "knowledge/business-analysis/requirements-feedback-loops.yaml",
+      "knowledge/business-analysis/data-storytelling-rules.yaml",
+      "knowledge/business-analysis/gdpr-patterns.yaml",
       "knowledge/data-modeling/README.md",
       "knowledge/data-modeling/anti-patterns/common-modeling-mistakes.yaml",
       "knowledge/data-modeling/assessment/model-health-check.yaml",
@@ -155,6 +160,7 @@
       "knowledge/coding/README.md",
       "knowledge/coding/code-quality-principles.yaml",
       "knowledge/coding/typescript-patterns.yaml",
+      "knowledge/coding/shell-patterns.yaml",
       "knowledge/design/README.md",
       "knowledge/design/ascii-conventions.yaml",
       "knowledge/design/ux-modeling-methodology.yaml",
@@ -163,6 +169,7 @@
       "knowledge/design/interaction-animation.yaml",
       "knowledge/design/visual-design-rules.yaml",
       "knowledge/design/layout-principles.yaml",
+      "knowledge/design/interaction-patterns.yaml",
       "knowledge/product-research/README.md",
       "knowledge/product-research/competitive-analysis-methodology.yaml",
       "knowledge/product-research/data-source-evaluation.yaml",
@@ -188,6 +195,9 @@
       "knowledge/search/multi-strategy-retrieval-patterns.yaml",
       "knowledge/search/evidence-combination-frameworks.md",
       "knowledge/search/score-transform-catalog.md",
+      "knowledge/dx/README.md",
+      "knowledge/dx/skill-quality-rubrics.yaml",
+      "knowledge/dx/developer-documentation-patterns.yaml",
       "knowledge/provenance_log.md"
     ],
     "skills": [

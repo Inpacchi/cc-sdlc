@@ -1,0 +1,526 @@
+# Shell Scripting Patterns
+# Defensive Bash techniques and ShellCheck configuration for production-grade scripts.
+# Covers: strict mode, error trapping, variable safety, idempotency, structured logging,
+# signal handling, and static analysis configuration.
+# Sources: bash-defensive-patterns and shellcheck-configuration (wshobson)
+# Last updated: 2026-04-22
+
+id: shell-patterns
+name: "Shell Scripting Patterns"
+description: >
+  Defensive Bash patterns for production-grade scripts: CI/CD pipelines,
+  deployment automation, plugin launchers, and system utilities. Covers strict
+  mode, error trapping, safe variable handling, idempotency, structured logging,
+  and ShellCheck static analysis configuration.
+pattern: entries
+category: coding
+spec_relevant: false
+project_applicability:
+  relevant_when: "Project contains bash scripts (CI/CD pipelines, plugin launchers, deployment scripts)"
+  action_if_irrelevant: remove
+last_updated: 2026-04-22
+
+# ─────────────────────────────────────────────
+# Strict Mode
+# ─────────────────────────────────────────────
+#
+# Source: bash-defensive-patterns (wshobson)
+
+strict_mode:
+  rule: >
+    Every bash script must begin with `set -Eeuo pipefail`. This single line
+    converts a permissive "keep going when things fail" default into a
+    "stop and report" default — the correct behavior for automation scripts
+    where silent failures corrupt state.
+
+  rationale: >
+    Bash's default behavior is permissive by design (interactive shells should
+    not abort on error). For scripts, the defaults are wrong. Each flag corrects
+    a specific failure mode. Think of -Eeuo pipefail as the four-point harness
+    of Bash safety: each strap catches a different failure mode that would
+    otherwise let the script "ride through" a crash silently.
+
+  flag_meanings:
+    "-E": >
+      Inherit the ERR trap inside functions. Without -E, a function that fails
+      does not trigger the ERR trap set in the outer script.
+    "-e": >
+      Exit immediately when any command returns a non-zero exit code. Without
+      this, failed commands are silently skipped and execution continues.
+    "-u": >
+      Exit when an undefined variable is referenced. Without this,
+      `rm -rf "$UNDEFINED_VAR/"` becomes `rm -rf "/"`.
+    "-o pipefail": >
+      A pipeline (cmd1 | cmd2 | cmd3) fails if ANY command in it fails, not
+      just the last one. Without pipefail, `false | true` exits 0.
+
+  pattern: |
+    #!/bin/bash
+    set -Eeuo pipefail
+
+    # Now: undefined vars, failed commands, and pipe failures all abort the script.
+
+  checklist:
+    - "Does every .sh file start with #!/bin/bash and set -Eeuo pipefail?"
+    - "Are ShellCheck warnings about missing strict mode flags addressed?"
+
+  source: "bash-defensive-patterns (wshobson)"
+
+# ─────────────────────────────────────────────
+# Error Trapping and Cleanup
+# ─────────────────────────────────────────────
+#
+# Source: bash-defensive-patterns (wshobson)
+
+error_trapping_and_cleanup:
+  rule: >
+    Implement `trap` handlers for ERR (log the failing line) and EXIT (cleanup
+    temp resources). Trap handlers run even when the script exits abnormally,
+    ensuring resources are not leaked and failures are locatable.
+
+  rationale: >
+    Without an EXIT trap, a script that creates a temp directory and then
+    crashes leaves that directory behind. Without an ERR trap, a failure on
+    line 47 produces no useful output. Traps are the "always clean up" and
+    "always report" guarantees — like a try/finally in Python, but for the
+    entire script.
+
+  pattern: |
+    #!/bin/bash
+    set -Eeuo pipefail
+
+    # Always log which line triggered the ERR trap
+    trap 'echo "ERROR: script failed on line $LINENO" >&2' ERR
+
+    # Always clean up temp files on exit (normal or abnormal)
+    TMPDIR=$(mktemp -d)
+    trap 'rm -rf -- "$TMPDIR"' EXIT
+
+    # For graceful signal handling (e.g., in long-running scripts)
+    PIDS=()
+    cleanup() {
+        for pid in "${PIDS[@]}"; do
+            kill -TERM "$pid" 2>/dev/null || true
+            wait "$pid" 2>/dev/null || true
+        done
+    }
+    trap cleanup SIGTERM SIGINT
+
+  checklist:
+    - "Does the script set an ERR trap that logs the line number?"
+    - "Are all temp files and directories created after setting an EXIT trap?"
+    - "Do long-running scripts with background processes trap SIGTERM/SIGINT?"
+
+  source: "bash-defensive-patterns (wshobson)"
+
+# ─────────────────────────────────────────────
+# Variable Quoting and Safety
+# ─────────────────────────────────────────────
+#
+# Source: bash-defensive-patterns (wshobson), shellcheck-configuration (wshobson)
+
+variable_quoting:
+  rule: >
+    Always double-quote variable expansions: `"$VAR"`, `"${ARRAY[@]}"`.
+    Unquoted expansions undergo word splitting and glob expansion — a
+    variable containing spaces becomes multiple arguments, and a variable
+    containing `*` expands to file names. This is the most common source
+    of Bash bugs caught by ShellCheck (SC2086).
+
+  rationale: >
+    Consider `cp $source $dest`. If `$source` is `/path/to/my file.txt`,
+    bash splits it into two arguments: `/path/to/my` and `file.txt`. The
+    cp command receives three arguments and behaves incorrectly. `"$source"`
+    keeps the value as a single string regardless of spaces or special characters.
+    Think of quotes as "holding the value together" — without them, the shell
+    can tear it apart unpredictably.
+
+  patterns:
+    basic_quoting: |
+      # WRONG — word splits on spaces, globs on * and ?
+      cp $source $dest
+      for file in $list; do ...
+
+      # CORRECT
+      cp "$source" "$dest"
+      for file in "${list[@]}"; do ...  # array expansion
+
+    required_variable_guard: |
+      # Assert a required variable is set; exit with message if missing
+      : "${REQUIRED_VAR:?REQUIRED_VAR is not set — aborting}"
+
+    test_for_unset: |
+      # Test for unset/empty safely (avoids -u failure on optional vars)
+      if [[ -z "${OPTIONAL_VAR:-}" ]]; then
+          echo "OPTIONAL_VAR is not set or empty"
+      fi
+
+  checklist:
+    - "Are all variable expansions double-quoted?"
+    - "Is ${REQUIRED_VAR:?message} used for mandatory variables?"
+    - "Is ${OPTIONAL_VAR:-} (with default) used when testing optional variables?"
+    - "Does ShellCheck run cleanly with no SC2086 warnings?"
+
+  source: "bash-defensive-patterns (wshobson)"
+
+# ─────────────────────────────────────────────
+# Safe Array Handling
+# ─────────────────────────────────────────────
+#
+# Source: bash-defensive-patterns (wshobson)
+
+array_handling:
+  rule: >
+    Use `declare -a` to create arrays and `"${array[@]}"` to expand them.
+    Never iterate with `for item in $list` (unquoted scalar) when the items
+    may contain spaces. Use `mapfile`/`readarray` to populate arrays from
+    command output.
+
+  rationale: >
+    `for item in $list` splits on whitespace — "file name.txt" becomes two
+    iterations. `"${array[@]}"` expands each element as a separate word,
+    preserving spaces within elements. `mapfile` reads lines into an array
+    correctly even when lines contain spaces or special characters.
+
+  pattern: |
+    # Declare and iterate safely
+    declare -a files=("file one.txt" "file two.txt" "file three.txt")
+    for file in "${files[@]}"; do
+        echo "Processing: $file"  # each filename preserved intact
+    done
+
+    # Populate array from command output (NUL-delimited for filenames with spaces)
+    while IFS= read -r -d '' file; do
+        echo "Found: $file"
+    done < <(find /path -type f -print0)
+
+    # mapfile for line-by-line command output
+    mapfile -t results < <(grep "pattern" "$logfile")
+    for result in "${results[@]}"; do
+        echo "$result"
+    done
+
+  checklist:
+    - "Are array expansions written as \"${array[@]}\" (quoted, at-sign)?"
+    - "Is mapfile or while IFS= read used for command-output arrays, not $(cmd) unquoted?"
+    - "Are find commands that may return filenames with spaces using -print0 | while IFS= read -r -d ''?"
+
+  source: "bash-defensive-patterns (wshobson)"
+
+# ─────────────────────────────────────────────
+# Structured Logging in Scripts
+# ─────────────────────────────────────────────
+#
+# Source: bash-defensive-patterns (wshobson)
+
+structured_logging_bash:
+  rule: >
+    Scripts used in CI/CD or automation must use timestamped logging functions
+    (log_info, log_warn, log_error, log_debug) that write to stderr. Logging
+    to stdout pollutes captured output; using raw `echo` loses timestamp and
+    severity context.
+
+  rationale: >
+    A script that writes `echo "done"` and `echo "ERROR: failed"` to the same
+    stream gives the log aggregator no way to distinguish progress from failure.
+    Functions that write to stderr with a timestamp and level let CI systems
+    capture script output separately from diagnostic logs, and let on-call
+    engineers search by severity.
+
+  pattern: |
+    log_info()  { echo "[$(date +'%Y-%m-%dT%H:%M:%S')] INFO:  $*" >&2; }
+    log_warn()  { echo "[$(date +'%Y-%m-%dT%H:%M:%S')] WARN:  $*" >&2; }
+    log_error() { echo "[$(date +'%Y-%m-%dT%H:%M:%S')] ERROR: $*" >&2; }
+    log_debug() {
+        if [[ "${DEBUG:-0}" == "1" ]]; then
+            echo "[$(date +'%Y-%m-%dT%H:%M:%S')] DEBUG: $*" >&2
+        fi
+    }
+
+    # Usage
+    log_info "Starting deployment to $ENVIRONMENT"
+    log_debug "Full config: $CONFIG_JSON"
+    log_error "Failed to connect to database" && exit 1
+
+  checklist:
+    - "Does the script use log_info/log_warn/log_error rather than bare echo for diagnostic output?"
+    - "Do logging functions write to stderr (>&2), not stdout?"
+    - "Is debug output gated on DEBUG=1 rather than always-on?"
+
+  source: "bash-defensive-patterns (wshobson)"
+
+# ─────────────────────────────────────────────
+# Idempotent Script Design
+# ─────────────────────────────────────────────
+#
+# Source: bash-defensive-patterns (wshobson)
+
+idempotent_scripts:
+  rule: >
+    Scripts that provision or configure state must be safe to run multiple times.
+    Check-before-act (if resource exists, skip; else create) prevents errors from
+    re-running a script that previously succeeded partially. Idempotent scripts
+    can also be used as a convergence mechanism: run them again to repair drift.
+
+  rationale: >
+    Automation scripts run in CI, in disaster recovery, and during re-deployments.
+    A script that fails with "directory already exists" on its second run is not
+    production-ready. The check-then-act pattern converts idempotency from an
+    afterthought into the default behavior.
+
+  pattern: |
+    ensure_directory() {
+        local -r dir="$1"
+        if [[ -d "$dir" ]]; then
+            log_info "Directory already exists: $dir (no-op)"
+            return 0
+        fi
+        mkdir -p "$dir" || { log_error "Failed to create: $dir"; return 1; }
+        log_info "Created directory: $dir"
+    }
+
+    ensure_config() {
+        local -r config_file="$1"
+        local -r default_value="$2"
+        if [[ -f "$config_file" ]]; then
+            log_info "Config already exists: $config_file (no-op)"
+            return 0
+        fi
+        echo "$default_value" > "$config_file"
+        log_info "Wrote default config to: $config_file"
+    }
+
+  checklist:
+    - "Does each resource-creation step check for existence before creating?"
+    - "Can the script be run twice in succession without error?"
+    - "Does a partial run followed by a full re-run converge to the correct state?"
+
+  source: "bash-defensive-patterns (wshobson)"
+
+# ─────────────────────────────────────────────
+# Dry-Run Support
+# ─────────────────────────────────────────────
+#
+# Source: bash-defensive-patterns (wshobson)
+
+dry_run_support:
+  rule: >
+    Production automation scripts should support a DRY_RUN=true mode that
+    prints all state-changing commands without executing them. This enables
+    pre-flight review of what a deployment or migration script will do without
+    committing the changes.
+
+  rationale: >
+    "What will this script actually do?" is a question that should have a safe
+    answer before every production run. A dry-run mode lets operators verify
+    the plan without risk. It also serves as self-documentation: the printed
+    commands describe intent clearly.
+
+  pattern: |
+    DRY_RUN="${DRY_RUN:-false}"
+
+    run_cmd() {
+        if [[ "$DRY_RUN" == "true" ]]; then
+            log_info "[DRY RUN] Would execute: $*"
+            return 0
+        fi
+        "$@"
+    }
+
+    # Usage — all state-changing operations routed through run_cmd
+    run_cmd cp "$source" "$dest"
+    run_cmd rm -rf "$stale_dir"
+    run_cmd systemctl restart myservice
+
+  checklist:
+    - "Are all state-changing commands in the script routed through a run_cmd() wrapper?"
+    - "Does DRY_RUN default to false so it is opt-in?"
+    - "Is the dry-run flag documented in the script's usage() output?"
+
+  source: "bash-defensive-patterns (wshobson)"
+
+# ─────────────────────────────────────────────
+# Safe Script Directory Detection
+# ─────────────────────────────────────────────
+#
+# Source: bash-defensive-patterns (wshobson)
+
+script_directory_detection:
+  rule: >
+    Detect the script's own directory using `"$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"`.
+    Never use `$(dirname $0)` (unquoted, no -P) — it fails when the script
+    is invoked from a different working directory or via a symlink.
+
+  rationale: >
+    `$0` contains how the script was invoked, not where it lives. If you run
+    `bash ./tools/deploy.sh` from the project root, `$0` is `./tools/deploy.sh`
+    and `dirname $0` is `.` — which resolves to the current directory, not the
+    script directory. `BASH_SOURCE[0]` is always the script's actual path, and
+    `cd && pwd -P` resolves symlinks and relative paths to an absolute path.
+
+  pattern: |
+    SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &>/dev/null && pwd -P)"
+    SCRIPT_NAME="$(basename -- "${BASH_SOURCE[0]}")"
+
+    # Now SCRIPT_DIR is always the directory containing this script,
+    # regardless of where it was called from.
+    source "${SCRIPT_DIR}/lib/helpers.sh"
+
+  checklist:
+    - "Is BASH_SOURCE[0] used instead of $0 for script-relative path detection?"
+    - "Is the cd...pwd -P idiom used (not just dirname)?"
+    - "Is SCRIPT_DIR defined before any relative path operations?"
+
+  source: "bash-defensive-patterns (wshobson)"
+
+# ─────────────────────────────────────────────
+# ShellCheck Configuration
+# ─────────────────────────────────────────────
+#
+# Source: shellcheck-configuration (wshobson)
+
+shellcheck_configuration:
+  rule: >
+    Every project containing shell scripts must have a `.shellcheckrc` at the
+    project root and must run ShellCheck in CI. ShellCheck is the ruff/mypy
+    equivalent for Bash — static analysis that catches the exact classes of bugs
+    described in the shell-patterns knowledge store before they reach production.
+
+  rationale: >
+    Most Bash bugs are variants of the same small set of patterns: unquoted
+    variables, `[ ]` instead of `[[ ]]`, `$?` instead of direct exit-code
+    testing, using `ls` in loops, silenced pipe failures. ShellCheck knows all
+    of them. Running it in CI ensures that every script change is reviewed
+    against this checklist automatically.
+
+  pattern:
+    shellcheckrc: |
+      # .shellcheckrc — place at project root
+      shell=bash
+
+      # Enable optional checks
+      enable=avoid-nullary-conditions
+      enable=require-variable-braces
+
+      # SC1091: Not following sourced files (many false positives with dynamic paths)
+      disable=SC1091
+
+    ci_integration: |
+      # GitHub Actions
+      - name: ShellCheck
+        run: find . -name "*.sh" -not -path "./.git/*" -exec shellcheck {} \;
+
+      # Pre-commit hook (.git/hooks/pre-commit)
+      git diff --cached --name-only | grep '\.sh$' | while read -r script; do
+          shellcheck "$script" || { echo "ShellCheck failed: $script"; exit 1; }
+      done
+
+  key_codes_to_understand:
+    SC2086: "Double quote to prevent globbing/word-splitting (most common)"
+    SC2181: "Check exit code directly with 'if cmd;' not 'if [ $? -eq 0 ];'"
+    SC2015: "Use if-then-else instead of cmd && echo || echo (|| runs even on success)"
+    SC2009: "Use pgrep/pidof instead of ps|grep (grep matches itself)"
+    SC1091: "Not following sourced file — disable if file paths are dynamic"
+
+  fixing_vs_suppressing: >
+    Address violations by fixing the code, not by adding `# shellcheck disable=`
+    comments. Each suppression is a permanent blind spot. The only acceptable
+    suppressions are: SC1091 for dynamic source paths, and per-line for
+    documented false positives with an explanatory comment.
+
+  checklist:
+    - "Does the project have a .shellcheckrc at the root?"
+    - "Does CI run ShellCheck across all .sh files?"
+    - "Are any # shellcheck disable= comments accompanied by an explanation?"
+    - "Is SC2086 (unquoted variable) clean — zero suppressed occurrences?"
+
+  source: "shellcheck-configuration (wshobson)"
+
+# ─────────────────────────────────────────────
+# Atomic File Writes
+# ─────────────────────────────────────────────
+#
+# Source: bash-defensive-patterns (wshobson)
+
+atomic_file_writes:
+  rule: >
+    When writing to a file that may be read by other processes, write to a
+    temp file first and then `mv` it into place. `mv` within the same filesystem
+    is atomic — readers see either the old file or the new one, never a partial
+    write. Direct writes are not atomic and can produce corrupt reads.
+
+  rationale: >
+    A process writing 10,000 lines to a config file does not hold a lock while
+    writing. Another process reading the file mid-write sees partial content.
+    Writing to a temp file and renaming it exploits the filesystem's atomic rename
+    guarantee: the destination path flips from old to new in a single kernel
+    operation with no intermediate state visible to readers.
+
+  pattern: |
+    atomic_write() {
+        local -r target="$1"
+        local tmpfile
+        tmpfile=$(mktemp "$(dirname "$target")/.tmp.XXXXXX") || return 1
+
+        # Write to temp file
+        cat > "$tmpfile"
+
+        # Atomic rename — readers see old or new, never partial
+        mv "$tmpfile" "$target"
+    }
+
+    # Usage
+    generate_config | atomic_write /etc/myapp/config.json
+
+  checklist:
+    - "Do scripts that write large files use temp-then-rename, not direct write?"
+    - "Is the temp file on the same filesystem as the target (same directory)?"
+    - "Is the temp file cleaned up if the write fails before the rename?"
+
+  source: "bash-defensive-patterns (wshobson)"
+
+# ─────────────────────────────────────────────
+# Dependency Checking
+# ─────────────────────────────────────────────
+#
+# Source: bash-defensive-patterns (wshobson)
+
+dependency_checking:
+  rule: >
+    Scripts with external tool dependencies must check for those tools at
+    startup using `command -v` and fail with a clear message listing all
+    missing dependencies at once. Using `which` is less portable; `command -v`
+    is the POSIX-correct approach.
+
+  rationale: >
+    A script that silently uses an uninstalled tool produces confusing errors
+    deep in execution. Checking at startup gives a clear "you need to install
+    X and Y" message before any state changes occur. Checking for all missing
+    deps at once (not stopping at the first) gives a complete install list.
+
+  pattern: |
+    check_dependencies() {
+        local -a missing=()
+        local -a required=("jq" "curl" "git" "docker")
+
+        for cmd in "${required[@]}"; do
+            if ! command -v "$cmd" &>/dev/null; then
+                missing+=("$cmd")
+            fi
+        done
+
+        if [[ ${#missing[@]} -gt 0 ]]; then
+            log_error "Missing required tools: ${missing[*]}"
+            log_error "Install them and retry."
+            return 1
+        fi
+    }
+
+    check_dependencies || exit 1
+
+  checklist:
+    - "Does the script check all required external tools at startup?"
+    - "Does the check use command -v, not which?"
+    - "Does it report ALL missing dependencies, not just the first one?"
+
+  source: "bash-defensive-patterns (wshobson)"
