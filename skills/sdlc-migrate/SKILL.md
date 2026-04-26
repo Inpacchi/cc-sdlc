@@ -18,44 +18,11 @@ Apply cc-sdlc upstream updates to a project while preserving project-specific cu
 
 ## Source Repo Access Rule
 
-**All reads from the cc-sdlc source repo MUST use git commands**, not filesystem reads. This ensures you're reading committed state, not the working tree.
-
-- Read a file: `git -C [cc-sdlc-path] show HEAD:<path>`
-- List files: `git -C [cc-sdlc-path] ls-tree -r --name-only HEAD`
-- Diff since version: `git -C [cc-sdlc-path] diff [source_version]..HEAD`
-
-Never use `cat`, `cp`, `ls`, or direct file reads against `[cc-sdlc-path]`. The source repo may have uncommitted work in progress.
-
-### Safe File Extraction (CRITICAL)
-
-**Never use direct shell redirection** to extract files: `git show HEAD:<path> > file` is UNSAFE because shell redirection truncates the target file *before* `git show` runs. If `git show` fails for any reason (path doesn't exist, clone was cleaned up, permission error), the target file is left empty — destroying the project's content.
-
-**Safe pattern — verify before overwriting:**
-```bash
-# Extract to temp, verify content exists, then move
-CONTENT=$(git -C [cc-sdlc-path] show HEAD:<path> 2>/dev/null) || {
-  echo "ERROR: git show failed for <path> — file NOT overwritten"
-  return 1  # or continue to next file
-}
-if [ -z "$CONTENT" ]; then
-  echo "ERROR: <path> has empty content in source — file NOT overwritten"
-  return 1
-fi
-echo "$CONTENT" > [project-path]/[target]
-```
-
-**Alternative — use git archive for batch extraction:**
-```bash
-# Extract specific files to a temp directory, then move
-git -C [cc-sdlc-path] archive HEAD:<dir> | tar -x -C /tmp/extract/
-# Verify each file before copying to project
-```
-
-**Why this matters:** During migration, a single silent `git show` failure can destroy dozens of project files. A 2026-04-15 bug emptied 8 knowledge READMEs because `git show` produced no output after the temp clone was cleaned up — the shell redirect created empty files over the project's content.
+**All reads from cc-sdlc MUST use git commands** (`git -C [cc-sdlc-path] show HEAD:<path>`), never filesystem reads. **Never use shell redirection** (`git show > file`) — it silently destroys targets on failure. Full rules and safe extraction patterns: see `[sdlc-root]/process/source-repo-safety.md`.
 
 ## Transaction Log
 
-Every phase start/end, gate decision, mutation, and failure writes an append-only JSONL entry to `.sdlc-transaction-log` in the project root. Schema and event types are documented in `sdlc-initialize/SKILL.md` § "Transaction Log" — this skill follows the same format.
+Every phase start/end, gate decision, mutation, and failure writes an append-only JSONL entry to `.sdlc-transaction-log` in the project root. Schema and event types: see `[sdlc-root]/process/transaction-log-schema.md`.
 
 **Run ID convention for migrate:** `migrate-{6-char-random-hex}` (e.g., `migrate-def456`).
 
@@ -130,36 +97,7 @@ cc-sdlc HEAD: [commit hash from git -C [cc-sdlc-path] rev-parse HEAD]
 
 ## Path Transformation Rules
 
-Throughout this migration, apply these transformations when copying or merging content:
-
-### Source → Project Path Mapping
-
-| cc-sdlc Source Path | Project Path |
-|---------------------|--------------|
-| `knowledge/` | `[sdlc-root]/knowledge/` |
-| `disciplines/` | `[sdlc-root]/disciplines/` |
-| `process/` | `[sdlc-root]/process/` |
-| `templates/*.md` | `[sdlc-root]/templates/*.md` |
-| `playbooks/` | `[sdlc-root]/playbooks/` |
-| `examples/` | `[sdlc-root]/examples/` |
-| `agents/` | `.claude/agents/` (always — Claude Code requires this location) |
-| `skills/` | `.claude/skills/` (always — Claude Code requires this location) |
-
-**Not installed to child projects:**
-- `templates/optional/` — Conditional CLAUDE.md appendices (e.g., `data-pipeline-integrity.md`). Read from cc-sdlc source during initialization when needed, not installed.
-- `CLAUDE-SDLC.md` — Content is merged into the project's `CLAUDE.md` during initialization. No separate file is maintained.
-
-### Project-Specific Files (Never Overwrite)
-
-Some files in the cc-sdlc source are **templates** that become project-specific after initialization. These must NOT be direct-copied during migration:
-
-| File | Reason |
-|------|--------|
-| `process/agent-selection.yaml` | Project's agent roster and dispatch rules — contains project-specific agent names |
-| `knowledge/agent-context-map.yaml` | Project's agent-to-knowledge mappings — already protected in §3.3 |
-| `knowledge/provenance_log.md` | Project's knowledge provenance records — append-only log of ingestions and research handoffs |
-
-Framework files may contain canonical agent names (e.g., `frontend-developer`) in examples. These are illustrative — they don't affect dispatch behavior. The project's actual agents in `.claude/agents/` and `agent-context-map.yaml` define what gets dispatched.
+Source-to-project path mappings (e.g., `knowledge/` → `[sdlc-root]/knowledge/`, `agents/` → `.claude/agents/`) and the list of project-specific files that must never be overwritten (`agent-selection.yaml`, `agent-context-map.yaml`, `provenance_log.md`): see `[sdlc-root]/process/path-mappings.md`.
 
 ## Phase 1: Detect What Changed
 
@@ -389,78 +327,14 @@ Markers preserve project content, but that content can become stale, conflicting
    diff <(old_section) <(new_section)
    ```
 
-3. **Classify the marker review finding:**
-
-   | Upstream Change | Project Marker Status | Finding Type | Recommendation |
-   |-----------------|----------------------|--------------|----------------|
-   | Section unchanged | Any | `OK` | Re-inject as-is |
-   | Section updated (minor) | Content still valid | `OK` | Re-inject as-is |
-   | Section updated (significant) | Content may be stale | `REVIEW` | Present to user — content may need updating |
-   | Section restructured | Block position unclear | `REVIEW` | Present to user — may need repositioning |
-   | Section removed | Block orphaned | `ORPHAN` | Present to user — content has no home |
-   | New patterns added nearby | Could benefit project | `OPPORTUNITY` | Present to user — may want to adopt |
-   | Project content contradicts upstream | Conflict detected | `CONFLICT` | Present to user — resolve contradiction |
+3. **Classify the marker review finding** — types: `OK`, `REVIEW`, `ORPHAN`, `OPPORTUNITY`, `CONFLICT`. Full classification table, detection thresholds, and user prompt format: see `references/marker-review-findings.md`.
 
 4. **Build the review findings list** — collect all non-`OK` findings across all files
 
-5. **Present findings to user via `AskUserQuestion`:**
+5. **Present findings to user via `AskUserQuestion`** — use the prompt format in `references/marker-review-findings.md`. User chooses per-finding: keep, update, remove, or merge. Apply decisions and log per that reference.
 
-   ```
-   PROJECT-SECTION CONTENT REVIEW
-   ══════════════════════════════
-   
-   Found [N] marked blocks that may need attention:
-   
-   ┌─ [file path] ─────────────────────────────────
-   │ Label: [marker label]
-   │ Section: [heading]
-   │ Finding: [REVIEW | ORPHAN | OPPORTUNITY | CONFLICT]
-   │
-   │ Upstream change:
-   │   [brief description of what changed in upstream]
-   │
-   │ Project content:
-   │   [first 3-5 lines of marked block, truncated if long]
-   │
-   │ Recommendation:
-   │   [specific suggestion based on finding type]
-   └────────────────────────────────────────────────
-   
-   [Repeat for each finding]
-   
-   For each finding, choose:
-   1. Keep as-is — re-inject project content unchanged
-   2. Update — [opens content for manual edit, then re-inject]
-   3. Remove — discard this marked block, adopt upstream
-   4. Merge — combine project additions with upstream changes
-   
-   Enter choices (e.g., "1:keep, 2:update, 3:remove" or "all:keep"):
-   ```
-
-6. **Apply user decisions:**
-   - `keep` → re-inject block verbatim after upstream copy
-   - `update` → user edits the block content, then re-inject
-   - `remove` → do not re-inject; block is discarded
-   - `merge` → combine project content with upstream changes (present merged result for confirmation)
-
-7. **Log all decisions in migration report:**
-   ```
-   PROJECT-SECTION review decisions:
-   - [file]#[label]: kept (upstream section unchanged)
-   - [file]#[label]: kept (user chose to preserve despite upstream changes)
-   - [file]#[label]: updated (user modified content to align with upstream)
-   - [file]#[label]: removed (user adopted upstream version)
-   - [file]#[label]: merged (combined project + upstream)
-   ```
-
-**Finding type details:**
-
-| Type | Detection | User Prompt |
-|------|-----------|-------------|
-| `REVIEW` | Upstream section diff > 20% changed lines, or key patterns added/removed | "Upstream significantly updated this section. Your marked content may reference outdated patterns or miss improvements." |
-| `ORPHAN` | Upstream removed the heading entirely | "The section this content lived under no longer exists. Consider: moving to a new location, removing if obsolete, or keeping at file end." |
-| `OPPORTUNITY` | Upstream added new content within 10 lines of marker position | "Upstream added new guidance near your marked content. Review whether to incorporate or reference it." |
-| `CONFLICT` | Project content contains patterns explicitly superseded in upstream changelog | "Your marked content uses [pattern] which upstream replaced with [new pattern]. Consider updating." |
+   <!-- Prompt format, decision application, and logging format extracted to references/marker-review-findings.md -->
+   <!-- Finding type detection rules (REVIEW, ORPHAN, OPPORTUNITY, CONFLICT thresholds) also in that reference -->
 
 **When to skip review:**
 
@@ -676,9 +550,9 @@ The `sdlc-audit` skill has framework audit methodology in `SKILL.md` and `refere
 1. Read the cc-sdlc source versions of all audit skill files
 2. Read the project's versions
 3. Update SKILL.md workflow, modes, and reference pointers — **verbatim from cc-sdlc source, not rephrased**
-4. Update `references/compliance-methodology.md` audit dimensions and report format
-5. Update `references/improvement-methodology.md` extraction patterns and categorization
-6. Update `references/session-reading.md` JSONL format reference
+4. Update the project's `sdlc-audit/references/compliance-methodology.md` audit dimensions and report format
+5. Update the project's `sdlc-audit/references/improvement-methodology.md` extraction patterns and categorization
+6. Update the project's `sdlc-audit/references/session-reading.md` JSONL format reference
 7. Preserve any project-specific audit dimensions or improvement categories added by the project
 
 **Migration note:** The `sdlc-compliance-auditor` agent has been restored as a subagent dispatched by `sdlc-audit`. If the project has an old version, update it to the current version. If the project removed it during a prior migration, re-install it.
@@ -888,34 +762,9 @@ The project's `CLAUDE.md` contains CLAUDE-SDLC.md content — skill names, proce
 
 **Check for:**
 
-1. **Skill name references (guarded renames)** — driven by `skeleton/contract_changes.yaml`. Read that file from the cc-sdlc source. Select entries with `type: rename_skill` and `id` > the project's `last_applied_contract_id` (stored in `.sdlc-manifest.json`; treat as `"0000"` if absent). Process selected entries in id order; each entry contributes `from → to` pairs to the rename set. If the project's `last_applied_contract_id` is absent, apply the full rename set — this covers projects installed before contract_changes.yaml existed.
+1. **Skill name references (guarded renames)** — driven by `skeleton/contract_changes.yaml` entries with `type: rename_skill`. Only rename references to skills that actually exist in the project. Full guarded rename rules for both skills and agents (inventory check, chained renames, logging): see `references/guarded-renames.md`.
 
-   For every accumulated rename pair, sweep CLAUDE.md and other project references.
-
-   **Guarded rename rule:** Before rewriting any skill reference in the project's CLAUDE.md or other files:
-   1. Build the project's actual skill inventory: `ls .claude/skills/`
-   2. Only rewrite if the target skill directory exists in the project
-   3. If the target doesn't exist (e.g., the project hasn't received the new skill yet), log a warning instead of rewriting:
-      ```
-      GUARDED RENAME SKIPPED: [old-name] → [new-name] — target directory does not exist in project
-      ```
-   This prevents renaming references to skills that don't exist in the project, which causes silent process failures.
-
-   **Chained renames:** If a skill was renamed multiple times (e.g., `diff-review` → `sdlc-review-diff` → `sdlc-review-code`), contract_changes.yaml has a separate entry per hop. Applying entries in id order walks the chain automatically — no special-case logic needed.
-
-   **Do NOT hardcode rename pairs in this skill.** Every rename goes in contract_changes.yaml. If you find yourself wanting to add a special case here, add it to the YAML instead.
-
-2. **Agent name references in dispatching skills (guarded renames)** — skills that dispatch subagents (`sdlc-review-code`, `sdlc-review-fix`, `sdlc-execute`, `sdlc-lite-execute`, `sdlc-plan`, `sdlc-lite-plan`) contain agent names in their examples and dispatch logic. If the upstream cc-sdlc uses different agent names than the project (e.g., `frontend-developer` vs `frontend-engineer`), do NOT rename the project's references to match upstream.
-
-   **Guarded rename rule for agents:** Before renaming any agent reference in a dispatching skill:
-   1. Build the project's actual agent inventory: `ls .claude/agents/`
-   2. Only rename if the target agent file exists in the project
-   3. If the target doesn't exist, keep the project's original agent name:
-      ```
-      GUARDED RENAME SKIPPED: [old-agent] → [new-agent] — target agent does not exist in project
-      ```
-   
-   **Why this matters:** Projects customize agent names to match their domain (`frontend-engineer` vs `frontend-developer`, `data-engineer` vs `analytics-engineer`). Renaming references to agents that don't exist causes silent dispatch failures — the skill tries to invoke a nonexistent agent.
+2. **Agent name references in dispatching skills (guarded renames)** — skills that dispatch subagents contain project-specific agent names. Do NOT rename to match upstream unless the target agent exists. Full rules: see `references/guarded-renames.md`.
 
 3. **Process file paths** — verify paths like `[sdlc-root]/process/overview.md`, `[sdlc-root]/process/sdlc_changelog.md`, `[sdlc-root]/process/compliance_audit.md` still exist
 
@@ -1080,90 +929,13 @@ Do **not** auto-install bundles. Do **not** remove installed bundles the project
 
 ## Recovery / Emergency Restore
 
-If `/sdlc-migrate` crashes, is interrupted, or leaves the workspace in an inconsistent state, use this section to diagnose and recover. Migration is designed to be resumable — most scenarios resolve via re-running the skill.
-
-### Step 1: Diagnose
-
-**Transaction log** (authoritative timeline):
-```bash
-tail -n 200 .sdlc-transaction-log | jq -c 'select(.run_id | startswith("migrate-"))'
-# Last `run_start` marks the crashed migration run
-# Last `mutation` event shows what was last committed
-# Presence of `checkpoint: point_of_no_return` tells you whether mutations were attempted
-```
-
-**Manifest version:**
-```bash
-jq -r '.source_version' .sdlc-manifest.json
-```
-Authoritative post-migration version. If this matches the intended `LATEST_VERSION`, migration completed. If it still shows the old version, Phase 4.5 didn't run.
-
-**Source clone state:**
-```bash
-ls /tmp/cc-sdlc-migrate/ 2>/dev/null
-```
-If present, the temp clone wasn't cleaned up — may indicate crash during or before Phase 4.6. Safe to delete manually if the migration is resolved.
-
-**Drift decisions** (if §1.2a detected any):
-```bash
-grep -c '"event":"drift_decision"' .sdlc-transaction-log
-# If drift was detected but fewer drift_decision events than drift_detected events,
-# some files have unresolved drift — they weren't handled before the crash
-```
-
-### Step 2: Match state to recovery action
-
-| State | Recovery Action |
-|-------|-----------------|
-| Crash before point_of_no_return (Phase 0–1 events, no `checkpoint: point_of_no_return` in log) | **Safe — no recovery needed.** Re-run `/sdlc-migrate` from the top. Phase 0 and Phase 1 are idempotent. |
-| Crash after point_of_no_return, manifest updated to `LATEST_VERSION` | **Migration completed.** Any remaining issues are audit-level. Dispatch `sdlc-compliance-auditor` to identify. |
-| Crash after point_of_no_return, manifest still at old version | **Operational writes partial.** Re-run `/sdlc-migrate` — it detects the version skew and completes from the first unwritten file. PROJECT-SECTION marker re-extraction handles already-written files correctly. |
-| Crash during §2.1 direct copy | **File-level idempotency saves you.** Re-run — each direct copy is idempotent (same git show → same content). Previously copied files will simply re-copy with the same result. |
-| Crash during §2.1b knowledge YAML merge | **Knowledge files at intermediate state.** Re-run — key-level merge is idempotent when re-applied against its own output. Use git diff to verify files look correct after re-run. |
-| Drift decisions lost to crash (drift_detected without matching drift_decision) | **Re-run `/sdlc-migrate`.** Drift re-detected at §1.2a; CD re-prompted with same options. Prior decisions not preserved across crashes. |
-| Temp clone at `/tmp/cc-sdlc-migrate/` from prior run | **Clean up manually:** `rm -rf /tmp/cc-sdlc-migrate/` before re-running. Phase 0 would have cloned fresh. |
-
-### Step 3: Never do these things
-
-- **Do not edit `.sdlc-manifest.json` to match what you think the state should be.** If the manifest is wrong, re-run migrate; don't synthesize state.
-- **Do not delete `[sdlc-root]/` and re-run `/sdlc-initialize`.** That loses drift-detection history and treats the workspace as greenfield. Always prefer re-running migrate for mid-migration recovery.
-- **Do not ignore drift warnings from §1.2a.** They signal files where manual edits will be silently overwritten if you proceed without deciding.
-
-### Step 4: Absolute last resort
-
-If the workspace is so corrupted that re-running migrate cannot resolve it:
-
-1. Back up: `cp -r [sdlc-root] [sdlc-root].backup-{date}` and `cp .sdlc-manifest.json .sdlc-manifest.backup-{date}.json`
-2. Run `/sdlc-initialize` in repair mode to rebuild the skeleton.
-3. Manually re-apply project customizations from the backup (PROJECT-SECTION blocks, agent-context-map additions, discipline parking lot entries).
-
-This path loses `installed_files` hash history and resets drift-detection baselines — use only when no other recovery works.
+If migration fails, crashes, or leaves the workspace inconsistent, see `references/recovery-procedures.md` for diagnosis commands, state-to-action mapping, and last-resort procedures. Migration is designed to be resumable — most scenarios resolve via re-running `/sdlc-migrate`.
 
 ---
 
 ## Red Flags
 
-| Thought | Reality |
-|---------|---------|
-| "I'll just copy all files from cc-sdlc" | Content-merge exists for a reason — direct copy overwrites project customizations |
-| "The project's agent names match cc-sdlc's" | They almost never do. Always read the project's context-map, not the source's |
-| "I'll copy agent-selection.yaml with the other process files" | `agent-selection.yaml` is project-specific — it contains the project's agent roster, not the framework's. Never overwrite it. |
-| "I'll skip the changelog review" | Breaking changes and new capabilities need user input before applying |
-| "The tracker levels look right, I'll overwrite them" | The source repo's tracker reflects the source repo's levels, not this project's |
-| "I'll rephrase the framework sections to be clearer" | Verbatim rule. Copy exactly from cc-sdlc. Do not rephrase. |
-| "I'll remove this agent mapping that cc-sdlc doesn't have" | Project-specific mappings are intentional. Never remove them. |
-| "No files were deleted, so §2.1a doesn't apply" | Always check. Moved files appear as add+delete pairs, not renames. |
-| "I'll just read the file from the cc-sdlc directory" | Use `git -C [path] show HEAD:file` — never raw filesystem reads. The repo may have uncommitted WIP. |
-| "I'll use `git show HEAD:path > file` to extract" | UNSAFE. Shell redirect truncates the target before git show runs. If git show fails, the target becomes an empty file. See "Safe File Extraction" in Source Repo Access Rule. |
-| "New knowledge files are installed, so the project benefits automatically" | Knowledge in [sdlc-root]/ is available but not applied until skills and agents are updated to use it. §3.4 closes this gap. |
-| "This file has no PROJECT-SECTION markers, so I'll just overwrite it" | Run deviation detection (§2.1c) first — the project may have customized framework content that should be wrapped in markers before overwriting. |
-| "I'll rename all skill references to match upstream" | Guarded renames (§4.3a) — only rename if the target skill exists in the project. Renaming to a nonexistent skill causes silent process failures. |
-| "I'll rename agent names in skills to match upstream" | Guarded renames (§4.3a) — only rename if the target agent exists in the project. Projects use different agent names (`frontend-engineer` vs `frontend-developer`). Renaming to a nonexistent agent causes silent dispatch failures. |
-| "I'll auto-fix all the downstream impact findings" | Present findings to the user. They choose what to apply — some findings may not suit the project's context. |
-| "The SDLC is in `ops/sdlc/`" | Not always. Some projects use `.claude/sdlc/`. Detect the actual structure in pre-flight and use `[sdlc-root]` throughout. |
-| "PROJECT-SECTION markers mean this content is protected, just re-inject it" | Markers preserve content from being overwritten, but they don't prevent staleness. Review marked content against upstream changes (§2.1d) — a 6-month-old custom skill phase may reference outdated patterns. |
-| "I'll skip the marker review for old blocks" | Old blocks are the most likely to be stale. The skip threshold is for recent blocks (< 7 days) that can't have drifted yet. |
-| "The user chose 'keep' last time, so keep all markers this time" | Each migration is a fresh review. Upstream may have changed differently this time. Don't cache decisions across migrations. |
+Common anti-patterns and their corrections (20 entries covering direct-copy temptation, agent name assumptions, verbatim rule, guarded renames, marker staleness, and more): see `references/red-flags.md`.
 
 ## Integration
 

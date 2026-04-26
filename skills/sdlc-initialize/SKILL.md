@@ -33,53 +33,9 @@ This is the only SDLC skill where CC does domain work directly. The justificatio
 
 ## Transaction Log
 
-Every phase start/end, gate decision, mutation, and failure writes an append-only JSONL entry to `.sdlc-transaction-log` in the project root. This enables recovery diagnostics — if a session crashes mid-initialization or mid-migration, the next session can read the log to understand what completed and what didn't.
+Every phase writes append-only JSONL entries to `.sdlc-transaction-log` for recovery diagnostics. Log events include `run_start`, `phase_start`/`phase_end`, `gate`, `mutation`, `checkpoint`, `warning`, `failure`, and `run_end`.
 
-### Log location and lifecycle
-
-- **Path:** `.sdlc-transaction-log` (project root, gitignored — add to `.gitignore` in Phase 1d)
-- **Format:** JSONL — one JSON object per line, newline-terminated, append-only
-- **Rotation:** On each new init/migrate run, append a `run_start` marker. Logs accumulate history across runs (not truncated).
-
-### Entry schema
-
-```json
-{"ts": "2026-04-21T18:30:00Z", "run_id": "init-abc123", "skill": "sdlc-initialize", "event": "run_start", "details": {"mode": "greenfield-fresh"}}
-{"ts": "2026-04-21T18:30:02Z", "run_id": "init-abc123", "skill": "sdlc-initialize", "event": "phase_start", "phase": "0", "details": {"phase_name": "Ideation and Spec"}}
-{"ts": "2026-04-21T18:32:00Z", "run_id": "init-abc123", "skill": "sdlc-initialize", "event": "gate", "phase": "0", "gate": "spec_approval", "result": "approved"}
-{"ts": "2026-04-21T18:35:42Z", "run_id": "init-abc123", "skill": "sdlc-initialize", "event": "mutation", "phase": "1", "details": {"type": "file_install", "count": 127}}
-{"ts": "2026-04-21T18:40:00Z", "run_id": "init-abc123", "skill": "sdlc-initialize", "event": "run_end", "details": {"result": "success", "duration_ms": 600000}}
-```
-
-### Required event types
-
-| `event` | When to log | Required `details` |
-|---------|-------------|---------------------|
-| `run_start` | First action when the skill starts | `mode`, `invocation_args` |
-| `phase_start` | Entering a phase | `phase`, `phase_name` |
-| `phase_end` | Exiting a phase | `phase`, `duration_ms`, `result` (`pass`/`fail`) |
-| `gate` | User confirmation or hard-fail gate | `phase`, `gate` (name), `result` (`approved`/`rejected`/`cancelled`) |
-| `mutation` | Any action that changes state (file install, git operation, manifest write) | `phase`, `type`, scope details |
-| `checkpoint` | Named milestone, including `point_of_no_return` | `phase`, `name` |
-| `warning` | Non-fatal issue | `phase`, `category`, `message`, `location` |
-| `failure` | Any error condition | `phase`, `error`, remediation hints |
-| `run_end` | Final exit | `result` (`success`/`failure`/`cancelled`), `duration_ms` |
-
-### Run ID generation
-
-`run_id = "{skill-shortname}-{6-char-random-hex}"` — e.g., `init-abc123`, `migrate-def456`. Consistent run_id lets future diagnostics filter all events from a single invocation.
-
-### Reading the log for recovery
-
-If a session ended abnormally:
-
-```bash
-tail -n 100 .sdlc-transaction-log | jq -c '.'
-# Last `run_start` marks the interrupted run
-# Last mutation event = what was last committed
-# Last phase_start without matching phase_end = where it crashed
-# Presence of `checkpoint: point_of_no_return` tells you whether mutations began
-```
+See `[sdlc-root]/process/transaction-log-schema.md` for the full schema, entry types, run ID conventions, and recovery reading guide.
 
 ## Mode Detection
 
@@ -119,146 +75,9 @@ Present the assessment and mode selection to CD via `AskUserQuestion`:
 
 ## Lite Graduation Mode
 
-For projects that installed `BOOTSTRAP-LITE.md` (minimal 3-agent / 2-skill starter) and now want the full framework. Runs Phase 0-L to merge the lite install into the full layout, then falls through to Phase 1 so the standard install proceeds with the lite assets already in place and preserved by the skip-existing logic.
+For projects that installed `BOOTSTRAP-LITE.md` (minimal 3-agent / 2-skill starter) and now want the full framework. Runs Phase 0-L to merge the lite install into the full `ops/sdlc/` layout, preserving all lite agents, skills, discipline entries, knowledge customizations, and changelog history. After graduation, falls through to Phase 1 so the standard install proceeds with lite assets already in place.
 
-### Phase 0-L: Merge Lite Install Into Full Layout
-
-**Entry condition:** `ops/sdlc-lite/` exists and `ops/sdlc/` does not (or is empty). If both exist and `ops/sdlc/` is populated, treat as Already Initialized and report.
-
-**0-L.a. Inventory and confirm.**
-
-Scan and report what will be preserved:
-
-```
-LITE GRADUATION INVENTORY
-Lite agents (preserved as-is):
-  - .claude/agents/software-architect.md
-  - .claude/agents/fullstack-developer.md
-  - .claude/agents/code-reviewer.md
-Lite skills (preserved as-is):
-  - .claude/skills/sdlc-lite-plan/
-  - .claude/skills/sdlc-lite-execute/
-Lite content (moved into ops/sdlc/):
-  - ops/sdlc-lite/process/*.md       → ops/sdlc/process/
-  - ops/sdlc-lite/disciplines/*.md   → ops/sdlc/disciplines/
-  - ops/sdlc-lite/knowledge/**       → ops/sdlc/knowledge/
-  - ops/sdlc-lite/templates/*.md     → ops/sdlc/templates/
-  - ops/sdlc-lite/sdlc_changelog.md  → ops/sdlc/process/sdlc_changelog.md
-Deliverable catalog: docs/_index.md (stays in place; format upgraded in Phase 3)
-Lite work history: docs/current_work/sdlc-lite/ (stays as historical record)
-```
-
-Confirm via `AskUserQuestion`:
-
-> I've detected an SDLC-Lite install. Graduation will move lite assets into the full SDLC layout (`ops/sdlc/`), preserve your 3 agents and 2 lite skills, and run the full bootstrap to add specs, full agent roster, chronicle, playbooks, and the remaining knowledge stores. Proceed?
-
-Log `phase_start` event with `phase: 0-L`.
-
-**0-L.b. Create full layout skeleton.**
-
-```bash
-mkdir -p ops/sdlc/{process,knowledge,disciplines,templates,playbooks,plugins}
-mkdir -p ops/sdlc/knowledge/{architecture,coding,data-modeling,design,product-research,testing}
-```
-
-**0-L.c. Move lite content into full layout.**
-
-For each source path, move the file (not copy — we want `ops/sdlc-lite/` empty at the end so it can be removed):
-
-| Source | Target |
-|--------|--------|
-| `ops/sdlc-lite/process/manager-rule.md` | `ops/sdlc/process/manager-rule.md` |
-| `ops/sdlc-lite/process/finding-classification.md` | `ops/sdlc/process/finding-classification.md` |
-| `ops/sdlc-lite/process/review-fix-loop.md` | `ops/sdlc/process/review-fix-loop.md` |
-| `ops/sdlc-lite/disciplines/*.md` | `ops/sdlc/disciplines/` |
-| `ops/sdlc-lite/knowledge/agent-context-map.yaml` | `ops/sdlc/knowledge/agent-context-map.yaml` |
-| `ops/sdlc-lite/knowledge/architecture/*.yaml` | `ops/sdlc/knowledge/architecture/` |
-| `ops/sdlc-lite/knowledge/coding/*.yaml` | `ops/sdlc/knowledge/coding/` |
-| `ops/sdlc-lite/knowledge/testing/*.yaml` | `ops/sdlc/knowledge/testing/` |
-| `ops/sdlc-lite/templates/sdlc_lite_plan_template.md` | `ops/sdlc/templates/` |
-| `ops/sdlc-lite/templates/sdlc_lite_result_template.md` | `ops/sdlc/templates/` |
-| `ops/sdlc-lite/sdlc_changelog.md` | `ops/sdlc/process/sdlc_changelog.md` |
-
-Log each move as a `mutation` event.
-
-**After the moves, Phase 1's skip-existing logic preserves every lite customization.** Full-install versions of the same files (e.g., `manager-rule.md`, `finding-classification.md`) will not overwrite. Lite discipline parking lot entries with real insights will not be replaced by empty full-install seeds. Lite knowledge file customizations persist.
-
-**0-L.d. Rewrite `ops/sdlc-lite/` path references.**
-
-Every lite skill, lite agent, and the lite CLAUDE.md block references `ops/sdlc-lite/` directly. Rewrite all references to `ops/sdlc/`:
-
-```bash
-# Skills
-for f in .claude/skills/sdlc-lite-plan/SKILL.md .claude/skills/sdlc-lite-execute/SKILL.md; do
-  [ -f "$f" ] && sed -i.bak 's|ops/sdlc-lite/|ops/sdlc/|g' "$f" && rm -f "$f.bak"
-done
-
-# Agents
-for f in .claude/agents/software-architect.md .claude/agents/fullstack-developer.md .claude/agents/code-reviewer.md; do
-  [ -f "$f" ] && sed -i.bak 's|ops/sdlc-lite/|ops/sdlc/|g' "$f" && rm -f "$f.bak"
-done
-
-# Verify no lite paths remain in rewritten files
-! grep -l 'ops/sdlc-lite/' .claude/skills/sdlc-lite-*/SKILL.md .claude/agents/*.md
-```
-
-**0-L.e. Remove the SDLC-Lite block from CLAUDE.md.**
-
-The lite bootstrap appended a `# SDLC-Lite` section to `CLAUDE.md`. Phase 2 will add the full SDLC-equivalent content. Remove the lite section now so Phase 2 doesn't duplicate it.
-
-1. Read `CLAUDE.md`
-2. Find the line `# SDLC-Lite` (must appear with a preceding `---` separator — that's the marker the bootstrap uses)
-3. Delete from the preceding `---` through the end of the file (the block is always last — the lite bootstrap appends it, and nothing should follow)
-4. If multiple `# SDLC-Lite` occurrences exist, stop and report to CD (manual intervention needed — the file has been customized beyond the bootstrap template)
-5. Write the trimmed `CLAUDE.md`
-
-Log as `mutation` with `type: claude_md_lite_block_removed`.
-
-**0-L.f. Remove the empty `ops/sdlc-lite/` directory.**
-
-```bash
-# After all moves, ops/sdlc-lite/ should contain no files
-if [ -z "$(find ops/sdlc-lite -type f 2>/dev/null)" ]; then
-  rm -rf ops/sdlc-lite/
-else
-  # Something wasn't moved — report and leave the directory in place
-  find ops/sdlc-lite -type f
-  # Log a warning event; do not delete
-fi
-```
-
-**0-L.g. Prepend graduation entry to the migrated changelog.**
-
-Edit `ops/sdlc/process/sdlc_changelog.md` — prepend an entry above existing content documenting the graduation:
-
-```markdown
-## <ISO-date>: Graduated from SDLC-Lite to full SDLC
-
-**Origin:** `sdlc-initialize` Lite Graduation mode.
-
-**What happened:** Moved lite install from `ops/sdlc-lite/` into `ops/sdlc/`; preserved 3 lite agents, 2 lite skills, lite discipline parking lot entries, and lite knowledge files. Removed the SDLC-Lite block from `CLAUDE.md` (Phase 2 will add the full SDLC block). Proceeded to Phase 1 to install the remaining framework (full agent roster, specs, chronicle, playbooks, remaining knowledge stores).
-
-**Changes made:**
-
-1. **`ops/sdlc-lite/*`** → `ops/sdlc/*` — directory migration
-2. **Path references** in lite skills, lite agents, and `CLAUDE.md` rewritten from `ops/sdlc-lite/` to `ops/sdlc/`
-3. **`ops/sdlc-lite/`** removed after successful merge
-
-**Rationale:** The lite install is designed as an on-ramp to the full framework. Graduation preserves everything the team built on lite (agents with project-specific scope, discipline entries with real insights, changelog history, deliverable catalog) and layers the full framework on top.
-```
-
-**0-L.h. Proceed to Phase 1.**
-
-Log `phase_end` with `result: pass`. Fall through to Phase 1 (Install the Skeleton). Phase 1's skip-existing logic preserves everything the graduation just moved into place.
-
-The remaining phases behave as follows for a graduated install:
-
-- **Phase 1 (Skeleton install):** Adds full framework files that don't already exist. Lite agents, lite skills, lite process docs (manager-rule, finding-classification, review-fix-loop), lite disciplines, lite knowledge, lite templates, and the changelog are all preserved. Full-framework additions: `sdlc-plan` / `sdlc-execute` / `sdlc-review` / `sdlc-audit` / remaining skills, full process docs (deliverable_lifecycle, collaboration_model, knowledge-routing, etc.), chronicle directory, playbooks, remaining knowledge YAML files, remaining discipline files.
-- **Phase 2 (CLAUDE.md):** Adds the full SDLC-SDLC.md content block (no duplication — the lite block was removed in 0-L.e).
-- **Phase 3 (D1 catalog registration):** Upgrades `docs/_index.md` format if needed; preserves existing entries.
-- **Phase 4 (Domain agents):** Detects the 3 existing lite agents and does not recreate them. Asks CD whether to add additional full-roster agents (sdet, accessibility-auditor, security-engineer, etc.).
-- **Phase 5 (Agent-Context Map):** Preserves lite mappings for the 3 agents; adds entries for new agents created in Phase 4.
-- **Phase 7 (Discipline parking lots):** Preserves lite discipline entries; creates additional discipline files (business-analysis, deployment, process-improvement, etc.) that weren't in the lite install.
+See `references/lite-graduation.md` for the full Phase 0-L procedure (inventory, content migration, path rewriting, changelog entry, and per-phase behavior notes for graduated installs).
 
 ---
 
@@ -298,7 +117,7 @@ Then enter the ideation loop. The principles here are borrowed from `sdlc-idea` 
 - Is there a README with any project description?
 - Are there any prior art references in the repo?
 
-**Ask one question at a time.** Do not batch questions. Let each answer inform the next. Use `AskUserQuestion` for every question — no conversational text questions.
+**Ask one question at a time.** Do not batch questions. Let each answer inform the next. Use AskUserQuestion for each question — this ensures clear consent gates and structured feedback.
 
 **Question priorities for initialization** (these establish what the spec needs):
 
@@ -437,22 +256,9 @@ For each directory in manifest.directories:
   mkdir -p <target>/<directory>
 ```
 
-**Copy files by category** (source → target mappings):
+**Copy files by category** using the source → target path mappings in `[sdlc-root]/process/path-mappings.md`. The key transforms: `knowledge/` → `[sdlc-root]/knowledge/`, `agents/` → `.claude/agents/`, `skills/` → `.claude/skills/`, and process/templates/disciplines/playbooks → `[sdlc-root]/` subdirectories.
 
-| Source Path | Target Path |
-|-------------|-------------|
-| `process/*` | `ops/sdlc/process/*` |
-| `templates/*.md` | `ops/sdlc/templates/*.md` |
-| `examples/*` | `ops/sdlc/examples/*` |
-| `disciplines/*` | `ops/sdlc/disciplines/*` |
-| `playbooks/*` | `ops/sdlc/playbooks/*` |
-| `knowledge/**/*` | `ops/sdlc/knowledge/**/*` |
-| `plugins/*` | `ops/sdlc/plugins/*` |
-| `skills/**/*` | `.claude/skills/**/*` |
-| `agents/*` | `.claude/agents/*` |
-| `README.md` | `ops/sdlc/README.md` |
-
-**Safe file extraction:** When copying from a git clone (e.g., `/tmp/cc-sdlc-bootstrap`), read each source file's content and verify it's non-empty before writing to the target. Never use shell redirection like `git show HEAD:<path> > file` — this truncates the target before git show runs, leaving empty files if the command fails. Use the Read tool to get content, verify it, then Write.
+**Safe file extraction:** See `[sdlc-root]/process/source-repo-safety.md` for verified-content extraction patterns. The core rule: never use shell redirection (`git show > file`) — it truncates the target before git show runs, leaving empty files on failure.
 
 **Not installed to child projects:**
 - `templates/optional/` — Conditional CLAUDE.md appendices (e.g., `data-pipeline-integrity.md`). Read from cc-sdlc source during Phase 2 when needed, not installed.
@@ -979,7 +785,7 @@ Present the checklist to CD. If any items failed, note them and suggest remediat
 
 ### Phase 11: Post-Initialization Compliance Audit
 
-**MANDATORY — do not skip.** Dispatch the `sdlc-compliance-auditor` subagent directly to verify initialization integrity. Do not ask CD to invoke `/sdlc-audit` separately — dispatch the subagent yourself as part of this skill's execution.
+Run the compliance audit before declaring initialization complete — this catches structural gaps early. Dispatch the `sdlc-compliance-auditor` subagent directly to verify initialization integrity. Do not ask CD to invoke `/sdlc-audit` separately — dispatch the subagent yourself as part of this skill's execution.
 
 **Dispatch prompt for the subagent:**
 
@@ -1001,7 +807,7 @@ After the audit passes (or only minor/info findings remain):
 
 ### Phase 12: Cleanup (Mandatory)
 
-**Always run cleanup after successful initialization.**
+**Run cleanup after successful initialization.**
 
 Remove the temp clone if it exists:
 
@@ -1021,137 +827,21 @@ rm -f .claude/BOOTSTRAP.md BOOTSTRAP.md
 
 ## Retrofit Mode
 
-For existing projects with code and documentation that need cc-sdlc integrated.
+For existing projects with code and documentation that need cc-sdlc integrated. Discovers and categorizes existing docs, proposes a migration plan, then runs the standard install while augmenting (not replacing) existing content.
 
-### Phase R1: Discovery
-
-1. Scan the project for existing documentation (markdown files, docs/, design/, specs/)
-2. Categorize each document:
-
-| Category | Indicators |
-|----------|------------|
-| **Spec** | "Specification", "Design", requirements, API definitions |
-| **Planning** | "Instructions", "How to", implementation steps |
-| **Result** | "COMPLETE", "DONE", completion records |
-| **Roadmap** | Future plans, phases, milestones |
-| **Reference** | API docs, architecture overview, README |
-| **Issue** | "BLOCKED", problems, open questions |
-
-3. Group related documents into logical concepts (domains/features)
-4. Check for existing agents in `.claude/agents/`
-
-### Phase R2: Proposal
-
-1. Present categorization table to CD (files found, proposed type, proposed concept)
-2. Propose concept groupings for the chronicle
-3. Propose which existing docs map to which SDLC artifact types
-4. Get CD approval via `AskUserQuestion` before acting
-
-**Gate:** CD must approve the proposal before Phase R3.
-
-### Phase R3: Implementation
-
-1. Install files from cc-sdlc source (same as Greenfield Phase 1)
-2. Augment existing CLAUDE.md with SDLC process section (do NOT overwrite)
-3. Create concept directories in `docs/chronicle/` based on approved proposal
-4. Move/copy existing docs to appropriate locations
-5. Backfill `docs/_index.md` with entries for substantial completed work
-6. Create domain agents (same as Greenfield Phase 4 — via `/sdlc-create-agent`)
-7. Wire agent-context map (same as Greenfield Phase 5)
-8. Seed knowledge and disciplines (same as Greenfield Phases 6–8, informed by existing codebase patterns)
-9. Assess initial maturity levels (same as Greenfield Phase 9a)
-
-### Phase R4: Verification
-
-Same as Greenfield Phases 10–11 (verification checklist + compliance audit), plus:
-
-```
-[ ] Existing documents categorized and moved to SDLC locations
-[ ] Chronicle concept directories created with _index.md files
-[ ] Deliverable catalog backfilled with completed work
-[ ] Existing CLAUDE.md augmented (not replaced)
-```
+See `references/retrofit-mode.md` for Phases R1–R4.
 
 ---
 
 ## Recovery / Emergency Restore
 
-If `/sdlc-initialize` crashes, is interrupted, or leaves the workspace in a visibly bad state, this section is how to diagnose and recover.
-
-### Step 1: Diagnose
-
-Check these sources of truth, in order:
-
-**1. Transaction log** (most specific):
-```bash
-tail -n 100 .sdlc-transaction-log | jq -c '.'
-# Find the last `run_start` for sdlc-initialize
-# Walk forward: which phases completed (phase_end + result)?
-# Where did it stop (last event)? Before or after the point_of_no_return checkpoint?
-```
-
-**2. Manifest** (operational-layer truth):
-```bash
-cat .sdlc-manifest.json 2>/dev/null | jq .
-```
-- Missing → Phase 1 never completed. Safe to re-run init.
-- Present with `source_version` → Phase 1 succeeded; later phases may be partial.
-- Present with `installed_files` → drift detection available for next migration.
-
-**3. Filesystem state:**
-```bash
-ls [sdlc-root]/process/ [sdlc-root]/knowledge/ 2>/dev/null
-ls .claude/agents/ .claude/skills/ 2>/dev/null
-```
-- Populated → Phase 1 file installation ran.
-- Agents present → Phase 4 completed for those agents.
-
-### Step 2: Match state to recovery action
-
-| State | Recovery Action |
-|-------|-----------------|
-| No manifest, no `[sdlc-root]/` | **Full re-run.** `/sdlc-initialize` — workspace is clean. |
-| Manifest present, `[sdlc-root]/` incomplete | **Repair mode.** Re-run `/sdlc-initialize`; mode detection identifies this as Repair and reinstalls from Phase 1. |
-| Manifest + `[sdlc-root]/` present, no agents | **Resume from Phase 4.** Re-run `/sdlc-initialize`; mode detection identifies "post-skeleton" state. |
-| All present but compliance audit failed | **Targeted fix.** The CRITICAL finding identifies what to fix. Apply the fix, then dispatch `sdlc-compliance-auditor` manually. Full re-run is not required. |
-| Manifest lacks `installed_files` (pre-drift-detection install) | Next `/sdlc-migrate` will back-fill automatically (see §1.2a of migrate). |
-
-### Step 3: Never do these things
-
-- **Do not delete `[sdlc-root]/` to force a clean retry.** That loses any project customizations and knowledge wiring. Use mode detection + repair instead.
-- **Do not delete `.sdlc-manifest.json`.** It tracks version and drift baselines; reconstructing is not trivial.
-- **Do not hand-write agent files to skip `/sdlc-create-agent`.** Skipping validation is the fastest way to ship broken agents.
-
-### Step 4: Last resort — reset
-
-Absolute last resort. Requires explicit CD decision.
-
-1. Back up: `git stash` or `cp -r [sdlc-root] [sdlc-root].backup && cp -r .claude .claude.backup`.
-2. Re-run `/sdlc-initialize` from scratch.
-3. Manually port project customizations back from backup (agent memories, PROJECT-SECTION blocks, discipline parking lot entries).
+If initialization fails, see `references/recovery-emergency.md` for diagnostics and recovery steps.
 
 ---
 
 ## Red Flags
 
-| Thought | Reality |
-|---------|---------|
-| "I'll skip ideation and go straight to scaffolding" | Agents and knowledge seeded without stack context are generic and unhelpful. Define the project first. |
-| "I should dispatch an agent for the spec" | No agents exist yet in greenfield. CC writes the spec directly. This is the one exception to the Manager Rule. |
-| "The user described the project, I have enough to create agents" | You have enough to create agents when you have an approved spec with tech stack and repo structure. Not before. |
-| "I'll write the agent files directly — the skill is slow" | `/sdlc-create-agent` validates frontmatter, descriptions, and template compliance. Hand-written agents skip these gates. |
-| "The context map ships with reasonable defaults" | The defaults use generic role names. If they don't match your agent filenames, self-discovery is broken. |
-| "Disciplines can be seeded later" | A few bullets now costs 2 minutes; discovering the gap mid-execution costs a review round. |
-| "Context7 is optional for now" | Without it, agents will hallucinate library APIs from training data. Install it before any agent work begins. |
-| "I'll overwrite their existing CLAUDE.md with a fresh one" | In retrofit mode, ALWAYS augment. Existing project instructions are authoritative. |
-| "The project only needs 2 agents" | `software-architect` and `code-reviewer` are mandatory — that's already 2. Add at least one implementer. The minimum viable set is 3+. |
-| "We don't need a software-architect or code-reviewer for a small project" | Both are mandatory. The architect mediates debate, reviews plans, and seeds knowledge. The code-reviewer is unconditionally dispatched by every review skill. Without them, review and planning skills are broken. |
-| "The agents are created, we're done with Phase 4" | Verify dispatcher wiring (4e). An agent that isn't in the selection tables won't be dispatched by review or planning skills. |
-| "I'll seed knowledge from training data" | Verify all library/framework claims via Context7 before writing knowledge files. Training data goes stale. |
-| "Installation failed, I'll create the directories manually" | Fix the installation failure. Manual creation misses files and skips version tracking. |
-| "Manager Rule applies from the start" | In greenfield Phases 0–3, no agents exist. CC works directly. Manager Rule activates at Phase 4. |
-| "I'll batch all the ideation questions" | One question at a time via AskUserQuestion. Batched questions get shallow answers. |
-| "I'll add adapter-plugin detection to this skill" | Adapter plugins override this skill entirely when installed — they never depend on cc-sdlc base detecting them. Detection logic in this skill would be dead code. |
+Common anti-patterns: see `references/red-flags.md`.
 
 ## Integration
 

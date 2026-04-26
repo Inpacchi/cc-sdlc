@@ -34,6 +34,22 @@ Each entry contains:
 
 ---
 
+## 2026-04-25: Extract reference material from bloated skills (SQR-07 P1 fix)
+
+**Origin:** Skill quality audit against SQR rubrics flagged sdlc-initialize (1163 lines, 28 directives) and sdlc-migrate (1185 lines, 32 directives) as BLOATED_SKILL + OVER_CONSTRAINED.
+
+**What happened:** Extracted conditional, recovery, and reference material from both skills into `references/` directories. Softened prescriptive directives to rationale-driven framing where the directive was a preference rather than a safety requirement. Fixed 3 orphan references in sdlc-migrate that pointed to sdlc-audit's reference files without qualifying the path.
+
+**Changes made:**
+
+1. **`skills/sdlc-initialize/SKILL.md`** — 1163→865 lines (26% reduction). Extracted 5 reference files: transaction-log.md (schema/recovery), lite-graduation.md (Phase 0-L), retrofit-mode.md (Phases R1–R4), recovery-emergency.md (diagnostics), red-flags.md (anti-patterns). Directives: 28→19.
+2. **`skills/sdlc-migrate/SKILL.md`** — 1185→956 lines (19% reduction). Extracted 6 reference files: source-repo-safety.md (git access patterns), path-mappings.md (source→project transforms), recovery-procedures.md (diagnostics), red-flags.md (anti-patterns), marker-review-findings.md (PROJECT-SECTION finding types), guarded-renames.md (skill/agent rename safety). Directives: 32→22. Fixed orphan references in §2.4 to clarify they point to the project's sdlc-audit/references/ files.
+3. **`skeleton/manifest.json`** — Added 11 new reference file entries.
+
+**Rationale:** SQR-04 (scope calibration) and SQR-05 (progressive disclosure) require skills over 800 lines to use references/ directories. Material on the primary execution path stays in SKILL.md; conditional modes, recovery procedures, and lookup tables move to reference files loaded on demand.
+
+---
+
 ## 2026-04-25: Wire new knowledge files into applicable skills
 
 **Origin:** Post-intake analysis of which skills would produce better output by consulting the newly ingested knowledge stores.

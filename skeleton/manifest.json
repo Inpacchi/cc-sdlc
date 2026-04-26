@@ -79,7 +79,10 @@
       "process/debate-protocol.md",
       "process/team-communication-protocol.md",
       "process/knowledge-routing.md",
-      "process/input-quality-gates.md"
+      "process/input-quality-gates.md",
+      "process/transaction-log-schema.md",
+      "process/source-repo-safety.md",
+      "process/path-mappings.md"
     ],
     "templates": [
       "templates/spec_template.md",
@@ -215,7 +218,15 @@
       "skills/sdlc-tests-run/SKILL.md",
       "skills/sdlc-idea/SKILL.md",
       "skills/sdlc-initialize/SKILL.md",
+      "skills/sdlc-initialize/references/lite-graduation.md",
+      "skills/sdlc-initialize/references/retrofit-mode.md",
+      "skills/sdlc-initialize/references/recovery-emergency.md",
+      "skills/sdlc-initialize/references/red-flags.md",
       "skills/sdlc-migrate/SKILL.md",
+      "skills/sdlc-migrate/references/recovery-procedures.md",
+      "skills/sdlc-migrate/references/red-flags.md",
+      "skills/sdlc-migrate/references/marker-review-findings.md",
+      "skills/sdlc-migrate/references/guarded-renames.md",
       "skills/sdlc-ingest/SKILL.md",
       "skills/sdlc-playbook-generate/SKILL.md",
       "skills/sdlc-playbook-generate/references/analysis-methodology.md",
