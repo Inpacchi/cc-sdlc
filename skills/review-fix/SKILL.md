@@ -30,7 +30,7 @@ Read the review report from the current conversation. Extract each finding's des
 
 ### Agent Dispatch Protocol
 
-Consult `[sdlc-root]/knowledge/architecture/agent-orchestration-patterns.yaml` for dispatch discipline — especially AOP1 (decompose by file ownership to prevent merge conflicts) and AOP9 (every dispatch must include objective, owned files, constraints, acceptance criteria, and out-of-scope).
+Consult `[sdlc-root]/knowledge/architecture/agent-orchestration-patterns.yaml` for dispatch discipline — especially AOP1 (decompose by file ownership to prevent merge conflicts) and AOP9 (every dispatch must include objective, owned files, constraints, acceptance criteria, and out-of-scope). When dispatching 2+ fixers in parallel, follow `[sdlc-root]/process/parallel-dispatch-monitoring.md` — read every agent's output before deciding next steps, check for file conflicts via `git diff --stat`, and apply the 3-strike rule for stuck agents.
 
 Dispatch prompts must describe WHAT/WHY — implementation HOW is the agent's domain. Every dispatch must include sufficient context for the agent to work autonomously.
 

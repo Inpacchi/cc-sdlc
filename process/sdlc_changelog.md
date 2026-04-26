@@ -34,6 +34,30 @@ Each entry contains:
 
 ---
 
+## 2026-04-25: Fix AOP10 and AOP9 audit findings across 8 skills
+
+**Origin:** AOP audit of all 12 dispatch-capable skills found zero FAILs but two systemic PARTIAL patterns: AOP10 (workload monitoring) in 4 parallel-dispatch skills, and AOP9 (dispatch prompt structure) in 5 skills.
+
+**What happened:** Skills that dispatch agents in parallel lacked mid-execution monitoring for stuck or imbalanced agents. Skills dispatching single subagents or reviewers lacked explicit acceptance criteria in their dispatch prompts.
+
+**Changes made:**
+
+1. **`process/parallel-dispatch-monitoring.md`** — NEW. Shared protocol for stuck-agent detection, BLOCKED signal handling, workload imbalance detection, rebalancing, and file-conflict resolution. Includes 3-strike rule, prompt-revision-not-repetition principle, and anti-patterns.
+2. **`knowledge/architecture/agent-orchestration-patterns.yaml`** — Added dispatch_prompt_templates section with full dispatch template (5-section AOP9 structure) and subagent dispatch template (lightweight objective + acceptance criteria).
+3. **`skills/sdlc-execute/SKILL.md`** — Wired parallel-dispatch-monitoring.md at the parallel dispatch point (AOP10 fix).
+4. **`skills/sdlc-lite-execute/SKILL.md`** — Wired parallel-dispatch-monitoring.md at the dispatch protocol (AOP10 fix).
+5. **`skills/review-fix/SKILL.md`** — Wired parallel-dispatch-monitoring.md at the dispatch protocol (AOP10 fix).
+6. **`skills/enrich-agent/SKILL.md`** — Wired parallel-dispatch-monitoring.md at the batch dispatch step (AOP10 fix).
+7. **`skills/sdlc-plan/SKILL.md`** — Added explicit acceptance criteria and out-of-scope guidance to the dispatch protocol (AOP9 fix).
+8. **`skills/sdlc-review-code/SKILL.md`** — Added full dispatch template reference with explicit objective, owned files (read-only), acceptance criteria, and out-of-scope at the reviewer dispatch step (AOP9 fix).
+9. **`skills/sdlc-review/SKILL.md`** — Added subagent dispatch template with objective and acceptance criteria for sdlc-reviewer dispatch (AOP9 fix).
+10. **`skills/sdlc-audit/SKILL.md`** — Added subagent dispatch template with objective and acceptance criteria for compliance-auditor dispatch (AOP9 fix).
+11. **`skeleton/manifest.json`** — Added parallel-dispatch-monitoring.md to process files.
+
+**Rationale:** The AOP audit showed that the framework's own skills partially followed 2 of the 10 orchestration patterns it teaches. Closing the gap ensures the skills practice what the knowledge store preaches — agents consulting the orchestration patterns will see consistent application in the skills that reference them.
+
+---
+
 ## 2026-04-25: Add "Use when" conditional framing to all skill descriptions (SQR-01 P4 fix)
 
 **Origin:** Skill quality audit against SQR-01 (triggering accuracy) found 25 of 29 skills lacked "Use when..." conditional framing in their descriptions, reducing autonomous invocation accuracy.

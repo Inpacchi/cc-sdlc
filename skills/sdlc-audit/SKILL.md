@@ -63,7 +63,7 @@ DISPATCH AUDITOR → REPORT → TRIAGE → FIX
 
 ### 1. Dispatch Auditor
 
-Dispatch the `sdlc-compliance-auditor` subagent to perform the 9-dimension scan. The subagent reads the methodology, scans all dimensions, and returns structured findings with a score and promotion candidates.
+Dispatch the `sdlc-compliance-auditor` subagent to perform the 9-dimension scan. Use the subagent dispatch template from `[sdlc-root]/knowledge/architecture/agent-orchestration-patterns.yaml` § dispatch_prompt_templates — objective: "Scan all 9 compliance dimensions and return structured findings"; acceptance criteria: "Return per-dimension score (0-10), overall score, categorized findings with severity, and promotion candidates for knowledge/discipline stores."
 
 **Audit Dimensions (summary):**
 

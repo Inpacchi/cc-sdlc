@@ -80,6 +80,7 @@
       "process/team-communication-protocol.md",
       "process/knowledge-routing.md",
       "process/input-quality-gates.md",
+      "process/parallel-dispatch-monitoring.md",
       "process/transaction-log-schema.md",
       "process/source-repo-safety.md",
       "process/path-mappings.md"

@@ -376,6 +376,59 @@ rules:
     source: "wshobson/agent-teams/task-coordination-strategies"
 
 # ─────────────────────────────────────────────
+# Dispatch Prompt Templates
+# ─────────────────────────────────────────────
+
+dispatch_prompt_templates:
+  description: >
+    Reusable templates that implement AOP9. Skills reference these rather
+    than re-inventing dispatch prompt structure. Two variants: full
+    (multi-agent implementation) and subagent (single well-defined
+    subagent with its own methodology).
+
+  full_dispatch:
+    use_when: "Dispatching domain agents for implementation, review, or investigation"
+    sections:
+      - name: "Objective"
+        content: "One sentence: what this agent must accomplish."
+      - name: "Owned files"
+        content: "Explicit list of files the agent may modify. For read-only dispatches (review, investigation), state 'Read-only — do not modify files.'"
+      - name: "Constraints"
+        content: "Library versions, conventions, fitness functions, design decisions that bind this work. Include cross-domain knowledge file paths from agent-context-map.yaml when relevant."
+      - name: "Acceptance criteria"
+        content: "Observable conditions for 'done' — a test passes, a file exists, a behavior occurs, a structured report is returned. Must be verifiable by the orchestrator without subjective judgment."
+      - name: "Out of scope"
+        content: "Explicit list of work the agent must NOT do. Name the most likely scope-drift for this task."
+    template: |
+      **Objective:** {one sentence goal}
+
+      **Owned files:** {file list, or "Read-only — do not modify files"}
+
+      **Constraints:**
+      - {library version / convention / design decision}
+      - Read {knowledge file paths} for domain patterns
+
+      **Acceptance criteria:**
+      - {observable condition 1}
+      - {observable condition 2}
+
+      **Out of scope:**
+      - {likely drift 1} — do not {action}
+      - {likely drift 2} — handled by {other agent or phase}
+
+  subagent_dispatch:
+    use_when: "Dispatching a single well-defined subagent (sdlc-reviewer, sdlc-compliance-auditor) that has its own methodology reference file"
+    minimum_sections:
+      - name: "Objective"
+        content: "What the subagent must produce — include the target (file path, scope)."
+      - name: "Acceptance criteria"
+        content: "What constitutes a complete result — structured findings with scores, a formatted report, specific checks that must be covered."
+    template: |
+      Dispatch `{subagent-name}` to {objective}.
+      Target: {file path or scope}.
+      Return: {structured format — e.g., findings with severity/category, score, promotion candidates}.
+
+# ─────────────────────────────────────────────
 # Maintenance
 # ─────────────────────────────────────────────
 

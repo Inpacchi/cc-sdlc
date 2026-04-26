@@ -221,7 +221,7 @@ Goal: run Steps 1–7 of the single-agent workflow against each target agent, in
    - Direction to **edit the target file directly** — do not return a plan for human review. The plan was Phase 1; the user already approved which sources apply to this target.
    - A concise report format for the response: counts by extraction mode (direct/adjacent/reframed), top 3 patterns integrated, any sources that failed to fetch (distinguishing 404-then-discovered from genuinely-missing), and the sections updated
 
-3. **Run batches sequentially; items within a batch in parallel.** Send all 3–4 Agent tool calls for a batch in a single message. Wait for the batch to complete before dispatching the next. Do not fan out all targets at once — rate limits and report volume both suffer.
+3. **Run batches sequentially; items within a batch in parallel.** Send all 3–4 Agent tool calls for a batch in a single message. Wait for the batch to complete before dispatching the next. Do not fan out all targets at once — rate limits and report volume both suffer. Within each batch, follow `[sdlc-root]/process/parallel-dispatch-monitoring.md` — read every subagent's output before starting the next batch, and apply the 3-strike rule if a subagent fails repeatedly.
 
 4. **Handle write-back failures (staging fallback).** Dispatched subagents sometimes have Edit permission denied on target files even when the user granted Edit to the main thread — tool permissions do not always inherit across the Agent boundary. If a subagent reports that it completed analysis but could not write:
 
