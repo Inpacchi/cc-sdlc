@@ -82,6 +82,8 @@ The size of a fix is not a valid reason to self-fix. A one-character typo fix st
 
 ### Agent Dispatch Protocol
 
+Consult `[sdlc-root]/knowledge/architecture/agent-orchestration-patterns.yaml` for dispatch discipline — especially AOP3 (competing hypotheses for debugging) when root cause is unclear, and AOP9 (dispatch prompts must include acceptance criteria and owned files).
+
 Dispatch prompts must describe WHAT/WHY — implementation HOW is the agent's domain. Every dispatch must include sufficient context for the agent to work autonomously.
 
 ### 0. Setup

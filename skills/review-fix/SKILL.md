@@ -29,6 +29,8 @@ Read the review report from the current conversation. Extract each finding's des
 
 ### Agent Dispatch Protocol
 
+Consult `[sdlc-root]/knowledge/architecture/agent-orchestration-patterns.yaml` for dispatch discipline — especially AOP1 (decompose by file ownership to prevent merge conflicts) and AOP9 (every dispatch must include objective, owned files, constraints, acceptance criteria, and out-of-scope).
+
 Dispatch prompts must describe WHAT/WHY — implementation HOW is the agent's domain. Every dispatch must include sufficient context for the agent to work autonomously.
 
 ### 2. Group by Agent and Dispatch Fixes

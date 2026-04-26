@@ -148,11 +148,13 @@ LOCATE → EXTRACT → CATEGORIZE → PROPOSE → (optional) APPLY → CHANGELOG
 - Gotchas encountered that no knowledge file warned about
 - Agent dispatches that lacked necessary context
 
-**Skill deficiencies** — specific skill behaviors that produced suboptimal results:
+**Skill deficiencies** — specific skill behaviors that produced suboptimal results. Evaluate against `[sdlc-root]/knowledge/dx/skill-quality-rubrics.yaml` (SQR-01–SQR-10) for concrete scoring:
 - Steps in a skill workflow that were skipped or done out of order
 - Missing phases that the work required
 - Agent recommendations in skills that were wrong for the task
 - Template sections that didn't fit the actual output needed
+- Triggering accuracy failures (SQR-01/02: skill fired when it shouldn't or didn't fire when it should)
+- Anti-pattern flags (SQR-07: OVER_CONSTRAINED, BLOATED_SKILL, MISSING_TRIGGER)
 
 **Structural gaps** — missing infrastructure in the SDLC:
 - Task types that have no playbook but should

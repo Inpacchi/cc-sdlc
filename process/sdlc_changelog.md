@@ -34,6 +34,26 @@ Each entry contains:
 
 ---
 
+## 2026-04-25: Wire new knowledge files into applicable skills
+
+**Origin:** Post-intake analysis of which skills would produce better output by consulting the newly ingested knowledge stores.
+
+**What happened:** Reviewed all 24 skills against 10 new/expanded knowledge files. Identified 7 skills with concrete applicability and wired references at their dispatch and quality-gate points.
+
+**Changes made:**
+
+1. **`skills/sdlc-plan/SKILL.md`** — Added agent-orchestration-patterns reference (AOP5, AOP6, AOP9) to Agent Dispatch Protocol section.
+2. **`skills/sdlc-lite-execute/SKILL.md`** — Added agent-orchestration-patterns reference (AOP1, AOP8, AOP9, AOP10) to Agent Dispatch Protocol section.
+3. **`skills/review-fix/SKILL.md`** — Added agent-orchestration-patterns reference (AOP1, AOP9) to Agent Dispatch Protocol section.
+4. **`skills/sdlc-tests-create/SKILL.md`** — Added agent-orchestration-patterns reference (AOP2, AOP5) to domain expert dispatch; added advanced-test-patterns reference to SDET dispatch guidelines.
+5. **`skills/sdlc-tests-run/SKILL.md`** — Added agent-orchestration-patterns reference (AOP3, AOP9) to Agent Dispatch Protocol section.
+6. **`skills/sdlc-develop-skill/SKILL.md`** — Added skill-quality-rubrics reference (SQR-01/02 mental test) to Frontmatter Generation; added rubric audit (SQR-04/05/06/07) to Quality Gate.
+7. **`skills/sdlc-audit/SKILL.md`** — Added skill-quality-rubrics reference (SQR-01–10) to Improvement Mode's "Skill deficiencies" checklist with triggering accuracy and anti-pattern flag evaluation.
+
+**Rationale:** Knowledge files only add value when agents actually consult them. Wiring references at the specific decision points where the knowledge applies (dispatch protocol for orchestration, quality gate for rubrics) ensures the knowledge is loaded at the right moment rather than sitting unused in the store.
+
+---
+
 ## 2026-04-25: Upstream knowledge intake from neuroloom commit add42269
 
 **Origin:** Bulk ingestion of ~290 rules from wshobson/agents third-party skills triage. Identified general-purpose knowledge worth pulling into the base framework.

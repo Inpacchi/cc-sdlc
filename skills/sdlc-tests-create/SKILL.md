@@ -113,7 +113,7 @@ Coverage Map:
 
 ## Step 2: Domain Expert Gap Analysis
 
-**Dispatch ALL relevant domain agents to audit the coverage map.** The SDET knows testing patterns but doesn't have deep domain knowledge of (for example) webhook lifecycle, subscription state machines, or recovery flows. Domain experts catch gaps the SDET would miss. Each agent's perspective matters — do not subset.
+**Dispatch ALL relevant domain agents to audit the coverage map.** The SDET knows testing patterns but doesn't have deep domain knowledge of (for example) webhook lifecycle, subscription state machines, or recovery flows. Domain experts catch gaps the SDET would miss. Each agent's perspective matters — do not subset. See AOP2 (decompose by concern for review work) and AOP5 (group sizing) in `[sdlc-root]/knowledge/architecture/agent-orchestration-patterns.yaml`.
 
 ### Which agents to dispatch
 
@@ -199,6 +199,7 @@ IMPLEMENTATION INVENTORY:
 
 GUIDELINES:
 - Read `[sdlc-root]/knowledge/testing/testing-paradigm.yaml` and apply the testing paradigm it defines
+- Consult `[sdlc-root]/knowledge/testing/advanced-test-patterns.yaml` for Playwright CI config, custom fixture patterns, waiting strategies, and property-based testing when applicable
 - PRIORITIZE integration and E2E tests that exercise real workflows end-to-end
 - Unit tests ONLY for pure functions with complex branching logic (state machines,
   classifiers, validators with multiple edge cases)
