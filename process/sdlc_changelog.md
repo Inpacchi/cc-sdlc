@@ -34,6 +34,21 @@ Each entry contains:
 
 ---
 
+## 2026-04-26: Tag-based migration versioning
+
+**Origin:** Framework versioning improvement — migrations tracked by commit SHAs, making version comparisons opaque and commit messages unreadable.
+
+**What happened:** Migration skill used raw commit SHAs for `source_version` tracking and diff resolution. Commit messages read `sdlc(migrate): apply cc-sdlc upstream 944414c → 8e90c00` instead of human-readable release versions. The cc-sdlc repo uses semver git tags (`v1.0.0`, `v1.4.0`, etc.) but the migration skill didn't leverage them.
+
+**Changes made:**
+
+1. **`skills/sdlc-migrate/SKILL.md`** — Replaced all `HEAD`-based source reads with `[target_tag]`-based reads. Added Pre-Flight Step 1b to resolve latest semver release tag. Updated §1.1 to handle tag-based `source_version` with backward compat for legacy SHA manifests. Updated §4.5 manifest to store `source_version` as tag and `source_version_sha` as commit hash. Added recommended commit message format: `sdlc(migrate): upgrade cc-sdlc from [old] to [new]`. Updated migration assessment, changelog reads, diff commands, and report template to use tags.
+2. **`skills/sdlc-initialize/SKILL.md`** — Updated `.sdlc-manifest.json` schema to store `source_version` as release tag and `source_version_sha` as commit hash. Added tag resolution instructions.
+
+**Rationale:** Release tags are the natural versioning unit — they're human-readable, ordered, and meaningful. `v1.2.0 → v1.4.0` immediately communicates scope; `944414c → 8e90c00` does not. Tags also prevent migrating to unreleased commits on the source repo's working branch.
+
+---
+
 ## 2026-04-26: Relocate agent template, make agent suggestions and sdlc-initialize ephemeral [contract-change]
 
 **Origin:** Framework structure review — agent template is a template artifact, not an agent; agent suggestions catalog and sdlc-initialize are only needed during initialization.

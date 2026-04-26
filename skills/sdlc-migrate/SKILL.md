@@ -18,7 +18,9 @@ Apply cc-sdlc upstream updates to a project while preserving project-specific cu
 
 ## Source Repo Access Rule
 
-**All reads from cc-sdlc MUST use git commands** (`git -C [cc-sdlc-path] show HEAD:<path>`), never filesystem reads. **Never use shell redirection** (`git show > file`) — it silently destroys targets on failure. Full rules and safe extraction patterns: see `[sdlc-root]/process/source-repo-safety.md`.
+**All reads from cc-sdlc MUST use git commands** (`git -C [cc-sdlc-path] show [target_tag]:<path>`), never filesystem reads. **Never use shell redirection** (`git show > file`) — it silently destroys targets on failure. Full rules and safe extraction patterns: see `[sdlc-root]/process/source-repo-safety.md`.
+
+**`[target_tag]`** is the latest semver release tag in the cc-sdlc source repo (e.g., `v1.4.0`). Resolved once during Pre-Flight and used as the git ref for every source read. Never use bare `HEAD` — it may point past the latest release if the source repo has unreleased commits.
 
 ## Transaction Log
 
@@ -47,7 +49,9 @@ Before starting, verify this is a migration (not initialization):
 
 If neither `ops/sdlc/` nor `.claude/sdlc/` exists → tell user to run `sdlc-initialize` instead and stop.
 
-**Step 1 — Resolve cc-sdlc source to a local path** (in priority order):
+**Step 1 — Resolve cc-sdlc source and target release:**
+
+**1a. Resolve source to a local path** (in priority order):
 1. `$ARGUMENTS` — if the user passed a local clone path, verify with `git -C [path] rev-parse HEAD`
 2. `.sdlc-manifest.json` → `source_repo` field (git remote URL) — **clone it immediately:**
    ```bash
@@ -55,6 +59,25 @@ If neither `ops/sdlc/` nor `.claude/sdlc/` exists → tell user to run `sdlc-ini
    ```
    This is safe and expected — it's a shallow clone of the user's own repo. Use `/tmp/cc-sdlc-migrate` as `[cc-sdlc-path]` for all subsequent phases. Clean up with `rm -rf /tmp/cc-sdlc-migrate` after migration completes.
 3. If neither is available, ask the user.
+
+**1b. Resolve `[target_tag]`** — the latest semver release tag in the cc-sdlc source repo:
+
+```bash
+# Fetch tags if shallow clone
+git -C [cc-sdlc-path] fetch --tags 2>/dev/null
+
+# Get the latest semver tag (vN.N.N), sorted by version
+TARGET_TAG=$(git -C [cc-sdlc-path] tag -l 'v[0-9]*.[0-9]*.[0-9]*' --sort=-v:refname | head -1)
+TARGET_SHA=$(git -C [cc-sdlc-path] rev-parse "$TARGET_TAG")
+
+if [ -z "$TARGET_TAG" ]; then
+  echo "WARNING: No release tags found in cc-sdlc source — falling back to HEAD"
+  TARGET_TAG="HEAD"
+  TARGET_SHA=$(git -C [cc-sdlc-path] rev-parse HEAD)
+fi
+```
+
+Use `[target_tag]` (the resolved tag, e.g., `v1.4.0`) as the git ref for **every** source read in subsequent phases. This ensures the migration targets a stable release, not unreleased commits.
 
 **Step 2 — Detect project structure:**
 
@@ -90,7 +113,8 @@ Has .sdlc-manifest.json: [yes/no]
 Has .claude/agents/: [yes/no]
 Has .claude/skills/: [yes/no]
 cc-sdlc source: [local path or "cloned from [URL] to /tmp/cc-sdlc-migrate"]
-cc-sdlc HEAD: [commit hash from git -C [cc-sdlc-path] rev-parse HEAD]
+cc-sdlc target release: [target_tag] ([TARGET_SHA short])
+Project installed version: [source_version] (from .sdlc-manifest.json)
 ```
 
 ---
@@ -105,13 +129,23 @@ Source-to-project path mappings (e.g., `knowledge/` → `[sdlc-root]/knowledge/`
 
 Read the project's `.sdlc-manifest.json` to get:
 - `source_repo` — the git remote URL for the cc-sdlc repo (used to clone if no local path given)
-- `source_version` — the commit hash from the last install/migration
+- `source_version` — the release tag (e.g., `v1.2.0`) from the last install/migration
 
-Then check what changed in cc-sdlc since that commit (using git, not filesystem):
+**Resolve `source_version` to a git ref:**
+
+| `source_version` value | Interpretation | Diff base |
+|------------------------|----------------|-----------|
+| Semver tag (e.g., `v1.2.0`) | Normal — project tracks releases | `v1.2.0` |
+| 40-char hex SHA (legacy) | Pre-tag manifest — resolve to nearest tag | `git -C [cc-sdlc-path] describe --tags --abbrev=0 [SHA]` (falls back to SHA if no tag contains it) |
+| `"unknown"` or missing | First migration after legacy install | Full migration — compare all files |
+
+**Already up to date?** If `source_version` equals `[target_tag]`, the project is already on the latest release. Report "Already on [target_tag] — nothing to migrate" and stop.
+
+Then check what changed in cc-sdlc between the project's version and the target release:
 
 ```bash
-git -C [cc-sdlc-path] log --oneline [source_version]..HEAD
-git -C [cc-sdlc-path] diff --name-only [source_version]..HEAD
+git -C [cc-sdlc-path] log --oneline [source_version]..[target_tag]
+git -C [cc-sdlc-path] diff --name-only [source_version]..[target_tag]
 ```
 
 If `source_version` is `"unknown"` or missing, treat this as a **full migration** — compare all framework files against the project. Do not stop or ask the user — a full migration is the correct fallback.
@@ -120,7 +154,7 @@ If `source_version` is `"unknown"` or missing, treat this as a **full migration*
 
 **Before categorizing or applying anything**, read the changelog entries since the project's source version.
 
-Read `process/sdlc_changelog.md` from the cc-sdlc source repo (via `git -C [cc-sdlc-path] show HEAD:process/sdlc_changelog.md`), stopping when you reach entries older than the project's `source_version` date. This is the migration's release notes — it surfaces:
+Read `process/sdlc_changelog.md` from the cc-sdlc source repo (via `git -C [cc-sdlc-path] show [target_tag]:process/sdlc_changelog.md`), stopping when you reach entries older than the project's `source_version` date. This is the migration's release notes — it surfaces:
 
 - **Breaking changes** — renamed concepts, moved files, added structural markers, changed conventions
 - **New capabilities** — new knowledge files, new disciplines, new agent roles the project may want
@@ -131,7 +165,7 @@ Read `process/sdlc_changelog.md` from the cc-sdlc source repo (via `git -C [cc-s
 Present a brief migration summary to the user via `AskUserQuestion`:
 
 ```
-Migration summary: [source_version] → [HEAD]
+Migration summary: [source_version] → [target_tag]
 - N commits, M changelog entries
 - Breaking changes: [list or "none"]
 - New capabilities: [list or "none"]
@@ -222,7 +256,7 @@ This migration skill is responsible for **consuming** markers: extracting, prese
 
 ### 2.0 Load Contract Changes
 
-Read `skeleton/contract_changes.yaml` from the cc-sdlc source.
+Read `skeleton/contract_changes.yaml` from the cc-sdlc source (via `git -C [cc-sdlc-path] show [target_tag]:skeleton/contract_changes.yaml`).
 
 **If the file is absent** (the upstream cc-sdlc predates the contract-changes system): skip this step entirely. `pending_changes` is empty. §4.3a falls back to its inherent path-integrity and convention checks with no rename set. §4.5 does not update `last_applied_contract_id`. §4.7 is skipped. Log `CONTRACT CHANGES: not present in upstream — skipping contract-driven steps`.
 
@@ -291,7 +325,7 @@ For files with no project customizations, copy directly from cc-sdlc to the proj
 - `templates/optional/` — Conditional CLAUDE.md appendices. Read from cc-sdlc source during initialization when needed, not installed.
 - `CLAUDE-SDLC.md` — See §2.1e for CLAUDE-SDLC.md handling (merge into CLAUDE.md, not a separate file).
 
-**All reads from the cc-sdlc source repo must use git commands** (e.g., `git -C [cc-sdlc-path] show HEAD:path/to/file`), not filesystem reads. This ensures you're reading committed state, not working tree.
+**All reads from the cc-sdlc source repo must use git commands** (e.g., `git -C [cc-sdlc-path] show [target_tag]:path/to/file`), not filesystem reads. This ensures you're reading the target release, not unreleased working tree state.
 
 **PROJECT-SECTION preservation with content review (mandatory for all direct-copy files):**
 
@@ -312,15 +346,15 @@ Markers preserve project content, but that content can become stale, conflicting
 1. **Identify the surrounding context:**
    - Which section heading is it under?
    - What was the upstream content in that section at `source_version`?
-   - What is the upstream content in that section at `HEAD`?
+   - What is the upstream content in that section at `[target_tag]`?
 
 2. **Detect upstream changes to the same area:**
    ```bash
    # Get the section content at old version
    git -C [cc-sdlc-path] show [source_version]:<path> | ... extract section ...
    
-   # Get the section content at new version
-   git -C [cc-sdlc-path] show HEAD:<path> | ... extract section ...
+   # Get the section content at target release
+   git -C [cc-sdlc-path] show [target_tag]:<path> | ... extract section ...
    
    # Compare
    diff <(old_section) <(new_section)
@@ -365,7 +399,7 @@ Check the cc-sdlc changelog for files that were **deleted, moved, or renamed** s
 
 1. From the diff in Phase 1.1, identify any files that were deleted or moved:
    ```bash
-   git -C [cc-sdlc-path] diff --name-status [source_version]..HEAD | grep -E '^[DR]'
+   git -C [cc-sdlc-path] diff --name-status [source_version]..[target_tag] | grep -E '^[DR]'
    ```
 
 2. For each deleted file: remove it from the downstream project's `[sdlc-root]/` directory.
@@ -484,7 +518,7 @@ Options:
 
 1. **Read the upstream CLAUDE-SDLC.md** content via git:
    ```bash
-   git -C [cc-sdlc-path] show HEAD:CLAUDE-SDLC.md
+   git -C [cc-sdlc-path] show [target_tag]:CLAUDE-SDLC.md
    ```
 
 2. **Identify the SDLC section boundaries** in the project's `CLAUDE.md`:
@@ -789,7 +823,7 @@ The project's `CLAUDE.md` contains CLAUDE-SDLC.md content — skill names, proce
 **Dispatch prompt for the subagent:**
 
 > Run a compliance audit focused on migration integrity. Check all 9 dimensions, with special attention to:
-> - Dimension 7 (Migration Integrity): All framework files match the cc-sdlc source at [new commit hash]
+> - Dimension 7 (Migration Integrity): All framework files match the cc-sdlc source at [target_tag]
 > - No orphaned files from previous versions remain
 > - Agent-context-map paths all resolve
 > - Content-merge preserved project data (tracker levels, parking lot entries, skill customizations)
@@ -808,7 +842,7 @@ If the audit returns findings:
 
 After migration, update `.sdlc-manifest.json`:
 
-1. **Update `source_version`** to the current cc-sdlc commit hash
+1. **Update `source_version`** to the target release tag (e.g., `v1.4.0`). Also set `source_version_sha` to the tag's commit hash for precise diff resolution.
 2. **Add missing fields** if the manifest predates this migration:
    - `sdlc_root`: set to `[sdlc-root]` detected in pre-flight
    - `installed_files`: back-fill if absent (hash every file in `skeleton/manifest.json` source_files at its installed path; mark `installed_at: "backfilled-{CURRENT_VERSION}"`)
@@ -823,8 +857,11 @@ After migration, update `.sdlc-manifest.json`:
 # Read existing manifest
 MANIFEST=$(cat .sdlc-manifest.json)
 
-# Update source_version
-MANIFEST=$(echo "$MANIFEST" | jq --arg v "$(git -C [cc-sdlc-path] rev-parse HEAD)" '.source_version = $v')
+# Update source_version to release tag
+MANIFEST=$(echo "$MANIFEST" | jq --arg v "$TARGET_TAG" '.source_version = $v')
+
+# Store the tag's commit SHA for precise diff resolution
+MANIFEST=$(echo "$MANIFEST" | jq --arg v "$TARGET_SHA" '.source_version_sha = $v')
 
 # Add sdlc_root if missing
 if ! echo "$MANIFEST" | jq -e '.sdlc_root' >/dev/null 2>&1; then
@@ -842,8 +879,8 @@ echo "$MANIFEST" > .sdlc-manifest.json
 [1-2 sentences: what the migration brought (e.g., "Upgraded from v1.2 to v1.3 — added 3 new knowledge files, merged 2 expanded skills, wired 4 agent roles"). State any items needing manual review.]
 
 ### Source Version
-- Previous: [old commit hash]
-- Current: [new commit hash]
+- Previous: [source_version] ([old SHA short])
+- Current: [target_tag] ([TARGET_SHA short])
 
 ### Changes Applied
 - Agent memory gitignored: yes/already present
@@ -906,7 +943,7 @@ echo "$MANIFEST" > .sdlc-manifest.json
 - Post-migration audit: passed/findings fixed (auditor dispatched automatically in §4.4)
 
 ### Next Steps
-1. Commit the migration
+1. Commit the migration with: `sdlc(migrate): upgrade cc-sdlc from [source_version] to [target_tag]`
 ```
 
 ### 4.7 Offer Newly Debuted Bundles
