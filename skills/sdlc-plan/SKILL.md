@@ -183,7 +183,7 @@ Relevant domain agents for this task:
 - frontend-developer: touches UI components and state management
 - ui-ux-designer: new UI component needs design review
 - software-architect: new pattern being introduced
-- code-reviewer: always included for implementation tasks
+- code-reviewer: included by default for implementation tasks
 ```
 
 For recurring task types, consult `[sdlc-root]/playbooks/` for pre-seeded agent selection and reference implementations.
@@ -272,7 +272,7 @@ The primary domain agent writes the core spec. Other relevant agents contribute 
 1. Consult `[sdlc-root]/knowledge/agent-context-map.yaml` for the agent's mapped files
 2. Check whether **any** knowledge file in the project has `spec_relevant: true`. If none do, load ALL mapped files (the project hasn't configured spec-relevance yet — preserve current behavior).
 3. If at least one file is tagged `true`: read each mapped YAML file's top-level `spec_relevant` field. Include only files where `spec_relevant: true` — skip files where `spec_relevant: false` or the field is absent.
-4. The testing paradigm (`[sdlc-root]/knowledge/testing/testing-paradigm.yaml`) is ALWAYS included at spec time regardless of its `spec_relevant` tag — it is explicitly referenced for the Testing Strategy section below.
+4. The testing paradigm (`[sdlc-root]/knowledge/testing/testing-paradigm.yaml`) is included at spec time regardless of its `spec_relevant` tag — the Testing Strategy section below depends on it.
 
 This filtering reduces context load during spec writing by excluding implementation-detail knowledge (code patterns, debugging guides, deployment patterns) that does not inform **what** to build. At plan time (Step 4), ALL mapped files load for each dispatched agent — no `spec_relevant` filtering.
 
@@ -284,7 +284,7 @@ Reference the template at `[sdlc-root]/templates/spec_template.md`. Required fie
 - Data model changes
 - Interface/adapter changes required
 - Depends on (other deliverable IDs)
-- Testing strategy — informed by the testing paradigm (`[sdlc-root]/knowledge/testing/testing-paradigm.yaml`, always loaded at spec time regardless of `spec_relevant` tag): unit tests for pure logic, integration tests for I/O boundaries, E2E for critical user flows. Identify which code layers the feature introduces and match test types accordingly.
+- Testing strategy — informed by the testing paradigm (`[sdlc-root]/knowledge/testing/testing-paradigm.yaml`, loaded at spec time per rule 4 above): unit tests for pure logic, integration tests for I/O boundaries, E2E for critical user flows. Identify which code layers the feature introduces and match test types accordingly.
 - Success criteria
 - Constraints
 - Open questions / unknowns — explicitly state what the spec does NOT know yet. Each unknown is a risk; the plan must address or accept each one.
@@ -387,7 +387,7 @@ The plan MUST include:
 - **Outcomes, constraints, and acceptance criteria for every phase** — what must be true when the phase is done, what must not break, and how to verify success. These are always required regardless of how much implementation detail is included.
 - **Implementation guidance at the planning agent's discretion** — The default posture is WHAT and WHY: let the executing agent reason against the live codebase. But when the planning agent has specific knowledge that would help execution succeed — a non-obvious approach, a key function or file relationship, a migration pattern, a data flow that isn't apparent from reading the code — include it. The planning agent's judgment on what context is useful takes priority over withholding details. The goal is to give the executing agent everything it needs, not to enforce abstraction for its own sake.
 
-  **Always required (the WHAT):**
+  **Required (the WHAT):**
   - Outcome: "Egress and spectator identities must be unique across reconnects"
   - Constraint: "Must not break stable identities for player/caster/judge roles"
   - Acceptance criteria: "Two concurrent tabs requesting session tokens produce distinct identities"
@@ -476,7 +476,7 @@ Plan revision — dispatching:
 - [ ] [writing-agent-name]: incorporate N findings (K critical, M major), overwrite plan file
 ```
 
-**Every checkbox must have a corresponding agent dispatch. Count the checkboxes. Count the dispatches. They must match.** If you find yourself editing the plan directly — or saving the agent's returned body yourself — stop. Both violate the Manager Rule.
+The checkbox-must-match-dispatch rule from Step 5 applies here too. If you find yourself editing the plan directly — or saving the agent's returned body yourself — stop. Both violate the Manager Rule.
 
 **Re-review criteria:** Re-review is mandatory if ANY of the following is true: (1) any FIX finding has Severity = `critical`, (2) the revised plan's file list differs from the pre-revision file list, or (3) a phase was added, removed, or its assigned agent changed. Otherwise — no FIX findings met these criteria — skip re-review. This check is mechanical: scan the Severity column and compare the before/after Files list. Do not reason about whether the revision "changed the approach."
 

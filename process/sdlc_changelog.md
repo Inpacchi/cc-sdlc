@@ -34,6 +34,23 @@ Each entry contains:
 
 ---
 
+## 2026-04-25: Reduce directive overcount in orchestration skills (SQR-07 P5 fix)
+
+**Origin:** Skill quality audit against SQR rubrics flagged 4 orchestration skills as OVER_CONSTRAINED (>15 MUST/ALWAYS/NEVER): sdlc-plan (27), sdlc-execute (23), sdlc-lite-execute (22), sdlc-lite-plan (20).
+
+**What happened:** Audited every directive in the 4 skills and classified as genuine requirement (Manager Rule enforcement, anti-hallucination, dispatch accountability, plan completeness) vs soft preference (formatting labels, duplicate restatements). Deduplicated repeated rules and softened preference-level directives to rationale-based framing.
+
+**Changes made:**
+
+1. **`skills/sdlc-plan/SKILL.md`** — 27→23 directives. Deduplicated checkbox-must-match rule (Step 5 revision references back to Step 5 original). Softened: "ALWAYS included at spec time" → rationale ("the Testing Strategy section depends on it"), "always included" → "included by default", "Always required" → "Required".
+2. **`skills/sdlc-execute/SKILL.md`** — 23→21 directives. Deduplicated File-Conflict Gate (dispatch-time rule references back to phase-plan table rule). Softened: "never semicolon-chained" → "not semicolon-chained".
+3. **`skills/sdlc-lite-execute/SKILL.md`** — 22→21 directives. Deduplicated File-Conflict Gate (same pattern as sdlc-execute).
+4. **`skills/sdlc-lite-plan/SKILL.md`** — 20→19 directives. Deduplicated checkbox-must-match rule (Step 4 revision references back to Step 3). Softened: "always included" → "included by default", "What should always be present" → "Required regardless of detail level".
+
+**Rationale:** SQR-06 (token efficiency) targets <1 directive per 10 lines; all 4 skills pass this density check (1 per 17–25 lines). The remaining directives above the SQR-07 absolute threshold of 15 are genuine correctness constraints for multi-agent orchestration — Manager Rule enforcement, Context7 verification gates, plan completeness requirements, and dispatch accountability. Orchestration skills legitimately require more constraints than single-concern skills because each dispatch phase introduces compounding failure modes.
+
+---
+
 ## 2026-04-25: Extract reference material from bloated skills (SQR-07 P1 fix)
 
 **Origin:** Skill quality audit against SQR rubrics flagged sdlc-initialize (1163 lines, 28 directives) and sdlc-migrate (1185 lines, 32 directives) as BLOATED_SKILL + OVER_CONSTRAINED.

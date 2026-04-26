@@ -152,7 +152,7 @@ Compact form (happy path — Triage = BUILD):
 ### Phase [N] — [phase name]  (agent: [agent-name])
 
 Design decisions:
-- [decision 1 — one per bullet, never semicolon-chained]
+- [decision 1 — one per bullet, not semicolon-chained]
 - [decision 2]
 
 Expected: [counts from plan, or "none"]
@@ -178,7 +178,7 @@ Design Decisions: [list binding decisions from the plan that apply to this phase
 Agent: [agent-name]
 ```
 
-**File-Conflict Gate (parallel phases only):** Before dispatching two or more phases simultaneously, list every file each phase will modify. If any file appears in more than one phase, those phases MUST run sequentially — dispatch the first phase, wait for POST-GATE to pass, then dispatch the second. Do not rely on the plan's dependency table alone; verify file overlap yourself.
+**File-Conflict Gate (parallel phases only):** Before dispatching two or more phases simultaneously, verify file overlap (same rule as the phase-plan table at L143 above, applied at dispatch time). If any file appears in more than one phase, sequence those phases. Do not rely on the plan's dependency table alone; verify file overlap yourself.
 
 **Parallel Phase Ownership Decomposition.** When the plan specifies two or more phases that can run in parallel, the File-Conflict Gate above is necessary but not sufficient — also verify each phase has a coherent ownership cluster. Use this decomposition lens before dispatching parallel phases:
 

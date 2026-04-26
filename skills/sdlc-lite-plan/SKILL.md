@@ -138,7 +138,7 @@ Emit agent coverage and chronicle context as two tables. **Use this form on the 
 |-----------------------------------|----------------------------------|-----|
 | <domain>                          | <agent-name> ← writer            | <one-line rationale> |
 | <domain>                          | <agent-name>                     | <one-line rationale> |
-| implementation review             | code-reviewer                    | always included |
+| implementation review             | code-reviewer                    | included by default |
 
 **Prior context** — <N> entries
 
@@ -187,7 +187,7 @@ The most relevant worker domain agent writes the plan **and saves it directly to
 **Plan rules:**
 - **Default to WHAT and WHY.** Phases should lead with outcomes and constraints — what must be true when the phase is done, and why it matters. This is the baseline because it lets the executing agent reason against the live codebase rather than following stale instructions.
 - **Include implementation guidance when the planning agent deems it necessary.** If the planning agent has specific knowledge that would help the executing agent — a non-obvious approach, a specific function that needs modification, a migration pattern, a key file relationship — include it. The planning agent's judgment on what context is useful takes priority over a blanket prohibition on HOW details. The goal is to give the executing agent everything it needs to succeed, not to withhold information for purity's sake. Since lite plans are typically executed same-session, **code snippets are encouraged** — function signatures, before/after diffs, and structural patterns compress intent concretely and improve execution reliability.
-- **What should always be present regardless:** Outcome (what "done" looks like), constraints (what must not break), and acceptance criteria. Implementation details are additive — they supplement the outcome description, they don't replace it.
+- **Required regardless of detail level:** Outcome (what "done" looks like), constraints (what must not break), and acceptance criteria. Implementation details are additive — they supplement the outcome description, they don't replace it.
 - **Constraint values must be concrete** — "maximum 4 items" not "a maximum count". If the value is a product decision the user hasn't made, mark it explicitly (e.g., `USER DECISION NEEDED: max table count — what should the limit be?`) so the reviewer routes it as DECIDE.
 
 - **Maximum 4 phases.** If you need more, this probably warrants a deliverable — check with the user.
@@ -229,7 +229,7 @@ Plan revision — dispatching:
 - [ ] [writing-agent-name]: incorporate N findings (K critical, M major), overwrite plan file
 ```
 
-**Every checkbox must have a corresponding agent dispatch. Count the checkboxes. Count the dispatches. They must match.** If you find yourself editing the plan directly — or saving the agent's returned body yourself — stop. Both violate the Manager Rule.
+The checkbox-must-match-dispatch rule from Step 3 applies here too. If you find yourself editing the plan directly — or saving the agent's returned body yourself — stop. Both violate the Manager Rule.
 
 - **Re-review is mandatory if ANY of the following is true:** (1) any FIX finding in the classification table has Severity = `critical`, (2) the revised plan's Files list differs from the pre-revision Files list, or (3) a phase was added, removed, or its assigned agent changed. Otherwise — no FIX findings met these criteria — skip re-review. This check is mechanical: scan the Severity column and compare the before/after Files list. Do not reason about whether the revision "changed the approach."
 
