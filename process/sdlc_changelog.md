@@ -34,6 +34,19 @@ Each entry contains:
 
 ---
 
+## 2026-04-26: Enrich sdlc-compliance-auditor and sdlc-reviewer with operational rigor
+
+**Origin:** External corpora mining produced useful operational patterns for the two SDLC meta-agents.
+
+**What happened:**  Imported changes to `sdlc-compliance-auditor` and `sdlc-reviewer` contained genuinely useful operational discipline (evidence requirements, sampling strategy, false-positive awareness, content-quality grading) alongside Neuroloom-specific bleed and two regressions (dropped cross-skill DRY and phrasing-contract sections from the reviewer). Performed a selective merge: adopted universal patterns, stripped project-specific content, preserved all base framework functionality.
+
+**Changes made:**
+
+1. **`agents/sdlc-compliance-auditor.md`** — Added Core Principles section (evidence discipline, full-coverage rule, sampling strategy, false-positive awareness, finding classification, remediation guidance). Enhanced workflow with scope-declaration step. Enhanced output format with executive summary, coverage notes, and wider findings table. Added 5 anti-rationalization entries. Enhanced self-verification checklist. Preserved Phrasing Contract Validation and PROJECT-SECTION sections intact.
+2. **`agents/sdlc-reviewer.md`** — Added Scope, Knowledge Context, Communication Protocol sections per agent template convention. Restructured checks under Core Principles with enhanced frontmatter validity (detailed `\\n` vs `\n` bug explanation), cross-reference validity, content-quality specificity grading, "Do NOT use" discipline, structural quality checks, template-drift awareness, and nit severity level. Replaced generic anti-rationalization entries with domain-specific ones. Preserved cross-skill DRY, phrasing-contract, and content-size checks that the enrichment had dropped.
+
+**Rationale:** The base agents specified what to check but not how rigorously. Evidence discipline (location/observation/expectation/delta per finding), sampling transparency, false-positive awareness, and content-quality grading make audit and review output actionable without re-investigation. These patterns are project-agnostic and improve every downstream installation.
+
 ## 2026-04-26: Tag-based migration versioning
 
 **Origin:** Framework versioning improvement — migrations tracked by commit SHAs, making version comparisons opaque and commit messages unreadable.
