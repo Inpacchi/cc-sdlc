@@ -122,14 +122,15 @@ When agent results return, curate into a reference doc:
 
 **Required sections:**
 1. **YAML frontmatter** — title, created date, tags
-2. **About [Company]** — Who they are, what they do, scale/size context
-3. **Why [Company] Matters to This Project** — Specific technology overlaps, what domains they cover that we care about
-4. **Blog URL(s)**
-5. **Tier 1 articles** — organized by theme, each with URL + 1-line project relevance note
-6. **Tier 2 articles** — same format
-7. **Tier 3 articles** — same format (can be condensed)
-8. **Key Takeaways** — 5-8 numbered actionable insights specific to the project
-9. **Gaps** — Project domains this source doesn't cover, with pointers to better sources
+2. **Executive Summary** — "Found {N} articles: {T1} directly applicable, {T2} transferable patterns, {T3} background. Top insight: [1-sentence highest-value finding]."
+3. **About [Company]** — Who they are, what they do, scale/size context
+4. **Why [Company] Matters to This Project** — Specific technology overlaps, what domains they cover that we care about
+5. **Blog URL(s)**
+6. **Tier 1 articles ({count})** — organized by theme, each with URL + 1-line project relevance note
+7. **Tier 2 articles ({count})** — same format
+8. **Tier 3 articles ({count})** — same format (can be condensed)
+9. **Key Takeaways** — 5-8 numbered actionable insights specific to the project
+10. **Gaps** — Project domains this source doesn't cover, with pointers to better sources
 
 **Naming convention:** `{Company}-Engineering-Blog-Reference.md` (or `{Source}-Reference.md` for non-blog sources)
 

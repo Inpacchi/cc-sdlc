@@ -182,16 +182,19 @@ IMPROVEMENT AUDIT REPORT
 Source: [session ID / commit range / current session]
 Analyzed: [message count] messages, [commit count] commits
 
-PROCESS FRICTION
+SUMMARY: [N] improvements found — [H] high, [M] medium, [L] low severity.
+Top priority: [1-sentence description of the highest-severity improvement].
+
+PROCESS FRICTION ([count])
   [numbered list of friction points with severity]
 
-KNOWLEDGE GAPS
+KNOWLEDGE GAPS ([count])
   [numbered list with target discipline/store]
 
-SKILL DEFICIENCIES
+SKILL DEFICIENCIES ([count])
   [numbered list with target skill and proposed change]
 
-STRUCTURAL GAPS
+STRUCTURAL GAPS ([count])
   [numbered list with proposed addition]
 
 PROPOSED CHANGES

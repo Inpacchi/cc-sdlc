@@ -93,7 +93,7 @@ Include private functions that contain significant business logic (like `_handle
 For each function in the inventory, check if existing tests cover it:
 
 ```
-Coverage Map:
+Coverage Map — {N} functions inventoried, {M} gaps identified ({K} critical)
 
 | Function | Tested By | Coverage Level | Gap |
 |----------|-----------|---------------|-----|

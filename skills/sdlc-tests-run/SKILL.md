@@ -124,9 +124,7 @@ If ALL tests pass on this run:
 Output:
 
 ```
-Test Loop — Round {N} Results
-Passed: {X}/{total}
-Failed: {Y}/{total}
+Test Loop — Round {N}: {X}/{total} passing, {Y} failures remaining
 
 Failed tests:
 1. {test name} — {one-line error summary}
@@ -278,10 +276,9 @@ Round {N}/5 — re-running tests...
 **Round 5 exhausted:** If round 5 completes and tests still fail, output the stuck report:
 
 ```
-Test Loop — Stuck Report (5 rounds exhausted)
+Test Loop — {Y} tests stuck after 5 rounds ({X}/{total} passing, committed)
 
-Tests passing: {X}/{total}
-Tests still failing: {Y}
+Recommend: dispatch debug-specialist for the {Y} stuck failures, or investigate manually.
 
 Stuck failures:
 | Test | Error | Rounds Failed | Agents Dispatched | Last Agent Response |
@@ -289,8 +286,6 @@ Stuck failures:
 | name | error | 3,4,5 | sdet, frontend-developer | summary of last attempt |
 
 Hypothesis: {your assessment of why these tests are stuck}
-
-Passing tests were committed. Stuck failures need manual investigation.
 ```
 
 If ANY tests went from failing to passing during the loop, still auto-commit (Step 5). Stage ALL modified files from the loop — even partial fixes benefit the codebase and should not be discarded because a separate test is stuck.
@@ -315,10 +310,7 @@ Co-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>
 4. Output the final summary:
 
 ```
-Test Loop Complete
-Rounds: {N}/5
-Tests: {pass}/{total} passing
-Commit: {short-sha}
+Test Loop Complete — all {total} tests green in {N} rounds (commit {short-sha})
 
 Fixes applied:
 - [sdet] {what was fixed in test code}

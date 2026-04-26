@@ -837,7 +837,9 @@ echo "$MANIFEST" > .sdlc-manifest.json
 ### 4.6 Report to User
 
 ```markdown
-## SDLC Migration Complete
+## SDLC Migration Complete — {N} files updated, all gates passed
+
+[1-2 sentences: what the migration brought (e.g., "Upgraded from v1.2 to v1.3 — added 3 new knowledge files, merged 2 expanded skills, wired 4 agent roles"). State any items needing manual review.]
 
 ### Source Version
 - Previous: [old commit hash]

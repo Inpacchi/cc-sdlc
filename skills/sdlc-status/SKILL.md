@@ -39,6 +39,8 @@ Scan the project's SDLC artifacts and present a status summary. This is read-onl
 5. **Present the dashboard:**
 
 ```
+**{N} active, {N} blocked, {N} ready to execute.** Next ID: D__.
+
 ## Active Deliverables
 
 | ID | Name | Stage | Next Action |
@@ -46,21 +48,16 @@ Scan the project's SDLC artifacts and present a status summary. This is read-onl
 | D1 | ... | Complete | Archive via "Let's organize the chronicles" |
 | D2 | ... | Plan ready | Execute via sdlc-execute |
 
-## Blocked Items
+## Blocked Items ({N})
 
 - [issue filename]: brief description from first line
 
-## Recent Archives
+## Recent Archives ({N})
 
 - concept-name: brief description
-
-## Stats
-
-- Next deliverable ID: D__
-- Active: N | Blocked: N | Complete (unarchived): N
 ```
 
-Do NOT suggest or take any follow-up actions. Just present the status.
+Do NOT suggest or take any follow-up actions beyond what appears in the Next Action column. Present the status.
 
 ## Red Flags
 

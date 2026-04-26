@@ -34,6 +34,28 @@ Each entry contains:
 
 ---
 
+## 2026-04-25: Apply DS1/DS4/DS7 insight-first output pattern across 9 skills
+
+**Origin:** Data-storytelling audit of all skill output templates against DS1–DS7 rules. Found 3 systemic patterns: label-style headers (DS4, 8 skills), data dump before rollup (DS7.1 + DS1, 6 skills), missing call to action (DS7.5, 3 skills).
+
+**What happened:** Every skill that produces structured output to the user opened with methodology or raw data instead of the conclusion. Section headers used category labels ("Active Deliverables", "Coverage Map") instead of conclusion headlines. Multi-section reports dumped all detail before summarizing.
+
+**Changes made:**
+
+1. **`skills/sdlc-status/SKILL.md`** — Added executive summary line with counts before dashboard table. Added counts to section headers. Removed Stats section (rolled into summary).
+2. **`skills/sdlc-tests-run/SKILL.md`** — Round results now lead with pass/fail ratio as headline. Stuck report leads with recommendation. Completion summary leads with "all green" conclusion.
+3. **`skills/sdlc-tests-create/SKILL.md`** — Coverage Map template now leads with inventory count and critical gap count.
+4. **`skills/sdlc-audit/SKILL.md`** — Improvement mode report now includes SUMMARY line with severity counts and top priority before category sections. Added counts to each category header.
+5. **`skills/sdlc-archive/SKILL.md`** — Approval table now leads with action summary ("N to archive, M to delete, K skipped").
+6. **`skills/sdlc-ingest/SKILL.md`** — Ingestion report now includes SUMMARY line with rule count, file count, agent count, and parking lot count before the 13 detail sections.
+7. **`skills/sdlc-migrate/SKILL.md`** — Migration report headline now includes file count and gate status. Added 1-2 sentence executive summary before Source Version.
+8. **`skills/research-external/SKILL.md`** — Added Executive Summary as required section #2 with tier counts and top insight.
+9. **`skills/sdlc-lite-execute/SKILL.md`** — Already DS1-compliant (starts with "what was built, the core value delivered"). No changes needed.
+
+**Rationale:** The structural fix is one rule: every output template starts with a 1-2 line executive summary stating the conclusion and counts before presenting evidence. This matches DS1 (insight-first), DS4 (headline formula with specific numbers), and avoids DS7 anti-patterns (data dump, buried insight, missing call to action).
+
+---
+
 ## 2026-04-25: Fix AOP10 and AOP9 audit findings across 8 skills
 
 **Origin:** AOP audit of all 12 dispatch-capable skills found zero FAILs but two systemic PARTIAL patterns: AOP10 (workload monitoring) in 4 parallel-dispatch skills, and AOP9 (dispatch prompt structure) in 5 skills.

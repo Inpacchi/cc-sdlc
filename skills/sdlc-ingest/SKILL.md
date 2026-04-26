@@ -306,6 +306,9 @@ Source: [count] files from [path]
 Target discipline: [name]
 Extraction depth: shallow | deep
 
+SUMMARY: [total new rules] rules extracted across [count] knowledge files,
+wired to [count] agents. [count] items to parking lot ([count] need validation).
+
 KNOWLEDGE FILES
   Created: [list of new YAML files with rule count]
   Updated: [list of existing files with new rule count]

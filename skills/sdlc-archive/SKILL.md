@@ -80,7 +80,7 @@ For each artifact, classify using this priority order: **frontmatter status → 
 **This is the ONLY AskUserQuestion in the entire flow.** Present one comprehensive table covering all artifact types and all proposed actions:
 
 ```
-Archive & cleanup plan:
+Archive & cleanup plan — {N} items to archive, {M} to delete, {K} skipped (active)
 
 | Item | Type | Status Evidence | Target Concept | Action |
 |------|------|----------------|----------------|--------|
