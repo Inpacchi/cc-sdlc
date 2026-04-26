@@ -379,8 +379,8 @@ Required files (commonly missed):
 [ ] ops/sdlc/knowledge/product-research/README.md
 [ ] ops/sdlc/knowledge/testing/README.md
 [ ] .claude/skills/sdlc-migrate/SKILL.md
-[ ] .claude/agents/AGENT_TEMPLATE.md
-[ ] .claude/agents/AGENT_SUGGESTIONS.md
+[ ] [sdlc-root]/templates/agent-template.md
+[ ] .claude/agents/AGENT_SUGGESTIONS.md (ephemeral — deleted in Phase 12)
 [ ] .claude/skills/sdlc-audit/SKILL.md
 [ ] ops/sdlc/plugins/README.md
 [ ] ops/sdlc/plugins/context7-setup.md
@@ -477,7 +477,7 @@ Present the proposed roster to CD via `AskUserQuestion`:
 **MANDATORY: Invoke `/sdlc-create-agent` for each agent.** Do NOT write agent files directly. The skill handles:
 - Frontmatter validation (name format, description with `<example>` blocks)
 - System prompt scaffolding (Knowledge Context, Communication Protocol, Anti-Rationalization Table)
-- Template compliance (AGENT_TEMPLATE.md structure)
+- Template compliance (agent-template.md structure)
 
 **Mandatory agents (create these regardless of project size):**
 1. **`software-architect`** — dispatched by both review and planning skills, mediates debate in `team-review-fix`, seeds disciplines and knowledge in later initialization phases, and reviews every other agent's plan output. Create first so it's available for dispatch throughout initialization.
@@ -763,7 +763,7 @@ Agents:
     Created: [list all agents]
 [ ] Mandatory agents created: software-architect, code-reviewer
 [ ] Spec-vs-roster reconciliation complete — all spec-listed roles created or deviation logged
-[ ] AGENT_TEMPLATE.md and AGENT_SUGGESTIONS.md present in .claude/agents/
+[ ] agent-template.md present in [sdlc-root]/templates/
 [ ] Framework subagents present in .claude/agents/: sdlc-reviewer.md, sdlc-compliance-auditor.md
 [ ] Dispatcher wiring: all agents in agent-selection.yaml, sdlc-plan agent table, infra triggers
 [ ] Context map: agent-context-map.yaml wired to actual agent filenames
@@ -821,7 +821,14 @@ Remove the bootstrap file — it served its purpose:
 rm -f .claude/BOOTSTRAP.md BOOTSTRAP.md
 ```
 
-**On failure:** If initialization fails partway, still remove `/tmp/cc-sdlc-bootstrap` but leave the bootstrap file so the user can retry.
+Remove ephemeral files — these were used during initialization and are no longer needed:
+
+```bash
+rm -f .claude/agents/AGENT_SUGGESTIONS.md
+rm -rf .claude/skills/sdlc-initialize/
+```
+
+**On failure:** If initialization fails partway, still remove `/tmp/cc-sdlc-bootstrap` but leave the bootstrap file, AGENT_SUGGESTIONS.md, and sdlc-initialize so the user can retry.
 
 ---
 

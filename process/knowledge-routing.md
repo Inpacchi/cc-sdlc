@@ -27,7 +27,7 @@ The files in each list are project knowledge stores: YAML files containing reusa
 
 ### The agent-side contract
 
-Every agent built on this framework carries a `## Knowledge Context` section in its system prompt. The canonical instruction, taken verbatim from `agents/AGENT_TEMPLATE.md`, is:
+Every agent built on this framework carries a `## Knowledge Context` section in its system prompt. The canonical instruction, taken verbatim from `templates/agent-template.md`, is:
 
 > Before starting substantive work, consult `[sdlc-root]/knowledge/agent-context-map.yaml` and find your entry. Read the mapped knowledge files — they contain reusable patterns, anti-patterns, and domain-specific guidance relevant to your work.
 
@@ -95,7 +95,7 @@ mappings:
    done
    ```
 
-5. **Add the `## Knowledge Context` section** to the agent's system prompt if using the template — it is already present in `AGENT_TEMPLATE.md`. Confirm the wording matches the canonical text.
+5. **Add the `## Knowledge Context` section** to the agent's system prompt if using the template — it is already present in `agent-template.md`. Confirm the wording matches the canonical text.
 
 ---
 
@@ -133,7 +133,7 @@ Skills and agents that reference the knowledge layer MUST use these exact phrase
 |----------|-------------------|-------|
 | Looking up an agent's mapped knowledge files | `consult [sdlc-root]/knowledge/agent-context-map.yaml` | Lowercase unless at sentence start (`Consult ...`) |
 | Cross-domain knowledge injection during dispatch | `Consult [sdlc-root]/knowledge/agent-context-map.yaml for the [agent-name] entry and include relevant knowledge files in the dispatch prompt` | Standard dispatch-time form |
-| Agent's Knowledge Context section (canonical, from `AGENT_TEMPLATE.md`) | `Before starting substantive work, consult [sdlc-root]/knowledge/agent-context-map.yaml and find your entry. Read the mapped knowledge files...` | Full template |
+| Agent's Knowledge Context section (canonical, from `templates/agent-template.md`) | `Before starting substantive work, consult [sdlc-root]/knowledge/agent-context-map.yaml and find your entry. Read the mapped knowledge files...` | Full template |
 | Referencing the communication protocol | `Read [sdlc-root]/knowledge/architecture/agent-communication-protocol.yaml` | — |
 | Reading domain knowledge stores | `Read [sdlc-root]/knowledge/<domain>/<file>.yaml` | Use literal domain and file names |
 | Wiring new files to agent mappings | `update [sdlc-root]/knowledge/agent-context-map.yaml` | Use `update`, not "Read and add" or "Connect via" |

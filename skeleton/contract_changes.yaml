@@ -180,3 +180,21 @@ changes:
       none required (beneficial, not breaking), but bump
       supported_ccsdlc_version after verifying no new forbidden phrases
       leaked in.
+
+  - id: "0010"
+    date: "2026-04-26"
+    title: "Move agent-template to templates/, make agent-suggestions ephemeral"
+    type: other
+    changelog_ref: "2026-04-26: Relocate agent template and make agent suggestions ephemeral"
+    notes: >
+      AGENT_TEMPLATE.md moved from agents/ to templates/ and renamed to
+      agent-template.md. Install path changes from .claude/agents/AGENT_TEMPLATE.md
+      to [sdlc-root]/templates/agent-template.md. AGENT_SUGGESTIONS.md and
+      sdlc-initialize are now ephemeral — used during initialization, then
+      deleted in Phase 12 cleanup. Migrate must: (1) delete
+      .claude/agents/AGENT_TEMPLATE.md if it exists (replaced by templates copy),
+      (2) delete .claude/agents/AGENT_SUGGESTIONS.md if it exists,
+      (3) delete .claude/skills/sdlc-initialize/ if it exists (no longer
+      a persistent skill). Adapter action: update transformation tables —
+      agent-template.md references now use [sdlc-root]/templates/ path
+      instead of .claude/agents/.

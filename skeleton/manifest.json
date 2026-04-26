@@ -98,7 +98,8 @@
       "templates/postmortem_template.md",
       "templates/decision_record_template.md",
       "templates/reference_doc_template.md",
-      "templates/incident-runbook-template.md"
+      "templates/incident-runbook-template.md",
+      "templates/agent-template.md"
     ],
     "_templates_note": "templates/*.md are installed to child projects. templates/optional/ is source-only (conditional CLAUDE.md appendices read during initialization).",
     "templates_optional_source_only": [
@@ -218,11 +219,6 @@
       "skills/sdlc-status/SKILL.md",
       "skills/sdlc-tests-run/SKILL.md",
       "skills/sdlc-idea/SKILL.md",
-      "skills/sdlc-initialize/SKILL.md",
-      "skills/sdlc-initialize/references/lite-graduation.md",
-      "skills/sdlc-initialize/references/retrofit-mode.md",
-      "skills/sdlc-initialize/references/recovery-emergency.md",
-      "skills/sdlc-initialize/references/red-flags.md",
       "skills/sdlc-migrate/SKILL.md",
       "skills/sdlc-migrate/references/recovery-procedures.md",
       "skills/sdlc-migrate/references/red-flags.md",
@@ -246,7 +242,6 @@
       "skills/sdlc-port-opencode/SKILL.md"
     ],
     "agents": [
-      "agents/AGENT_TEMPLATE.md",
       "agents/AGENT_SUGGESTIONS.md",
       "agents/sdlc-reviewer.md",
       "agents/sdlc-compliance-auditor.md"

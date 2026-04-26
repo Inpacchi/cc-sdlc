@@ -70,7 +70,7 @@ Clarify with the user:
 - **Depth:** Single source deep-dive, or broad survey across multiple sources?
 
 **Domain classification lens:** Before dispatching agents, establish the framework's knowledge domains. Check for:
-1. Agent suggestions in `agents/AGENT_SUGGESTIONS.md` — catalogs every domain agent role the framework supports, with expertise descriptions and domain keywords
+1. Agent suggestions in `agents/AGENT_SUGGESTIONS.md` — catalogs every domain agent role the framework supports, with expertise descriptions and domain keywords (source-only reference file)
 2. Agent definitions in `agents/` — each agent's domain expertise line reveals a framework domain
 3. Knowledge stores in `knowledge/` — directory names and YAML files reveal domain areas
 4. Discipline files in `disciplines/` — each discipline maps to a domain

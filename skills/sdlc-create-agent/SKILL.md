@@ -23,7 +23,7 @@ Create a new domain agent that follows cc-sdlc conventions. Scaffold the complet
 
 ## Reference
 
-Read `.claude/agents/AGENT_TEMPLATE.md` before proceeding — it is the canonical structural pattern with full frontmatter reference.
+Read `[sdlc-root]/templates/agent-template.md` before proceeding — it is the canonical structural pattern with full frontmatter reference.
 
 ## Steps
 
@@ -50,7 +50,7 @@ Generate each field:
 
 **name:** `lowercase-with-hyphens`, 3-50 characters, starts and ends with alphanumeric. Check for conflicts with existing agents.
 
-**description:** Follow the exact format from AGENT_TEMPLATE.md line 3. Include realistic scenarios in example blocks.
+**description:** Follow the exact format from agent-template.md line 3. Include realistic scenarios in example blocks.
 
 **model:**
 - `sonnet` (default) — most agents
@@ -79,7 +79,7 @@ Present the complete frontmatter for review before proceeding.
 
 ### 3. Body Scaffolding
 
-Generate each section following AGENT_TEMPLATE.md structure:
+Generate each section following agent-template.md structure:
 
 #### 3a. Scope Statement
 ```
@@ -117,7 +117,7 @@ Generate 4-6 domain-specific quality checks. Must include:
 - "Structured handoff emitted with modified files and follow-up items"
 
 #### 3h. Persistent Agent Memory (if memory: project)
-Include the standard memory section from AGENT_TEMPLATE.md:
+Include the standard memory section from agent-template.md:
 - MEMORY.md guidelines (200-line limit)
 - What to save / what NOT to save (domain-specific examples)
 - Surfacing Learnings to the SDLC section
@@ -225,6 +225,6 @@ Dispatch the `sdlc-reviewer` subagent on the created agent file. Present its fin
 
 - **Feeds into:** The created agent becomes available for dispatch by orchestration skills
 - **Modifies:** `[sdlc-root]/process/agent-selection.yaml` (tier1 reviewers + infrastructure_domains), `sdlc-plan` (agent table) — see Step 6
-- **Uses:** `.claude/agents/AGENT_TEMPLATE.md` (structural reference), `[sdlc-root]/knowledge/agent-context-map.yaml` (knowledge wiring), `.claude/agents/AGENT_SUGGESTIONS.md` (reusable patterns), `sdlc-reviewer` (quality gate), existing agents (conflict checking)
+- **Uses:** `[sdlc-root]/templates/agent-template.md` (structural reference), `[sdlc-root]/knowledge/agent-context-map.yaml` (knowledge wiring), `sdlc-reviewer` (quality gate), existing agents (conflict checking)
 - **Complements:** `sdlc-develop-skill` (skills vs agents), `sdlc-review` (review existing agents)
 - **Does NOT replace:** Direct editing of existing agents (this creates new ones only)

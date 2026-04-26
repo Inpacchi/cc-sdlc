@@ -184,8 +184,7 @@ Group the changed cc-sdlc files by migration strategy:
 | File Type | Location | Strategy |
 |-----------|----------|----------|
 | **Skills** | `skills/*/SKILL.md` | Content-merge: update framework sections, preserve project customizations |
-| **Agent template** | `agents/AGENT_TEMPLATE.md` | Direct copy (no project customizations) |
-| **Agent suggestions** | `agents/AGENT_SUGGESTIONS.md` | Direct copy (no project customizations) |
+| **Agent template** | `templates/agent-template.md` | Direct copy to `[sdlc-root]/templates/` (no project customizations) |
 | **Audit skill** | `skills/sdlc-audit/SKILL.md` + `references/` | Content-merge: update audit methodology, preserve project-specific additions |
 | **Knowledge YAMLs** | `knowledge/**/*.yaml` | Key-level merge: add new upstream keys, preserve project additions (§2.1b). Check for moved/deleted files (§2.1a) |
 | **Process docs** | `process/*.md` | Direct copy (framework-level) |
@@ -282,7 +281,7 @@ For files with no project customizations, copy directly from cc-sdlc to the proj
 - `knowledge/**/*.yaml` (but NOT `agent-context-map.yaml`)
 - `knowledge/README.md` (to `[sdlc-root]/knowledge/`) — NOT `knowledge/provenance_log.md`; that's project-specific (see "Project-Specific Files")
 - `README.md` (to `[sdlc-root]/`)
-- `agents/AGENT_TEMPLATE.md`, `agents/AGENT_SUGGESTIONS.md` → `.claude/agents/`
+- `templates/agent-template.md` → `[sdlc-root]/templates/` (agent template moved from agents/ to templates/)
 - `agents/sdlc-reviewer.md`, `agents/sdlc-compliance-auditor.md` → `.claude/agents/` (framework subagents must be in `.claude/agents/` for Claude Code to dispatch them, not just `[sdlc-root]/agents/`)
 - `playbooks/*.md` (unless the project has written its own playbooks — check git blame)
 - `examples/*.md`
@@ -387,6 +386,7 @@ Check the cc-sdlc changelog for files that were **deleted, moved, or renamed** s
      ```bash
      rm [sdlc-root]/CLAUDE-SDLC.md
      ```
+   - **Contract-driven cleanups:** Check `pending_changes` (from §1.2b) for entries that describe file relocations or removals. Apply them here — delete old-path files after verifying the new-path copy landed.
    
    Log any removals in the migration report.
 
@@ -593,9 +593,9 @@ These sections originate from the framework and should be updated across all pro
 
 | Section | Source | Update Rule |
 |---------|--------|-------------|
-| `## Knowledge Context` | AGENT_TEMPLATE | Must exist in every agent. If missing, add it. If present, update to match template wording. |
-| `## Communication Protocol` | AGENT_TEMPLATE | Update the canonical protocol reference. Preserve domain-specific handoff fields. |
-| Memory section header/guidelines | AGENT_TEMPLATE | Update generic guidelines and "Surfacing Learnings to the SDLC" section. Preserve domain-specific "what to save" content. |
+| `## Knowledge Context` | agent-template | Must exist in every agent. If missing, add it. If present, update to match template wording. |
+| `## Communication Protocol` | agent-template | Update the canonical protocol reference. Preserve domain-specific handoff fields. |
+| Memory section header/guidelines | agent-template | Update generic guidelines and "Surfacing Learnings to the SDLC" section. Preserve domain-specific "what to save" content. |
 
 ### 3.2 Apply Template Updates
 
@@ -662,7 +662,7 @@ New or updated knowledge files and process docs may conflict with or improve the
    - **Do not modify skills.** Collect findings.
 
 3. **Scan child agents:**
-   - Glob `.claude/agents/*.md` (excluding framework agents: `sdlc-reviewer.md`, `sdlc-compliance-auditor.md`, `AGENT_TEMPLATE.md`, `AGENT_SUGGESTIONS.md`)
+   - Glob `.claude/agents/*.md` (excluding framework agents: `sdlc-reviewer.md`, `sdlc-compliance-auditor.md`)
    - For each agent, read its domain expertise description
    - Cross-reference against newly added knowledge files — if a new knowledge file covers a domain the agent works in but isn't in the agent's `## Knowledge Context` section, flag it
    - **Do not modify agents.** Collect findings.

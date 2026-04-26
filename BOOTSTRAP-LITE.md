@@ -84,7 +84,7 @@ Record the user's answer verbatim — it feeds every agent's scope, tool list, a
 
 ### Step 3: Create the 3 agents (lite orchestration of `/sdlc-create-agent`)
 
-Read `/tmp/cc-sdlc-lite-bootstrap/agents/AGENT_TEMPLATE.md` as the structural reference. For each of the 3 agents below, generate the frontmatter + body using the detected stack + user input from Step 2, then write to `.claude/agents/{name}.md`.
+Read `/tmp/cc-sdlc-lite-bootstrap/templates/agent-template.md` as the structural reference. For each of the 3 agents below, generate the frontmatter + body using the detected stack + user input from Step 2, then write to `.claude/agents/{name}.md`.
 
 **Simplifications vs. full `/sdlc-create-agent`:**
 - No domain-conflict check across existing agents (lite roster is fixed)

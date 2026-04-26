@@ -95,7 +95,7 @@ Add a header to AGENTS.md (substitute the actual resolved path from Step 1 for `
 
 ### 4. Adapt Agent Definitions
 
-For each `.md` file in `.claude/agents/` (skip `AGENT_TEMPLATE.md` and `AGENT_SUGGESTIONS.md`):
+For each `.md` file in `.claude/agents/` (skip `AGENT_SUGGESTIONS.md` if present):
 
 1. Read the agent file
 2. Create a copy in `.opencode/agents/{name}.md`

@@ -34,6 +34,31 @@ Each entry contains:
 
 ---
 
+## 2026-04-26: Relocate agent template, make agent suggestions and sdlc-initialize ephemeral [contract-change]
+
+**Origin:** Framework structure review — agent template is a template artifact, not an agent; agent suggestions catalog and sdlc-initialize are only needed during initialization.
+
+**What happened:** Three structural issues: (1) `AGENT_TEMPLATE.md` lived in `agents/` and installed to `.claude/agents/`, but it's a template for creating agents, not an agent itself — it belongs with other templates. (2) `AGENT_SUGGESTIONS.md` is a reference catalog used during Phase 4 agent creation but serves no purpose after initialization — it clutters `.claude/agents/` alongside actual agents. (3) `sdlc-initialize` is only needed once — after initialization, `sdlc-migrate` handles all future updates, and re-initialization can bootstrap from source.
+
+**Changes made:**
+
+1. **`agents/AGENT_TEMPLATE.md` → `templates/agent-template.md`** — Moved from agents/ to templates/ and renamed to lowercase-hyphenated convention. Install path changes from `.claude/agents/AGENT_TEMPLATE.md` to `[sdlc-root]/templates/agent-template.md`.
+2. **`skeleton/manifest.json`** — Moved agent template entry from `source_files.agents` to `source_files.templates`. Removed `sdlc-initialize` (5 files) from `source_files.skills`.
+3. **`skeleton/contract_changes.yaml`** — Added entry 0010 for migration-driven cleanup of old paths.
+4. **`skills/sdlc-create-agent/SKILL.md`** — Updated template reference to `[sdlc-root]/templates/agent-template.md`, removed AGENT_SUGGESTIONS.md from Uses list.
+5. **`skills/sdlc-initialize/SKILL.md`** — Updated verification checklists; added AGENT_SUGGESTIONS.md and sdlc-initialize deletion to Phase 12 cleanup.
+6. **`skills/sdlc-migrate/SKILL.md`** — Removed agent template and suggestions from direct-copy agents list; updated template-derived section references; added contract-driven cleanup delegation.
+7. **`skills/sdlc-port-opencode/SKILL.md`** — Removed AGENT_TEMPLATE.md from skip list (no longer in `.claude/agents/`).
+8. **`process/knowledge-routing.md`** — Updated template path references.
+9. **`agents/AGENT_SUGGESTIONS.md`** — Updated internal references to template.
+10. **`BOOTSTRAP-LITE.md`** — Updated template source path.
+11. **`README.md`** — Updated agents/ directory description.
+12. **`CLAUDE.md`** — Updated directory purpose descriptions.
+
+**Rationale:** Templates belong with templates. Ephemeral files shouldn't persist after initialization — they add noise to agent/skill discovery and clutter directories with artifacts that serve no post-init purpose. Re-initialization bootstraps from source, so the skill doesn't need to live in the project.
+
+---
+
 ## 2026-04-25: Fix 12 phrasing contract violations across 7 skills
 
 **Origin:** Knowledge store compliance audit (Tier 4) — systematic scan of all skills for phrasing contract violations: non-canonical verbs, parenthetical knowledge references, bare paths, and imprecise directory references.

@@ -19,7 +19,7 @@ The framework is designed to be adopted incrementally — start with the core pr
 | `knowledge/`   | Structured YAML knowledge stores — patterns, methodologies, test strategies                                                        |
 | `playbooks/`   | Recipes for recurring task types (add your own as patterns emerge)                                                                 |
 | `skills/`      | Claude Code skills for SDLC workflow automation                                                                                    |
-| `agents/`      | Agent definitions — `AGENT_TEMPLATE.md` for adding your own project agents                                                         |
+| `agents/`      | Agent definitions — `AGENT_SUGGESTIONS.md` catalog and framework subagents                                                          |
 | `skeleton/`    | Directory structure manifest for project initialization                                                                            |
 | `plugins/`     | Plugin setup guides (context7 required, LSP recommended)                                                                           |
 
