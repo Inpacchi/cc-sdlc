@@ -7,6 +7,7 @@ description: >
   quorum of adjacent domain agents plus code-reviewer through a review-fix loop. Writes to
   `docs/reference/{category}/` with strict frontmatter + fixed section order + mandatory
   file:line anchors. Registers in `docs/reference/_index.md`.
+  Use when a system, API surface, event schema, or pipeline needs structured documentation for agent consumption.
   Triggers on "create a reference doc", "write internal reference", "document this for future agents",
   "reference doc for X", "/sdlc-create-reference-doc".
   Do NOT use for customer-facing product docs — those are project-specific (typically a docs site).

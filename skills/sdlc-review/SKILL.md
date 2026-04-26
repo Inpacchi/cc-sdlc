@@ -6,6 +6,7 @@ description: >
   external source (agent definitions, articles, docs, code patterns) and compares against
   existing cc-sdlc agents/skills to identify improvements or new candidates.
   Knowledge store candidates route to /sdlc-ingest.
+  Use when an SDLC skill or agent file needs convention review, or when external sources need analysis against existing definitions.
   Triggers on "review this skill", "review this agent", "check skill quality", "check agent quality",
   "/sdlc-review", "analyze these", "incorporate from these", "compare against our agents",
   "what can we learn from this", "see if there's anything useful".

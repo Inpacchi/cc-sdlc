@@ -9,6 +9,7 @@ description: >
   "run an sdlc audit", "compliance audit", "audit this session", "audit for improvements",
   "what can we improve about the process", "sdlc health check", "check sdlc compliance",
   "audit these commits", "process improvement audit".
+  Use when you need to verify SDLC compliance, identify process improvements, or evaluate knowledge layer health.
   Do NOT use for generating playbooks from sessions — use sdlc-playbook-generate.
   Do NOT use for bulk knowledge import — use sdlc-ingest.
 ---

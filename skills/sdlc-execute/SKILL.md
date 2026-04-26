@@ -5,6 +5,7 @@ description: >
   docs/current_work/planning/dNN_name_plan.md — written and reviewed by worker domain agents via
   sdlc-plan. Loads the plan, executes phases using worker domain agents, reviews all completed work
   with worker domain agents, fixes all findings, and commits.
+  Use when an approved plan exists and the user confirms execution.
   Triggers on "execute the plan", "implement the plan", or references to an existing plan file.
   Do NOT use without a plan — if no plan exists, use sdlc-plan first.
   Do NOT use for lite deliverables — those use sdlc-lite-execute.

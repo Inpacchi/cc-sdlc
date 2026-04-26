@@ -4,6 +4,7 @@ description: >
   Open-ended exploration and iterative concept development for ideas that aren't ready to plan yet.
   Focuses on Socratic questioning, codebase-aware research, and sketching multiple conceptual
   approaches before committing to any direction. Produces an idea brief, not a spec or plan.
+  Use when an idea needs open-ended exploration before it's ready for formal planning.
   Triggers on "I have an idea", "let's explore", "what if we", "brainstorm", "how should we approach",
   "I'm thinking about", "explore this concept", "idea for", "could we", "what would it take to",
   "kick around an idea", "spitball", "before we plan anything", "I want to think through".

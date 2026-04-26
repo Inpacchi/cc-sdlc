@@ -5,6 +5,7 @@ description: >
   files, directory), debate findings organically with an architect mediator, then fix all findings
   using persistent teammates — no fresh agent spawning. Loops review-fix rounds until clean
   within one persistent team.
+  Use when code changes need a deep team-powered review with persistent agents that debate and fix findings in-session.
   Triggers on "team review", "deep review", "review and fix with team", "/team-review-fix",
   "team review this commit", "team review these files".
   Do NOT use for quick reviews — use sdlc-review-code.

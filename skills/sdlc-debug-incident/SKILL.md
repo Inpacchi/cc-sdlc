@@ -8,6 +8,7 @@ description: >
   dispatched domain agents in real time; CLOSEOUT restructures the messy doc into the
   project's postmortem template (timeline, root cause, action items) once remediation
   deliverables exist.
+  Use when a production incident occurs — service down, OOM, elevated error rate, data issue, or security event.
   Triggers on "incident", "production incident", "OOM", "service is down", "we had an outage",
   "production issue", "investigate the outage", "postmortem", "incident report",
   "document the incident", "/sdlc-debug-incident".

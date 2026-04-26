@@ -3,6 +3,7 @@ name: sdlc-reconcile
 description: >
   Reconcile untracked ad hoc work back into the SDLC process — bring informal commits into the
   tracked deliverable catalog with backfilled spec/plan/result artifacts.
+  Use when informal ad hoc work has accumulated outside the SDLC tracking process.
   Triggers on "let's catalog our ad hoc work", "let's catch up the docs",
   "what have we done since D[last]?", "let's rejoin the process", "reconcile our recent work",
   "/sdlc-reconcile".

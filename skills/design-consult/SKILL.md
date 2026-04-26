@@ -4,6 +4,7 @@ description: >
   Design consultation that synthesizes screenshots, references, and codebase context into 2-3 distinct
   design options backed by design theory. Uses the ui-ux-designer agent with design principles
   mandatory. Supports iterative refinement until a final direction is chosen.
+  Use when a UI component, page layout, or interaction flow needs visual design exploration before implementation.
   Triggers on "design consult", "consult on the design", "design options", "give me design ideas",
   "help me design", "design this", "I need design help", "design consultation", "layout ideas",
   "UI concepts for".

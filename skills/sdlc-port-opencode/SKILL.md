@@ -6,6 +6,7 @@ description: >
   adapts agent and skill definitions with tool-name mapping, and scaffolds opencode.json
   configuration. Does NOT remove or replace the Claude Code setup — adds OpenCode
   compatibility alongside it. Shared content in [sdlc-root] is used as-is by both tools.
+  Use when an existing cc-sdlc project needs OpenCode compatibility alongside its Claude Code setup.
   Triggers on "port to opencode", "make this work with opencode", "opencode compatibility",
   "wire for opencode", "adapt for opencode", "opencode setup", "/sdlc-port-opencode".
   Do NOT use for full framework migration or updates — use sdlc-migrate.

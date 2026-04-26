@@ -3,6 +3,7 @@ name: sdlc-lite-execute
 description: >
   Execute a lightweight plan that was produced by sdlc-lite-plan. Worker domain agents implement the phases,
   review the completed work, and fix findings. Produces a result doc capturing what was built. Deliverable is tracked in the catalog with tier: lite.
+  Use when an approved SDLC-Lite plan exists and the user confirms execution.
   Trigger when someone says "execute the lite plan", "go ahead with the plan", "start the lite work",
   or after sdlc-lite-plan has produced a reviewed plan and the user confirms execution via the plan mode prompt.
   The plan file lives at docs/current_work/sdlc-lite/dNN_{slug}_plan.md — load it from there.

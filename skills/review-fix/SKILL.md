@@ -4,6 +4,7 @@ description: >
   Fix all findings from the most recent /sdlc-review-code — dispatches worker domain agents to fix,
   then runs the review-fix loop until all agents report clean. Triggers on "fix review findings",
   "fix the review", "/sdlc-review-fix", "address the findings", "fix all findings".
+  Use when a code review has produced findings that need fixing.
   Do NOT use without a prior /sdlc-review-code in this conversation.
 ---
 

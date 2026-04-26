@@ -4,6 +4,7 @@ description: >
   Generate detailed specifications for visual brand assets — dimensions, element positioning,
   color values, typography, and AI image generation prompts. Produces actionable specs that
   can be handed to designers or used with AI image generators.
+  Use when the project needs visual brand asset specifications — logos, icons, marketing graphics, or hero images.
   Triggers on "design brand asset", "create brand asset", "asset spec for", "how should I design the", "specs for logo",
   "specs for OG image", "generate prompt for", "make me a [logo/favicon/OG image]",
   "what size should the", "where should I position".

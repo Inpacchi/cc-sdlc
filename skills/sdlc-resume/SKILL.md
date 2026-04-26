@@ -3,6 +3,7 @@ name: sdlc-resume
 description: >
   Resume work on an active deliverable — loads context (spec, plan, prior results) and suggests
   the next action based on deliverable state.
+  Use when returning to a session and needing to pick up an active deliverable.
   Triggers on "resume a deliverable", "pick up where we left off", "continue D[N]",
   "what's in progress", "resume work", "/sdlc-resume".
   Do NOT use for starting new deliverables — use sdlc-plan or sdlc-lite-plan.

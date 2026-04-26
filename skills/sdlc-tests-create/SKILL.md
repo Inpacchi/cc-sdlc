@@ -5,6 +5,7 @@ description: >
   for coverage gap analysis and the SDET agent for implementation. Two-phase approach: domain
   agents audit what needs testing, SDET builds the tests. Prioritizes integration and E2E
   tests that exercise real application behavior over isolated unit tests.
+  Use when completed work needs test coverage — after a deliverable, execution phase, or significant code change.
   Trigger when someone says "create tests", "write tests", "generate test suite",
   "create test suite", "test this work", "write tests for this", or after completing
   a deliverable or SDLC-Lite execution.

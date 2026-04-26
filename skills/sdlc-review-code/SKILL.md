@@ -4,6 +4,7 @@ description: >
   Review code changes with domain agents — checks for overengineering, unnecessary code, DRY violations,
   and architecture adherence. Target auto-detects from arguments: no argument reviews uncommitted changes,
   a commit ref reviews that commit, a range reviews the range.
+  Use when code changes need review — works on uncommitted changes, specific commits, or commit ranges.
   Triggers on "review this commit", "review HEAD", "review the last commit", "code review",
   "review uncommitted changes", "check my diff", "review before committing", "diff review",
   "review working tree", "look at my changes", "/sdlc-review-code".

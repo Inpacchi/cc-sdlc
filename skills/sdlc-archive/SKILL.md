@@ -4,6 +4,7 @@ description: >
   Archive completed deliverables and resolved idea briefs from `docs/current_work/` to
   `docs/chronicle/`. Only deliverables in the Complete state are eligible — verify `**Status:**`
   marker before moving. Idea briefs, bug reports, handoffs, and lite deliverables are also handled.
+  Use when a deliverable is complete or an idea brief is resolved and needs to move from active work to the chronicle.
   Triggers on "let's organize the chronicles", "archive completed deliverables",
   "move to chronicle", "archive deliverable", "/sdlc-archive".
   Do NOT use for deliverables still In Progress or Validated — they stay in current_work until Complete.

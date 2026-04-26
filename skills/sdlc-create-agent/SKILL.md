@@ -8,6 +8,7 @@ description: >
   self-verification checklist, persistent memory section), agent-context-map update,
   registration, and wiring into dispatching skills ([sdlc-root]/process/agent-selection.yaml for all review skills,
   sdlc-plan, sdlc-lite-plan). Dispatches sdlc-reviewer for quality gate.
+  Use when the project needs a new domain agent that doesn't exist yet.
   Triggers on "create a new agent", "new agent", "add an agent", "scaffold an agent",
   "I need an agent for", "make an agent", "/sdlc-create-agent".
   Do NOT use for creating skills — use sdlc-develop-skill.

@@ -12,6 +12,7 @@ description: >
   modifies multiple skills in one invocation, detects shared changes and centralizes them.
   Enforces single-line YAML descriptions, verb-first naming, manager-rule references for
   agent-dispatching skills, and mandatory sections. Dispatches sdlc-reviewer for quality gate.
+  Use when creating a new skill or modifying an existing one in the SDLC framework.
   Triggers on "create a new skill", "new skill", "add a skill", "scaffold a skill",
   "I need a skill for", "make a skill", "modify a skill", "update a skill", "customize a skill",
   "/sdlc-develop-skill", "/sdlc-create-skill".

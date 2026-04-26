@@ -5,6 +5,7 @@ description: >
   definitions, articles, docs, frameworks) and integrate them into an existing
   agent. Uses a 6-dimension analytical framework to catch direct, adjacent,
   and reframed patterns that surface-level scanning misses.
+  Use when you have external sources that may contain patterns worth integrating into an existing agent.
   Triggers on "enrich this agent", "extract patterns from these sources for
   [agent]", "what can we learn from these for [agent]", "/sdlc-enrich-agent".
   Supports a bulk mode for fanning sources across multiple agents or applying

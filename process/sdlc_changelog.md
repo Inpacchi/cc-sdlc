@@ -34,6 +34,20 @@ Each entry contains:
 
 ---
 
+## 2026-04-25: Add "Use when" conditional framing to all skill descriptions (SQR-01 P4 fix)
+
+**Origin:** Skill quality audit against SQR-01 (triggering accuracy) found 25 of 29 skills lacked "Use when..." conditional framing in their descriptions, reducing autonomous invocation accuracy.
+
+**What happened:** SQR-01 requires descriptions to contain "Use when..." followed by concrete trigger contexts that help Claude Code decide *when* to invoke the skill. Most skills had "Triggers on" phrasing (listing explicit trigger phrases) but not the conditional context that enables autonomous routing. Added "Use when" sentences to all 25 affected skills, bringing all 29 to SQR-01 compliance.
+
+**Changes made:**
+
+1–25. All skills in `skills/*/SKILL.md` that lacked "Use when" now have a conditional context sentence inserted before the trigger phrase list. Each sentence describes the concrete situation in which the skill should fire — not what it does, but when it's needed.
+
+**Rationale:** The "Use when" sentence is the routing signal — it tells Claude Code's skill selection mechanism the *conditions* under which this skill is appropriate, complementing the "Triggers on" phrases which list *exact words* users say. Both are needed: "Use when" handles semantic matching; "Triggers on" handles lexical matching.
+
+---
+
 ## 2026-04-25: Reduce directive overcount in orchestration skills (SQR-07 P5 fix)
 
 **Origin:** Skill quality audit against SQR rubrics flagged 4 orchestration skills as OVER_CONSTRAINED (>15 MUST/ALWAYS/NEVER): sdlc-plan (27), sdlc-execute (23), sdlc-lite-execute (22), sdlc-lite-plan (20).

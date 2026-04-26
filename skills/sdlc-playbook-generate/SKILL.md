@@ -8,6 +8,7 @@ description: >
   "generate playbook", "create playbook from session", "playbook from that session", "let's make a
   playbook for", "formalize that into a playbook", "turn that session into a playbook",
   "what did we learn from that session", "extract a playbook".
+  Use when a completed session or set of commits should be formalized into a reusable playbook.
   Do NOT use for creating playbooks from scratch without session data — write those directly.
   Do NOT use for bulk knowledge import — use sdlc-ingest.
   Do NOT use for session resumption — use sdlc-resume.
