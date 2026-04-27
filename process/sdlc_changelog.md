@@ -34,6 +34,20 @@ Each entry contains:
 
 ---
 
+## 2026-04-27: Make sdlc-idea step 4 dispatch demand-driven and project-tier-only
+
+**Origin:** User observation that sdlc-idea's Research step never named project-installed specialist agents (e.g., a project's `ir-analyst` for information-retrieval unknowns) even though they exist for exactly this purpose, and that the skill consulted `knowledge/agent-context-map.yaml` (for knowledge-file lookup) but not `process/agent-selection.yaml` (the source of truth for agent dispatch). Follow-up clarification: personal-tier agents (`~/.claude/agents/`) must NOT be dispatched from skills, because they aren't guaranteed to exist for every contributor on a project.
+
+**What happened:** Step 4 said "use WebSearch" and pointed only at the knowledge-file map. Skill users had no in-skill cue to dispatch a project specialist for in-domain unknowns, and no link to the canonical agent-selection table. Two counter-pressures shaped the final edit: (1) idea exploration's core principle is "no premature convergence" — a default fan-out of research agents would lock in convergence before questioning had sharpened the real unknown; (2) personal-tier dispatch is non-portable — different contributors will have different `~/.claude/agents/` rosters, so a skill that depends on them is not reproducible across the team.
+
+**Changes made:**
+
+1. **`skills/sdlc-idea/SKILL.md`** — Rewrote step 4 ("Research (as needed)") to make research demand-driven: trigger only when a specific unknown emerges from questioning, never as a default sweep, never as a parallel fan-out. Added a "Project specialist agents" subsection that directs the skill to scan `[sdlc-root]/process/agent-selection.yaml` (`tier1` and `tier2` only — explicitly NOT `personal:`) for an installed agent whose `dispatch_when`/`covers` triggers match the unknown. Provided an illustrative (not prescriptive) table mapping unknown shapes to plausible project-tier specialists (e.g., an IR specialist for retrieval-strategy questions, `data-architect` for schema questions). When no project-tier agent fits, fall back to direct WebSearch/Context7 — never synthesize a personal-tier dispatch. Added three Red Flags rows: against premature fan-out, against self-WebSearching when a project specialist exists, and explicitly against dispatching personal-tier agents listed in `agent-selection.yaml`. Updated Integration → Uses to name the project-tier-only consultation.
+
+**Rationale:** The skill now picks up project-installed specialists (which solve the original gap that surfaced the issue — a project's `ir-analyst` going unused for IR-domain unknowns) without inviting the convergence trap and without depending on per-contributor personal agents. Pointing at `agent-selection.yaml` rather than restating agent capabilities inline keeps the skill consistent with the rest of the framework's agent-selection contract — when projects add specialists via `sdlc-create-agent`, sdlc-idea picks them up automatically with no further skill edits.
+
+---
+
 ## 2026-04-26: Add evidence-based "when to use" decision tree to team-review-fix
 
 **Origin:** Three-session retrospective (2026-04-14, 2026-04-17, 2026-04-26) showed the team model earns its keep on ~30% of work (coordinated multi-file commits, contract-drift detection, scope escalation) while ~70% is equally well served by subagent dispatch.

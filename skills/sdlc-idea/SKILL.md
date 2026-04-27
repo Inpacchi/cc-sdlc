@@ -130,17 +130,35 @@ There is no minimum question count. The user may answer two questions and have f
 
 ### 4. Research (as needed)
 
-During or after questioning, specific unknowns may emerge that require research:
+Research is **demand-driven, not default**. Trigger research only when a specific unknown emerges from questioning — never run a research sweep up front, and never fan out multiple research agents "just to be thorough." Premature research is a convergence trap: it produces findings that feel like answers before the real question has been sharpened.
 
-**Codebase deep-dives** — Trace specific code paths, read specific modules, verify what the architecture actually supports vs. what seems possible.
+When an unknown does emerge, pick the lightest tool that can resolve it:
 
-**Web research** — Use WebSearch for research on approaches, technologies, or patterns relevant to the idea. Frame searches around the specific unknowns that emerged from questioning.
+**Codebase deep-dives** — Trace specific code paths, read specific modules, verify what the architecture actually supports vs. what seems possible. Use directly (Read, Grep, LSP).
 
 **Library/API verification** — If the idea involves external libraries or services, verify capabilities via Context7 (`mcp__context7__resolve-library-id` → `mcp__context7__query-docs`). Do NOT assume library capabilities from training data.
 
 **Knowledge store consultation** — Consult `[sdlc-root]/knowledge/agent-context-map.yaml` to identify which methodology files are relevant to the domain being explored, then read those files. They define how the project approaches this domain (e.g., testing paradigm for test-related ideas, data modeling patterns for schema ideas).
 
-Share research findings with the user as they come in. New information often shifts the conversation.
+**Project specialist agents** — Before reaching for WebSearch yourself, scan `[sdlc-root]/process/agent-selection.yaml` (`tier1:` and `tier2:` only) for any project-installed agent whose domain matches the unknown.
+
+A project-tier agent fits the unknown when its `dispatch_when` triggers, `covers` list, or domain framing maps to what you're trying to learn. Examples (illustrative — actual roster is project-specific):
+
+| Unknown shape | Project-tier agent that fits (if installed) |
+|---|---|
+| "What's the right retrieval strategy / ranking model / embedding approach?" | An IR specialist (e.g., `ir-analyst`) |
+| "How should this schema/index/migration be shaped?" | `data-architect` |
+| "Which auth/input-validation pattern applies here?" | `security-engineer` |
+| "How should this real-time/WebSocket flow be structured?" | `realtime-systems-engineer` |
+
+If no project-tier agent's domain matches the unknown, fall back to direct tools — WebSearch for narrow facts, Context7 for library/API verification. Do not synthesize a personal-tier dispatch; if the project lacks a specialist for this domain, that's a signal to either keep the research narrow or surface the gap to the user (they may want to add an agent via `sdlc-create-agent`).
+
+Dispatch rules when a project-tier agent fits:
+- One agent per emerged unknown. If you can't articulate which specific question the agent is answering, you're not ready to dispatch.
+- Brief the agent with the seed, the grounding summary, and the specific unknown — not the entire conversation.
+- Wait for findings before continuing to question or sketch — research that arrives after a sketch is locked in is wasted.
+
+Share research findings with the user as they come in. New information often shifts the conversation, sometimes back to step 2 or 3.
 
 ### 5. Sketch Conceptual Approaches
 
@@ -246,10 +264,13 @@ Do NOT start planning or implementing. The idea exploration ends with a directio
 | "I'll skip codebase grounding, the idea is conceptual" | Every idea lives in a codebase context. Ground first, always. |
 | "The user seems to know what they want — skip questioning" | Even confident users benefit from one or two probing questions. The question may not change the direction, but it often sharpens it. |
 | "Let me batch 5 questions to save time" | One question at a time. Batched questions get shallow answers. |
+| "Let me fan out a few research agents in parallel before questioning" | Research is demand-driven. Dispatch a specialist only after a specific unknown has emerged — running a menu up front locks in convergence before the real question is even sharp. |
+| "I'll WebSearch this myself, faster than dispatching" | For a narrow factual lookup, yes. But scan `agent-selection.yaml` (`tier1`/`tier2`) first — if a project-installed specialist's domain matches the unknown, dispatch them; their depth beats your generic search. |
+| "I'll dispatch a personal-tier agent like research-analyst since it's listed in agent-selection.yaml" | Don't. Personal-tier agents live at `~/.claude/agents/` and aren't guaranteed to exist for every contributor. Only dispatch project-tier agents (`tier1`/`tier2`); fall back to direct WebSearch/Context7 otherwise. |
 
 ## Integration
 
 - **Feeds into:** `sdlc-plan` (full planning), `sdlc-lite-plan` (lightweight planning), `sdlc-design-consult` (visual design exploration)
-- **Uses:** LSP, Grep, Context7, WebSearch, chronicle and knowledge layer
+- **Uses:** LSP, Grep, Context7, WebSearch, chronicle and knowledge layer; consults `[sdlc-root]/process/agent-selection.yaml` (`tier1`/`tier2` only — never `personal:`) to dispatch a project-installed specialist when an emerged unknown maps to its domain
 - **Complements:** `sdlc-design-consult` explores visual direction; `idea` explores conceptual direction. They can feed into each other.
 - **Does NOT replace:** DISCOVERY-GATE in `sdlc-plan` (that gate validates minimum discovery before spec writing; this skill is unbounded exploration before any commitment)
