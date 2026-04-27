@@ -62,8 +62,8 @@ Look for `Agent` tool calls in assistant messages. Extract:
 
 ### Knowledge Context Tracking
 
-Identify knowledge files and references consulted during the session:
-- Explicit reads of `[sdlc-root]/knowledge/` files
+Identify knowledge sources consulted during the session:
+- Explicit `Read [sdlc-root]/knowledge/<file>.yaml` calls
 - Context7 lookups for external library docs
 - Codebase pattern reads (existing implementations used as reference)
 - Any methodology or process files consulted

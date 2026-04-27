@@ -34,6 +34,20 @@ Each entry contains:
 
 ---
 
+## 2026-04-26: Rephrase analysis-methodology.md to canonical Pattern Mapping form (Class G fix)
+
+**Origin:** Sleeved post-`migrate-0957db` self-audit identified one genuine cc-sdlc skill weakness across the 71 manual fixes — `skills/sdlc-playbook-generate/references/analysis-methodology.md:66` had `- Explicit reads of \`[sdlc-root]/knowledge/\` files`, a verb+prepositional-phrase-of-path construction that no Pattern Mapping rule covered. Both Pass 1 (instruction rules require canonical "Read [sdlc-root]/...yaml" form) and Pass 2 (noun-phrase rules don't fire on verb+of constructions) missed it.
+
+**Changes made:**
+
+1. **`skills/sdlc-playbook-generate/references/analysis-methodology.md:65-66`** — Rephrased to canonical form: `Identify knowledge sources consulted during the session:` / `- Explicit \`Read [sdlc-root]/knowledge/<file>.yaml\` calls`. The new form matches the existing Pass 1 wildcard rule for `Read [sdlc-root]/knowledge/<domain>/<file>.yaml` so adapter transformers fire correctly.
+
+Mirrored upstream in `neuroloom-sdlc-plugin` 0.4.6 — the plugin's Pass 2 concept-terminology table now has a verb-of-path rule class (`<verb> of [sdlc-root]/knowledge/ files` → `<verb> of memory entries tagged sdlc:knowledge`) covering verb+prepositional-phrase-of-path constructions for any future site that slips through.
+
+**Rationale:** Two-pronged fix per the audit's recommendation. Rephrasing the cc-sdlc source line eliminates the only known instance and routes through the existing Pass 1 wildcard rule. The plugin's new Pass 2 rule class is a backstop for any future verb-of-path constructions that get introduced upstream before being caught.
+
+---
+
 ## 2026-04-26: Expand adapter-installation audit with concept-terminology, stale-agent, and new-file-install bypass scans
 
 **Origin:** Two consecutive sleeved adapter audit cycles (`migrate-6f4217` and the follow-up `migrate-0957db`, both 2026-04-26) surfaced three defect classes the original `ccsdlc-audit-adapter-installation` skill missed because Step 3 only matched `[sdlc-root]/...` paths. CD discovered each class manually via diff-against-HEAD after the formal 9-dimension audit had marked the migration as passing.
