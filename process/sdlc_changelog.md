@@ -34,6 +34,20 @@ Each entry contains:
 
 ---
 
+## 2026-04-26: Add evidence-based "when to use" decision tree to team-review-fix
+
+**Origin:** Three-session retrospective (2026-04-14, 2026-04-17, 2026-04-26) showed the team model earns its keep on ~30% of work (coordinated multi-file commits, contract-drift detection, scope escalation) while ~70% is equally well served by subagent dispatch.
+
+**What happened:** The skill's cost guidance said "3-6x more tokens" but gave no concrete decision criteria for when that cost is justified vs when subagent dispatch is the better default.
+
+**Changes made:**
+
+1. **`skills/team-review-fix/SKILL.md`** — Added "When to Use This vs Subagent Dispatch" section immediately after the cost line. Decision tree with 5 signals (partner-facing, multi-package, coordinated commits, cross-fixer overlap, scope escalation) — use team when 2+ are true. Explicit "use subagent dispatch when" list for the commodity cases. Evidence section citing the three audit sessions.
+
+**Rationale:** The 2026-04-26 audit's honest cost-benefit analysis showed the skill was justified for that session (partner-grade, multi-package, contract-drift surface) but would have been overkill for a routine refactor. Making the decision criteria concrete prevents misuse on commodity work while reinforcing the value for the cases where it genuinely earns its keep.
+
+---
+
 ## 2026-04-26: Rephrase analysis-methodology.md to canonical Pattern Mapping form (Class G fix)
 
 **Origin:** Sleeved post-`migrate-0957db` self-audit identified one genuine cc-sdlc skill weakness across the 71 manual fixes — `skills/sdlc-playbook-generate/references/analysis-methodology.md:66` had `- Explicit reads of \`[sdlc-root]/knowledge/\` files`, a verb+prepositional-phrase-of-path construction that no Pattern Mapping rule covered. Both Pass 1 (instruction rules require canonical "Read [sdlc-root]/...yaml" form) and Pass 2 (noun-phrase rules don't fire on verb+of constructions) missed it.
@@ -69,6 +83,34 @@ Mirrored upstream in `neuroloom-sdlc-plugin` 0.4.6 — the plugin's Pass 2 conce
 **Mirrored upstream in `neuroloom-sdlc-plugin` 0.4.6:** three new mandatory §4.2-gate audits halt before regressions reach disk — Pass 2 residue halt (catches concept-terminology that escaped Pass 2), Stale Agent Reference Audit (proactive scan with `agent_renames` field for project-side rename declarations), and Contract Residue Audit (catches Pattern Mapping bypass on any subtype including `mcp_new_file`). §5.0 telemetry assertion now requires 8 events before `run_complete`. Together with the audit-skill scans on the cc-sdlc side, defense-in-depth covers: (1) the §4.2-gate halts at write time, (2) the §5.0 assertion blocks `run_complete` if any audit was bypassed, (3) the audit skill catches anything that escapes both.
 
 **Rationale:** The audit's job is to surface defects the plugin's internal gates miss. Path-bearing-residue covers Pass 1; the bare-form scan covers Pass 2; the agent-reference scan covers a third namespace neither touches. Without all three, regressions silently propagate upstream's file-mode prose and unadopted-agent references into Neuroloom installations, and the only signal is downstream agents producing slightly-wrong outputs that take weeks to attribute to the migration.
+
+---
+
+## 2026-04-26: Harden team-review-fix for scale + formalize PRE-DELIVERABLE-SPLIT (audit-driven)
+
+**Origin:** Team-review-fix audit 2026-04-26 (Sleeved session, 17 commits, 24 teammate instances, 108 findings, ~102 shipped). All six R-rules from the 2026-04-17 audit worked — routing 11/12 first-pass, zero reviewer-edit violations, zero stale-view retractions. New failure modes surfaced at scale: fixer context exhaustion (3 incidents), architect master-list lag, stale-routing echoes to terminated teammates, soft-dead fixer misclassification at TeamDelete.
+
+**What happened:** The 2026-04-17 prompt patches held under a 4x scope increase (108 vs 25 findings). New failures were infrastructure/scale-driven, not discipline failures. A new finding classification (PRE-DELIVERABLE-SPLIT) emerged organically and worked well for 3 scope escalations (D22, D23, D24).
+
+**Changes made:**
+
+1. **`process/finding-classification.md`** — Added PRE-DELIVERABLE-SPLIT as the sixth canonical classification. Available in execution and team-review-fix contexts. Guidelines cover when to use, when not to use, and architect responsibilities (capture options, preserve evidence, assign D-number).
+
+2. **`skills/team-review-fix/SKILL.md`** —
+   - Step 3 architect spawn: classification rules now mention PRE-DELIVERABLE-SPLIT
+   - Step 4 Phase 1: classification list updated to six classifications
+   - Step 6a fixer prompt: added context-budget discipline (self-flag at ~50%, never start multi-task edits past ~75%, never leave files in partially-edited state)
+   - Step 6e: added user-away graceful degradation (low-cadence observation when no user message in ~30 min)
+   - Step 7: expanded protocol compliance table with 9 new rows (cost gate, retraction discipline, context-budget discipline, termination tracking, liveness poll, status-sync cadence, PRE-DELIVERABLE-SPLIT, user-away degradation, missed-fixer check). Added Future Deliverables table.
+   - Step 8: shutdown sequence now cross-references architect's terminated-teammates list; requires teammate_terminated system messages before TeamDelete, not silence-based inference
+   - Red flags: 3 new entries (soft-dead fixers, context exhaustion, PRE-DELIVERABLE-SPLIT scope)
+
+3. **`process/debate-protocol.md`** — Expanded architect prompt template:
+   - DURING FIX: duplicate-assignment guard (TaskGet before FIX_REQUEST), 10-minute status-sync cadence, master-list lag self-reporting, context-handoff coordination, PRE-DELIVERABLE-SPLIT classification
+   - TERMINATION TRACKING: maintain terminated-teammates list, verify recipients before SendMessage, reroute messages for terminated reviewers to team-lead
+   - LIVENESS POLL DISCIPLINE: four-state classification (ALIVE+ACTIVE, ALIVE+IDLE, TERMINATED, UNRESPONSIVE), no soft-dead inference
+
+**Rationale:** The 2026-04-17 R-rules proved effective (all six produced measurable improvement). The 2026-04-26 failures are scale-driven and require new safeguards: context-budget self-flagging prevents corrupted commits, termination tracking prevents stale routing, liveness poll discipline prevents TeamDelete failures, and PRE-DELIVERABLE-SPLIT gives the team a clean escalation path when fix-loop scope exceeds cycle capacity.
 
 ---
 

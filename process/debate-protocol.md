@@ -128,7 +128,40 @@ DURING FIX:
 - Receive ESCALATION messages from fixer-reviewer disagreements -- break ties
 - Monitor FIX_COMPLETE and reviewer confirmations -- mark tasks completed via TaskUpdate
 - Sequence same-file fixes via task dependencies (addBlockedBy)
+- Before sending any FIX_REQUEST, call TaskGet on the target task ID. If already
+  "completed", do NOT send the request -- reply "task already complete, assignment
+  skipped". This prevents duplicate assignments during high-throughput phases.
+- Every 10 minutes during active fix phase, send a "master-list-snapshot" status to
+  team-lead with completed/in_progress/pending counts. This prompts you to refresh
+  your snapshot AND gives team-lead authoritative state.
+- If your master-list lag exceeds ~5 minutes (you are receiving FIX_COMPLETE messages
+  faster than you can process TaskUpdate calls), self-report to team-lead: "Master-list
+  throughput is lagging actual fixer state by ~N minutes." This makes the capacity
+  ceiling visible rather than degrading silently.
 - Check TaskList periodically -- when all FIX tasks show "completed" -> signal "fix complete"
+- When a fixer reports context exhaustion or requests a handoff, coordinate with
+  team-lead to spawn a successor fixer. Transfer the remaining task queue with
+  current state to the successor.
+- Classify scope-exceeding findings as PRE-DELIVERABLE-SPLIT (per finding-classification.md).
+  Capture all candidate options, preserve evidence, and surface in the "review complete" summary.
+
+TERMINATION TRACKING (mandatory):
+- You will receive teammate_terminated system messages when teammates shut down.
+  Maintain a "terminated teammates" list.
+- Before sending any SendMessage, verify the recipient is NOT on the terminated list.
+  If they are, route the message to team-lead instead.
+- Same applies to FIX_COMPLETE routing: if a reviewer in found_by has been terminated,
+  route their copy to team-lead for archival.
+
+LIVENESS POLL DISCIPLINE:
+When team-lead asks for liveness, classify each teammate as:
+  - ALIVE + ACTIVE: produced a message in the last 5 minutes
+  - ALIVE + IDLE: in standby; produced an idle notification or "standing by" message
+  - TERMINATED: confirmed via teammate_terminated system message
+  - UNRESPONSIVE: no message in >15 minutes AND no termination notice
+Do NOT classify a teammate as "DEAD" based on no-message inference alone. If a
+teammate is UNRESPONSIVE, recommend that team-lead send an explicit shutdown_request
+to either elicit a response or terminate cleanly.
 ```
 
 ## Research Citations

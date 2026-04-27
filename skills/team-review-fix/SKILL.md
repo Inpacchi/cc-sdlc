@@ -16,7 +16,27 @@ description: >
 
 Review any target with a persistent agent team, resolve conflicts through organic debate with an architect mediator, and fix all findings using the same team. No fresh agent spawning between phases. The team stays alive through all rounds and is cleaned up at the end.
 
-**Cost:** 3-6x more tokens than `sdlc-review-code` + `sdlc-review-fix`. Use when finding accuracy and fix quality matter more than speed — complex changes, security-critical code, architectural decisions, cross-domain work.
+**Cost:** 3-6x more tokens than `sdlc-review-code` + `sdlc-review-fix`. The team model earns its keep on ~30% of work (coordinated multi-file commits, cross-package contract-drift, mid-execution scope escalation). The other ~70% would be equally well served by subagent dispatch. Use the decision tree below.
+
+### When to Use This vs Subagent Dispatch
+
+Use `/team-review-fix` when **two or more** of these are true:
+
+| Signal | Why it needs a team |
+|--------|-------------------|
+| **Partner-facing or production-critical** | Wrong fix direction is expensive; real-time reviewer validation prevents regressions landing |
+| **Multiple package boundaries in scope** | Contract-drift findings (codec ↔ route ↔ schema ↔ docs) require holding multiple surfaces simultaneously — single-domain subagents miss these |
+| **Coordinated multi-file commits needed** | The apiKey cluster pattern: 7 tasks landing as ONE commit while preserving security invariants. Subagents fragment this into separate commits with regression risk between them |
+| **Cross-fixer file overlap expected** | Two fixers touching the same file need sequencing via `addBlockedBy`. Subagents collide silently |
+| **Scope escalation likely** | Work that may surface PRE-DELIVERABLE-SPLIT findings or mid-execution DECIDE pivots that reshape downstream tasks |
+
+Use `sdlc-review-code` + `sdlc-review-fix` (subagent dispatch) when:
+- Bug-fix sweep with well-understood patterns
+- Independent per-file changes (docs content, individual test creation, style fixes)
+- Single-package work where findings don't cross domain boundaries
+- Speed matters more than finding accuracy
+
+**Evidence (3 sessions):** The team model caught contract-drift findings (12 of 25 critical/major in the 2026-04-26 session) that single-domain subagents would have missed. The apiKey coordinated commit and Grand Archive 3-way independent confirmation are the strongest examples. But ~70% of individual findings and fixes had no debate value and would have been cheaper as subagents.
 
 **Argument:** `$ARGUMENTS` (optional — commit ref, file paths, directory, or description of what to review)
 
@@ -100,7 +120,7 @@ Create the agent team. The main session is the team lead — it manages lifecycl
    - The architect prompt template from `[sdlc-root]/process/debate-protocol.md`
    - Instruction to build the master findings list progressively as findings arrive
    - Reference to `[sdlc-root]/process/team-communication-protocol.md` for message format
-   - Reference to `[sdlc-root]/process/finding-classification.md` for classification rules (no PLAN classification in this skill)
+   - Reference to `[sdlc-root]/process/finding-classification.md` for classification rules (no PLAN — use PRE-DELIVERABLE-SPLIT for scope escalation)
 
 2. **All REVIEWERS in parallel** — each reviewer receives:
    - Target content
@@ -174,7 +194,7 @@ If a reviewer went idle without any architect interaction, the team-lead prods t
 - All outstanding challenges have been resolved
 - The master findings list in the shared task list is stable
 
-The architect classifies each finding: **FIX / INVESTIGATE / DECIDE / PRE-EXISTING** (per `[sdlc-root]/process/finding-classification.md` — no PLAN classification in this skill).
+The architect classifies each finding: **FIX / INVESTIGATE / DECIDE / PRE-EXISTING / PRE-DELIVERABLE-SPLIT** (per `[sdlc-root]/process/finding-classification.md` — no PLAN classification in this skill).
 
 Present DECIDE items to user via AskUserQuestion. Block until answered.
 
@@ -239,6 +259,23 @@ work downstream to the verification gate.
 
 Include the verification commands and their output in your FIX_COMPLETE
 message body so reviewers can audit the pre-flight checks.
+
+CONTEXT-BUDGET DISCIPLINE (mandatory — audit 2026-04-26 produced one
+corrupted commit from silent context exhaustion):
+Before tackling any non-trivial task (multiple file edits, coordinated
+multi-task commit, or cross-package change), assess your context budget.
+If you are above ~50% consumption AND the task is non-trivial:
+  1. Self-flag to the architect: "Approaching context limit (~N%);
+     requesting handoff before tackling task X."
+  2. Wait for architect's decision — you may proceed if approved, or
+     stand down if they spawn a successor.
+  3. If proceeding: land the most coordinated single commit you can
+     complete cleanly, then send FIX_COMPLETE for what landed and a
+     "context-handoff-needed" message for what remains.
+NEVER start a multi-task coordinated edit past ~75% context consumption
+without explicit architect approval. NEVER leave a file in a partially-
+edited state — if your output truncates mid-edit, the next fixer inherits
+the corruption.
 ```
 
 **When multiple reviewers found the same issue:** The architect assigns the fix to ONE fixer (the most relevant domain), but records ALL reviewers who found it in the task metadata (`found_by` field). The fixer sends FIX_COMPLETE to ALL reviewers who found the issue — each reviewer who surfaced the finding validates the fix from their domain perspective.
@@ -311,6 +348,8 @@ If verification fails — architect assigns failures to relevant fixers. Loop un
 
 This is a single pass — the collaborative fix phase already produced reviewer-validated code, so this gate catches only integration-level issues (type errors from cross-file changes, test regressions, etc.).
 
+**User-away graceful degradation:** If no user message has been received in ~30 minutes and fixer activity is ongoing, shift to low-cadence observation — acknowledge fixer activity briefly (one short sentence per landing wave, not per FIX_COMPLETE), do not request architect status reports more often than every 30 minutes, let the team self-organize via the architect. Resume normal cadence when the user returns. Goal: minimize token spend during user-absent phases.
+
 ### Step 7: Final Report
 
 ```markdown
@@ -324,23 +363,37 @@ Status legend: ✓ clean | ~ required intervention | ! violation
 |------|--------|-------|
 | Environment gate | ✓ | |
 | Target resolution | ✓ | |
+| Cost gate (user-confirmed dispatch) | ✓ | {N reviewers dispatched, N dropped by user} |
 | Teammate selection + validation | ✓ | |
 | Team creation + architect-first spawn | ✓ | |
 | Inter-agent finding routing (reviewers use SendMessage, not plain text) | ✓/~/! | {note any reviewers who required re-emission prods} |
 | Reviewer read-only discipline (no Edit/Write in Phase 1) | ✓/! | {note any violations caught and reverted} |
+| Reviewer retraction discipline (re-read at HEAD before retracting) | ✓ | {N challenges resolved via R6} |
 | Architect ACKs every finding | ✓ | |
 | Challenges resolved by architect (no premature convergence) | ✓ | {N challenges, N escalated} |
-| DECIDE items surfaced via AskUserQuestion | ✓ | {N items} |
+| DECIDE items surfaced via AskUserQuestion | ✓ | {N items, N scope-narrowed} |
 | Fixer spawn deferred until after review convergence | ✓ | |
+| Fixer context-budget discipline (self-flag at ~50%, no silent exhaustion) | ✓/~/! | {note any respawns, handoffs, or corrupted commits} |
 | Fixer task-ID discipline (no duplicate TaskCreate) | ✓/~ | {note any consolidations} |
 | Fixer pre-FIX_COMPLETE checklist (tests + lint + types) | ✓/~ | {note any issues caught by verification gate} |
 | Cross-fixer sequencing via addBlockedBy | ✓ | |
 | Reviewer real-time validation | ✓ | |
+| Architect termination tracking (no stale routing) | ✓/~ | {note any messages sent to terminated teammates} |
+| Architect liveness poll (no soft-dead inference) | ✓/~ | {note any unresponsive teammates misclassified} |
+| Architect status-sync cadence (master-list lag <5 min) | ✓/~ | {note any duplicate assignments from lag} |
+| PRE-DELIVERABLE-SPLIT items filed | ✓ | {N items, D-numbers assigned} |
 | Verification gate (tests, typecheck, lint, SAST) | ✓ | |
-| Team shutdown (all teammates terminated) | Pending | |
-| TeamDelete success | Pending | |
+| User-away degradation (if applicable) | ✓/N/A | {note if low-cadence mode activated} |
+| Team shutdown (all teammates terminated via shutdown_request) | Pending | |
+| TeamDelete success (no missed fixers) | Pending | |
 
 **Orchestration interventions:** {count}. If >5, flag as "high-friction" — investigate the protocol gap.
+
+### Future Deliverables
+
+| D-Number | Finding | Scope | Options Preserved |
+|----------|---------|-------|-------------------|
+| {D-N} | {finding description} | {why it exceeds this cycle} | {candidate approaches} |
 
 ### Finding Summary
 
@@ -376,11 +429,13 @@ Per Claude Code docs: "Always use the lead to clean up. Teammates should not run
 
 **Shutdown sequence:**
 
-1. Lead sends shutdown request to each teammate individually
+1. Request the architect's terminated-teammates list and cross-reference against the full spawn log. Any teammate NOT on the terminated list AND not explicitly in the current shutdown batch must be accounted for — do NOT assume "soft-dead" teammates are actually gone.
+2. Lead sends shutdown request to each non-terminated teammate individually
    - Teammates can reject with explanation — handle rejections
-2. Wait for all teammates to confirm shutdown
+   - Include any "UNRESPONSIVE" teammates the architect flagged during liveness polls
+3. Wait for all teammates to confirm shutdown via `teammate_terminated` system messages
    - Note: "teammates finish their current request or tool call before shutting down, which can take time"
-3. Only after ALL teammates are shut down — TeamDelete
+4. Only after ALL teammates are confirmed terminated (via system messages, not via silence) — TeamDelete
 4. TeamDelete removes team config and task list automatically
 5. Offer to commit changes:
 
@@ -407,6 +462,9 @@ Do NOT commit automatically — wait for the user to confirm.
 | "Fixer created new task IDs to track subtasks" | Architect owns the master task list. Fixers use TaskUpdate on the original task ID, not TaskCreate. Consolidate duplicates and send the fixer a process note. |
 | "Fixer said FIX_COMPLETE, just run verification" | Check that the fixer ran lint + typecheck + tests on touched files before FIX_COMPLETE. The pre-flight checklist prevents verification-gate ping-pong. |
 | "Architect signaled convergence, we're good" | Verify every reviewer has at least one architect interaction (ACK'd finding or "standing by"). Silent reviewers may have emitted findings as plain text that never reached the architect. |
+| "Fixer went silent, they're probably done" | Do NOT infer termination from silence. Check for a teammate_terminated system message. If none, send a shutdown_request to elicit a response. Soft-dead fixers cause TeamDelete failures. |
+| "Fixer can handle one more big task before context runs out" | If the fixer is past ~50% context consumption and the task is non-trivial, they must self-flag. One corrupted commit from silent exhaustion costs more than a respawn. |
+| "This finding is too big but let's just make it a FIX" | If it needs a CD UX decision, introduces a new subsystem, or requires full planning — it's PRE-DELIVERABLE-SPLIT. File with all options preserved and a D-number. |
 
 ## Integration
 
