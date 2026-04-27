@@ -82,18 +82,63 @@ Missing any mandatory event is a finding — the plugin's own gates didn't run. 
 
 ### Step 3: Contract-residue scan
 
-Canonical phrases that should have been transformed sometimes stay untouched — a Pattern Mapping gap, a match-rule failure, or a preservation boundary that kept untransformed content. Run the leak grep with the correct exempt filter:
+Canonical phrases that should have been transformed sometimes stay untouched — a Pattern Mapping gap, a match-rule failure, or a preservation boundary that kept untransformed content. Run **two** scans: a path-bearing residue scan AND a bare concept-terminology residue scan. Both classes have caused production regressions; missing either skips a defect class.
+
+**Scan 3a — path-bearing residue (Pass 1 phrasing-contract miss):**
 
 ```bash
 grep -rn '\[sdlc-root\]/\(knowledge\|disciplines\)/' <target-path>/.claude/ 2>/dev/null \
   | grep -vE 'sdlc_changelog|knowledge-routing|sdlc-reviewer\.md|sdlc-compliance-auditor\.md|CLAUDE-SDLC\.md|provenance_log\.md'
 ```
 
-For each hit, read context and classify per `references/classification-framework.md`:
-- **Correctly exempt** — Integration section, fenced code block, audit-description prose that the contract allows
-- **Pattern gap** — No rule in plugin Pattern Mapping covers this phrasing (plugin add needed)
-- **Match failure** — Rule exists but didn't fire (plugin matcher bug)
+**Scan 3b — bare concept-terminology residue (Pass 2 phrasing-contract miss):**
+
+Pass 2 in plugin 0.4.0+ translates file-mode vocabulary to memory-graph vocabulary even when no `[sdlc-root]/` path is present. Phrases like `knowledge files`, `discipline files`, `parking lot entries`, `knowledge stores` (plural), `YAML files` (in knowledge context) all describe the knowledge layer using its file-based shape — they must be transformed in Neuroloom installations even though Scan 3a misses them entirely.
+
+```bash
+grep -rinE '\bknowledge files?\b|\bdiscipline files?\b|\bparking[- ]lot entr|\bknowledge stores?\b|\bknowledge-store entr|\bdiscipline parking lots?\b|\bknowledge YAMLs?\b|\bYAML knowledge files?\b|\bagent-context-map\b|\bknowledge area\b|\bsuggested knowledge area\b' <target-path>/.claude/ 2>/dev/null \
+  | grep -vE 'sdlc_changelog|knowledge-routing|sdlc-reviewer\.md|sdlc-compliance-auditor\.md|CLAUDE-SDLC\.md|provenance_log\.md|path-mappings\.md|agent-memory/'
+```
+
+The `agent-memory/` filter excludes project-authored agent-MEMORY.md content (project-specific, not framework-derived).
+
+**Hard-coverage check (added post-`migrate-6f4217` sleeved audit, 2026-04-26):** sleeved's `deliverable_lifecycle.md:76` had upstream `- Testing knowledge files updated` overwrite the project's pre-migration `- Testing knowledge memory entries updated`. Pass 2 should have re-translated `knowledge files` → `knowledge memory entries` (rule exists in plugin pattern-mapping-rules.md ~line 136) but didn't fire. The audit before this update missed it because Scan 3a's grep didn't match — no `[sdlc-root]/` on the line. Scan 3b is the fix.
+
+**For each hit (3a OR 3b), read context and classify per `references/classification-framework.md`:**
+- **Correctly exempt** — Integration section, fenced code block, audit-description prose that the contract allows, project-specific agent memory, or content where "knowledge files" / "YAML files" legitimately refers to the file mechanism (e.g., the discussion of YAML format in `sdlc-ingest`'s "Existing knowledge" line). Distinguishing signal: if the sentence describes Neuroloom-mode operation, the term is residue (defect); if it describes a YAML-file-based mechanism specifically (like agent-context-map's structure), it can be legitimately retained
+- **Pattern gap** — No rule in plugin Pattern Mapping / Pass 2 covers this phrasing (plugin add needed)
+- **Match failure** — Rule exists but didn't fire (plugin matcher bug; usually paired with telemetry gap if Pass 2 didn't emit `concept_terminology_applied`)
 - **Preservation boundary** — Section was preserved verbatim and contained the leak (plugin needs to re-transform inside preserved sections, or the user needs to normalize)
+
+**Scan 3c — stale agent reference scan (added post-`migrate-6f4217` sleeved audit, 2026-04-26):**
+
+Framework content references agents by name in dispatch maps, message envelopes, and routing tables. When the project's `.claude/agents/` doesn't include those names, those references break runtime dispatch silently. The plugin's §4.2-gate Stale Agent Reference Audit (added 0.4.7) catches this proactively at write time; this scan is the outside-the-run check that catches anything that escaped the gate or migrated before 0.4.7 lands.
+
+```bash
+# Build the project agent roster
+ROSTER=$(ls <target-path>/.claude/agents/ | sed 's/\.md$//' | sort -u)
+
+# Extract candidate agent references from framework content
+grep -rohE '`[a-z][a-z0-9-]+(engineer|developer|architect|designer|auditor|specialist|advisor|strategist|researcher|reviewer|officer)`|"reviewer-[a-z-]+"|"fixer-[a-z-]+"|"architect-[a-z-]+"' \
+  <target-path>/.claude/sdlc/ <target-path>/.claude/skills/ 2>/dev/null \
+  | sed 's/[`"]//g' | sed 's/^reviewer-//' | sed 's/^fixer-//' | sed 's/^architect-//' \
+  | sort -u \
+  | while read agent; do
+      if ! echo "$ROSTER" | grep -qx "$agent"; then
+        echo "STALE: $agent"
+      fi
+    done
+```
+
+**For each STALE hit, classify:**
+
+- **Halt-class (dispatch-position):** name appears in a dispatch instruction (`Dispatch <name>`, `Spawn <name> as a teammate`, `from: "reviewer-<name>"` in a message envelope, a YAML key in a fenced `agent-selection.yaml`-shaped block, a routing-table column header). Runtime dispatch will fail. Plugin defect — the §4.2-gate should have halted; if the migration ran on 0.4.7+, this is a gate-bypass. If pre-0.4.7, expected — surface as a project cleanup item.
+
+- **Warn-class (descriptive prose):** name appears in advisory text — "consult security-engineer for auth issues", "(e.g., ml-engineer)", an example list under a heading like "Common dispatch domains". Doesn't break runtime but documents an unadopted role. Plugin should have emitted `agent_unresolved_warning` for §5.4 surfacing.
+
+- **Project-rename candidate:** project's roster includes a likely rename (e.g., project has `infosec-engineer`, content references `security-engineer`). Recommend declaring `agent_renames: {"security-engineer": "infosec-engineer"}` in `.sdlc-manifest.json` so future migrations apply the substitution consistently.
+
+**The bug this catches:** sleeved post-`migrate-6f4217` had ~11 stale agent references across `team-communication-protocol.md`, `sdlc-debug-incident.md`, `sdlc-plan.md`, `sdlc-execute.md`, `sdlc-tests-run.md`, etc. — names like `security-engineer`, `data-architect`, `ml-engineer`, `db-engineer`, `devops-engineer`, `frontend-engineer`, `data-pipeline-engineer`, `database-architect`, `ml-architect`, `security-auditor`, `systems-engineer`. The user discovered them by manually diffing `team-communication-protocol.md` weeks after migration completed. Both Scan 3a and Scan 3b miss this class — agent names don't contain `[sdlc-root]/` paths and aren't in the concept-terminology table. Scan 3c is the third leg.
 
 ### Step 4: File-by-file diff audit
 
@@ -147,10 +192,12 @@ ALWAYS use this exact template:
 | Metric | Value | Status |
 |---|---|---|
 | MCP call lines | N | healthy ≥ 40 / concerning < 20 / broken < 5 |
-| Contract-residue leaks | N | target 0 |
+| Contract-residue leaks (Scan 3a — path-bearing) | N | target 0 |
+| Concept-terminology residue (Scan 3b — bare forms) | N | target 0 |
+| Stale agent references (Scan 3c — non-resolving names) | N | target 0 |
 | Double-paren corruptions | N | target 0 |
 | Orphan debris sites | N | target 0 |
-| Malformed `Read memory_store` | N | target 0 |
+| Malformed `Read memory_store` / `Update memory_search` | N | target 0 |
 | Files with content-loss | N | target 0 |
 | Transaction log gaps | N | target 0 |
 

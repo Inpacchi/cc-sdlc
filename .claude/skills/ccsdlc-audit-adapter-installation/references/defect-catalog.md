@@ -125,6 +125,66 @@ Rule pattern `Read [sdlc-root]/disciplines/*.md and find [X]` should match case-
 
 **Fix location:** plugin.
 
+### 2.4 Bare concept-terminology residue (Pass 2 misfires)
+
+**Discovered post-`migrate-6f4217` (sleeved 2026-04-26)** — a defect class the audit's path-based residue grep misses entirely.
+
+Pass 2 of the plugin transformer (added in 0.4.0) translates file-mode concept terminology to memory-graph terminology even when no `[sdlc-root]/` path is present. The rules are documented in `pattern-mapping-rules.md` § "Knowledge-layer concept terminology" — they cover phrases like:
+
+- `knowledge files` (bare plural) → `knowledge memory entries`
+- `knowledge file` (bare singular) → `knowledge memory entry`
+- `discipline files` (bare plural) → `discipline memory entries`
+- `discipline file` (bare singular) → `discipline memory entry`
+- `parking lot entries` → `discipline memory entries`
+- `parking lot entry` (singular) → `discipline memory entry`
+- `discipline parking lots` → `discipline memory entries`
+- `knowledge stores` (bare plural concept) → `knowledge memory entries`
+- `knowledge store` (bare singular concept) → `knowledge layer`
+- `Knowledge YAML files` / `YAML knowledge files` / `Knowledge YAMLs` → `memory entries tagged sdlc:knowledge`
+- `agent-context-map` (bare, used as live thing) → `the memory graph's agent index`
+
+**The bug class:** the rules exist but Pass 2 didn't fire on the affected files. When Pass 2 doesn't run (e.g., `migrate-6f4217` emitted zero `concept_terminology_applied` events), upstream's file-mode prose overwrites the project's pre-migration Neuroloom-aware prose in any section that lacked an MCP signal marker for section-level preservation.
+
+**Exemplar from `migrate-6f4217`:** sleeved's `process/deliverable_lifecycle.md:76` had pre-migration `- Testing knowledge memory entries updated`. Migration overwrote with upstream's `- Testing knowledge files updated`. The rule `knowledge files` → `knowledge memory entries` exists in the plugin's Pass 2 table but didn't fire — Pass 2 was never invoked on the file. The user found this manually after the audit failed to surface it. ~37 sibling hits across sleeved at the time of detection, mix of regressions and upstream-inherited references.
+
+**Detection grep (Scan 3b in `SKILL.md`):**
+```bash
+grep -rnE '\bknowledge files\b|\bdiscipline files\b|\bparking lot entr|\bknowledge stores\b|\bDiscipline parking lots\b|\bKnowledge YAMLs?\b|\bYAML knowledge files\b|\bagent-context-map\b' <target>/.claude/ 2>/dev/null \
+  | grep -vE 'sdlc_changelog|knowledge-routing|sdlc-reviewer\.md|sdlc-compliance-auditor\.md|CLAUDE-SDLC\.md|provenance_log\.md|agent-memory/'
+```
+
+**Per-hit classification — context guards matter:** not every match is a regression. Some legitimate retentions:
+- `sdlc-ingest` discussion of YAML format ("Existing knowledge: 3 YAML files") — describes the upstream file structure that ingest consumes; legitimate
+- `compliance-methodology.md` audit-dimension prose where `agent-context-map.yaml` is named as a config artifact's identity — legitimate
+- `sdlc-develop-skill` Integration `**Uses:**` line listing knowledge files as a dependency — legitimate (Integration sections are exempt)
+- Project `agent-memory/` content (filtered out by the grep already)
+
+Distinguishing signal: **if the sentence describes a Neuroloom-mode operation and the term refers to the live knowledge layer, it's residue (defect)**. If the sentence describes a YAML-file-based mechanism specifically (a configuration file's structure, an upstream file format), retention is legitimate.
+
+**Co-occurrence with telemetry gap:** if §2 of the audit (transaction log verification) found zero `concept_terminology_applied` events, expect Scan 3b to surface many hits across many files — Pass 2 didn't run at all. Conversely, if Pass 2 events exist but Scan 3b still has hits, the bug is rule-coverage (Pattern Mapping gap) or context-guard miscalibration.
+
+**Fix location:** plugin (the rule already exists; the bug is enforcement). Telemetry hardening from `migrate-6f4217` audit (plugin 0.4.5) addresses the root cause; this scan is the outside-the-run check that catches Pass 2 misfires regardless.
+
+**New-file-install pathway (added post-`migrate-6f4217` second sleeved follow-up):** when upstream introduces a new file the project hasn't seen before (`subtype: mcp_new_file`), the migration writes upstream content WITHOUT a project version to merge against. The plugin spec requires Pattern Mapping to run regardless, but in `migrate-6f4217` the executor treated "no merging needed" as "no transformation needed" and silently bypassed Pass 1 entirely on `incident-runbook-template.md` (introduced upstream, no project version) — the file landed with intact `[sdlc-root]/knowledge/architecture/debugging-methodology.yaml` and `error-cascade-methodology.yaml` references. Both Scan 3a (this skill) and the plugin's new Contract Residue Audit (0.4.8+) catch this — the audit hard-halts at write time, this scan catches anything that slips through. Co-occurrence signal: high Scan 3a count concentrated in template files (`*-template.md` under `[sdlc-root]/templates/`) suggests the new-file-install path bypassed Pattern Mapping, since templates are most likely to be new on any given migration.
+
+### 2.5 Stale agent references (framework content names agents the project doesn't have)
+
+**Discovered post-`migrate-6f4217` (sleeved 2026-04-26)** — a defect class neither Scan 3a (path-bearing residue) nor Scan 3b (concept-terminology residue) catches.
+
+cc-sdlc framework content names canonical agents in dispatch maps, message envelopes, and routing tables: `security-engineer`, `data-architect`, `ml-engineer`, `devops-engineer`, `data-pipeline-engineer`, etc. Projects often have a different roster (sleeved has `infosec-engineer` instead of `security-engineer`, `firebase-architect` instead of `data-architect`, no `ml-engineer` at all). The migration's existing guarded-rename machinery only fires when a `contract_changes.yaml` entry drives a rename for CLAUDE.md — it doesn't proactively walk every framework file looking for agent refs that don't resolve to the project's roster.
+
+**Exemplar from `migrate-6f4217`:** sleeved's `process/team-communication-protocol.md:16` had pre-migration `from: "reviewer-infosec-engineer"` (project's actual agent). Migration overwrote with upstream's `from: "reviewer-security-engineer"` (cc-sdlc canonical name, an agent that doesn't exist in sleeved). The user discovered it manually weeks later; the audit before this update missed it because no `[sdlc-root]/` path appears and no concept-terminology phrase fired. ~11 sibling stale refs across sleeved at detection time: `data-architect`, `data-pipeline-engineer`, `database-architect`, `db-engineer`, `devops-engineer`, `frontend-engineer`, `ml-architect`, `ml-engineer`, `security-auditor`, `security-engineer`, `systems-engineer`.
+
+**Detection grep (Scan 3c in `SKILL.md`):** build the project roster from `<target>/.claude/agents/`, then scan framework content for backtick-quoted role names and message-envelope quoted values, strip the `reviewer-`/`fixer-`/`architect-` prefix, and check whether each resolves.
+
+**Per-hit classification:**
+
+- **Halt-class (dispatch-position):** the name appears in a dispatch instruction or message envelope `from:`/`to:` field — runtime dispatch will fail. Plugin halt-class defect; must be fixed before migration completes (or pre-0.4.7, surfaced as a project-cleanup item).
+- **Warn-class (descriptive prose):** the name appears in advisory text (e.g., "consult security-engineer for auth issues", "(e.g., ml-engineer)"). Doesn't break runtime; document as a project-roster gap or declare the rename.
+- **Project-rename candidate:** project has a likely rename (e.g., project has `infosec-engineer`, content has `security-engineer`). Recommend declaring `agent_renames` in `.sdlc-manifest.json` (plugin 0.4.7+ field) so future migrations apply the substitution.
+
+**Fix location:** plugin §4.2-gate Stale Agent Reference Audit (added 0.4.7) catches this proactively at write time; this scan (Scan 3c) is the outside-the-run check that catches anything that escapes the gate or migrated before 0.4.7 lands.
+
 ---
 
 ## 3. Exempt-file violations

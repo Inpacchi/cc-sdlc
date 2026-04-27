@@ -34,6 +34,30 @@ Each entry contains:
 
 ---
 
+## 2026-04-26: Expand adapter-installation audit with concept-terminology, stale-agent, and new-file-install bypass scans
+
+**Origin:** Two consecutive sleeved adapter audit cycles (`migrate-6f4217` and the follow-up `migrate-0957db`, both 2026-04-26) surfaced three defect classes the original `ccsdlc-audit-adapter-installation` skill missed because Step 3 only matched `[sdlc-root]/...` paths. CD discovered each class manually via diff-against-HEAD after the formal 9-dimension audit had marked the migration as passing.
+
+**The three discoveries:**
+
+1. **Pass 2 concept-terminology residue.** `deliverable_lifecycle.md:76` had upstream's file-mode `Testing knowledge files updated` overwriting sleeved's pre-migration `Testing knowledge memory entries updated`. ~37 sibling hits across sleeved. The audit's path-bearing residue scan missed all of them — agent names and bare concept-terminology don't contain `[sdlc-root]/` paths.
+
+2. **Stale agent references.** `team-communication-protocol.md:16` had upstream's `from: "reviewer-security-engineer"` overwriting sleeved's `from: "reviewer-infosec-engineer"` (sleeved's project agent is `infosec-engineer`). ~11 sibling stale refs across framework content (`data-architect`, `ml-engineer`, `db-engineer`, `devops-engineer`, `chief-product-officer`, etc.). Neither path-bearing nor concept-terminology scans cover this class — agent names are their own namespace.
+
+3. **New-file-install Pattern Mapping bypass.** `incident-runbook-template.md` was introduced upstream as a new file with no project version pre-migration. The migration wrote `[sdlc-root]/knowledge/architecture/debugging-methodology.yaml` and `error-cascade-methodology.yaml` references intact — Pattern Mapping never fired. The plugin spec §4.2.0 step 2 requires Pattern Mapping to run for every file regardless of whether a prior version exists; the executor treated "no merging needed" as "no transformation needed" and silently bypassed.
+
+**Changes made:**
+
+1. **`.claude/skills/ccsdlc-audit-adapter-installation/SKILL.md`** — Step 3 expanded from one scan to three. Scan 3a (existing) covers path-bearing residue. Scan 3b (new) covers bare concept-terminology with hyphenated forms (`knowledge-store entries`, `parking-lot entry`, `discipline parking-lot`), case-insensitive matching for headings, and `knowledge area` template prose. Scan 3c (new) covers stale agent references — builds the project roster from `<target>/.claude/agents/`, extracts candidate names from backtick-quoted role patterns and message-envelope quoted values, strips `reviewer-`/`fixer-`/`architect-` prefix, surfaces unresolved names. Suffix list includes `-engineer`, `-developer`, `-architect`, `-designer`, `-auditor`, `-specialist`, `-advisor`, `-strategist`, `-researcher`, `-reviewer`, `-officer`. Headline metrics table gains rows for Scan 3b/3c counts; rephrased malformed-output row to include `Update memory_search`.
+
+2. **`.claude/skills/ccsdlc-audit-adapter-installation/references/defect-catalog.md`** — §2.4 documents the bare concept-terminology defect class with the `deliverable_lifecycle.md:76` exemplar, the co-occurrence pattern with telemetry gaps (zero `concept_terminology_applied` events → many hits across many files), and the new-file-install bypass pathway (high Scan 3a count concentrated in `*-template.md` files signals Pattern Mapping bypass on `mcp_new_file` installs). §2.5 documents stale agent references with the `team-communication-protocol.md:16` exemplar and per-hit classification (halt-class dispatch position, warn-class descriptive prose, project-rename candidate).
+
+**Mirrored upstream in `neuroloom-sdlc-plugin` 0.4.6:** three new mandatory §4.2-gate audits halt before regressions reach disk — Pass 2 residue halt (catches concept-terminology that escaped Pass 2), Stale Agent Reference Audit (proactive scan with `agent_renames` field for project-side rename declarations), and Contract Residue Audit (catches Pattern Mapping bypass on any subtype including `mcp_new_file`). §5.0 telemetry assertion now requires 8 events before `run_complete`. Together with the audit-skill scans on the cc-sdlc side, defense-in-depth covers: (1) the §4.2-gate halts at write time, (2) the §5.0 assertion blocks `run_complete` if any audit was bypassed, (3) the audit skill catches anything that escapes both.
+
+**Rationale:** The audit's job is to surface defects the plugin's internal gates miss. Path-bearing-residue covers Pass 1; the bare-form scan covers Pass 2; the agent-reference scan covers a third namespace neither touches. Without all three, regressions silently propagate upstream's file-mode prose and unadopted-agent references into Neuroloom installations, and the only signal is downstream agents producing slightly-wrong outputs that take weeks to attribute to the migration.
+
+---
+
 ## 2026-04-26: Enrich sdlc-compliance-auditor and sdlc-reviewer with operational rigor
 
 **Origin:** External corpora mining produced useful operational patterns for the two SDLC meta-agents.
