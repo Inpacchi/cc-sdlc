@@ -122,6 +122,8 @@ Follow the state machine in `[sdlc-root]/process/deliverable_lifecycle.md`. Upda
 
 Read and follow `[sdlc-root]/process/manager-rule.md` — the canonical definition of this rule. It applies unconditionally for the entire session.
 
+**No pre-dispatch narration.** Status comes from the gates (PRE-GATE, POST-GATE, REVIEW-GATE) — not from sentences around them. Do not type filler describing what you are about to do: "Plan loaded.", "Let me check the catalog.", "Proceeding to Phase N.", "Now updating the catalog and committing.", "Staged set looks correct. Committing." The gates ARE the protocol; commentary around them is noise the user has to scroll past. The two acceptable exceptions are: (1) a one-line note conveying genuinely new information — a deviation observed, a phase-bleeding decision, a serialization choice forced by mid-stream discovery, a triage rationale; (2) the explicit announcements other rules require ("Review loop complete — all agents clean.", REVIEW-GATE block, etc.). When in doubt, prefer the gate over a sentence.
+
 ## Phase Details
 
 ### 1. Execute Phases
@@ -167,16 +169,46 @@ Verbose form (use when any of these triggers fires):
 - **Dependency re-check** — the Phase plan table needs amending (mid-execution re-sequencing, late-discovered conflict)
 - **Re-dispatch** — partial completion or stub fix within this same phase
 
+Verbose form — single phase. Emit as a table; the labeled-field block format is deprecated:
+
 ```
-PRE-GATE Phase [N] — [phase name]
-Pattern search: [what you searched for] → [found / not found / following pattern at path/to/file.ts] (use LSP goToImplementation/findReferences for interface implementations and call sites; Grep for text patterns)
-Triage: BUILD | SKIP | REVISE_PLAN
-If SKIP or REVISE_PLAN: [reason — stop and wait for CD confirmation before proceeding]
-Dependencies: [phase N complete | none required]
-Data sources: [ALL external sources from the plan for this phase — URLs, repos, APIs, documents | "codebase only"]
-Expected counts: [any counts stated in the plan — "14 trigger prefixes", "11 counter types" | none]
-Design Decisions: [list binding decisions from the plan that apply to this phase | none]
-Agent: [agent-name]
+**PRE-GATE Phase [N] — [phase name]**
+
+| Field          | Value |
+|----------------|-------|
+| Agent          | [agent-name] |
+| Triage         | BUILD | SKIP | REVISE_PLAN |
+| If not BUILD   | [reason — stop and wait for CD confirmation; omit row if Triage = BUILD] |
+| Dependencies   | [phase N complete | none required] |
+| Pattern search | [what you searched for] → [found / not found / following pattern at path/to/file.ts] (use LSP goToImplementation/findReferences for interfaces and call sites; Grep for text patterns) |
+| Data sources   | [ALL external sources — URLs, repos, APIs, documents | "codebase only"] |
+| Expected       | [counts from plan | none] |
+
+Design Decisions:
+- [decision 1 — one per bullet, never semicolon-chained]
+- [decision 2]
+```
+
+Verbose form — parallel dispatch (two or more phases in the same wave). Emit a single comparison table instead of repeating the per-phase block:
+
+```
+**PRE-GATE — parallel dispatch (Phases [N], [M])**
+
+| Field          | Phase [N]: [name]      | Phase [M]: [name]      |
+|----------------|------------------------|------------------------|
+| Agent          | [agent-name]           | [agent-name]           |
+| Triage         | BUILD                  | BUILD                  |
+| Dependencies   | [...]                  | [...]                  |
+| File overlap   | none with Phase [M]    | none with Phase [N]    |
+| Pattern search | [...]                  | [...]                  |
+| Data sources   | [...]                  | [...]                  |
+| Expected       | [...]                  | [...]                  |
+
+Design Decisions — Phase [N]:
+- ...
+
+Design Decisions — Phase [M]:
+- ...
 ```
 
 **File-Conflict Gate (parallel phases only):** Before dispatching two or more phases simultaneously, verify file overlap (same rule as the phase-plan table at L143 above, applied at dispatch time). If any file appears in more than one phase, sequence those phases. Do not rely on the plan's dependency table alone; verify file overlap yourself.
@@ -299,6 +331,8 @@ Dispatching: [count] agents
 ```
 
 After ALL phases are done, run the **Review-Fix Loop** per `[sdlc-root]/process/review-fix-loop.md`. **Start with Step 0 (Verification Gate):** run tests, type checks, linting, and any configured SAST tooling BEFORE dispatching review agents. Fix any verification failures first — do not ask reviewers to evaluate code that doesn't build, doesn't pass tests, or has known tool-detected issues. Agent source: the plan's agent assignment table. Classifications: use all five per `[sdlc-root]/process/finding-classification.md` (FIX, PLAN, INVESTIGATE, DECIDE, PRE-EXISTING).
+
+**Triage output format (mandatory).** When you collect findings and classify them, emit the canonical Classification Table from `[sdlc-root]/process/finding-classification.md` — one row per finding with columns `# | Finding | Agent | Classification | Severity | Rationale`. Do NOT emit two free-form bullet lists ("Will fix:" / "Out of scope:") with agent names in brackets. The canonical table puts every finding on the same scannable axis; the bullet-list shape forces the reader to re-parse classification from prose ("logged in result doc", "pre-existing systemic", "accepted trade-off"). After the table, dispatch FIX rows in a single batch — no narration between table and dispatch.
 
 **Plan contract briefing (mandatory):** When dispatching review agents in the loop, each agent's prompt must include the plan's specification for the phases they are reviewing — specifically: the expected behavior, acceptance criteria, and implementation approach from the plan. Reviewers check "does the implementation match what was specified?" in addition to "is the code well-written?" A well-structured stub passes code quality review but fails plan compliance review. Without the plan contract, reviewers can only assess code quality — they cannot detect whether the agent delivered what was actually asked for.
 
@@ -501,6 +535,9 @@ When the deliverable is complete, the "Let's organize the chronicles" command mo
 | "Frontend phase and backend phase touch different files, so they can run in parallel" | Logical dependency ≠ file overlap. If frontend consumes backend's schemas or generated types, backend produces the contract first. Dispatch the contract-producing phase, verify the artifact, then dispatch consumers. |
 | "The parallel decomposition isn't working — I'll just serialize what's left and keep going" | Silent serialization hides the planning defect. Emit `REVISE_PLAN` triage and wait for CD. The discipline entry protects the next deliverable. |
 | "Two phases are both assigned to the same agent but touch different files — run them in parallel" | A single agent session cannot be dispatched twice concurrently. Two phases sharing an agent owner must sequence, regardless of file non-overlap. |
+| "Plan loaded. Let me check the catalog. Proceeding to Phase 1." | Pre-dispatch narration is noise. Read the plan, then emit the PRE-GATE — no filler sentences between tool calls and gates. |
+| Two phases dispatched in parallel, two long PRE-GATE blocks emitted | Use the parallel comparison table form. One table with phase columns is faster to read than two stacked blocks. |
+| Triage emitted as "Will fix:" + "Out of scope:" bullet lists with `[agent-name]` brackets | Use the canonical Classification Table from finding-classification.md. Bullet lists force the reader to re-parse classification from prose. |
 
 ## Integration
 

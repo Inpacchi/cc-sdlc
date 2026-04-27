@@ -79,6 +79,8 @@ Follow the state machine in `[sdlc-root]/process/deliverable_lifecycle.md`. Upda
 
 Read and follow `[sdlc-root]/process/manager-rule.md` — the canonical definition of this rule. It applies unconditionally for the entire session.
 
+**No pre-dispatch narration.** Status comes from the gates (PRE-GATE, POST-GATE, REVIEW-GATE) — not from sentences around them. Do not type filler describing what you are about to do: "Plan loaded.", "Let me check the catalog.", "Proceeding to Phase N.", "Now updating the catalog and committing.", "Staged set looks correct. Committing." The gates ARE the protocol; commentary around them is noise the user has to scroll past. The two acceptable exceptions are: (1) a one-line note conveying genuinely new information — a deviation observed, a phase-bleeding decision, a serialization choice forced by mid-stream discovery, a triage rationale; (2) the explicit announcements other rules require ("Review loop complete — all agents clean.", REVIEW-GATE block, etc.). When in doubt, prefer the gate over a sentence.
+
 ### Agent Dispatch Protocol
 
 Consult `[sdlc-root]/knowledge/architecture/agent-orchestration-patterns.yaml` for dispatch discipline — especially AOP1 (decompose by file ownership for parallel work), AOP8 (wide-shallow dependency graphs), AOP9 (dispatch prompts must include acceptance criteria, owned files, and out-of-scope), and AOP10 (detect workload imbalance between agents). When dispatching 2+ agents in parallel, follow `[sdlc-root]/process/parallel-dispatch-monitoring.md` — read every agent's output before deciding next steps, check for file conflicts, and apply the 3-strike rule for stuck agents.
@@ -142,15 +144,44 @@ Verbose form (use when any of these triggers fires):
 - **Triage ≠ BUILD** — SKIP or REVISE_PLAN (stop and wait for user confirmation)
 - **Re-dispatch** — partial completion or stub fix within this same phase
 
+Verbose form — single phase. Emit as a table; the labeled-field block format is deprecated:
+
 ```
-PRE-GATE Phase [N] — [phase name]
-Pattern search: [what you searched for] → [found / not found / following pattern at path/to/file.ts]
-Dependencies: [phase N complete | none required]
-File-conflict check: [parallel only — list files per phase, confirm no overlap | N/A — sequential]
-Data sources: [ALL external sources from the plan for this phase — URLs, repos, APIs, documents | "codebase only"]
-Expected counts: [any counts stated in the plan — "14 trigger prefixes", "11 counter types" | none]
-Design Decisions: [list binding decisions from the plan that apply to this phase | none]
-Agent: [agent-name]
+**PRE-GATE Phase [N] — [phase name]**
+
+| Field          | Value |
+|----------------|-------|
+| Agent          | [agent-name] |
+| Dependencies   | [phase N complete | none required] |
+| File-conflict  | [parallel only: list overlap check | N/A — sequential] |
+| Pattern search | [what you searched for] → [found / not found / following pattern at path/to/file.ts] |
+| Data sources   | [ALL external sources — URLs, repos, APIs, documents | "codebase only"] |
+| Expected       | [counts from plan | none] |
+
+Design Decisions:
+- [decision 1 — one per bullet, never semicolon-chained]
+- [decision 2]
+```
+
+Verbose form — parallel dispatch (two or more phases in the same wave). Emit a single comparison table instead of repeating the per-phase block:
+
+```
+**PRE-GATE — parallel dispatch (Phases [N], [M])**
+
+| Field          | Phase [N]: [name]      | Phase [M]: [name]      |
+|----------------|------------------------|------------------------|
+| Agent          | [agent-name]           | [agent-name]           |
+| Dependencies   | [...]                  | [...]                  |
+| File overlap   | none with Phase [M]    | none with Phase [N]    |
+| Pattern search | [...]                  | [...]                  |
+| Data sources   | [...]                  | [...]                  |
+| Expected       | [...]                  | [...]                  |
+
+Design Decisions — Phase [N]:
+- ...
+
+Design Decisions — Phase [M]:
+- ...
 ```
 
 - **Pattern Reuse Gate:** Search the codebase for existing implementations of what this phase builds. Use LSP `goToImplementation` for interface methods and `findReferences` for hooks/utilities. Use Grep for text patterns in configuration or documentation. If a pattern exists, follow it — consistency over preference.
@@ -238,6 +269,8 @@ Dispatching: [count] agents
 ```
 
 After ALL phases are done, run the **Review-Fix Loop** per `[sdlc-root]/process/review-fix-loop.md`. **Start with Step 0 (Verification Gate):** run tests, type checks, linting, and any configured SAST tooling BEFORE dispatching review agents. Fix any verification failures first. Agent source: the plan's agent assignment table. Classifications: use all five per `[sdlc-root]/process/finding-classification.md`.
+
+**Triage output format (mandatory).** When you collect findings and classify them, emit the canonical Classification Table from `[sdlc-root]/process/finding-classification.md` — one row per finding with columns `# | Finding | Agent | Classification | Severity | Rationale`. Do NOT emit two free-form bullet lists ("Will fix:" / "Out of scope:") with agent names in brackets. The canonical table puts every finding on the same scannable axis; the bullet-list shape forces the reader to re-parse classification from prose ("logged in result doc", "pre-existing systemic", "accepted trade-off"). After the table, dispatch FIX rows in a single batch — no narration between table and dispatch.
 
 **Plan contract briefing (mandatory):** When dispatching review agents in the loop, each agent's prompt must include the plan's specification for the phases they are reviewing — specifically: the expected behavior, acceptance criteria, and implementation approach from the plan. Reviewers check "does the implementation match what was specified?" in addition to "is the code well-written?" A well-structured stub passes code quality review but fails plan compliance review. Without the plan contract, reviewers can only assess code quality — they cannot detect whether the agent delivered what was actually asked for.
 
@@ -411,6 +444,9 @@ The Manager Rule remains in effect per `[sdlc-root]/process/manager-rule.md` —
 | "The user asked about the server code — I'll just fix it while I'm here" | Domain crossing. Dispatch the relevant domain agent for that scope. Read domain boundaries in agent definitions. |
 | "I'll commit the code now and the docs separately" | Documentation artifacts (result docs, catalog updates, discipline entries, archive moves) ship in the same commit as the work they describe. Separate doc commits fragment the history and break bisectability. |
 | "I know how this library works" | Verify external library APIs via Context7 before writing integration code. |
+| "Plan loaded. Let me check the catalog. Proceeding to Phase 1." | Pre-dispatch narration is noise. Read the plan, then emit the PRE-GATE — no filler sentences between tool calls and gates. |
+| Two phases dispatched in parallel, two long PRE-GATE blocks emitted | Use the parallel comparison table form. One table with phase columns is faster to read than two stacked blocks. |
+| Triage emitted as "Will fix:" + "Out of scope:" bullet lists with `[agent-name]` brackets | Use the canonical Classification Table from finding-classification.md. Bullet lists force the reader to re-parse classification from prose. |
 
 ## Integration
 

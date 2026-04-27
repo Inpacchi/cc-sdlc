@@ -34,6 +34,21 @@ Each entry contains:
 
 ---
 
+## 2026-04-27: Make sdlc-execute and sdlc-lite-execute output more scannable (table-form PRE-GATE, canonical Triage table, no-narration rule)
+
+**Origin:** User feedback after watching a live D21bc execution session. The output was dominated by three readability sinks: (1) verbose PRE-GATE blocks repeated as ~10-line labeled-field stanzas — doubled when phases dispatched in parallel; (2) Triage emitted as two free-form bullet lists ("Will fix:" / "Out of scope:") with agent-name brackets, forcing the reader to re-parse classification from prose; (3) pre-dispatch narration ("Plan loaded.", "Let me check the catalog.", "Proceeding to Phase N.") that added bulk without information the gates didn't already convey.
+
+**What happened:** Both execute skills' verbose PRE-GATE form was specified as a labeled-field stanza, which works for one phase but compounds badly under parallel dispatch — the same field labels repeat across stacked blocks instead of aligning into columns. The Triage step's canonical format already exists in `process/finding-classification.md` (the Classification Table at L11–15), but neither execute skill explicitly required reviewers to use it; sessions were defaulting to bullet lists. Pre-dispatch narration is encouraged by Claude Code's general output guidance ("state in one sentence what you're about to do") but conflicts with the gate-driven discipline these skills already enforce — the gates ARE the protocol; sentences around them are noise.
+
+**Changes made:**
+
+1. **`skills/sdlc-lite-execute/SKILL.md`** — Replaced the labeled-field PRE-GATE verbose form with a Field/Value table (single phase) and a comparison table (parallel dispatch with phase columns). Added "No pre-dispatch narration" rule under Manager Rule with two acceptable exceptions (genuinely-new-information one-liners; rule-required announcements). Added a "Triage output format (mandatory)" paragraph after the Review-Fix Loop reference, pointing at the canonical Classification Table in `finding-classification.md` and explicitly forbidding the "Will fix / Out of scope" bullet shape. Added three Red Flags rows: pre-dispatch narration, stacked PRE-GATE blocks for parallel phases, bullet-list triage.
+2. **`skills/sdlc-execute/SKILL.md`** — Mirrored all four edits from sdlc-lite-execute, with two adjustments: PRE-GATE table preserves the `Triage` and `If not BUILD` rows (sdlc-execute supports SKIP/REVISE_PLAN; sdlc-lite-execute does not), and the parallel comparison table reuses the same shape. Same Manager Rule narration ban, same Triage paragraph, same three Red Flags rows.
+
+**Rationale:** Tables compress information density — the parallel-dispatch comparison form alone removes ~40 lines from a typical multi-phase session. Pointing the Triage step at the existing canonical Classification Table closes a gap where two skills permitted a non-canonical shape that the canonical doc already forbade ("no narrative paragraphs, no blanket dismissals"). The narration rule converts a stylistic default into a measurable one — every filler sentence between a tool call and a gate is now a Red Flag, which makes audits possible. None of these changes alter the protocol; they only change the shape of the output the user reads.
+
+---
+
 ## 2026-04-27: Make sdlc-idea step 4 dispatch demand-driven and project-tier-only
 
 **Origin:** User observation that sdlc-idea's Research step never named project-installed specialist agents (e.g., a project's `ir-analyst` for information-retrieval unknowns) even though they exist for exactly this purpose, and that the skill consulted `knowledge/agent-context-map.yaml` (for knowledge-file lookup) but not `process/agent-selection.yaml` (the source of truth for agent dispatch). Follow-up clarification: personal-tier agents (`~/.claude/agents/`) must NOT be dispatched from skills, because they aren't guaranteed to exist for every contributor on a project.
