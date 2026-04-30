@@ -34,6 +34,40 @@ Each entry contains:
 
 ---
 
+## 2026-04-30: Add sdlc-reflect skill for post-session discipline capture
+
+**Origin:** User request — the discipline capture protocol (`process/discipline_capture.md`) runs automatically at the end of `sdlc-execute`, `sdlc-plan`, and other formal skills, but sessions that use direct dispatch, ad-hoc bug fixes, or exploratory coding have no structured way to feed learnings back into the SDLC. Insights from these sessions either get lost when the conversation ends or require the user to manually edit discipline parking lots.
+
+**What happened:** Direct-dispatch and ad-hoc sessions are common — they're the "vibe coding" path where CD steers in real-time. These sessions often produce valuable cross-discipline insights (library gotchas, integration friction, anti-patterns discovered during refactoring) but lack the built-in discipline capture step that formal skills provide. The gap means the SDLC's discipline parking lots only capture learnings from planned work, not from the often-more-educational unplanned work.
+
+**Changes made:**
+
+1. **`process/discipline_capture.md`** — Added two new canonical GAP signal types: `GOTCHA_DISCOVERED` (library/API/framework behaved unexpectedly) and `ANTI_PATTERN_HIT` (refactored away from a problematic pattern). These are session-inferrable without agent handoff data, making them available to all skills that run discipline capture — not just standalone reflection.
+2. **`skills/sdlc-reflect/SKILL.md`** — New utility skill. Surveys the current session (recent commits, uncommitted changes, conversation context), identifies learnings through structured gap detection (five of seven signals from `process/discipline_capture.md` — omits two that require agent handoffs) and freeform scanning, categorizes by discipline, presents for user confirmation, and writes to parking lots with `[NEEDS VALIDATION]` markers. Uses `[session: {slug}]` context format. Does NOT promote to knowledge stores — that remains the triage cycle's job.
+3. **`skeleton/manifest.json`** — Registered `skills/sdlc-reflect/SKILL.md` under `source_files.skills`.
+4. **`CLAUDE-SDLC.md`** — Added a soft prompt after the handoff workflow rule: "After a direct-dispatch or ad-hoc session, consider invoking `sdlc-reflect`." Intentionally not a "STOP and invoke" rule — reflection is opt-in, not mandatory.
+5. **`process/commands.md`** — Added `/sdlc-reflect` to the Status & Navigation table.
+
+**Rationale:** Making discipline capture available as a standalone skill closes the feedback loop for non-SDLC sessions without adding mandatory ceremony. The soft prompt in CLAUDE-SDLC.md reminds CC that the option exists without forcing it — consistent with the "toolbox, not recipe" philosophy in `disciplines/README.md`. By reusing the structured gap detection signals from `discipline_capture.md` (rather than duplicating the logic), the skill stays DRY and benefits from future improvements to that protocol.
+
+---
+
+## 2026-04-27: Add sdlc-handoff skill for cross-session context capture
+
+**Origin:** User request — sessions frequently surface issues, ideas, or out-of-scope work that should be addressed elsewhere, but there was no structured way to crystallize that context for another session to pick up. The existing `*_handoff.md` filename was already recognized as an artifact type by `sdlc-archive` (it triages and archives handoffs alongside idea briefs and bug reports), but no skill produced them — handoffs only existed as ad-hoc artifacts authored by hand or not at all.
+
+**What happened:** Without a handoff skill, three failure modes were common: (1) users left TODO comments that rotted in code; (2) they tried to handle the discovered work in the current session, derailing the task in flight; (3) they wrote a one-paragraph note that lacked the file:line evidence and active-deliverable context the receiving session needed, forcing the receiver to redo discovery. A canonical handoff artifact closes the gap between "I noticed something" and "another session can act on it without my conversation history."
+
+**Changes made:**
+
+1. **`skills/sdlc-handoff/SKILL.md`** — New utility skill. Captures a self-contained handoff doc at `docs/current_work/ideas/{slug}_handoff.md` with classified trigger (issue/idea/deferred-work/investigation), evidence pulled from the current session (file:line refs, error output, observations, active deliverable), recommended next skill, and explicit out-of-scope notes. Validates that evidence is concrete (a handoff with no file references is rejected). Surfaces a copy-pastable next-step command for the receiving session. Does NOT auto-clear the current session.
+2. **`skeleton/manifest.json`** — Registered `skills/sdlc-handoff/SKILL.md` under `source_files.skills`.
+3. **`CLAUDE-SDLC.md`** — Added a "STOP and invoke `sdlc-handoff` when..." rule alongside the existing `sdlc-idea`/`sdlc-plan`/`sdlc-lite-plan` workflow rules, naming the three triggers: out-of-scope discovery, parking-for-later, and self-contained-starting-point-for-new-session.
+
+**Rationale:** Handoffs slot into the existing artifact taxonomy (`docs/current_work/ideas/*_handoff.md`) rather than creating a parallel directory — this preserves `sdlc-archive`'s existing triage logic without contract changes. Forcing the skill to recommend a next skill (and explaining why) makes the receiving session's first move obvious and prevents handoffs from becoming permanent waiting rooms. The "no re-investigation" rule keeps `sdlc-handoff` distinct from `sdlc-idea` — handoff captures what's already known; idea explores what isn't.
+
+---
+
 ## 2026-04-27: Make sdlc-execute and sdlc-lite-execute output more scannable (table-form PRE-GATE, canonical Triage table, no-narration rule)
 
 **Origin:** User feedback after watching a live D21bc execution session. The output was dominated by three readability sinks: (1) verbose PRE-GATE blocks repeated as ~10-line labeled-field stanzas — doubled when phases dispatched in parallel; (2) Triage emitted as two free-form bullet lists ("Will fix:" / "Out of scope:") with agent-name brackets, forcing the reader to re-parse classification from prose; (3) pre-dispatch narration ("Plan loaded.", "Let me check the catalog.", "Proceeding to Phase N.") that added bulk without information the gates didn't already convey.

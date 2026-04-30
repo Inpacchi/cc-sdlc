@@ -99,6 +99,14 @@ If you're in direct dispatch and ANY of these become true, stop and ask CD about
 - An approved plan exists at the expected path
 - The user explicitly says "execute the plan" or references a specific plan file
 
+**STOP and invoke `sdlc-handoff` when:**
+
+- A bug, idea, or out-of-scope work is discovered mid-session and addressing it now would derail the current task
+- The user wants to "park this" or "pick this up in a new session"
+- A new session needs a self-contained starting point that doesn't depend on the current conversation
+
+**After a direct-dispatch or ad-hoc session**, consider invoking `sdlc-reflect` to surface learnings into discipline parking lots — especially if the work involved gotchas, cross-domain friction, or patterns worth recording. This is optional; skip it if nothing non-obvious surfaced.
+
 **When starting any session:** Check `docs/current_work/` for in-progress deliverables before accepting new work.
 
 ### Process Changelog

@@ -30,6 +30,8 @@ The standard deliverable lifecycle: **ideation → plan → execute**. Most work
 |---------|--------|
 | `/sdlc-status` | Show active deliverables, blocked items, and recent archives |
 | `/sdlc-resume` | Resume work on an active deliverable — loads context and suggests next action |
+| `/sdlc-handoff` or "create a handoff" | Invokes `sdlc-handoff` — capture the current session as a self-contained handoff doc at `docs/current_work/ideas/{slug}_handoff.md` for another session to pick up via `sdlc-idea`, `sdlc-lite-plan`, `sdlc-plan`, or `sdlc-debug-incident` |
+| `/sdlc-reflect` or "capture learnings" | Invokes `sdlc-reflect` — surface session learnings into discipline parking lots after direct-dispatch or ad-hoc work sessions |
 
 ## Auditing
 

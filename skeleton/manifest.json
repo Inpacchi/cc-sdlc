@@ -239,7 +239,9 @@
       "skills/team-review-fix/SKILL.md",
       "skills/sdlc-debug-incident/SKILL.md",
       "skills/sdlc-create-reference-doc/SKILL.md",
-      "skills/sdlc-port-opencode/SKILL.md"
+      "skills/sdlc-port-opencode/SKILL.md",
+      "skills/sdlc-handoff/SKILL.md",
+      "skills/sdlc-reflect/SKILL.md"
     ],
     "agents": [
       "agents/AGENT_SUGGESTIONS.md",

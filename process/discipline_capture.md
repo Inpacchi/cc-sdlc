@@ -24,6 +24,8 @@ For each agent dispatched in this session, compare what knowledge was available 
 | Finding could have been prevented by knowledge that doesn't exist | `MISSING_KNOWLEDGE` | Agent hit a React StrictMode gotcha not in any knowledge file |
 | Knowledge exists but wasn't mapped to this agent | `UNMAPPED_KNOWLEDGE` | Agent needed testing patterns but only had architecture files mapped |
 | Knowledge was mapped but agent still got it wrong | `STALE_KNOWLEDGE` | Gotcha file says "use X" but X no longer works in current version |
+| A library, API, or framework behaved unexpectedly | `GOTCHA_DISCOVERED` | Pagination API silently returns empty pages instead of 404 past the last page |
+| Refactored away from a pattern that was causing problems | `ANTI_PATTERN_HIT` | Nested ternaries in render logic caused stale-closure bugs; extracted to named functions |
 
 ### Comparison 2: Cross-domain friction
 
@@ -63,7 +65,7 @@ Auto-detected gaps use a distinct format and are always marked `[NEEDS VALIDATIO
 - **[date] [context]**: [GAP:{type}] {description}. Source: {agent} finding. [NEEDS VALIDATION]
 ```
 
-Types: `MISSING_KNOWLEDGE`, `UNMAPPED_KNOWLEDGE`, `STALE_KNOWLEDGE`, `CROSS_DOMAIN_FRICTION`, `RESURFACING_PATTERN`
+Types: `MISSING_KNOWLEDGE`, `UNMAPPED_KNOWLEDGE`, `STALE_KNOWLEDGE`, `CROSS_DOMAIN_FRICTION`, `RESURFACING_PATTERN`, `GOTCHA_DISCOVERED`, `ANTI_PATTERN_HIT`
 
 ## Freeform Insight Scan
 
