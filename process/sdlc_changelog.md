@@ -34,6 +34,22 @@ Each entry contains:
 
 ---
 
+## 2026-05-02: Wire CLAUDE.md refresh into execute and code-review skills
+
+**Origin:** User asked to incorporate the patterns from anthropics/claude-plugins-official `claude-md-management` plugin (a `claude-md-improver` audit skill and a `/revise-claude-md` session-capture command) into the existing SDLC execution and code-review flows rather than adopting a parallel plugin.
+
+**What happened:** The plugin solves two problems we already had implicit gaps for: (1) project memory drifts as deliverables ship — the right moment to capture new conventions and architecture is at deliverable end, before context fades; (2) commits routinely invalidate documented claims (paths, commands, dependencies) without the author noticing. Both problems map cleanly to existing seams: end-of-execution post-discipline capture for (1), and the pre-dispatch lens injection in code review for (2). Folding the capabilities into existing skills is preferable to adding a new top-level skill — it puts the concern in the workflow that already loads the relevant context.
+
+**Changes made:**
+
+1. **`skills/sdlc-execute/SKILL.md`** — Added §3c "CLAUDE.md Refresh" between §3b per-phase commits and §4 final verify. Defines a six-row trigger scan (new convention / build command change / architecture shift / path renames / dependency gotchas / removed feature still documented) and surgical update rules. Explicit `CLAUDE.md refresh: no changes needed` no-op when no trigger fires. Added CLAUDE.md to the §4 staged files list so refresh updates ship in the final commit. Added two Red Flag rows: "CLAUDE.md is fine, no need to refresh (without scanning)" and "Pasting deliverable summary into CLAUDE.md".
+2. **`skills/sdlc-review-code/SKILL.md`** — Added a "Pre-dispatch — CLAUDE.md Alignment Lens" section between the test-quality and commit-message lenses. Lens scopes to *invalidated* claims only (not missing documentation). New finding category `claude-md-staleness` added to the findings-table column list. Added a "CLAUDE.md Drift" sub-section to the report template (sibling of Overengineering Summary) so drift is surfaced as a cross-cutting concern. Added two Red Flag rows: "diff doesn't add docs, so no CLAUDE.md issue" and "CLAUDE.md feels out of date in general — flag it" (the latter routes generalized-staleness audits to `claude-md-improver`, scoped to the commit-aligned lens here).
+3. **`skills/sdlc-lite-execute/SKILL.md`** — Mirrored §3c from `sdlc-execute` as §3d "CLAUDE.md Refresh" between discipline capture and the §4 verify/commit step. Same six-trigger scan and update rules; with an added note that the no-op outcome is the common case for lite (smaller diffs) but the explicit emission is still required so the gate is auditable. Added CLAUDE.md to the §4 staged files list. Added two Red Flag rows ("Lite deliverables are too small to bother" and "Pasting the deliverable summary into CLAUDE.md").
+
+**Rationale:** The `claude-md-management` plugin's two capabilities are session-end capture and codebase-aligned audit. Both have natural seams in our flow: discipline capture is already the "end-of-deliverable knowledge harvest" step, and the code-review pre-dispatch lenses are already where we inject cross-cutting checks (test quality, commit quality). Adding parallel skills would duplicate context loading; adding lenses keeps the agent's review pass single. The drift lens is scoped narrowly — commit-invalidated claims only — to avoid a "rewrite CLAUDE.md every PR" failure mode. Generalized CLAUDE.md health audits remain a separate concern (would map to a `claude-md-improver`-style skill if we add one later). The lite extension uses §3d (not §3c) because the lite skill's discipline capture is already at §3c — the numbering is offset by one between the two skills.
+
+---
+
 ## 2026-05-02: Forbid emitting both compact and verbose Pre-Dispatch forms
 
 **Origin:** User observation during D142 planning in `~/Projects/neuroloom`. The Pre-Dispatch output emitted *both* the compact `Prior context` table AND the verbose `CHRONICLE-CONTEXT` block — defeating the b08af9d compaction work.

@@ -91,6 +91,14 @@ Beyond "what is NOT tested" (absence analysis), agents must also assess the qual
 
 Flag behavior-testing violations as `minor` with category `test-quality`. Flag determinism issues as `major` — flaky tests erode the signal value of the entire suite.
 
+**Pre-dispatch — CLAUDE.md Alignment Lens**
+
+The diff may invalidate documented project knowledge. Ask `code-reviewer` to compare the diff against the project's CLAUDE.md (root + any module-/package-level CLAUDE.md whose tree the diff touches):
+
+> **CLAUDE.md alignment check:** For each file changed in this diff, check whether the project's CLAUDE.md (or a CLAUDE.md in the file's package) makes claims that the diff invalidates — file paths that moved or were deleted, conventions that changed, build/test/lint commands that no longer work, dependencies that were swapped or removed, or architecture statements that no longer describe the codebase. Cite the CLAUDE.md line that needs updating and the diff change that invalidated it. Flag stale documentation as `minor` with category `claude-md-staleness`. Escalate to `major` only when the staleness would actively misdirect a future agent (e.g., wrong build command, removed module still listed as canonical).
+
+This is a documentation-correctness check, not a "should we add more documentation" prompt. Do not flag CLAUDE.md for missing context the diff *could* be added to — only for content the diff *invalidates*.
+
 **Pre-dispatch — Commit Message Quality Lens**
 
 The commit message is part of the deliverable — it is the primary record of *why* a change was made. Ask `code-reviewer` to assess the commit message alongside the code:
@@ -152,12 +160,16 @@ The structured findings report is read by a developer who will act on it. How fi
 
 | # | Finding | Agent | Severity | Category |
 |---|---------|-------|----------|----------|
-| 1 | specific finding | agent-name | critical/major/minor | overengineering/type-safety/security/contract/DRY/architecture/correctness/test-quality/commit-quality |
+| 1 | specific finding | agent-name | critical/major/minor | overengineering/type-safety/security/contract/DRY/architecture/correctness/test-quality/commit-quality/claude-md-staleness |
 | 2 | ... | ... | ... | ... |
 
 ### Overengineering Summary
 
 [If any overengineering or unnecessary code was found, summarize the pattern here — e.g., "3 helper functions wrap single operations", "error handling added for impossible states". If none found, say "No overengineering detected."]
+
+### CLAUDE.md Drift
+
+[If any `claude-md-staleness` findings exist, list which CLAUDE.md file(s) and section(s) the diff invalidates and the line(s) that need updating. Authors miss documentation updates by default — surface this as a cross-cutting concern alongside Overengineering. Omit this section entirely when no drift was flagged.]
 
 ### Details
 
@@ -261,6 +273,8 @@ Do NOT ingest into the knowledge store from within this skill. Do NOT create par
 | "One agent called it critical, that settles it" | Severity is calibrated after collection, not inherited from the loudest agent. Apply the impact x likelihood criteria before finalizing the severity label. |
 | "An agent recommended refactoring the whole module while reviewing" | Scope creep in a finding. A finding must name a specific problem and a surgical fix. If the fix requires rewriting code outside the commit's scope, flag the specific issue and note the broader refactor as a separate tracking issue — not a required fix in this review. |
 | "The agent phrased every finding as a command" | Findings on uncertain issues should be questions. Findings on confirmed issues should be declarative. Using command form for a speculation inflates the author's cognitive load. |
+| "The diff doesn't add docs, so no CLAUDE.md issue" | The CLAUDE.md alignment lens checks for *invalidated* claims, not missing ones. A path rename, dropped command, or deleted module that CLAUDE.md still references is a finding regardless of whether the diff adds documentation. |
+| "CLAUDE.md feels out of date in general — flag it" | The lens is scoped to claims the *current diff* invalidates. Out-of-date content unrelated to this diff is for `claude-md-improver` audits, not commit-scoped review. |
 
 ## Integration
 - **Feeds into:** `sdlc-review-fix` (if findings need fixing)

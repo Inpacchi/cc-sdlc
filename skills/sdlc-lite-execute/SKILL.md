@@ -321,6 +321,30 @@ Entry format:
 
 No PROJECT-SECTION markers needed — discipline files are project-specific and not overwritten during framework migrations.
 
+### 3d. CLAUDE.md Refresh
+
+After discipline capture, scan the deliverable for changes that invalidate or extend the project's CLAUDE.md. The work just shipped — this is the moment to update project memory before context fades. Refresh updates ship in the step 4 final commit alongside the work that motivated them; do not commit CLAUDE.md separately.
+
+**Trigger scan.** Compare the deliverable's diff against the existing CLAUDE.md files (project root and any module-/package-level CLAUDE.md the work touched). Update CLAUDE.md only when one of these triggers fired during execution:
+
+| Trigger | What changes in CLAUDE.md |
+|---------|---------------------------|
+| New convention introduced (naming, error handling, state pattern, testing approach) | Add to conventions section |
+| Build / test / lint / dev command added, removed, or renamed | Update commands section |
+| Architecture shift (new layer, package boundary, contract surface, deployment model) | Update structure / architecture section |
+| Files or directories moved, renamed, or deleted that CLAUDE.md references by path | Fix path references |
+| New dependency with non-obvious usage (config, gotchas, version pin, opt-in flag) | Add to dependencies / gotchas section |
+| Feature, path, or module that CLAUDE.md still describes was removed or deprecated | Remove or mark deprecated |
+
+If no triggers fired, emit `CLAUDE.md refresh: no changes needed` and proceed. Do not pad CLAUDE.md with session-specific narration — only persistent project knowledge belongs there. Lite deliverables are smaller, so the no-op outcome is the common case; the explicit emission is still required so the gate is auditable.
+
+**Update rules:**
+1. Identify which CLAUDE.md file(s) need updates — root, package-level, or both.
+2. Make surgical edits to the affected sections only. Do not rewrite untouched sections.
+3. Do not paste deliverable summaries ("D-042 added session refresh"). CLAUDE.md describes *how the codebase works*, not deliverable history — that lives in the result doc.
+4. Do not document conventions that the next deliverable will touch again. Wait until the convention stabilizes.
+5. Do not log review-fix findings as CLAUDE.md content. Findings belong in disciplines.
+
 ### 4. Verify, Commit, and Clean Up
 
 **Principle: documentation artifacts ship with their work.** Result docs, catalog updates, discipline entries, and archive moves are part of the deliverable — not afterthoughts. They go in the same commit as the work they describe. Never create separate doc-only or `sdlc`-type commits for artifacts that belong to a work commit.
@@ -333,6 +357,7 @@ No PROJECT-SECTION markers needed — discipline files are project-specific and 
    - Result doc (`docs/current_work/sdlc-lite/dNN_*_result.md`)
    - Discipline parking lot entries (`[sdlc-root]/disciplines/*.md`)
    - Knowledge store updates (`[sdlc-root]/knowledge/*.md`)
+   - CLAUDE.md updates from step 3d (root and any module-level files)
    - Plan and result archive move (step 3 above)
    - Any other SDLC artifacts modified during execution
 5. Commit using the cc-sdlc commit format:
@@ -443,6 +468,8 @@ The Manager Rule remains in effect per `[sdlc-root]/process/manager-rule.md` —
 | "The plan is committed, this is just a small follow-up" | Manager Rule applies for the full session. Dispatch the domain agent. |
 | "The user asked about the server code — I'll just fix it while I'm here" | Domain crossing. Dispatch the relevant domain agent for that scope. Read domain boundaries in agent definitions. |
 | "I'll commit the code now and the docs separately" | Documentation artifacts (result docs, catalog updates, discipline entries, archive moves) ship in the same commit as the work they describe. Separate doc commits fragment the history and break bisectability. |
+| "Lite deliverables are too small to bother with CLAUDE.md refresh" | Step 3d is a scan, not a write. The common outcome for lite is `CLAUDE.md refresh: no changes needed`, but the explicit emission is what makes the gate auditable. Skip the scan and you skip the rare lite that does shift a path or convention. |
+| "Pasting the deliverable summary into CLAUDE.md" | CLAUDE.md describes how the codebase works, not deliverable history. Result docs hold "what shipped"; CLAUDE.md holds "what future agents need to know to navigate the code." |
 | "I know how this library works" | Verify external library APIs via Context7 before writing integration code. |
 | "Plan loaded. Let me check the catalog. Proceeding to Phase 1." | Pre-dispatch narration is noise. Read the plan, then emit the PRE-GATE — no filler sentences between tool calls and gates. |
 | Two phases dispatched in parallel, two long PRE-GATE blocks emitted | Use the parallel comparison table form. One table with phase columns is faster to read than two stacked blocks. |
