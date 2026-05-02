@@ -125,7 +125,18 @@ Consult `[sdlc-root]/knowledge/architecture/agent-orchestration-patterns.yaml` f
 
 ### 1. Identify Relevant Worker Domain Agents
 
-For recurring task types, consult `[sdlc-root]/playbooks/` for pre-seeded agent selection and reference implementations. When exploring existing patterns, use LSP (`goToDefinition`, `findReferences`, `goToImplementation`) for type-system and call-graph questions. Use Grep for string literals and non-TypeScript content.
+**Playbook scan** — before finalizing agent selection, check for a matching playbook:
+
+1. Read `[sdlc-root]/playbooks/README.md` — scan the "Available playbooks" table
+2. For each playbook whose task type overlaps with the current task, read the playbook file
+3. If a match is found, extract and incorporate:
+   - **Recommended agents** → merge into your agent list (add any you missed)
+   - **Knowledge context** → include these files when dispatching the relevant agents
+   - **Typical phases** → use as the starting phase structure (adapt, don't copy blindly)
+   - **Common gotchas** → surface as constraints in the plan
+4. If no playbooks exist yet or none match, move on — this is a lookup, not a gate
+
+When exploring existing patterns, use LSP (`goToDefinition`, `findReferences`, `goToImplementation`) for type-system and call-graph questions. Use Grep for string literals and non-TypeScript content.
 
 **Infrastructure domain trigger conditions** — read `[sdlc-root]/process/agent-selection.yaml` § `infrastructure_domains`. For each domain, ask its trigger questions about the task. If any trigger is true, add the specialist.
 
@@ -136,6 +147,8 @@ For recurring task types, consult `[sdlc-root]/playbooks/` for pre-seeded agent 
 Emit agent coverage and chronicle context as two tables. **Use this form on the happy path.**
 
 ```
+**Playbook match:** [playbook-slug] — [1-line reason] | none
+
 **Agent coverage**
 
 | Domain                            | Specialist                       | Why |

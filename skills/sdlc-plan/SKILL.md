@@ -186,7 +186,23 @@ Relevant domain agents for this task:
 - code-reviewer: included by default for implementation tasks
 ```
 
-For recurring task types, consult `[sdlc-root]/playbooks/` for pre-seeded agent selection and reference implementations.
+**Playbook scan** — before finalizing agent selection, check for a matching playbook:
+
+1. Read `[sdlc-root]/playbooks/README.md` — scan the "Available playbooks" table
+2. For each playbook whose task type overlaps with the current task, read the playbook file
+3. If a match is found, extract and incorporate:
+   - **Recommended agents** → merge into your agent list (add any you missed)
+   - **Knowledge context** → include these files when dispatching the relevant agents
+   - **Typical phases** → use as the starting phase structure (adapt, don't copy blindly)
+   - **Common gotchas** → surface as constraints in the spec and plan
+   - **Key decisions** → add to discovery questions
+4. Report the match in the Pre-Dispatch block:
+
+```
+Playbook match: [playbook-slug] — [1-line reason for match] | none
+```
+
+If no playbooks exist yet or none match, emit `Playbook match: none` and move on. This is a lookup, not a gate — no match is fine.
 
 **DISCOVERY-GATE** — you cannot dispatch agents to write the spec until this block appears in your response:
 

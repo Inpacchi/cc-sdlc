@@ -34,6 +34,21 @@ Each entry contains:
 
 ---
 
+## 2026-05-02: Add structured playbook matching to planning skills
+
+**Origin:** User observation — playbooks were only referenced by a passive one-liner ("consult `[sdlc-root]/playbooks/`") buried in the agent selection step. No structured lookup, no matching logic, no reporting. Playbooks only helped if the planner happened to check the directory and connect a playbook to the current task by inference alone.
+
+**What happened:** Investigated how `sdlc-plan` and `sdlc-lite-plan` consume playbooks. Both had a single sentence suggesting the planner check the playbooks directory — no scan step, no keyword matching, no incorporation instructions. Playbooks weren't wired into `agent-context-map.yaml` either. Decided against adding playbooks to the context map (playbooks are task-type knowledge for the planner, not role-specific knowledge for domain agents) and instead added a structured playbook-matching step directly to both planning skills.
+
+**Changes made:**
+
+1. **`skills/sdlc-plan/SKILL.md`** — Replaced the passive one-liner in Step 1 with a structured "Playbook scan" sub-step. Reads `[sdlc-root]/playbooks/README.md` index, matches against current task, reads matching playbooks, and incorporates recommended agents, knowledge context, typical phases, common gotchas, and key decisions. Reports match in the Pre-Dispatch block (`Playbook match: <slug> | none`).
+2. **`skills/sdlc-lite-plan/SKILL.md`** — Same structured "Playbook scan" sub-step added to Step 1. Added `Playbook match` line to the compact Pre-Dispatch block template.
+
+**Rationale:** Playbooks only add value if planning skills actively read and surface them. A structured scan with explicit incorporation rules turns playbooks from passive reference files into active planning inputs. Keeping the routing in the planning skills (not in agent-context-map) preserves the correct abstraction: playbooks inform the plan, not the agent's domain work.
+
+---
+
 ## 2026-04-30: Make sdlc-playbook-generate context-aware
 
 **Origin:** User feedback — the skill required an explicit argument explaining what the playbook should cover, which is hard to articulate when you've just finished a long session and want to say "make a playbook from this." Other skills like `sdlc-develop-skill` and `sdlc-create-agent` read the current session context directly; `sdlc-playbook-generate` should do the same.
