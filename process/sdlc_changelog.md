@@ -34,6 +34,21 @@ Each entry contains:
 
 ---
 
+## 2026-05-02: Forbid emitting both compact and verbose Pre-Dispatch forms
+
+**Origin:** User observation during D142 planning in `~/Projects/neuroloom`. The Pre-Dispatch output emitted *both* the compact `Prior context` table AND the verbose `CHRONICLE-CONTEXT` block — defeating the b08af9d compaction work.
+
+**What happened:** The fall-back wording introduced in b08af9d ("Fall back to the verbose form below when…") read as additive to the model — it appended the verbose form on top of the compact table instead of substituting it. The trigger conditions (load-bearing context, chronicle conflict, etc.) fired correctly, but "fall back to" did not unambiguously communicate "use *instead of* the compact form".
+
+**Changes made:**
+
+1. **`skills/sdlc-plan/SKILL.md`** — CHRONICLE-CONTEXT, AGENT-RECONFIRM (§3c), and AGENT-RECONFIRM (§5 review): replaced "Fall back to the verbose form below when…" with "**Emit either the compact table above OR the verbose form below — never both.**" Verbose-form headers now read "use *instead of* the compact table when any trigger above fires".
+2. **`skills/sdlc-lite-plan/SKILL.md`** — Same wording fix applied to the combined AGENT-RECONFIRM + CHRONICLE-CONTEXT fall-back section.
+
+**Rationale:** The compact tables are only valuable if they replace the verbose blocks. Doubled emission produces *more* output than before the refactor, since the compact tables added rows without removing the verbose form. Explicit "OR / never both" wording forces a choice. Note that the same wording bug exists in the neuroloom-sdlc-plugin's installed `sdlc-plan` (it inherits this text), and the plugin adds three additional verbose blocks (BUSINESS-CONTEXT, ARCHITECTURE-CONTEXT, DIAGRAM-CONTEXT) that have no compact form — those are out of scope for this fix and tracked as plugin work.
+
+---
+
 ## 2026-05-02: Add structured playbook matching to planning skills
 
 **Origin:** User observation — playbooks were only referenced by a passive one-liner ("consult `[sdlc-root]/playbooks/`") buried in the agent selection step. No structured lookup, no matching logic, no reporting. Playbooks only helped if the planner happened to check the directory and connect a playbook to the current task by inference alone.

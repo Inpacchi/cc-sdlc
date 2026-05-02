@@ -166,15 +166,15 @@ Emit agent coverage and chronicle context as two tables. **Use this form on the 
 
 Mark the plan writer with `← writer` in the Specialist column. "Domain" covers both role (e.g. `implementation review`) and infrastructure domain (e.g. `plugin install / env bootstrap`). The Prior context table holds chronicle entries by default; downstream installations that also surface business decisions (DRs, product constraints) add them as rows with `Source = <DR name>`, `Ref = DR-<NN>`. If there are no entries, replace the table with a single line: `**Prior context:** none`.
 
-#### Fall back to verbose form if any trigger fires
+#### Use verbose form instead of the compact tables if any trigger fires
 
-Fall back to the verbose AGENT-RECONFIRM + CHRONICLE-CONTEXT blocks below whenever any of these is true — the extra reasoning trail matters when the routine picks need justification:
+**Emit either the compact tables above OR the verbose blocks below — never both.** Use the verbose AGENT-RECONFIRM + CHRONICLE-CONTEXT blocks whenever any of these is true — the extra reasoning trail matters when the routine picks need justification:
 
 - **Coverage gap** — an infrastructure domain has no specialist, or `Agents to add` is non-empty
 - **Chronicle conflict** — a prior deliverable establishes a pattern that contradicts the current approach, or loaded context is load-bearing for approach selection (not just informational)
 - **Scope ambiguity** — unsure whether a trigger condition is met for some domain
 
-Verbose form (use when any trigger above fires):
+Verbose form (use *instead of* the compact tables when any trigger above fires):
 
 ```
 AGENT-RECONFIRM

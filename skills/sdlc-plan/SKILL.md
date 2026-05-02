@@ -252,12 +252,12 @@ Emit the result as a **Prior context** table on the happy path:
 
 If there are no entries, replace the table with a single line: `**Prior context:** none`. The Prior context table holds chronicle entries by default; downstream installations that also surface business decisions (DRs, product constraints) add them as rows with `Source = <DR name>`, `Ref = DR-<NN>`.
 
-Fall back to the verbose form below when any of these is true:
+**Emit either the compact table above OR the verbose form below — never both.** Use the verbose form when any of these is true:
 - Chronicle conflict — a prior deliverable establishes a pattern that contradicts the current approach
 - Loaded context is load-bearing for spec/approach selection (not just informational)
 - Takeaway for a concept does not fit a single line
 
-Verbose form (use when any trigger above fires):
+Verbose form (use *instead of* the compact table when any trigger above fires):
 
 ```
 CHRONICLE-CONTEXT
@@ -344,13 +344,13 @@ Action:
 
 "Domain" covers both package ownership (e.g. `packages/ui`) and infrastructure domain (e.g. `realtime fan-out`). The Specialist column is the agent list in table form — no separate flat list needed.
 
-**Fall back to verbose form if any trigger fires:**
+**Emit either the compact table above OR the verbose form below — never both.** Use the verbose form when any trigger fires:
 - Coverage gap — a package or infrastructure domain has no specialist (`no specialist` in the table)
 - Agents added or removed vs step 1 (delta is non-empty)
 - Infrastructure check catches a domain not obvious from the package list (generalist-masking or absence-masking; see below)
 - Scope ambiguity — unsure whether a trigger condition is met for some domain
 
-Verbose form (use when any trigger above fires):
+Verbose form (use *instead of* the compact table when any trigger above fires):
 
 ```
 AGENT-RECONFIRM
@@ -439,7 +439,7 @@ Writer saves to: `docs/current_work/planning/dNN_name_plan.md`
 
 ### 5. Domain Agent Plan Review
 
-**AGENT-RECONFIRM** — emit before dispatching review agents. Use the compact / verbose form convention from §3c (compact table by default, fall back to verbose when a coverage gap, delta from step 1, generalist-masking risk, or scope ambiguity is detected).
+**AGENT-RECONFIRM** — emit before dispatching review agents. Use the compact / verbose form convention from §3c: emit either the compact table OR the verbose form, never both. Default to the compact table; use the verbose form when a coverage gap, delta from step 1, generalist-masking risk, or scope ambiguity is detected.
 
 Compact form (default):
 
