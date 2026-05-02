@@ -34,6 +34,20 @@ Each entry contains:
 
 ---
 
+## 2026-04-30: Make sdlc-playbook-generate context-aware
+
+**Origin:** User feedback — the skill required an explicit argument explaining what the playbook should cover, which is hard to articulate when you've just finished a long session and want to say "make a playbook from this." Other skills like `sdlc-develop-skill` and `sdlc-create-agent` read the current session context directly; `sdlc-playbook-generate` should do the same.
+
+**What happened:** The skill's Step 1 only supported JSONL file lookup for past sessions, requiring a session ID, search term, or detailed description as `$ARGUMENTS`. Users invoking it mid-session or immediately after completing work had to describe their own session — redundant when the skill can already see the full conversation context.
+
+**Changes made:**
+
+1. **`skills/sdlc-playbook-generate/SKILL.md`** — Added Path A (current session context) as default source resolution. The skill now reads the current conversation directly when `$ARGUMENTS` is empty or references the current session. Path B (JSONL lookup) remains for past sessions. Added "Context-first, arguments-second" core principle. Updated workflow label from `LOCATE` to `RESOLVE SOURCE`. Added red flag entry for demanding user descriptions when context is readable. Updated trigger phrases to include current-session invocations ("make a playbook from this", "turn this into a playbook", etc.). Made `$ARGUMENTS` explicitly optional.
+
+**Rationale:** The conversation context is already available — requiring users to summarize it in an argument is unnecessary friction. This aligns `sdlc-playbook-generate` with other context-aware skills and makes the most common use case (playbook from current session) the easiest path.
+
+---
+
 ## 2026-04-30: Add sdlc-reflect skill for post-session discipline capture
 
 **Origin:** User request — the discipline capture protocol (`process/discipline_capture.md`) runs automatically at the end of `sdlc-execute`, `sdlc-plan`, and other formal skills, but sessions that use direct dispatch, ad-hoc bug fixes, or exploratory coding have no structured way to feed learnings back into the SDLC. Insights from these sessions either get lost when the conversation ends or require the user to manually edit discipline parking lots.

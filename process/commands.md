@@ -52,7 +52,7 @@ The standard deliverable lifecycle: **ideation → plan → execute**. Most work
 | Command | Action |
 |---------|--------|
 | "Ingest these transcripts/articles" | Invokes `sdlc-ingest` — bulk-import external knowledge into disciplines and knowledge stores |
-| "Make a playbook from that session" | Invokes `sdlc-playbook-generate` — analyze a session's conversation and commits to generate a structured playbook |
+| "Make a playbook from this" | Invokes `sdlc-playbook-generate` — generate a structured playbook from the current session context or a past session's conversation and commits |
 | `/sdlc-research-external` | Research external knowledge sources (blogs, talks, papers) and curate tiered reference docs |
 
 ## Skill & Agent Development

@@ -1,13 +1,18 @@
 ---
 name: sdlc-playbook-generate
 description: >
-  Generate structured playbooks from previous session conversations and their associated git commits.
-  Analyzes both what worked (the process to formalize) and what was missed (corrections, setup gotchas,
-  environment gaps, service configuration that surfaced mid-execution). Produces playbooks following the
-  project's existing playbook template format. Triggers on "make a playbook from", "analyze session",
-  "generate playbook", "create playbook from session", "playbook from that session", "let's make a
-  playbook for", "formalize that into a playbook", "turn that session into a playbook",
-  "what did we learn from that session", "extract a playbook".
+  Generate structured playbooks from the current conversation context or from previous session files
+  and their associated git commits. Reads the current session directly when invoked mid-conversation
+  or with no argument — no session ID or description required. Can also analyze past sessions via
+  JSONL lookup when a session identifier is provided. Analyzes both what worked (the process to
+  formalize) and what was missed (corrections, setup gotchas, environment gaps, service configuration
+  that surfaced mid-execution). Produces playbooks following the project's existing playbook template
+  format. Triggers on "make a playbook from", "analyze session", "generate playbook",
+  "create playbook from session", "playbook from that session", "let's make a playbook for",
+  "formalize that into a playbook", "turn that session into a playbook",
+  "what did we learn from that session", "extract a playbook", "make a playbook from this",
+  "playbook from what we just did", "turn this into a playbook", "playbook from this session",
+  "make a playbook", "create a playbook".
   Use when a completed session or set of commits should be formalized into a reusable playbook.
   Do NOT use for creating playbooks from scratch without session data — write those directly.
   Do NOT use for bulk knowledge import — use sdlc-ingest.
@@ -20,15 +25,16 @@ Extract structured, reusable playbooks from completed session conversations and 
 
 **This skill produces a playbook artifact in `[sdlc-root]/playbooks/`. It does NOT produce specs, plans, or implementations.**
 
-**Argument:** `$ARGUMENTS` (session identifier — a name, search term, or session ID; plus optional playbook purpose/scope hint)
+**Argument:** `$ARGUMENTS` (optional — playbook scope hint, session name/ID, or search term. When empty or referencing the current session, the skill reads the current conversation context directly.)
 
 ## When This Applies
 
-Use this when the user has completed work in a previous session and wants to formalize the process into a repeatable playbook. The hallmark is retrospective analysis — the work is done, and now the user wants to capture what they learned.
+Use this when the user has completed work and wants to formalize the process into a repeatable playbook. The hallmark is retrospective analysis — the work is done, and now the user wants to capture what they learned.
 
 Signs this skill is appropriate:
-- "Let's make a playbook from the Slack bot session"
-- "Analyze that session and create a playbook for integrations"
+- "Make a playbook from this" / "Turn this into a playbook" (current session — no argument needed)
+- "Let's make a playbook from the Slack bot session" (past session — name as argument)
+- "Analyze that session and create a playbook for integrations" (past session with scope hint)
 - The user just finished a non-trivial task and wants to prevent the same friction next time
 - A session involved corrections mid-stream that indicate missing process knowledge
 
@@ -38,6 +44,8 @@ Signs this skill is NOT appropriate:
 - Resuming an incomplete session → `sdlc-resume`
 
 ## Core Principles
+
+**Context-first, arguments-second.** When invoked without a session ID, read the current conversation directly — you already have full access to everything that happened. Don't require the user to summarize or describe what they want a playbook for when you can see the work yourself. Arguments are for scoping, not for explaining.
 
 **Two sources of truth, not one.** The conversation reveals what happened (intent, friction, corrections, discoveries). The git log reveals what was produced (code, config, migrations). Neither alone tells the full story. Cross-reference both.
 
@@ -52,16 +60,39 @@ Signs this skill is NOT appropriate:
 ## Workflow
 
 ```
-LOCATE → CORRELATE → ANALYZE → DRAFT → PLACE → REPORT
+RESOLVE SOURCE → CORRELATE → ANALYZE → DRAFT → PLACE → REPORT
 ```
 
 Sequential. Each step must complete before the next. The user confirms scope (step 2) before deep analysis begins.
 
 ## Steps
 
-### 1. Locate the Session
+### 1. Resolve Source
 
-Find the target session conversation. Sessions are stored as JSONL files in the project's Claude directory:
+Determine where to read the session data from. Two paths — current context or past session file.
+
+**Path A — Current session context (default when no session ID is provided):**
+
+Use this path when:
+- `$ARGUMENTS` is empty
+- `$ARGUMENTS` references the current session ("this", "what we just did", "this session", etc.)
+- `$ARGUMENTS` describes a playbook topic without referencing a specific past session
+
+The current conversation IS the source data. You already have full access to it — every user message, assistant response, tool call, correction, and error is visible in the conversation context. No JSONL file lookup needed.
+
+**Extract from current context:**
+- The sequence of work performed (tool calls, agent dispatches, files read/written/edited)
+- User corrections, feedback, "oh wait" moments, and error-fix cycles
+- Decision points and the choices made
+- The overall task type and scope of work completed
+
+If `$ARGUMENTS` is empty and the conversation contains substantial work, infer the playbook topic from the work performed. If the conversation is too short or ambiguous to infer a playbook topic, ask the user: "What aspect of this session should the playbook cover?"
+
+**Path B — Past session lookup (when a session name/ID is provided):**
+
+Use this path when `$ARGUMENTS` contains a session name, search term, or session ID that refers to a different session.
+
+Sessions are stored as JSONL files in the project's Claude directory:
 
 ```
 ~/.claude/projects/<project-dir-hash>/<session-id>.jsonl
@@ -81,13 +112,17 @@ Present the located session for confirmation before proceeding.
 
 ### 2. Correlate with Git History
 
-Using the session's timestamp range, extract all git commits made during that session:
+Identify git commits associated with the session's work.
+
+**For current session (Path A):** Use the commits made during this conversation. Check `git log` for recent commits, cross-referencing with files you observed being created or modified during the session.
+
+**For past session (Path B):** Use the session's timestamp range:
 
 ```bash
 git log --after="<session_start>" --before="<session_end>" --format="%H %ai %s" --reverse
 ```
 
-**Build the correlation map:**
+**Build the correlation map (both paths):**
 - List all commits with their messages and timestamps
 - For significant commits, read the diff summary (`git diff --stat <hash>~1 <hash>`)
 - Identify files created, modified, and deleted during the session
@@ -96,10 +131,8 @@ git log --after="<session_start>" --before="<session_end>" --format="%H %ai %s" 
 **Present scope for confirmation:**
 
 ```
-SESSION LOCATED
-ID: [session-id]
+SESSION SOURCE: [current conversation | session file <id>]
 Time span: [start] → [end] ([duration])
-Messages: [count] user / [count] assistant
 Commits: [count] commits touching [count] files
 Key files: [top 5-8 files by change frequency]
 Playbook target: [user's stated purpose, or inferred task type]
@@ -109,7 +142,7 @@ Wait for user confirmation. If the user adjusts the playbook scope or target, re
 
 ### 3. Analyze
 
-Read the session JSONL and extract structured insights. This is the core analytical step — see `references/analysis-methodology.md` for the detailed extraction patterns.
+Extract structured insights from the session data. For current session context (Path A), analyze the conversation directly — you already have it. For past session files (Path B), read the session JSONL. See `references/analysis-methodology.md` for the detailed extraction patterns (the same patterns apply to both paths — the difference is only where the data comes from).
 
 **Two-track analysis:**
 
@@ -219,6 +252,7 @@ Update `[sdlc-root]/process/sdlc_changelog.md`:
 
 | Thought | Reality |
 |---------|---------|
+| "I need the user to describe what this playbook is for" | Read the conversation context — you can see what was done. Only ask if the scope is genuinely ambiguous. |
 | "I'll just summarize what happened" | Extract process steps and gotchas, not a narrative summary. |
 | "The git log tells the whole story" | Git log shows what was committed. The conversation shows what was tried, failed, and corrected. Both are required. |
 | "I'll skip the gap analysis, the process is clear" | The gap analysis IS the primary value. A playbook without gotchas is just a generic checklist. |
@@ -230,7 +264,7 @@ Update `[sdlc-root]/process/sdlc_changelog.md`:
 ## Integration
 
 - **Feeds into:** Planning skills (`sdlc-plan`, `sdlc-lite-plan`) — playbooks pre-seed agent selection and knowledge context
-- **Uses:** Session JSONL files, git log, existing playbook template, knowledge stores (for cross-referencing)
+- **Uses:** Current conversation context (preferred) or session JSONL files, git log, existing playbook template, knowledge stores (for cross-referencing)
 - **Complements:** `sdlc-ingest` imports external knowledge; this skill imports internal session knowledge
 - **Downstream:** `/sdlc-audit` checks playbook freshness as part of knowledge layer health audits
 
