@@ -17,4 +17,4 @@
 | "Installation failed, I'll create the directories manually" | Fix the installation failure. Manual creation misses files and skips version tracking. |
 | "Manager Rule applies from the start" | In greenfield Phases 0–3, no agents exist. CC works directly. Manager Rule activates at Phase 4. |
 | "I'll batch all the ideation questions" | One question at a time via AskUserQuestion. Batched questions get shallow answers. |
-| "I'll add adapter-plugin detection to this skill" | Adapter plugins override this skill entirely when installed — they never depend on cc-sdlc base detecting them. Detection logic in this skill would be dead code. |
+| "I'll implement adapter-specific behavior inside this skill" | Adapter phase logic lives in the adapter's handler doc (see `[sdlc-root]/process/adapter-lifecycle-protocol.md`). This skill handles discovery and phase delegation — it does not implement adapter behavior directly. |

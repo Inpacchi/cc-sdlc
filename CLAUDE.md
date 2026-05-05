@@ -43,11 +43,11 @@ cc-sdlc is the stable core. Adapter plugins live in separate repos and transform
 
 | Plugin | Location | What It Adapts |
 |--------|----------|----------------|
-| **neuroloom-sdlc-plugin** | `~/Projects/neuroloom/neuroloom-sdlc-plugin` (local); `endless-galaxy-studios/neuroloom-sdlc-plugin` (GitHub) | Swaps file-based knowledge routing (`agent-context-map.yaml`) for Neuroloom's `memory_search` / `memory_store` MCP calls. Overrides `/sdlc-initialize`, `/sdlc-migrate`, `/sdlc-port`; transforms other cc-sdlc skills during install/migration via a phrasing-contract-driven transformation table. |
+| **neuroloom-sdlc-plugin** | `~/Projects/neuroloom/neuroloom-sdlc-plugin` (local); `endless-galaxy-studios/neuroloom-sdlc-plugin` (GitHub) | Swaps file-based knowledge routing (`agent-context-map.yaml`) for Neuroloom's `memory_search` / `memory_store` MCP calls. Declares lifecycle phase handlers via `adapter.json`; upstream delegates knowledge-seed, knowledge-update, post-file-write, and post-operation phases. `/sdlc-port` remains adapter-independent. Transforms cc-sdlc skills during install/migration via a phrasing-contract-driven transformation table (`references/pattern-mapping-rules.md`). |
 
 **The phrasing contract** (`process/knowledge-routing.md` § "Adapter Plugins and the Phrasing Contract") is the interface between cc-sdlc and adapters. cc-sdlc commits to using a fixed set of standard phrases when referencing the knowledge layer; adapters commit to transforming those exact phrases. When you change a knowledge-layer reference pattern in cc-sdlc, tag the changelog entry with `[contract-change]` so adapter maintainers catch it on their next upstream pull.
 
-**Working across both repos:** If a change here affects the contract, make the paired change in `neuroloom-sdlc-plugin` (typically in `skills/sdlc-migrate/SKILL.md` § "Pattern Mapping" and "Files Containing These Patterns"). Verify: `grep -n "consult\|Read" ~/Projects/neuroloom/neuroloom-sdlc-plugin/skills/sdlc-migrate/SKILL.md` shows the transformation table up to date.
+**Working across both repos:** If a change here affects the contract, make the paired change in `neuroloom-sdlc-plugin` (typically in `references/pattern-mapping-rules.md`). Verify: `grep -n "consult\|Read" ~/Projects/neuroloom/neuroloom-sdlc-plugin/references/pattern-mapping-rules.md` shows the transformation table up to date.
 
 ## When Editing This Repo
 
