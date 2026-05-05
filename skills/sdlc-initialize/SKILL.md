@@ -264,6 +264,8 @@ For each directory in manifest.directories:
 - `templates/optional/` — Conditional CLAUDE.md appendices (e.g., `data-pipeline-integrity.md`). Read from cc-sdlc source during Phase 2 when needed, not installed.
 - `CLAUDE-SDLC.md` — Content is merged directly into the project's `CLAUDE.md` during Phase 2. No separate file is created.
 
+**Adapter post-file-write:** If an adapter is present and declares `post-file-write`, execute the adapter's transformation instructions on each file after it is written (same per-file callout as in `sdlc-migrate` §2.1-post). The adapter's handler doc declares which file patterns to transform and which to skip.
+
 **Skip existing files** — do not overwrite files that already exist. Track counts:
 - Files installed (new)
 - Files skipped (already exist)
@@ -303,7 +305,23 @@ else
 fi
 ```
 
-**Note on adapter plugins:** Adapter plugins install their own `/sdlc-initialize` that overrides this skill. When an adapter is present, this skill does not run at all — the adapter's init writes its own manifest. cc-sdlc's base init therefore does not detect, flag, or write adapter-specific fields; those are the adapter's concern.
+**Adapter discovery:** Before writing the manifest, scan for adapter plugins:
+
+```
+For each directory in .claude/plugins/:
+  If {plugin_dir}/adapter.json exists and contains "ccsdlc_adapter": true:
+    Record as active adapter
+```
+
+If an adapter is found, read its `adapter.json` and populate the manifest's `adapter` block (see schema below). If multiple adapters are found, halt with an error. If none found, set `"adapter": null`.
+
+When an adapter is present, this skill delegates specific phases per `[sdlc-root]/process/adapter-lifecycle-protocol.md`:
+- Phase 1 (skeleton install) proceeds normally — operational files are written by upstream
+- After each file write, if the adapter declares `post-file-write`, upstream executes the adapter's transformation instructions on that file
+- Phase 6 (knowledge seeding) is delegated to the adapter's `knowledge-seed` handler instead of writing flat YAML files
+- Phase 10 (verification) includes the adapter's `post-operation` handler if declared
+
+When no adapter is found, behavior is identical to before this protocol existed.
 
 **Write `.sdlc-manifest.json`** at project root. Includes an `installed_files` map of SHA-256 hashes for every framework file written in Phase 1. This enables `sdlc-migrate` to detect post-install manual edits (drift) before overwriting.
 
@@ -319,6 +337,7 @@ fi
   "sdlc_root": "<SDLC_ROOT value from detection above>",
   "installed_bundles": ["design"],
   "last_applied_contract_id": "<newest id in skeleton/contract_changes.yaml at install time>",
+  "adapter": null,
   "installed_files": {
     "ops/sdlc/process/overview.md":      { "sha256": "<hash>", "size": <bytes>, "installed_at": "<ISO timestamp>" },
     "ops/sdlc/knowledge/architecture/agent-communication-protocol.yaml": { "sha256": "<hash>", "size": <bytes>, "installed_at": "<ISO timestamp>" },
@@ -333,6 +352,19 @@ fi
 **`source_version` and `source_version_sha`:** `source_version` stores the release tag (e.g., `v1.4.0`) — resolve via `git -C [cc-sdlc-path] tag -l 'v[0-9]*.[0-9]*.[0-9]*' --sort=-v:refname | head -1`. `source_version_sha` stores the tag's commit hash for precise diffs. If no tags exist (pre-release source), fall back to `"unknown"` for the tag and store the HEAD SHA. `sdlc-migrate` uses these fields to determine what changed between the installed version and the latest release.
 
 **`last_applied_contract_id`:** The id of the newest entry in `skeleton/contract_changes.yaml` at the time of this install. New projects start already caught up — `sdlc-migrate` will not re-apply historical renames and other one-shot migrations meant for older projects. Read this value from the cc-sdlc source when writing the manifest: parse `contract_changes.yaml`, take the last entry's `id`.
+
+**`adapter`:** `null` when no adapter plugin is found. When an adapter is discovered (via `adapter.json` in `.claude/plugins/`), this block is populated automatically during Phase 1:
+
+```json
+"adapter": {
+  "plugin": "<plugin name from plugin.json>",
+  "plugin_root": "<path to adapter plugin root, relative to project root>",
+  "supported_ccsdlc_version": "<from adapter.json>",
+  "phase_handlers": "<from adapter.json>"
+}
+```
+
+See `[sdlc-root]/process/adapter-lifecycle-protocol.md` for field semantics, discovery logic, and the `adapter.json` schema.
 
 **Hash generation:** SHA-256 of the file's content as written to disk.
 
@@ -562,6 +594,12 @@ This is mechanical — the orchestrator does this directly. The agent filenames 
 
 ### Phase 6: Seed Knowledge Stores
 
+**Adapter delegation:** If the adapter declares a `knowledge-seed` phase (detected during Phase 1's manifest write), delegate knowledge seeding entirely to the adapter's handler instructions. The adapter ingests knowledge into its backend rather than writing flat YAML files. Skip §6a–6d and resume at Phase 7.
+
+When no adapter is declared, proceed with flat-file knowledge seeding below.
+
+---
+
 **Now that agents exist, dispatch them for knowledge work.**
 
 **6a. Assess knowledge store relevance.**
@@ -747,6 +785,8 @@ This is a quick assessment (2-3 minutes total), not a gate. Present the tracker 
 
 ### Phase 10: Final Verification
 
+**Adapter post-operation:** If the adapter declares a `post-operation` phase, execute the adapter's verification instructions before the standard checklist below. This lets the adapter confirm its backend is consistent (e.g., all knowledge ingested, no untransformed phrasing-contract references remain). If the adapter's handler specifies `warn-continue` on failure, log the warning and proceed. If `halt`, stop and report.
+
 Run through the verification checklist:
 
 ```
@@ -859,4 +899,4 @@ Common anti-patterns: see `references/red-flags.md`.
 - **Uses:** `/sdlc-create-agent` (agent creation), Context7 (knowledge verification), `AskUserQuestion` (CD gates)
 - **Produces:** Fully initialized SDLC framework with project-specific agents, knowledge, and disciplines; `.sdlc-manifest.json` with `sdlc_root`, `source_version`, and `installed_files` fields
 - **Borrows from:** `sdlc-idea` (ideation principles for Phase 0), spec template (Phase 0c structure)
-- **Overridden by:** adapter plugins when installed — their `/sdlc-initialize` takes precedence and this skill does not run
+- **Adapter-aware:** when `manifest.adapter` is declared, delegates knowledge-seed, post-file-write, and post-operation phases per `[sdlc-root]/process/adapter-lifecycle-protocol.md`

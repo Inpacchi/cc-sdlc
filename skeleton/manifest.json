@@ -83,7 +83,8 @@
       "process/parallel-dispatch-monitoring.md",
       "process/transaction-log-schema.md",
       "process/source-repo-safety.md",
-      "process/path-mappings.md"
+      "process/path-mappings.md",
+      "process/adapter-lifecycle-protocol.md"
     ],
     "templates": [
       "templates/spec_template.md",

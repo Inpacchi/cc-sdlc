@@ -102,7 +102,22 @@ else
 fi
 ```
 
-**Adapter plugins:** If the project uses an adapter plugin (e.g., `neuroloom-sdlc-plugin`), that plugin's `/sdlc-migrate` overrides this skill. This skill only runs in projects that use cc-sdlc's file-based defaults. Adapter-specific concerns (e.g., memory-graph knowledge backends) are handled by the adapter's own migrate skill — this skill does not branch on adapter presence.
+**Adapter lifecycle detection:** After reading `.sdlc-manifest.json`, check for the `adapter` block:
+
+```
+If manifest.adapter exists and is not null:
+  Resolve handler doc: {project_root}/{adapter.plugin_root}/{adapter.phase_handlers}
+  If handler doc missing or unreadable → halt with error
+  Parse which H2 sections exist → these are the adapter's declared phases
+  Refresh supported_ccsdlc_version from live adapter.json (adapter may have been updated)
+  Log: adapter_detected event with plugin name and declared phases
+```
+
+When an adapter is detected, this skill delegates specific phases (knowledge-update, post-file-write, post-operation) to the adapter's handler doc instructions. Non-delegated phases run identically to the non-adapter path. See `[sdlc-root]/process/adapter-lifecycle-protocol.md` for the full protocol.
+
+**Adapter version gate:** During §1.2 (Changelog Review Gate), if an adapter is detected, compare each `[contract-change]` entry's cc-sdlc version against `adapter.supported_ccsdlc_version`. If any entry's version exceeds the adapter's declared support → halt with a message identifying the uncovered entries and the adapter's current version. The adapter maintainer must update their `adapter.json` before migration can proceed.
+
+When `manifest.adapter` is `null` or absent, behavior is identical to before this protocol existed.
 
 **Step 3 — Report assessment:**
 
@@ -391,6 +406,16 @@ If the project was previously committing agent memory files, note this in the mi
 git rm -r --cached .claude/agent-memory/ 2>/dev/null
 ```
 
+### 2.1-post: Adapter Post-File-Write
+
+**Adapter delegation:** After each file is written or merged (§2.1 direct copies, §2.1e CLAUDE-SDLC.md merge, §2.2–§2.4 content merges), if the adapter declares a `post-file-write` phase:
+
+1. Check whether the file matches the adapter's declared filter (from the handler doc's `**Applies to:**` and `**Skip:**` lines)
+2. If it matches, execute the adapter's `post-file-write` instructions on that file
+3. If the adapter's handler specifies `halt` on failure, stop the migration on transformation error
+
+When no adapter is declared, this step is skipped entirely — no overhead for non-adapter projects.
+
 ### 2.1a Remove Deleted and Moved Files
 
 Check the cc-sdlc changelog for files that were **deleted, moved, or renamed** since the project's `source_version`. These require explicit cleanup in the downstream project — direct copy only adds files, it doesn't remove stale ones.
@@ -427,6 +452,10 @@ Check the cc-sdlc changelog for files that were **deleted, moved, or renamed** s
 **Why this matters:** Without cleanup, downstream projects accumulate orphan files. Worse, if a file was moved (e.g., `knowledge/architecture/foo.yaml` → `knowledge/coding/foo.yaml`), agents mapped to the old path load a stale copy while the updated version sits unwired at the new path. Agent memories are a second source of path references that §3.3 (context map) doesn't cover — they must be scanned separately.
 
 ### 2.1b Knowledge YAML Key-Level Merge
+
+**Adapter delegation:** If the adapter declares a `knowledge-update` phase (H2 section exists in handler doc), skip this entire subsection. Execute the adapter's `knowledge-update` instructions instead — the adapter handles knowledge updates via its backend's native diff/upsert semantics. Resume at §2.1c after the adapter's phase completes (or halts on failure).
+
+---
 
 Knowledge YAML files contain domain patterns that projects naturally extend with project-specific additions. Unlike framework logic files, knowledge is additive — projects add their own patterns alongside upstream patterns. Direct-copy would destroy these additions.
 
@@ -838,6 +867,14 @@ If the audit returns findings:
 - **Critical/Major:** Fix before continuing. Re-dispatch the auditor after fixes.
 - **Minor/Info:** Log in the migration report, continue to §4.5.
 
+### 4.4a Adapter Post-Operation
+
+**Adapter delegation:** If the adapter declares a `post-operation` phase, execute the adapter's post-operation instructions after the compliance audit (§4.4) and before the manifest update. This is the adapter's opportunity to run its own integrity verification (e.g., contract residue scan, backend consistency check).
+
+If the adapter's handler specifies `warn-continue` on failure (recommended for this phase), log the warning and proceed to §4.5. If `halt`, stop and report.
+
+When no adapter is declared, skip to §4.5.
+
 ### 4.5 Update Manifest
 
 After migration, update `.sdlc-manifest.json`:
@@ -980,7 +1017,7 @@ Common anti-patterns and their corrections (20 entries covering direct-copy temp
 
 - **Feeds into:** `sdlc-audit` skill (post-migration compliance audit)
 - **Depends on:** cc-sdlc source repo (reads via git), `.sdlc-manifest.json` (version tracking)
-- **Uses:** `AskUserQuestion` (changelog review gate, user confirmation)
+- **Uses:** `AskUserQuestion` (changelog review gate, user confirmation), `[sdlc-root]/process/adapter-lifecycle-protocol.md` (when adapter declared)
 - **Related:** `sdlc-initialize` (first-time setup — use that, not this, for new projects)
 
 ## Migration vs Initialization

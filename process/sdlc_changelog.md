@@ -34,6 +34,23 @@ Each entry contains:
 
 ---
 
+## 2026-05-04: Add Adapter Lifecycle Protocol `[contract-change]`
+
+**Origin:** Handoff from the Neuroloom SDLC Plugin maintainer identifying that full skill overrides (42KB initialize, 70KB migrate) cause merge drift and miss upstream improvements. The actual adapter-specific delta is narrow: knowledge backend routing and phrasing-contract transformations.
+
+**What happened:** Designed and implemented an adapter lifecycle protocol that lets adapters participate at specific phases of initialize and migrate without overriding the entire skill. The protocol defines four extension points (knowledge-seed, knowledge-update, post-file-write, post-operation) that upstream delegates to when an adapter is declared in the project manifest.
+
+**Changes made:**
+
+1. **`process/adapter-lifecycle-protocol.md`** — New process doc. Defines adapter discovery (via `adapter.json` at the plugin root), the manifest `adapter` block schema, four lifecycle phases with inputs/outputs/failure semantics, handler doc structure, upstream integration pseudostructure, and migration path for existing adapters.
+2. **`skills/sdlc-initialize/SKILL.md`** — Replaced the "adapter plugins override this skill" note with lifecycle protocol awareness. Added `adapter: null` field to manifest schema with documentation. Added post-file-write callout during Phase 1 file installation. Added knowledge-seed delegation at Phase 6. Added post-operation hook at Phase 10.
+3. **`skills/sdlc-migrate/SKILL.md`** — Replaced the "adapter plugins override this skill" pre-flight note with adapter detection logic. Added knowledge-update delegation at §2.1b. Added §2.1-post (adapter post-file-write) after file writes. Added §4.4a (adapter post-operation) before manifest update.
+4. **`process/knowledge-routing.md`** — Added "Relationship to the Adapter Lifecycle Protocol" subsection cross-referencing the new doc. Updated "When cc-sdlc Changes" to reference handler docs instead of migrate skills.
+
+**Rationale:** The protocol separates concerns cleanly — upstream owns the migration algorithm, adapters own backend routing and content transformation. Adapters no longer need to fork 70KB skill files to participate in 10KB of adapter-specific logic. Upstream improvements (drift detection, marker preservation, bundle handling, changelog gating) flow through to adapter-based projects automatically. The design is based on the Neuroloom plugin's actual implementation: server-side idempotent upsert by stable ID for knowledge, two-pass Pattern Mapping for file transformation, and MCP preservation gates for migration safety.
+
+---
+
 ## 2026-05-02: Wire CLAUDE.md refresh into execute and code-review skills
 
 **Origin:** User asked to incorporate the patterns from anthropics/claude-plugins-official `claude-md-management` plugin (a `claude-md-improver` audit skill and a `/revise-claude-md` session-capture command) into the existing SDLC execution and code-review flows rather than adopting a parallel plugin.

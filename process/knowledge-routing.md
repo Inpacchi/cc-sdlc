@@ -194,9 +194,13 @@ Not all adapters need to do this — it's an adapter design choice. The contract
 - **Don't invent new phrasings** for the same operation. If a skill needs to look up an agent's mapped files, use the exact phrase from the canonical table above.
 - **Don't directly reference adapter-specific tools** in cc-sdlc skills. Those are adapter concerns.
 
+### Relationship to the Adapter Lifecycle Protocol
+
+This document governs the **content contract** — what phrases cc-sdlc uses so adapters can transform them. The **adapter lifecycle protocol** (`[sdlc-root]/process/adapter-lifecycle-protocol.md`) governs **execution** — when adapters run during initialize and migrate, and how upstream delegates knowledge and transformation phases. Both are required for adapter integration.
+
 ### When cc-sdlc Changes
 
-If a change to cc-sdlc introduces a new knowledge-access pattern, the adapter plugin's migrate skill must be updated in parallel. Document the new phrase in the table above so the adapter maintainer can add a transformation rule. The commit message should tag the change with `[contract-change]` so adapter maintainers can filter for it.
+If a change to cc-sdlc introduces a new knowledge-access pattern, the adapter plugin's handler doc must be updated in parallel. Document the new phrase in the table above so the adapter maintainer can add a transformation rule. The commit message should tag the change with `[contract-change]` so adapter maintainers can filter for it.
 
 ### Adapter Version Declaration (required)
 
