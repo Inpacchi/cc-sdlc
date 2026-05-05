@@ -198,3 +198,23 @@ changes:
       a persistent skill). Adapter action: update transformation tables —
       agent-template.md references now use [sdlc-root]/templates/ path
       instead of .claude/agents/.
+
+  - id: "0011"
+    date: "2026-05-04"
+    title: "Adapter lifecycle protocol — phase delegation replaces full skill overrides"
+    type: manifest_field_added
+    file: .sdlc-manifest.json
+    field: adapter
+    default: null
+    changelog_ref: "2026-05-04: Add Adapter Lifecycle Protocol"
+    notes: >
+      New process/adapter-lifecycle-protocol.md defines four lifecycle phases
+      (knowledge-seed, knowledge-update, post-file-write, post-operation) that
+      upstream delegates to adapter plugins. Adapters declare via adapter.json
+      at their plugin root; upstream discovers them during init and persists
+      the adapter block in .sdlc-manifest.json. Migrate reads the block and
+      delegates phases when present. Non-adapter projects are unaffected
+      (adapter field defaults to null). Adapter action: remove full skill
+      overrides for sdlc-initialize and sdlc-migrate; ship adapter.json and
+      a handler doc (references/adapter-lifecycle.md) instead. Migrate must:
+      install process/adapter-lifecycle-protocol.md to [sdlc-root]/process/.
