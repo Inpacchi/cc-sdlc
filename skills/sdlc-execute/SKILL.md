@@ -359,6 +359,8 @@ Key feedback incorporated:
 - Omit agents that found no issues (don't write "[agent] no issues found")
 - This section is **mandatory** — the task cannot be marked complete without it
 
+**Post-write: HTML render.** Render the result doc to a self-contained HTML file for human reading. Read the design system from `[sdlc-root]/templates/html-design-system.html`, apply **result** document-type defaults from `[sdlc-root]/process/html-rendering.md`, and write a `.html` file alongside the markdown.
+
 ### 3a. Discipline Capture
 
 Run the discipline capture protocol per `[sdlc-root]/process/discipline_capture.md`. Context format: `[DNN — phase N]`. This includes structured gap detection (using the review-fix triage table and agent dispatch data from this session) followed by the freeform insight scan.

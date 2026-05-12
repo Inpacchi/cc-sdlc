@@ -307,6 +307,8 @@ Reference the template at `[sdlc-root]/templates/spec_template.md`. Required fie
 
 Save to: `docs/current_work/specs/dNN_name_spec.md`
 
+**Post-write: HTML render.** Render the spec to a self-contained HTML file for human reading. Read the design system from `[sdlc-root]/templates/html-design-system.html`, apply **spec** document-type defaults from `[sdlc-root]/process/html-rendering.md`, and write a `.html` file alongside the markdown (same directory, same base name, `.html` extension). This is the version CD reviews for approval.
+
 ### 3. CD Approves the Spec
 
 **Hard gate.** Present the spec to the human and wait for explicit approval. Do NOT proceed to planning without approval. Implicit approval is fine ("looks good", "proceed", "yes").
@@ -436,6 +438,8 @@ Every section required by the template — package impact, phase dependencies ta
 **FACTS Gate** — after verifying completeness, score each phase using the FACTS rubric in `[sdlc-root]/process/input-quality-gates.md`. This is a soft gate: present the per-phase scores and overall mean, then let the human decide whether to proceed to review or revise low-scoring phases first. Phases with Clarity < 3 or Testability < 3 are worth flagging — reviewers will struggle to evaluate ambiguous or unverifiable phases.
 
 Writer saves to: `docs/current_work/planning/dNN_name_plan.md`
+
+**Post-write: HTML render.** Render the plan to a self-contained HTML file for human reading. Read the design system from `[sdlc-root]/templates/html-design-system.html`, apply **plan** document-type defaults from `[sdlc-root]/process/html-rendering.md`, and write a `.html` file alongside the markdown.
 
 ### 5. Domain Agent Plan Review
 

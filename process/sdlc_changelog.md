@@ -52,6 +52,26 @@ Each entry contains:
 
 **Rationale:** HTML documents are dramatically more readable than markdown for human review — they support visual hierarchy, diagrams, interactive navigation, color-coded severity, and responsive layout. Auto-generating HTML after every deliverable means CD always has a readable version without extra effort. The multi-audience variant system (engineer always, plus leadership/design/marketing on request) means a single spec can be shared with different stakeholders in the framing they need, all from the same source markdown. The design system ensures visual consistency across all rendered deliverables without per-template HTML guidelines.
 
+## 2026-05-12: Wire HTML render steps into deliverable-producing skills
+
+**Origin:** First use of sdlc-render in a target project — `sdlc-lite-plan` completed without auto-generating HTML despite the CLAUDE-SDLC.md workflow rule. CC follows each skill's workflow steps sequentially and doesn't reliably circle back to CLAUDE-SDLC.md for post-write hooks.
+
+**What happened:** The CLAUDE-SDLC.md auto-render rule alone was insufficient to trigger HTML generation. CC needs explicit render instructions within each skill's workflow, at the point where the deliverable file is written, to reliably produce the HTML version.
+
+**Changes made:**
+
+1. **`skills/sdlc-plan/SKILL.md`** — Added "Post-write: HTML render" step after spec save (spec type) and after plan save (plan type). Two insertion points because this skill writes two deliverables.
+2. **`skills/sdlc-lite-plan/SKILL.md`** — Added render step after plan file save, before FACTS Gate (plan type).
+3. **`skills/sdlc-execute/SKILL.md`** — Added render step after Worker Agent Reviews append, before discipline capture (result type).
+4. **`skills/sdlc-lite-execute/SKILL.md`** — Added render step after result doc write, before discipline capture (result type).
+5. **`skills/sdlc-idea/SKILL.md`** — Added render step after idea brief save, before next-step recommendation (exploration type).
+6. **`skills/sdlc-handoff/SKILL.md`** — Added render step after handoff doc validation, before surfacing to user (handoff type).
+7. **`skills/sdlc-audit/SKILL.md`** — Added render step after audit artifact save, before triage (report type).
+8. **`skills/sdlc-debug-incident/SKILL.md`** — Added render step after incident doc scaffold, before first-response checklist (incident type).
+9. **`skills/sdlc-create-reference-doc/SKILL.md`** — Added render step after registration, before commit (reference type).
+
+**Rationale:** Belt-and-suspenders — the CLAUDE-SDLC.md rule remains as a fallback, but each skill now explicitly includes the render step in its own workflow. This is the same pattern used for other cross-cutting concerns like discipline capture and CLAUDE.md refresh: the instruction lives in the skill workflow where CC will encounter it during execution, not in a separate document CC might not consult.
+
 ---
 
 ## 2026-05-04: Add Adapter Lifecycle Protocol `[contract-change]`

@@ -206,6 +206,8 @@ related_deliverables: []  # filled in as deliverables get created
 - {question}
 ```
 
+**Post-write: HTML render.** Render the incident doc to a self-contained HTML file for human reading. Read the design system from `[sdlc-root]/templates/html-design-system.html`, apply **incident** document-type defaults from `[sdlc-root]/process/html-rendering.md`, and write a `.html` file alongside the markdown.
+
 ### T2a. First Response Checklist
 
 Before selecting agents or generating hypotheses, run the first-response checklist for the incident class. These steps take 3-5 minutes and accomplish two things: they preserve evidence before any mitigation disturbs the system state, and they often narrow the hypothesis space enough that one or two agents can handle what would otherwise need five.

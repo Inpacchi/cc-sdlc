@@ -310,6 +310,8 @@ Reference the template at `[sdlc-root]/templates/sdlc_lite_result_template.md`. 
 
 The result doc lives alongside the plan file in `docs/current_work/sdlc-lite/`. When the plan is moved to `completed/`, the result doc moves with it.
 
+**Post-write: HTML render.** Render the result doc to a self-contained HTML file for human reading. Read the design system from `[sdlc-root]/templates/html-design-system.html`, apply **result** document-type defaults from `[sdlc-root]/process/html-rendering.md`, and write a `.html` file alongside the markdown.
+
 ### 3c. Discipline Capture
 
 Run the discipline capture protocol per `[sdlc-root]/process/discipline_capture.md`. Context format: `[DNN — phase N]`. This includes structured gap detection (using the review-fix triage table and agent dispatch data from this session) followed by the freeform insight scan.

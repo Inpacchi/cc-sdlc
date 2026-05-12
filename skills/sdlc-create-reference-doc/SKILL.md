@@ -160,6 +160,8 @@ Once review is clean:
 2. Update `docs/reference/_index.md` — add a row to the index table. If the index file does not exist, create it with a header + initial table schema (columns: `Title`, `Category`, `Owner`, `Audience`, `Last Verified`, `Link`).
 3. If `docs/reference/` or `docs/reference/{category}/` does not exist yet, create the directory.
 
+**Post-write: HTML render.** Render the reference doc to a self-contained HTML file for human reading. Read the design system from `[sdlc-root]/templates/html-design-system.html`, apply **reference** document-type defaults from `[sdlc-root]/process/html-rendering.md`, and write a `.html` file alongside the markdown.
+
 ### 7. Commit
 
 Stage the reference doc + index update + any template-anchor corrections. Commit message format:

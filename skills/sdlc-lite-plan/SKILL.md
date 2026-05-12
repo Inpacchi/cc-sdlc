@@ -212,6 +212,8 @@ The most relevant worker domain agent writes the plan **and saves it directly to
 - **Approach comparison:** If the approach follows an existing codebase pattern, cite the precedent. Otherwise, briefly compare 2 approaches with tradeoffs and state which was selected.
 - **The writing agent must produce the complete plan.** Every section shown in the template above — scope, files, agents, phase dependencies table, phases, and post-execution review — must be present in the saved file. After the agent confirms the save, Read the file to verify. If the saved plan is missing any template section, re-dispatch the writing agent to complete it and re-save. Do not fill in missing sections yourself.
 
+**Post-write: HTML render.** Render the plan to a self-contained HTML file for human reading. Read the design system from `[sdlc-root]/templates/html-design-system.html`, apply **plan** document-type defaults from `[sdlc-root]/process/html-rendering.md`, and write a `.html` file alongside the markdown.
+
 **FACTS Gate** — after verifying completeness, score each phase using the FACTS rubric in `[sdlc-root]/process/input-quality-gates.md`. This is a soft gate: present the per-phase scores and overall mean, then let the human decide whether to proceed to review or revise low-scoring phases first. Code snippets in lite plans count as Clarity evidence — phases with concrete signatures or diffs score higher on C than prose-only descriptions.
 
 ### 3. Worker Domain Agent Plan Review

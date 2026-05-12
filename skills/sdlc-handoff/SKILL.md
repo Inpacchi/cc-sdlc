@@ -158,6 +158,8 @@ Validate before saving:
 - Evidence section has at least one concrete reference (file path, line number, or verbatim error). A handoff with no evidence is a TODO, not a handoff.
 - Recommended next skill names a real, installed skill (or `direct-dispatch`).
 
+**Post-write: HTML render.** Render the handoff doc to a self-contained HTML file for human reading. Read the design system from `[sdlc-root]/templates/html-design-system.html`, apply **handoff** document-type defaults from `[sdlc-root]/process/html-rendering.md`, and write a `.html` file alongside the markdown.
+
 ### 6. Surface the Handoff
 
 Output to the user (plain text, not a question):
