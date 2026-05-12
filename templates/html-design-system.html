@@ -1,0 +1,1210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SDLC HTML Design System</title>
+<style>
+/* ============================================================
+   SDLC HTML Design System
+   ============================================================
+   This file is the visual foundation for all rendered HTML
+   deliverables. When generating HTML from markdown, read this
+   file and apply the tokens, components, and layout patterns
+   defined here.
+
+   Principles:
+   - Single-file: all CSS inline, no external dependencies
+   - Token-driven: use CSS custom properties for consistency
+   - Semantic: HTML structure mirrors document meaning
+   - Responsive: works on desktop, tablet, and mobile
+   - Printable: degrades gracefully to print
+   ============================================================ */
+
+/* --- Tokens --- */
+:root {
+  /* Color — Neutral */
+  --slate: #141413;
+  --gray-900: #2A2A28;
+  --gray-700: #3D3D3A;
+  --gray-500: #87867F;
+  --gray-300: #D1CFC5;
+  --gray-150: #F0EEE6;
+  --oat: #E3DACC;
+  --ivory: #FAF9F5;
+  --white: #FFFFFF;
+
+  /* Color — Accent */
+  --clay: #D97757;
+  --clay-light: #F4C6B3;
+  --olive: #788C5D;
+  --olive-light: #C8D5B8;
+  --teal: #4A8C8C;
+  --teal-light: #B3D4D4;
+
+  /* Color — Semantic */
+  --success: #3D7A4A;
+  --success-bg: #E8F5E9;
+  --warning: #B8860B;
+  --warning-bg: #FFF8E1;
+  --danger: #B04A3F;
+  --danger-bg: #FDECEA;
+  --info: #4A6FA5;
+  --info-bg: #E3EDF7;
+
+  /* Typography */
+  --serif: Georgia, "Times New Roman", serif;
+  --sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --mono: "SF Mono", "Cascadia Code", "Fira Code", Menlo, Consolas, monospace;
+
+  /* Type Scale */
+  --text-display: 2.5rem;    /* 40px — page title */
+  --text-h1: 1.75rem;        /* 28px — section heading */
+  --text-h2: 1.25rem;        /* 20px — subsection */
+  --text-h3: 1.05rem;        /* ~17px — group heading */
+  --text-body: 0.95rem;      /* ~15px — body text */
+  --text-small: 0.825rem;    /* ~13px — labels, captions */
+  --text-caption: 0.75rem;   /* 12px — metadata */
+
+  /* Line Heights */
+  --lh-tight: 1.2;
+  --lh-normal: 1.6;
+  --lh-loose: 1.8;
+
+  /* Spacing Scale (4px base) */
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 24px;
+  --sp-6: 32px;
+  --sp-7: 48px;
+  --sp-8: 64px;
+
+  /* Border */
+  --border-width: 1.5px;
+  --border-color: var(--gray-300);
+  --border: var(--border-width) solid var(--border-color);
+
+  /* Radius */
+  --r-xs: 4px;
+  --r-sm: 6px;
+  --r-md: 8px;
+  --r-lg: 12px;
+
+  /* Page */
+  --page-max: 1040px;
+  --page-padding: var(--sp-7);
+}
+
+/* --- Reset & Base --- */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: var(--sans);
+  font-size: var(--text-body);
+  line-height: var(--lh-normal);
+  color: var(--slate);
+  background: var(--ivory);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* --- Page Layout --- */
+.page {
+  max-width: var(--page-max);
+  margin: 0 auto;
+  padding: var(--sp-7) var(--page-padding);
+}
+
+@media (max-width: 768px) {
+  :root { --page-padding: var(--sp-5); }
+}
+@media (max-width: 480px) {
+  :root { --page-padding: var(--sp-4); }
+}
+
+/* --- Typography --- */
+.page-title {
+  font-family: var(--serif);
+  font-size: var(--text-display);
+  font-weight: 400;
+  line-height: var(--lh-tight);
+  letter-spacing: -0.02em;
+  margin-bottom: var(--sp-3);
+}
+
+.page-subtitle {
+  font-size: var(--text-body);
+  color: var(--gray-500);
+  margin-bottom: var(--sp-7);
+}
+
+.eyebrow {
+  font-family: var(--mono);
+  font-size: var(--text-caption);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--gray-500);
+  margin-bottom: var(--sp-2);
+}
+
+.section-number {
+  font-family: var(--mono);
+  font-size: var(--text-caption);
+  color: var(--gray-500);
+  margin-right: var(--sp-2);
+}
+
+h2 {
+  font-family: var(--serif);
+  font-size: var(--text-h1);
+  font-weight: 400;
+  line-height: var(--lh-tight);
+  margin-top: var(--sp-7);
+  margin-bottom: var(--sp-4);
+}
+
+h3 {
+  font-size: var(--text-h2);
+  font-weight: 600;
+  margin-top: var(--sp-6);
+  margin-bottom: var(--sp-3);
+}
+
+h4 {
+  font-size: var(--text-h3);
+  font-weight: 600;
+  margin-top: var(--sp-5);
+  margin-bottom: var(--sp-2);
+}
+
+p { margin-bottom: var(--sp-4); }
+
+a { color: var(--clay); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+hr.rule {
+  border: none;
+  border-top: 1px solid var(--gray-300);
+  margin: var(--sp-7) 0;
+}
+
+/* --- Header --- */
+.doc-header {
+  border-bottom: var(--border);
+  padding-bottom: var(--sp-6);
+  margin-bottom: var(--sp-7);
+}
+
+.doc-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-3);
+  margin-top: var(--sp-4);
+  font-size: var(--text-small);
+  color: var(--gray-500);
+}
+
+.doc-meta span { display: flex; align-items: center; gap: var(--sp-1); }
+
+/* --- Summary Grid --- */
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--sp-4);
+  margin-bottom: var(--sp-7);
+}
+
+@media (max-width: 768px) {
+  .summary-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 480px) {
+  .summary-grid { grid-template-columns: 1fr; }
+}
+
+/* --- Cards --- */
+.card {
+  background: var(--white);
+  border: var(--border);
+  border-radius: var(--r-lg);
+  padding: var(--sp-5);
+}
+
+.card-compact {
+  background: var(--white);
+  border: var(--border);
+  border-radius: var(--r-md);
+  padding: var(--sp-4);
+}
+
+/* --- Stat Card --- */
+.stat-card {
+  background: var(--white);
+  border: var(--border);
+  border-radius: var(--r-lg);
+  padding: var(--sp-5);
+  text-align: center;
+}
+
+.stat-card .stat-value {
+  font-family: var(--serif);
+  font-size: var(--text-display);
+  font-weight: 400;
+  line-height: 1;
+  margin-bottom: var(--sp-1);
+}
+
+.stat-card .stat-label {
+  font-size: var(--text-small);
+  color: var(--gray-500);
+}
+
+.stat-card .stat-delta {
+  font-family: var(--mono);
+  font-size: var(--text-caption);
+  margin-top: var(--sp-1);
+}
+
+.stat-delta.up { color: var(--success); }
+.stat-delta.down { color: var(--danger); }
+.stat-delta.flat { color: var(--gray-500); }
+
+.stat-card.accent-left {
+  border-left: 3px solid var(--clay);
+  text-align: left;
+}
+
+/* --- Badges & Tags --- */
+.badge {
+  display: inline-block;
+  font-family: var(--mono);
+  font-size: var(--text-caption);
+  padding: var(--sp-1) var(--sp-2);
+  border-radius: var(--r-xs);
+  background: var(--gray-150);
+  color: var(--gray-700);
+}
+
+.badge.success { background: var(--success-bg); color: var(--success); }
+.badge.warning { background: var(--warning-bg); color: var(--warning); }
+.badge.danger  { background: var(--danger-bg);  color: var(--danger); }
+.badge.info    { background: var(--info-bg);    color: var(--info); }
+
+.tag {
+  display: inline-block;
+  font-family: var(--mono);
+  font-size: var(--text-caption);
+  padding: 2px var(--sp-2);
+  border-radius: var(--r-sm);
+  background: var(--oat);
+  color: var(--gray-700);
+}
+
+/* --- Severity Dot --- */
+.dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--gray-300);
+}
+
+.dot.low   { background: var(--olive); }
+.dot.med   { background: var(--warning); }
+.dot.high  { background: var(--danger); }
+
+/* --- Callout Boxes --- */
+.callout {
+  border-left: 3px solid var(--gray-300);
+  padding: var(--sp-4);
+  margin-bottom: var(--sp-4);
+  background: var(--white);
+  border-radius: 0 var(--r-md) var(--r-md) 0;
+}
+
+.callout.info    { border-left-color: var(--info); }
+.callout.warning { border-left-color: var(--warning); }
+.callout.danger  { border-left-color: var(--danger); }
+.callout.success { border-left-color: var(--success); }
+
+.callout-title {
+  font-weight: 600;
+  font-size: var(--text-small);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: var(--sp-2);
+}
+
+.callout.info    .callout-title { color: var(--info); }
+.callout.warning .callout-title { color: var(--warning); }
+.callout.danger  .callout-title { color: var(--danger); }
+.callout.success .callout-title { color: var(--success); }
+
+/* --- Tables --- */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-small);
+  margin-bottom: var(--sp-5);
+}
+
+thead th {
+  text-align: left;
+  font-weight: 600;
+  padding: var(--sp-3) var(--sp-4);
+  border-bottom: 2px solid var(--gray-300);
+  font-size: var(--text-caption);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--gray-500);
+}
+
+tbody td {
+  padding: var(--sp-3) var(--sp-4);
+  border-bottom: 1px solid var(--gray-150);
+}
+
+tbody tr:hover { background: var(--gray-150); }
+
+/* --- Code --- */
+code {
+  font-family: var(--mono);
+  font-size: 0.88em;
+  background: var(--gray-150);
+  padding: 2px var(--sp-1);
+  border-radius: var(--r-xs);
+}
+
+pre {
+  background: var(--gray-900);
+  color: var(--gray-150);
+  padding: var(--sp-5);
+  border-radius: var(--r-md);
+  overflow-x: auto;
+  font-family: var(--mono);
+  font-size: var(--text-small);
+  line-height: var(--lh-loose);
+  margin-bottom: var(--sp-5);
+}
+
+pre code {
+  background: none;
+  padding: 0;
+  color: inherit;
+}
+
+/* --- Diff Viewer --- */
+.diff {
+  background: var(--white);
+  border: var(--border);
+  border-radius: var(--r-md);
+  overflow: hidden;
+  margin-bottom: var(--sp-5);
+  font-family: var(--mono);
+  font-size: var(--text-small);
+}
+
+.diff-header {
+  background: var(--gray-150);
+  padding: var(--sp-2) var(--sp-4);
+  font-weight: 600;
+  border-bottom: var(--border);
+}
+
+.diff-row {
+  display: flex;
+  padding: 1px 0;
+  line-height: 1.5;
+}
+
+.diff-row .line-num {
+  width: 48px;
+  min-width: 48px;
+  text-align: right;
+  padding-right: var(--sp-3);
+  color: var(--gray-500);
+  user-select: none;
+  font-size: var(--text-caption);
+  line-height: inherit;
+}
+
+.diff-row .line-content {
+  flex: 1;
+  padding-left: var(--sp-3);
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.diff-row.add { background: #E6FFED; }
+.diff-row.add .line-content::before { content: "+"; color: var(--success); margin-right: var(--sp-2); }
+.diff-row.del { background: #FFEEF0; }
+.diff-row.del .line-content::before { content: "-"; color: var(--danger); margin-right: var(--sp-2); }
+.diff-row.hunk {
+  background: var(--info-bg);
+  color: var(--info);
+  padding: var(--sp-1) var(--sp-4);
+  font-size: var(--text-caption);
+}
+
+/* --- Collapsible Sections --- */
+details {
+  border: var(--border);
+  border-radius: var(--r-md);
+  margin-bottom: var(--sp-4);
+  background: var(--white);
+}
+
+details summary {
+  padding: var(--sp-4);
+  cursor: pointer;
+  font-weight: 600;
+  user-select: none;
+  list-style: none;
+}
+
+details summary::before {
+  content: "\25B6";
+  display: inline-block;
+  margin-right: var(--sp-2);
+  font-size: var(--text-caption);
+  transition: transform 0.15s;
+  color: var(--gray-500);
+}
+
+details[open] summary::before { transform: rotate(90deg); }
+
+details .details-content {
+  padding: 0 var(--sp-4) var(--sp-4);
+}
+
+/* --- Lists --- */
+ul, ol {
+  margin-bottom: var(--sp-4);
+  padding-left: var(--sp-5);
+}
+
+li { margin-bottom: var(--sp-2); }
+
+ul.checklist {
+  list-style: none;
+  padding-left: 0;
+}
+
+ul.checklist li::before {
+  content: "\2610";
+  margin-right: var(--sp-2);
+  color: var(--gray-500);
+}
+
+ul.checklist li.checked::before {
+  content: "\2611";
+  color: var(--success);
+}
+
+/* --- Tabs --- */
+.tabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 2px solid var(--gray-300);
+  margin-bottom: var(--sp-5);
+}
+
+.tab {
+  padding: var(--sp-3) var(--sp-5);
+  cursor: pointer;
+  font-size: var(--text-small);
+  font-weight: 600;
+  color: var(--gray-500);
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.tab:hover { color: var(--slate); }
+.tab.active {
+  color: var(--slate);
+  border-bottom-color: var(--clay);
+}
+
+.tab-panel { display: none; }
+.tab-panel.active { display: block; }
+
+/* --- Timeline --- */
+.timeline {
+  position: relative;
+  padding-left: var(--sp-6);
+}
+
+.timeline::before {
+  content: "";
+  position: absolute;
+  left: 11px;
+  top: 4px;
+  bottom: 4px;
+  width: 2px;
+  background: var(--gray-300);
+}
+
+.timeline-item {
+  position: relative;
+  margin-bottom: var(--sp-5);
+}
+
+.timeline-item::before {
+  content: "";
+  position: absolute;
+  left: calc(-1 * var(--sp-6) + 6px);
+  top: 6px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--white);
+  border: 2px solid var(--gray-300);
+}
+
+.timeline-item.complete::before { background: var(--olive); border-color: var(--olive); }
+.timeline-item.active::before  { background: var(--clay);  border-color: var(--clay); }
+.timeline-item.pending::before { background: var(--white);  border-color: var(--gray-300); }
+
+.timeline-label {
+  font-weight: 600;
+  margin-bottom: var(--sp-1);
+}
+
+.timeline-meta {
+  font-size: var(--text-small);
+  color: var(--gray-500);
+}
+
+/* --- Comparison Grid --- */
+.comparison-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--sp-4);
+  margin-bottom: var(--sp-5);
+}
+
+@media (max-width: 768px) {
+  .comparison-grid { grid-template-columns: 1fr; }
+}
+
+.comparison-grid .card h4 {
+  margin-top: 0;
+}
+
+/* --- Requirement Card --- */
+.requirement {
+  background: var(--white);
+  border: var(--border);
+  border-radius: var(--r-md);
+  padding: var(--sp-4);
+  margin-bottom: var(--sp-3);
+}
+
+.requirement-id {
+  font-family: var(--mono);
+  font-size: var(--text-caption);
+  color: var(--gray-500);
+  margin-bottom: var(--sp-1);
+}
+
+.requirement-title {
+  font-weight: 600;
+  margin-bottom: var(--sp-2);
+}
+
+.requirement-body {
+  font-size: var(--text-small);
+  color: var(--gray-700);
+}
+
+/* --- Table of Contents --- */
+.toc {
+  background: var(--white);
+  border: var(--border);
+  border-radius: var(--r-lg);
+  padding: var(--sp-5);
+  margin-bottom: var(--sp-7);
+}
+
+.toc-title {
+  font-weight: 600;
+  font-size: var(--text-small);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--gray-500);
+  margin-bottom: var(--sp-3);
+}
+
+.toc ol {
+  padding-left: var(--sp-5);
+  margin-bottom: 0;
+}
+
+.toc li { margin-bottom: var(--sp-2); }
+
+.toc a {
+  color: var(--slate);
+  font-size: var(--text-small);
+}
+
+.toc a:hover { color: var(--clay); }
+
+/* --- SVG Diagrams --- */
+.diagram-container {
+  background: var(--white);
+  border: var(--border);
+  border-radius: var(--r-lg);
+  padding: var(--sp-5);
+  margin-bottom: var(--sp-5);
+  overflow-x: auto;
+}
+
+.diagram-container svg {
+  display: block;
+  margin: 0 auto;
+  max-width: 100%;
+  height: auto;
+}
+
+.diagram-container svg text {
+  font-family: var(--sans);
+  font-size: 13px;
+  fill: var(--slate);
+}
+
+.diagram-container svg text.mono {
+  font-family: var(--mono);
+  font-size: 11px;
+}
+
+.diagram-container svg rect.node {
+  fill: var(--white);
+  stroke: var(--gray-300);
+  stroke-width: 1.5;
+  rx: 6;
+}
+
+.diagram-container svg rect.node-accent {
+  fill: var(--clay-light);
+  stroke: var(--clay);
+  stroke-width: 1.5;
+  rx: 6;
+}
+
+.diagram-container svg line,
+.diagram-container svg path.edge {
+  stroke: var(--gray-300);
+  stroke-width: 1.5;
+  fill: none;
+}
+
+.diagram-container svg line.dashed,
+.diagram-container svg path.dashed {
+  stroke-dasharray: 6 4;
+}
+
+.diagram-container svg marker path {
+  fill: var(--gray-500);
+}
+
+/* --- Finding Row (for audit/review output) --- */
+.finding {
+  display: flex;
+  gap: var(--sp-3);
+  padding: var(--sp-3) var(--sp-4);
+  border-bottom: 1px solid var(--gray-150);
+  align-items: flex-start;
+}
+
+.finding:last-child { border-bottom: none; }
+
+.finding .finding-severity { min-width: 60px; }
+.finding .finding-body { flex: 1; }
+
+.finding .finding-body strong {
+  display: block;
+  margin-bottom: var(--sp-1);
+}
+
+.finding .finding-body p {
+  font-size: var(--text-small);
+  color: var(--gray-700);
+  margin-bottom: 0;
+}
+
+/* --- Two-Column Layout --- */
+.two-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--sp-5);
+  margin-bottom: var(--sp-5);
+}
+
+@media (max-width: 768px) {
+  .two-col { grid-template-columns: 1fr; }
+}
+
+/* --- Three-Column Layout --- */
+.three-col {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--sp-4);
+  margin-bottom: var(--sp-5);
+}
+
+@media (max-width: 768px) {
+  .three-col { grid-template-columns: 1fr; }
+}
+
+/* --- Banner / Status Bar --- */
+.banner {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: var(--sp-3) var(--sp-4);
+  border-radius: var(--r-md);
+  margin-bottom: var(--sp-5);
+  font-size: var(--text-small);
+  font-weight: 600;
+}
+
+.banner.info    { background: var(--info-bg);    color: var(--info); }
+.banner.success { background: var(--success-bg); color: var(--success); }
+.banner.warning { background: var(--warning-bg); color: var(--warning); }
+.banner.danger  { background: var(--danger-bg);  color: var(--danger); }
+
+/* --- Footer --- */
+.doc-footer {
+  margin-top: var(--sp-8);
+  padding-top: var(--sp-5);
+  border-top: 1px solid var(--gray-300);
+  font-size: var(--text-caption);
+  color: var(--gray-500);
+  text-align: center;
+}
+
+/* --- Print --- */
+@media print {
+  body { background: white; }
+  .page { max-width: none; padding: 0; }
+  details { border: none; }
+  details[open] summary { font-weight: bold; }
+  pre { white-space: pre-wrap; word-break: break-all; }
+  .tabs { display: none; }
+  .tab-panel { display: block !important; }
+  .callout, .card, .stat-card { break-inside: avoid; }
+}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- ============================================================
+       COMPONENT REFERENCE
+       ============================================================
+       Below are examples of each component. When rendering a
+       markdown deliverable to HTML, select the components that
+       match the document's content and structure.
+       ============================================================ -->
+
+  <header class="doc-header">
+    <div class="eyebrow">SDLC Design System</div>
+    <h1 class="page-title">Component Reference</h1>
+    <p class="page-subtitle">Visual vocabulary for rendered HTML deliverables. Every component below is available when converting markdown to HTML.</p>
+    <div class="doc-meta">
+      <span><strong>Version:</strong> 1.0</span>
+      <span><strong>Updated:</strong> 2026-05-12</span>
+    </div>
+  </header>
+
+  <!-- Table of Contents -->
+  <nav class="toc">
+    <div class="toc-title">Contents</div>
+    <ol>
+      <li><a href="#typography">Typography</a></li>
+      <li><a href="#summary-grid">Summary Grid</a></li>
+      <li><a href="#stat-cards">Stat Cards</a></li>
+      <li><a href="#cards">Cards &amp; Panels</a></li>
+      <li><a href="#badges">Badges, Tags &amp; Severity</a></li>
+      <li><a href="#callouts">Callout Boxes</a></li>
+      <li><a href="#tables">Tables</a></li>
+      <li><a href="#code">Code Blocks</a></li>
+      <li><a href="#diffs">Diff Viewer</a></li>
+      <li><a href="#collapsible">Collapsible Sections</a></li>
+      <li><a href="#tabs">Tabs</a></li>
+      <li><a href="#timeline">Timeline</a></li>
+      <li><a href="#requirements">Requirement Cards</a></li>
+      <li><a href="#findings">Finding Rows</a></li>
+      <li><a href="#diagrams">SVG Diagrams</a></li>
+      <li><a href="#layouts">Layout Patterns</a></li>
+      <li><a href="#banner">Banners</a></li>
+    </ol>
+  </nav>
+
+  <!-- 01 Typography -->
+  <section id="typography">
+    <h2><span class="section-number">01</span> Typography</h2>
+    <h1 class="page-title">Page Title (serif, display)</h1>
+    <h2>Section Heading (serif, h1 scale)</h2>
+    <h3>Subsection Heading (sans, h2 scale)</h3>
+    <h4>Group Heading (sans, h3 scale)</h4>
+    <p>Body text uses the system sans-serif stack at the body scale. It should be comfortable to read at length with generous line height.</p>
+    <p><small style="font-size: var(--text-small); color: var(--gray-500);">Small text for labels, captions, and secondary information.</small></p>
+    <p><span class="eyebrow">Eyebrow Label</span></p>
+    <p><code>Inline code</code> uses the mono stack with a subtle background.</p>
+  </section>
+
+  <hr class="rule">
+
+  <!-- 02 Summary Grid -->
+  <section id="summary-grid">
+    <h2><span class="section-number">02</span> Summary Grid</h2>
+    <p>Four-column grid for at-a-glance metadata. Collapses to 2 columns on tablet, 1 on mobile.</p>
+    <div class="summary-grid">
+      <div class="card-compact"><strong>Status</strong><br>In Progress</div>
+      <div class="card-compact"><strong>Priority</strong><br>High</div>
+      <div class="card-compact"><strong>Owner</strong><br>Backend Team</div>
+      <div class="card-compact"><strong>Target</strong><br>2026-05-20</div>
+    </div>
+  </section>
+
+  <hr class="rule">
+
+  <!-- 03 Stat Cards -->
+  <section id="stat-cards">
+    <h2><span class="section-number">03</span> Stat Cards</h2>
+    <div class="summary-grid">
+      <div class="stat-card">
+        <div class="stat-value">42</div>
+        <div class="stat-label">Files Changed</div>
+        <div class="stat-delta up">+12 from last sprint</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">98%</div>
+        <div class="stat-label">Test Coverage</div>
+        <div class="stat-delta flat">no change</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">3</div>
+        <div class="stat-label">Open Blockers</div>
+        <div class="stat-delta down">-2 from yesterday</div>
+      </div>
+      <div class="stat-card accent-left">
+        <div class="stat-value" style="font-size: var(--text-h1);">Needs Decision</div>
+        <div class="stat-label">API versioning strategy</div>
+      </div>
+    </div>
+  </section>
+
+  <hr class="rule">
+
+  <!-- 04 Cards -->
+  <section id="cards">
+    <h2><span class="section-number">04</span> Cards &amp; Panels</h2>
+    <div class="two-col">
+      <div class="card">
+        <h4>Standard Card</h4>
+        <p>White background, 1.5px border, 12px radius. Use for grouping related content.</p>
+      </div>
+      <div class="card-compact">
+        <h4>Compact Card</h4>
+        <p>Tighter padding, 8px radius. Use for metadata cells in grids.</p>
+      </div>
+    </div>
+  </section>
+
+  <hr class="rule">
+
+  <!-- 05 Badges & Tags -->
+  <section id="badges">
+    <h2><span class="section-number">05</span> Badges, Tags &amp; Severity</h2>
+    <p>
+      <span class="badge">Default</span>
+      <span class="badge success">Success</span>
+      <span class="badge warning">Warning</span>
+      <span class="badge danger">Danger</span>
+      <span class="badge info">Info</span>
+    </p>
+    <p style="margin-top: var(--sp-3);">
+      <span class="tag">tag</span>
+      <span class="tag">v2.1.0</span>
+      <span class="tag">backend</span>
+    </p>
+    <p style="margin-top: var(--sp-3);">
+      <span class="dot low"></span> Low &nbsp;
+      <span class="dot med"></span> Medium &nbsp;
+      <span class="dot high"></span> High
+    </p>
+  </section>
+
+  <hr class="rule">
+
+  <!-- 06 Callouts -->
+  <section id="callouts">
+    <h2><span class="section-number">06</span> Callout Boxes</h2>
+    <div class="callout info">
+      <div class="callout-title">Info</div>
+      <p style="margin-bottom:0;">Neutral informational callout for context or background detail.</p>
+    </div>
+    <div class="callout warning">
+      <div class="callout-title">Warning</div>
+      <p style="margin-bottom:0;">Highlights a risk, caveat, or something the reader should be aware of.</p>
+    </div>
+    <div class="callout danger">
+      <div class="callout-title">Blocking</div>
+      <p style="margin-bottom:0;">Critical issue that must be resolved before proceeding.</p>
+    </div>
+    <div class="callout success">
+      <div class="callout-title">Approved</div>
+      <p style="margin-bottom:0;">Confirmed, approved, or resolved item.</p>
+    </div>
+  </section>
+
+  <hr class="rule">
+
+  <!-- 07 Tables -->
+  <section id="tables">
+    <h2><span class="section-number">07</span> Tables</h2>
+    <table>
+      <thead>
+        <tr><th>File</th><th>Changes</th><th>Risk</th><th>Reviewer</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code>src/auth/login.ts</code></td><td>+42 / -18</td><td><span class="dot high"></span> High</td><td>Security</td></tr>
+        <tr><td><code>src/api/routes.ts</code></td><td>+15 / -3</td><td><span class="dot med"></span> Med</td><td>Backend</td></tr>
+        <tr><td><code>src/utils/format.ts</code></td><td>+8 / -2</td><td><span class="dot low"></span> Low</td><td>Auto</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <hr class="rule">
+
+  <!-- 08 Code -->
+  <section id="code">
+    <h2><span class="section-number">08</span> Code Blocks</h2>
+<pre><code>export async function authenticate(token: string): Promise&lt;User&gt; {
+  const decoded = verify(token, config.secret);
+  const user = await db.users.findById(decoded.sub);
+  if (!user) throw new UnauthorizedError("User not found");
+  return user;
+}</code></pre>
+  </section>
+
+  <hr class="rule">
+
+  <!-- 09 Diffs -->
+  <section id="diffs">
+    <h2><span class="section-number">09</span> Diff Viewer</h2>
+    <div class="diff">
+      <div class="diff-header">src/auth/login.ts</div>
+      <div class="diff-row hunk">@@ -12,6 +12,8 @@ export async function login()</div>
+      <div class="diff-row"><span class="line-num">12</span><span class="line-content">  const token = await generateToken(user);</span></div>
+      <div class="diff-row del"><span class="line-num">13</span><span class="line-content">  return { token };</span></div>
+      <div class="diff-row add"><span class="line-num">13</span><span class="line-content">  const refreshToken = await generateRefreshToken(user);</span></div>
+      <div class="diff-row add"><span class="line-num">14</span><span class="line-content">  return { token, refreshToken };</span></div>
+    </div>
+  </section>
+
+  <hr class="rule">
+
+  <!-- 10 Collapsible -->
+  <section id="collapsible">
+    <h2><span class="section-number">10</span> Collapsible Sections</h2>
+    <details>
+      <summary>Implementation Details</summary>
+      <div class="details-content">
+        <p>Content hidden by default. Use for supplementary detail, lengthy code, or lower-priority information that shouldn't dominate the page.</p>
+      </div>
+    </details>
+    <details open>
+      <summary>Open by Default</summary>
+      <div class="details-content">
+        <p>Add the <code>open</code> attribute to expand sections that should be visible initially.</p>
+      </div>
+    </details>
+  </section>
+
+  <hr class="rule">
+
+  <!-- 11 Tabs -->
+  <section id="tabs">
+    <h2><span class="section-number">11</span> Tabs</h2>
+    <div class="tabs">
+      <div class="tab active" onclick="switchTab(event, 'tab-overview')">Overview</div>
+      <div class="tab" onclick="switchTab(event, 'tab-details')">Details</div>
+      <div class="tab" onclick="switchTab(event, 'tab-code')">Code</div>
+    </div>
+    <div id="tab-overview" class="tab-panel active">
+      <p>Tab panels switch content in place. Use for multi-perspective views of the same data — e.g., overview / technical / timeline views of a plan.</p>
+    </div>
+    <div id="tab-details" class="tab-panel">
+      <p>Details panel content. Tabs require a small script block (see bottom of this file).</p>
+    </div>
+    <div id="tab-code" class="tab-panel">
+<pre><code>// Code panel content
+console.log("Hello from tabs");</code></pre>
+    </div>
+  </section>
+
+  <hr class="rule">
+
+  <!-- 12 Timeline -->
+  <section id="timeline">
+    <h2><span class="section-number">12</span> Timeline</h2>
+    <div class="timeline">
+      <div class="timeline-item complete">
+        <div class="timeline-label">Phase 1: Foundation</div>
+        <div class="timeline-meta">Completed — 2026-05-01</div>
+      </div>
+      <div class="timeline-item active">
+        <div class="timeline-label">Phase 2: Implementation</div>
+        <div class="timeline-meta">In progress — started 2026-05-05</div>
+      </div>
+      <div class="timeline-item pending">
+        <div class="timeline-label">Phase 3: Review &amp; Polish</div>
+        <div class="timeline-meta">Pending — estimated 2026-05-15</div>
+      </div>
+    </div>
+  </section>
+
+  <hr class="rule">
+
+  <!-- 13 Requirement Cards -->
+  <section id="requirements">
+    <h2><span class="section-number">13</span> Requirement Cards</h2>
+    <div class="requirement">
+      <div class="requirement-id">REQ-001</div>
+      <div class="requirement-title">User authentication via OAuth 2.0</div>
+      <div class="requirement-body">The system must support Google and GitHub OAuth providers. Session tokens expire after 24 hours with refresh token rotation.</div>
+    </div>
+    <div class="requirement">
+      <div class="requirement-id">REQ-002</div>
+      <div class="requirement-title">Rate limiting on public endpoints</div>
+      <div class="requirement-body">All public API endpoints must enforce rate limiting of 100 requests per minute per API key.</div>
+    </div>
+  </section>
+
+  <hr class="rule">
+
+  <!-- 14 Finding Rows -->
+  <section id="findings">
+    <h2><span class="section-number">14</span> Finding Rows</h2>
+    <div class="card" style="padding: 0; overflow: hidden;">
+      <div class="finding">
+        <div class="finding-severity"><span class="badge danger">Critical</span></div>
+        <div class="finding-body">
+          <strong>SQL injection in search endpoint</strong>
+          <p>User input passed directly to query builder without parameterization.</p>
+        </div>
+      </div>
+      <div class="finding">
+        <div class="finding-severity"><span class="badge warning">Warning</span></div>
+        <div class="finding-body">
+          <strong>Missing error boundary in checkout flow</strong>
+          <p>Payment form crashes propagate to the entire page instead of showing a fallback.</p>
+        </div>
+      </div>
+      <div class="finding">
+        <div class="finding-severity"><span class="badge info">Note</span></div>
+        <div class="finding-body">
+          <strong>Consider extracting validation logic</strong>
+          <p>Three handlers share near-identical validation — a shared schema would reduce duplication.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <hr class="rule">
+
+  <!-- 15 SVG Diagrams -->
+  <section id="diagrams">
+    <h2><span class="section-number">15</span> SVG Diagrams</h2>
+    <div class="diagram-container">
+      <svg viewBox="0 0 600 200" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M 0 0 L 10 5 L 0 10 z" fill="#87867F"/>
+          </marker>
+        </defs>
+        <!-- Nodes -->
+        <rect class="node" x="10" y="70" width="120" height="60"/>
+        <text x="70" y="105" text-anchor="middle">Client</text>
+
+        <rect class="node-accent" x="200" y="70" width="120" height="60"/>
+        <text x="260" y="105" text-anchor="middle">API Gateway</text>
+
+        <rect class="node" x="390" y="30" width="120" height="60"/>
+        <text x="450" y="65" text-anchor="middle">Auth Service</text>
+
+        <rect class="node" x="390" y="120" width="120" height="60"/>
+        <text x="450" y="155" text-anchor="middle">Data Service</text>
+
+        <!-- Edges -->
+        <line x1="130" y1="100" x2="200" y2="100" marker-end="url(#arrow)"/>
+        <line x1="320" y1="85" x2="390" y2="60" marker-end="url(#arrow)"/>
+        <line x1="320" y1="115" x2="390" y2="150" marker-end="url(#arrow)"/>
+        <line class="dashed" x1="450" y1="90" x2="450" y2="120" marker-end="url(#arrow)"/>
+      </svg>
+    </div>
+  </section>
+
+  <hr class="rule">
+
+  <!-- 16 Layouts -->
+  <section id="layouts">
+    <h2><span class="section-number">16</span> Layout Patterns</h2>
+    <h3>Two-Column</h3>
+    <div class="two-col">
+      <div class="card"><h4>Before</h4><p>Previous implementation with inline styles and no token system.</p></div>
+      <div class="card"><h4>After</h4><p>Refactored to use CSS custom properties for all visual values.</p></div>
+    </div>
+    <h3>Three-Column</h3>
+    <div class="three-col">
+      <div class="card-compact"><h4>Option A</h4><p>Server-side rendering</p></div>
+      <div class="card-compact"><h4>Option B</h4><p>Client-side SPA</p></div>
+      <div class="card-compact"><h4>Option C</h4><p>Hybrid approach</p></div>
+    </div>
+    <h3>Comparison Grid</h3>
+    <div class="comparison-grid">
+      <div class="card">
+        <h4>Approach 1: Monolith</h4>
+        <p>Single deployment, shared database, simple operations.</p>
+        <p><span class="badge success">Simple</span> <span class="badge warning">Scale risk</span></p>
+      </div>
+      <div class="card">
+        <h4>Approach 2: Microservices</h4>
+        <p>Independent deployments, service boundaries, operational complexity.</p>
+        <p><span class="badge success">Scalable</span> <span class="badge danger">Complex</span></p>
+      </div>
+    </div>
+  </section>
+
+  <hr class="rule">
+
+  <!-- 17 Banners -->
+  <section id="banner">
+    <h2><span class="section-number">17</span> Banners</h2>
+    <div class="banner info">Status: In Review</div>
+    <div class="banner success">All checks passed</div>
+    <div class="banner warning">2 open questions require CD decision</div>
+    <div class="banner danger">Blocked — waiting on external API access</div>
+  </section>
+
+  <footer class="doc-footer">
+    SDLC HTML Design System v1.0 &mdash; Generated by sdlc-render
+  </footer>
+
+</div>
+
+<script>
+function switchTab(event, panelId) {
+  const tabGroup = event.target.closest('section');
+  tabGroup.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  tabGroup.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  event.target.classList.add('active');
+  tabGroup.querySelector('#' + panelId).classList.add('active');
+}
+</script>
+</body>
+</html>

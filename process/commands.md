@@ -87,6 +87,12 @@ Installed only when CD opts into the `design` bundle during `/sdlc-initialize`.
 |---------|--------|
 | `/sdlc-port-opencode` | Adapt existing cc-sdlc installation for OpenCode — creates `.opencode/` structure, `AGENTS.md`, adapted agents/skills, and `opencode.json` alongside the Claude Code setup |
 
+## Rendering
+
+| Command | Action |
+|---------|--------|
+| `/sdlc-render` | Render a markdown deliverable as a self-contained HTML file. Interactive scoping for audience (multi-select), purpose, and emphasis. Auto-invoked after skills write deliverables. |
+
 ## Testing
 
 | Command | Action |

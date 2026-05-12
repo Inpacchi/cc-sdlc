@@ -107,6 +107,8 @@ If you're in direct dispatch and ANY of these become true, stop and ask CD about
 
 **After a direct-dispatch or ad-hoc session**, consider invoking `sdlc-reflect` to surface learnings into discipline parking lots — especially if the work involved gotchas, cross-domain friction, or patterns worth recording. This is optional; skip it if nothing non-obvious surfaced.
 
+**After any skill writes a deliverable MD file to `docs/current_work/`,** auto-render it to HTML using `sdlc-render` with document-type defaults and engineer audience. This produces a self-contained `.html` file alongside the markdown for human reading. No Q&A in auto mode — use the document type to select components and layout. See `[sdlc-root]/process/html-rendering.md` for conventions.
+
 **When starting any session:** Check `docs/current_work/` for in-progress deliverables before accepting new work.
 
 ### Process Changelog
@@ -116,6 +118,8 @@ When you make changes to SDLC process files (skills, agents, process docs, CLAUD
 - `[sdlc-root]/process/overview.md` — Full workflow
 - `[sdlc-root]/process/commands.md` — All SDLC commands and skills
 - `[sdlc-root]/templates/` — Document templates (spec, plan, result, concept index)
+- `[sdlc-root]/templates/html-design-system.html` — HTML design system for rendered deliverables
+- `[sdlc-root]/process/html-rendering.md` — HTML rendering conventions and document-type profiles
 - `docs/_index.md` — Deliverable catalog
 
 > **Note:** `[sdlc-root]` is `ops/sdlc/` by default, or `.claude/sdlc/` for projects using Neuroloom integration. The actual path is recorded in `.sdlc-manifest.json` under `sdlc_root`.

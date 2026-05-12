@@ -84,7 +84,8 @@
       "process/transaction-log-schema.md",
       "process/source-repo-safety.md",
       "process/path-mappings.md",
-      "process/adapter-lifecycle-protocol.md"
+      "process/adapter-lifecycle-protocol.md",
+      "process/html-rendering.md"
     ],
     "templates": [
       "templates/spec_template.md",
@@ -100,7 +101,8 @@
       "templates/decision_record_template.md",
       "templates/reference_doc_template.md",
       "templates/incident-runbook-template.md",
-      "templates/agent-template.md"
+      "templates/agent-template.md",
+      "templates/html-design-system.html"
     ],
     "_templates_note": "templates/*.md are installed to child projects. templates/optional/ is source-only (conditional CLAUDE.md appendices read during initialization).",
     "templates_optional_source_only": [
@@ -242,7 +244,8 @@
       "skills/sdlc-create-reference-doc/SKILL.md",
       "skills/sdlc-port-opencode/SKILL.md",
       "skills/sdlc-handoff/SKILL.md",
-      "skills/sdlc-reflect/SKILL.md"
+      "skills/sdlc-reflect/SKILL.md",
+      "skills/sdlc-render/SKILL.md"
     ],
     "agents": [
       "agents/AGENT_SUGGESTIONS.md",

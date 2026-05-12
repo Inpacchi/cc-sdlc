@@ -34,6 +34,26 @@ Each entry contains:
 
 ---
 
+## 2026-05-12: Add HTML Rendering Layer (sdlc-render)
+
+**Origin:** CD observation that markdown deliverables are difficult for humans to read beyond ~100 lines, hard to share with stakeholders, and lack the visual richness needed for effective HITL review. Inspired by HTML-as-output patterns emerging in the Claude Code community (Thariq's html-effectiveness work).
+
+**What happened:** Designed and implemented an HTML rendering layer that converts markdown deliverables to self-contained HTML files for human consumption. Markdown remains the source of truth for agents and version control; HTML is a presentation layer. The system supports multiple audience variants from a single source file and auto-renders after deliverable-producing skills.
+
+**Changes made:**
+
+1. **`templates/html-design-system.html`** — New file. Self-contained HTML design system with CSS tokens (colors, typography, spacing, borders), 17 component patterns (cards, stat cards, badges, callouts, tables, code blocks, diff viewers, collapsible sections, tabs, timelines, requirement cards, finding rows, SVG diagrams, layouts, banners), and responsive/print styles. Visual foundation for all rendered HTML.
+2. **`process/html-rendering.md`** — New process doc. Defines the MD→HTML philosophy (MD=source, HTML=human view), auto-render conventions, manual render workflow, output naming with audience suffixes, audience variant profiles (engineer, leadership, design, marketing), and document-type default profiles for 8 document types (spec, plan, result, exploration, report, incident, reference, handoff).
+3. **`skills/sdlc-render/SKILL.md`** — New skill. Two modes: auto (post-skill, engineer defaults, no Q&A) and manual (interactive scoping with 4 questions — audience multi-select, purpose, emphasis, specific requests). Each audience selection generates a separate HTML file with a naming suffix. Direct-action skill — no agent dispatch.
+4. **`CLAUDE-SDLC.md`** — Added auto-render workflow rule after the sdlc-reflect mention: "After any skill writes a deliverable MD file to docs/current_work/, auto-render it to HTML." Added design system and rendering process doc to Key References.
+5. **`process/commands.md`** — Added new "Rendering" section with `/sdlc-render` command.
+6. **`skeleton/manifest.json`** — Registered all three new files in `source_files` (skills, templates, process).
+7. **`skills/sdlc-migrate/SKILL.md`** — Added `templates/html-design-system.html` to §2.1 direct-copy list.
+
+**Rationale:** HTML documents are dramatically more readable than markdown for human review — they support visual hierarchy, diagrams, interactive navigation, color-coded severity, and responsive layout. Auto-generating HTML after every deliverable means CD always has a readable version without extra effort. The multi-audience variant system (engineer always, plus leadership/design/marketing on request) means a single spec can be shared with different stakeholders in the framing they need, all from the same source markdown. The design system ensures visual consistency across all rendered deliverables without per-template HTML guidelines.
+
+---
+
 ## 2026-05-04: Add Adapter Lifecycle Protocol `[contract-change]`
 
 **Origin:** Handoff from the Neuroloom SDLC Plugin maintainer identifying that full skill overrides (42KB initialize, 70KB migrate) cause merge drift and miss upstream improvements. The actual adapter-specific delta is narrow: knowledge backend routing and phrasing-contract transformations.
