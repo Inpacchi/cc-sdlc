@@ -52,6 +52,41 @@ Each entry contains:
 
 **Rationale:** HTML documents are dramatically more readable than markdown for human review — they support visual hierarchy, diagrams, interactive navigation, color-coded severity, and responsive layout. Auto-generating HTML after every deliverable means CD always has a readable version without extra effort. The multi-audience variant system (engineer always, plus leadership/design/marketing on request) means a single spec can be shared with different stakeholders in the framing they need, all from the same source markdown. The design system ensures visual consistency across all rendered deliverables without per-template HTML guidelines.
 
+## 2026-05-12: Refine HTML rendering from first real-world usage (D147 plan review)
+
+**Origin:** First sdlc-render output reviewed against its source plan (D147 marketing positioning v2 in Neuroloom project). The HTML was visually strong — tabs, copy tables, severity-coded findings — but dropped verbatim code blocks, flattened per-phase acceptance criteria, and went stale when the plan was revised after rendering.
+
+**What happened:** Reviewed the rendered HTML against the source markdown and identified structural gaps in the rendering guidance plus two new components worth standardizing.
+
+**Changes made:**
+
+1. **`templates/html-design-system.html`** — Added two new components discovered in the D147 render: `.copy-table` (red strikethrough current / green new for text replacement plans) and `.file-tag` (compact monospace file path tags for scope sections). Added to CSS, TOC, and component reference with examples. Now 20 components total.
+2. **`process/html-rendering.md`** — Updated plan document-type profile: added verbatim content rule (code blocks, replacement strings, acceptance criteria must not be summarized away — use collapsible `<details>` if they'd dominate), per-phase acceptance criteria placement (at bottom of each phase, not flattened), and substitution/fallback table preservation. Added similar verbatim content rule to spec profile. Added "Staleness" subsection under Version Control: defines when HTML becomes stale, how auto-render handles it, manual re-render triggers, footer timestamp conventions, and re-render-after-revision guidance.
+3. **`skills/sdlc-render/SKILL.md`** — Updated Step 5 (Generate) to reference the verbatim content rule and per-phase criteria placement from the process doc. Updated Step 6 (Write) with staleness check: detect existing HTML, include "Updated" timestamp on re-renders. Updated Step 7 (Report) with re-render notification format.
+
+**Rationale:** The D147 render proved the design system works — the visual treatment (tabs for Phase 1 components, collapsible regions for Phase 2, severity-coded findings) was exactly right. But two gaps surfaced: (1) verbatim content was lost when the renderer summarized code blocks into table abbreviations, and (2) the HTML went stale when the plan was revised during review-fix cycles. The copy-table and file-tag components were invented ad-hoc by the renderer — standardizing them ensures consistency across future renders.
+
+---
+
+## 2026-05-12: Close HTML coverage gaps from Thariq's html-effectiveness patterns
+
+**Origin:** Gap audit comparing the sdlc-render implementation against Thariq's full html-effectiveness showcase (20 examples across 9 categories). Identified 5 gaps: missing code review HTML, no interactive exploration artifacts during planning, missing slide deck components, thin SVG conventions, and no sharing guidance.
+
+**What happened:** Closed all 5 gaps to fully incorporate the patterns from the html-effectiveness showcase into the SDLC framework.
+
+**Changes made:**
+
+1. **`skills/sdlc-review-code/SKILL.md`** — Added Step 7 (HTML Review Artifact). After completing the review report, generates a self-contained HTML file at `docs/reviews/{target_slug}_review.html` with file risk map, annotated diffs with inline comments, severity-coded findings, and agent coverage summary. This is the artifact Thariq describes as "I attach a HTML code explainer to every PR I make now."
+2. **`skills/sdlc-render/SKILL.md`** — Added `docs/reviews/` → review type to the document-type detection table. Updated Red Flag to clarify that "tabs and collapsibles only" applies to deliverable renders, not exploration artifacts.
+3. **`skills/sdlc-idea/SKILL.md`** — Added interactive exploration artifact guidance to Step 5 (Sketch). When sketches involve visual concepts, create self-contained HTML files: side-by-side comparisons, interaction prototypes, parameter tuning with sliders/knobs, architecture diagrams, drag-and-drop prioritization.
+4. **`skills/sdlc-plan/SKILL.md`** — Added interactive exploration artifact guidance between chronicle-context and spec writing. Same HTML exploration patterns as sdlc-idea, triggered during MEDIUM/COMPLEX discovery when text descriptions are insufficient.
+5. **`process/html-rendering.md`** — Added "Two Categories of HTML" section (deliverable renders vs. exploration artifacts). Added "Review (code review)" document-type profile. Added "Sharing" section covering local open, S3 upload, GitHub Pages, PR attachment, and email workflows.
+6. **`templates/html-design-system.html`** — Enriched SVG conventions: added semantic node variants (node-success, node-danger, node-info), emphasized edge class, annotation text class, updated all rect rx from 6 to 10, added convention comment block documenting stroke widths, label sizes, and semantic coloring rules. Added architecture diagram and flowchart pattern examples. Added slide deck component: .deck container, .slide with centered large-type layout, arrow-key navigation JS, progress pips, prev/next buttons.
+
+**Rationale:** The initial sdlc-render implementation covered deliverable rendering well but missed three use cases from Thariq's showcase that map directly to SDLC workflows: code review artifacts (his strongest use case), interactive exploration during planning (sandboxes, prototypes, parameter tuning), and presentation-format output (slide decks for stakeholder updates). The SVG enrichment ensures consistent diagram quality across all rendered HTML. The sharing section addresses the distribution advantage that makes HTML worth generating in the first place.
+
+---
+
 ## 2026-05-12: Wire HTML render steps into deliverable-producing skills
 
 **Origin:** First use of sdlc-render in a target project — `sdlc-lite-plan` completed without auto-generating HTML despite the CLAUDE-SDLC.md workflow rule. CC follows each skill's workflow steps sequentially and doesn't reliably circle back to CLAUDE-SDLC.md for post-write hooks.

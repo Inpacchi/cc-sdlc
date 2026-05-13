@@ -10,6 +10,12 @@ Every deliverable MD file can be rendered to a self-contained HTML file using `s
 - **HTML for humans.** HTML uses the design system to present the same information with visual hierarchy, diagrams, interactive navigation, and audience-appropriate framing.
 - **One source, many views.** A single MD file can produce multiple HTML variants for different audiences. The engineer version is always generated; leadership, design, and marketing versions are generated on request.
 
+## Two Categories of HTML
+
+**Deliverable renders** — Post-write conversions of finished markdown deliverables (specs, plans, results, reviews, etc.) into styled, readable HTML. These use design system tokens and keep JavaScript minimal (tabs, collapsibles). Produced by `sdlc-render` or auto-render steps in skills.
+
+**Exploration artifacts** — Interactive HTML files created during `sdlc-idea` exploration and `sdlc-plan` discovery to help CD evaluate options. These are throwaway working tools: side-by-side approach comparisons, interaction prototypes, parameter tuning with sliders, drag-and-drop prioritization, animation sandboxes. They use the design system for visual tokens but allow any JavaScript needed for the interaction. They are demand-driven — create them when text descriptions would be insufficient for CD to make a confident decision.
+
 ## When HTML Is Generated
 
 ### Auto-Render (post-skill)
@@ -63,6 +69,18 @@ HTML files are generated artifacts. Projects may choose to:
 
 Neither approach is prescribed. The MD file is always the source of truth.
 
+### Staleness
+
+An HTML render becomes stale when its source markdown is modified after generation. Stale HTML is dangerous — humans read the HTML version and miss updates that only exist in the markdown.
+
+**Auto-render handles this:** When a skill writes or updates a deliverable MD file, the post-write render step regenerates the HTML. This keeps the HTML current as long as changes go through skills.
+
+**Manual edits require re-rendering:** If the markdown is updated outside a skill (direct edit, review-fix revisions, CD feedback incorporated manually), the HTML is now stale. The next skill that touches the file should re-render, or CD can invoke `/sdlc-render` manually.
+
+**Footer timestamps:** Every rendered HTML includes a generation timestamp in the footer. When comparing an HTML file to its source, check this timestamp against the markdown's last-modified date. If the markdown is newer, re-render before using the HTML for review.
+
+**Re-render on plan revision:** When a plan undergoes review-fix revisions (findings incorporated, DECIDE items resolved), re-render the HTML after the final revision — not after each intermediate revision. The HTML should reflect the approved plan, not a mid-revision snapshot.
+
 ## Audience Variants
 
 The engineer version is always generated (auto or manual). Additional audiences are selected during manual rendering via multi-select.
@@ -85,12 +103,16 @@ When auto-rendering (no Q&A), the document type determines which components and 
 - **Layout:** Header with deliverable ID and status → summary grid (status, priority, owner, target) → table of contents → requirement cards → dependency diagram (SVG) → acceptance criteria checklist → open questions callout
 - **Key components:** Requirement cards, callout boxes (open questions, constraints), comparison grid (for alternatives), diagrams
 - **Interactive:** Collapsible sections for detailed requirements, tabs for functional vs. non-functional requirements
+- **Verbatim content rule:** If the spec includes exact API signatures, schema definitions, or acceptance criteria with specific values, these must appear in the HTML — not summarized. Use collapsible code blocks for lengthy specifications.
 
 ### Plan
 
-- **Layout:** Header → summary grid → timeline visualization → phased sections with milestone markers → agent dispatch summary table → code snippet previews → risk table
-- **Key components:** Timeline, stat cards (scope metrics), code blocks, tables, tabs for phase-by-phase view
+- **Layout:** Header → summary grid (files, phases, findings, review rounds) → timeline visualization → phased sections with milestone markers → per-phase acceptance criteria → agent dispatch summary table → risk table
+- **Key components:** Timeline, stat cards (scope metrics), code blocks, tables, tabs for phase-by-phase view, copy tables (before/after for text replacement plans), file tags for scope
 - **Interactive:** Tabs for phases, collapsible implementation details
+- **Verbatim content rule:** Code blocks, replacement strings, import lines, and other verbatim content from the source plan MUST appear in the HTML — render in collapsible `<details>` sections if they would dominate a section, but do not summarize them into prose or table abbreviations. The executing agent needs exact text, not paraphrases.
+- **Per-phase acceptance criteria:** Render each phase's acceptance criteria at the bottom of that phase's section (as a checklist), not flattened into a single end-of-document list. The consolidated post-execution review checklist remains as a summary, but per-phase criteria give phase-level "what does done look like."
+- **Substitution/fallback tables:** If the plan includes icon substitutions, library fallbacks, or alternative approaches, render them in the phase where they apply — don't drop them.
 
 ### Result
 
@@ -127,6 +149,24 @@ When auto-rendering (no Q&A), the document type determines which components and 
 - **Layout:** Header with status banner → what's done / what's left two-column → key files list → decision log → context for next session
 - **Key components:** Banner (status), two-column layout, checklist, callout boxes
 - **Interactive:** Collapsible context sections
+
+### Review (code review)
+
+- **Layout:** Header with target description and date → stat cards (finding counts by severity) → file risk map table (per-file changes, severity dots) → annotated diffs with inline margin comments → overengineering summary → CLAUDE.md drift section → agent coverage summary → recurring patterns
+- **Key components:** Diff viewer with inline callout annotations, finding rows with severity badges, stat cards, file risk table with severity dots, banners, code blocks
+- **Interactive:** Collapsible per-file diff sections, tabs for findings-by-severity vs. findings-by-file views
+
+## Sharing
+
+HTML files are designed to be shared. Common workflows:
+
+- **Open locally:** `open docs/current_work/specs/d01_feature_spec.html` — immediate browser preview
+- **Attach to PRs:** Upload the HTML review artifact to the PR description or as a comment. GitHub renders HTML attachments.
+- **Upload to S3 / hosting:** For team-wide access, upload to an S3 bucket or static hosting. Share the link in Slack, email, or Linear. A link gets read; an attachment doesn't.
+- **GitHub Pages:** For persistent access, push HTML files to a `gh-pages` branch or `docs/` directory with Pages enabled.
+- **Email:** HTML files open directly in browsers — attach and recipients can view without any tooling.
+
+The key insight: the chance of someone actually reading your spec, report, or PR writeup is much higher when it's a styled HTML page they can open in a browser.
 
 ## Design System Reference
 

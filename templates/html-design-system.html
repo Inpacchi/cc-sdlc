@@ -651,6 +651,19 @@ ul.checklist li.checked::before {
 .toc a:hover { color: var(--clay); }
 
 /* --- SVG Diagrams --- */
+/* Conventions:
+   - Neutral strokes: 1.5px (var(--gray-300))
+   - Emphasized strokes: 2px (var(--clay) or semantic color)
+   - All rects: rx=10 (consistent rounded corners)
+   - Labels inside nodes: 13px sans (var(--sans))
+   - Monospace labels (code, IDs): 11px mono (var(--mono))
+   - Annotation labels outside nodes: 12px sans, var(--gray-500)
+   - Semantic coloring: Clay = focus/current, Olive = success/done,
+     Danger = error/failure, Info = external/async
+   - Solid lines = synchronous/primary flow
+   - Dashed lines = asynchronous/secondary flow
+   - Each SVG should be self-contained within a .diagram-container
+*/
 .diagram-container {
   background: var(--white);
   border: var(--border);
@@ -678,18 +691,45 @@ ul.checklist li.checked::before {
   font-size: 11px;
 }
 
+.diagram-container svg text.annotation {
+  font-family: var(--sans);
+  font-size: 12px;
+  fill: var(--gray-500);
+}
+
 .diagram-container svg rect.node {
   fill: var(--white);
   stroke: var(--gray-300);
   stroke-width: 1.5;
-  rx: 6;
+  rx: 10;
 }
 
 .diagram-container svg rect.node-accent {
   fill: var(--clay-light);
   stroke: var(--clay);
+  stroke-width: 2;
+  rx: 10;
+}
+
+.diagram-container svg rect.node-success {
+  fill: var(--success-bg);
+  stroke: var(--olive);
+  stroke-width: 2;
+  rx: 10;
+}
+
+.diagram-container svg rect.node-danger {
+  fill: var(--danger-bg);
+  stroke: var(--danger);
+  stroke-width: 2;
+  rx: 10;
+}
+
+.diagram-container svg rect.node-info {
+  fill: var(--info-bg);
+  stroke: var(--info);
   stroke-width: 1.5;
-  rx: 6;
+  rx: 10;
 }
 
 .diagram-container svg line,
@@ -697,6 +737,12 @@ ul.checklist li.checked::before {
   stroke: var(--gray-300);
   stroke-width: 1.5;
   fill: none;
+}
+
+.diagram-container svg line.emphasized,
+.diagram-container svg path.emphasized {
+  stroke: var(--clay);
+  stroke-width: 2;
 }
 
 .diagram-container svg line.dashed,
@@ -707,6 +753,112 @@ ul.checklist li.checked::before {
 .diagram-container svg marker path {
   fill: var(--gray-500);
 }
+
+/* --- Copy Table (before/after text replacement) --- */
+.copy-table { margin-bottom: var(--sp-5); }
+.copy-table td:first-child {
+  color: var(--danger);
+  text-decoration: line-through;
+  opacity: 0.7;
+}
+.copy-table td:last-child {
+  color: var(--success);
+  font-weight: 500;
+}
+
+/* --- File Tag --- */
+.file-tag {
+  display: inline-block;
+  font-family: var(--mono);
+  font-size: var(--text-caption);
+  padding: 2px 6px;
+  border-radius: var(--r-xs);
+  background: var(--gray-150);
+  color: var(--gray-700);
+  margin: 2px 4px 2px 0;
+}
+
+/* --- Slide Deck --- */
+.deck {
+  position: relative;
+  background: var(--white);
+  border: var(--border);
+  border-radius: var(--r-lg);
+  overflow: hidden;
+  margin-bottom: var(--sp-5);
+}
+
+.slide {
+  display: none;
+  padding: var(--sp-8) var(--sp-7);
+  min-height: 480px;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+}
+
+.slide.active { display: flex; }
+
+.slide .slide-number {
+  position: absolute;
+  top: var(--sp-4);
+  right: var(--sp-5);
+  font-family: var(--mono);
+  font-size: var(--text-caption);
+  color: var(--gray-500);
+}
+
+.slide h2 {
+  font-family: var(--serif);
+  font-size: var(--text-display);
+  font-weight: 400;
+  margin-top: 0;
+  margin-bottom: var(--sp-5);
+}
+
+.slide p {
+  font-size: var(--text-h2);
+  color: var(--gray-700);
+  max-width: 640px;
+  line-height: var(--lh-normal);
+}
+
+.deck-nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--sp-3) var(--sp-5);
+  border-top: 1px solid var(--gray-150);
+  background: var(--ivory);
+}
+
+.deck-nav button {
+  background: none;
+  border: var(--border);
+  border-radius: var(--r-md);
+  padding: var(--sp-2) var(--sp-4);
+  font-family: var(--sans);
+  font-size: var(--text-small);
+  cursor: pointer;
+  color: var(--slate);
+}
+
+.deck-nav button:hover { background: var(--gray-150); }
+
+.deck-progress {
+  display: flex;
+  gap: var(--sp-2);
+}
+
+.deck-progress .pip {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--gray-300);
+}
+
+.deck-progress .pip.active { background: var(--clay); }
 
 /* --- Finding Row (for audit/review output) --- */
 .finding {
@@ -839,6 +991,9 @@ ul.checklist li.checked::before {
       <li><a href="#diagrams">SVG Diagrams</a></li>
       <li><a href="#layouts">Layout Patterns</a></li>
       <li><a href="#banner">Banners</a></li>
+      <li><a href="#copy-table">Copy Tables</a></li>
+      <li><a href="#file-tags">File Tags</a></li>
+      <li><a href="#deck">Slide Deck</a></li>
     </ol>
   </nav>
 
@@ -1120,31 +1275,70 @@ console.log("Hello from tabs");</code></pre>
   <!-- 15 SVG Diagrams -->
   <section id="diagrams">
     <h2><span class="section-number">15</span> SVG Diagrams</h2>
+    <p>Conventions: 1.5px neutral strokes, 2px emphasized. All rects use rx=10. Labels: 13px sans inside nodes, 11px mono for code/IDs, 12px sans gray-500 for annotations. Semantic colors: Clay=focus, Olive=success, Danger=error, Info=external. Solid=synchronous, dashed=asynchronous.</p>
+    <h4>Architecture Diagram</h4>
     <div class="diagram-container">
-      <svg viewBox="0 0 600 200" xmlns="http://www.w3.org/2000/svg">
+      <svg viewBox="0 0 620 220" xmlns="http://www.w3.org/2000/svg">
         <defs>
           <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
             <path d="M 0 0 L 10 5 L 0 10 z" fill="#87867F"/>
           </marker>
         </defs>
-        <!-- Nodes -->
-        <rect class="node" x="10" y="70" width="120" height="60"/>
-        <text x="70" y="105" text-anchor="middle">Client</text>
+        <!-- Neutral node -->
+        <rect class="node" x="10" y="80" width="120" height="60"/>
+        <text x="70" y="115" text-anchor="middle">Client</text>
 
-        <rect class="node-accent" x="200" y="70" width="120" height="60"/>
-        <text x="260" y="105" text-anchor="middle">API Gateway</text>
+        <!-- Accent node (focus) -->
+        <rect class="node-accent" x="200" y="80" width="130" height="60"/>
+        <text x="265" y="115" text-anchor="middle">API Gateway</text>
 
-        <rect class="node" x="390" y="30" width="120" height="60"/>
-        <text x="450" y="65" text-anchor="middle">Auth Service</text>
+        <!-- Success node (done/healthy) -->
+        <rect class="node-success" x="400" y="20" width="130" height="60"/>
+        <text x="465" y="55" text-anchor="middle">Auth Service</text>
 
-        <rect class="node" x="390" y="120" width="120" height="60"/>
-        <text x="450" y="155" text-anchor="middle">Data Service</text>
+        <!-- Standard node -->
+        <rect class="node" x="400" y="140" width="130" height="60"/>
+        <text x="465" y="175" text-anchor="middle">Data Service</text>
 
-        <!-- Edges -->
-        <line x1="130" y1="100" x2="200" y2="100" marker-end="url(#arrow)"/>
-        <line x1="320" y1="85" x2="390" y2="60" marker-end="url(#arrow)"/>
-        <line x1="320" y1="115" x2="390" y2="150" marker-end="url(#arrow)"/>
-        <line class="dashed" x1="450" y1="90" x2="450" y2="120" marker-end="url(#arrow)"/>
+        <!-- Solid edge (synchronous) -->
+        <line x1="130" y1="110" x2="200" y2="110" marker-end="url(#arrow)"/>
+        <!-- Emphasized edge -->
+        <line class="emphasized" x1="330" y1="95" x2="400" y2="50" marker-end="url(#arrow)"/>
+        <line x1="330" y1="125" x2="400" y2="170" marker-end="url(#arrow)"/>
+        <!-- Dashed edge (asynchronous) -->
+        <line class="dashed" x1="465" y1="80" x2="465" y2="140" marker-end="url(#arrow)"/>
+
+        <!-- Annotation -->
+        <text class="annotation" x="475" y="118">async events</text>
+        <!-- Monospace label -->
+        <text class="mono" x="155" y="100">POST /api</text>
+      </svg>
+    </div>
+    <h4>Flowchart Pattern</h4>
+    <div class="diagram-container">
+      <svg viewBox="0 0 500 180" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <marker id="arrow2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M 0 0 L 10 5 L 0 10 z" fill="#87867F"/>
+          </marker>
+        </defs>
+        <rect class="node" x="10" y="60" width="100" height="50"/>
+        <text x="60" y="90" text-anchor="middle">Start</text>
+
+        <rect class="node-accent" x="160" y="60" width="100" height="50"/>
+        <text x="210" y="90" text-anchor="middle">Validate</text>
+
+        <rect class="node-success" x="310" y="10" width="100" height="50"/>
+        <text x="360" y="40" text-anchor="middle">Process</text>
+
+        <rect class="node-danger" x="310" y="110" width="100" height="50"/>
+        <text x="360" y="140" text-anchor="middle">Reject</text>
+
+        <line x1="110" y1="85" x2="160" y2="85" marker-end="url(#arrow2)"/>
+        <line x1="260" y1="72" x2="310" y2="35" marker-end="url(#arrow2)"/>
+        <line x1="260" y1="98" x2="310" y2="135" marker-end="url(#arrow2)"/>
+        <text class="annotation" x="272" y="48">pass</text>
+        <text class="annotation" x="272" y="128">fail</text>
       </svg>
     </div>
   </section>
@@ -1191,6 +1385,72 @@ console.log("Hello from tabs");</code></pre>
     <div class="banner danger">Blocked — waiting on external API access</div>
   </section>
 
+  <hr class="rule">
+
+  <!-- 18 Copy Tables -->
+  <section id="copy-table">
+    <h2><span class="section-number">18</span> Copy Tables</h2>
+    <p>Before/after tables for text replacement plans. Current text appears in red with strikethrough; new text in green. Use whenever a plan prescribes verbatim copy changes.</p>
+    <table class="copy-table">
+      <thead><tr><th>Current</th><th>New</th></tr></thead>
+      <tbody>
+        <tr><td>The memory engine for coding agents.</td><td>The lifecycle knowledge engine for coding agents.</td></tr>
+        <tr><td>Get Started Free</td><td>Start free</td></tr>
+        <tr><td>We do not train on your memories.</td><td>We do not train on your data.</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <hr class="rule">
+
+  <!-- 19 File Tags -->
+  <section id="file-tags">
+    <h2><span class="section-number">19</span> File Tags</h2>
+    <p>Compact monospace tags for showing file scope. Use in scope sections to list touched files.</p>
+    <p>
+      <span class="file-tag">src/auth/login.ts</span>
+      <span class="file-tag">src/api/routes.ts</span>
+      <span class="file-tag">src/utils/format.ts</span>
+      <span class="file-tag">package.json</span>
+      <span class="file-tag">tsconfig.json</span>
+    </p>
+  </section>
+
+  <hr class="rule">
+
+  <!-- 20 Slide Deck -->
+  <section id="deck">
+    <h2><span class="section-number">20</span> Slide Deck</h2>
+    <p>Arrow-key navigable presentation. Use for status updates, stakeholder decks, and any content that benefits from one-screen-at-a-time reading.</p>
+    <div class="deck" id="demo-deck">
+      <div class="slide active">
+        <span class="slide-number">1 / 3</span>
+        <h2>Sprint 14 Status</h2>
+        <p>3 features shipped, 1 in progress, 0 blocked</p>
+      </div>
+      <div class="slide">
+        <span class="slide-number">2 / 3</span>
+        <h2>Key Metrics</h2>
+        <p>P95 latency down 18%. Test coverage at 94%. Zero production incidents.</p>
+      </div>
+      <div class="slide">
+        <span class="slide-number">3 / 3</span>
+        <h2>Next Sprint</h2>
+        <p>OAuth migration, rate limiter v2, dashboard redesign kickoff</p>
+      </div>
+      <div class="deck-nav">
+        <button onclick="navigateDeck('demo-deck', -1)">&larr; Prev</button>
+        <div class="deck-progress">
+          <div class="pip active"></div>
+          <div class="pip"></div>
+          <div class="pip"></div>
+        </div>
+        <button onclick="navigateDeck('demo-deck', 1)">Next &rarr;</button>
+      </div>
+    </div>
+    <p style="font-size: var(--text-small); color: var(--gray-500);">Navigate with arrow keys or the prev/next buttons.</p>
+  </section>
+
   <footer class="doc-footer">
     SDLC HTML Design System v1.0 &mdash; Generated by sdlc-render
   </footer>
@@ -1205,6 +1465,23 @@ function switchTab(event, panelId) {
   event.target.classList.add('active');
   tabGroup.querySelector('#' + panelId).classList.add('active');
 }
+
+function navigateDeck(deckId, direction) {
+  const deck = document.getElementById(deckId);
+  const slides = deck.querySelectorAll('.slide');
+  const pips = deck.querySelectorAll('.pip');
+  let current = Array.from(slides).findIndex(s => s.classList.contains('active'));
+  slides[current].classList.remove('active');
+  pips[current].classList.remove('active');
+  current = (current + direction + slides.length) % slides.length;
+  slides[current].classList.add('active');
+  pips[current].classList.add('active');
+}
+
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'ArrowRight') navigateDeck('demo-deck', 1);
+  if (e.key === 'ArrowLeft') navigateDeck('demo-deck', -1);
+});
 </script>
 </body>
 </html>

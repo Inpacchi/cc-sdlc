@@ -258,6 +258,24 @@ Mark patterns "at threshold" when they reach 3+ occurrences — these are candid
 
 Do NOT ingest into the knowledge store from within this skill. Do NOT create parking-lot entries. The pattern log feeds `sdlc-audit` Dimension 6l, which handles promotion recommendations.
 
+### 7. HTML Review Artifact
+
+After completing the review report, render it as a self-contained HTML file for human reading. Read the design system from `[sdlc-root]/templates/html-design-system.html` and apply **review** document-type defaults from `[sdlc-root]/process/html-rendering.md`.
+
+Write to: `docs/reviews/{target_slug}_review.html` (e.g., `docs/reviews/HEAD_review.html`, `docs/reviews/abc1234_review.html`, `docs/reviews/uncommitted_review.html`).
+
+The HTML review should include:
+- Header with target description, date, and overall finding counts
+- File risk map (table with per-file change stats and severity dots)
+- Annotated diffs with inline margin comments for each finding (use diff viewer + callout components)
+- Overengineering summary section
+- CLAUDE.md drift section (if applicable)
+- Agent coverage summary
+- Findings detail with severity-coded badges
+- Recurring patterns section (if any identified)
+
+This is the artifact CD uses for review — it replaces scrolling through terminal output. If `docs/reviews/` doesn't exist, create it.
+
 ## Red Flags
 
 | Thought | Reality |

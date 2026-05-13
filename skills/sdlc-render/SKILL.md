@@ -123,6 +123,7 @@ Determine the document type from the file's path and content structure:
 | `docs/current_work/audits/` | report | Stat cards, finding severity rows, compliance tables |
 | `docs/current_work/incidents/` | incident | Severity banner, timeline, root cause diagram, remediation checklist |
 | `docs/reference/` | reference | Deep TOC, anchor links, code blocks, collapsible sections |
+| `docs/reviews/` | review | Annotated diffs, severity-coded findings, file risk map, inline comments |
 
 If the path doesn't match a known pattern, infer the type from the markdown structure (headings, content patterns) and default to the closest matching profile.
 
@@ -147,7 +148,7 @@ For each audience variant (engineer always, plus any selected in scoping):
    - Bold text in key positions → requirement cards, stat cards, or badges as appropriate
    - ASCII diagrams or flowchart descriptions → inline SVG using diagram conventions from design system
 
-5. **Document-type components:** Add type-specific components based on the detected document type (see Step 4). These are structural additions that make the document type's key information visually prominent.
+5. **Document-type components:** Add type-specific components based on the detected document type (see Step 4). These are structural additions that make the document type's key information visually prominent. Consult `[sdlc-root]/process/html-rendering.md` for the full profile — especially the verbatim content rule (code blocks, replacement strings, and acceptance criteria must not be summarized away) and per-phase acceptance criteria placement (at the bottom of each phase section, not flattened into one list).
 
 6. **Audience shaping:** For non-engineer variants, reshape the content:
    - **Leadership:** Move executive summary and decisions to the top. Collapse implementation details into `<details>` sections. Add stat cards for key metrics. Emphasize timeline and impact.
@@ -174,6 +175,8 @@ Write each HTML file alongside the source markdown:
 {source_name}_{custom}.html          ← if custom audience specified
 ```
 
+**Staleness check:** Before writing, check if an HTML file already exists at the target path. If it does, this is a re-render — include "Updated" in the footer timestamp alongside the original generation date. If the source markdown's last-modified date is newer than the existing HTML, this confirms the re-render was needed.
+
 ### Step 7: Report
 
 Output a summary of what was generated:
@@ -189,6 +192,8 @@ Open in browser: open docs/current_work/specs/d01_feature_spec.html
 
 In auto mode, keep the report to a single line confirming the HTML was written.
 
+If this is a re-render (existing HTML was overwritten), note it: `Re-rendered: d01_feature_spec.html (source updated since last render)`
+
 ## Red Flags
 
 | Thought | Reality |
@@ -196,7 +201,7 @@ In auto mode, keep the report to a single line confirming the HTML was written.
 | "I'll add a custom color that looks better here" | Use design system tokens only. Consistency across all rendered docs matters more than per-doc aesthetics. |
 | "This doc doesn't fit any type, I'll skip type detection" | Infer the closest type. Every doc benefits from a structural profile even if imperfect. |
 | "Leadership doesn't need the technical details at all" | Collapse, don't delete. Leadership variants should allow drilling into detail if they choose. Marketing is the exception — it omits internals. |
-| "I'll add complex JavaScript for interactivity" | Keep JS minimal. Tabs and collapsibles only. This is a document, not an app. |
+| "I'll add complex JavaScript for interactivity" | For deliverable renders: keep JS minimal — tabs and collapsibles only. This is a document, not an app. (Note: interactive exploration artifacts created during `sdlc-idea` and `sdlc-plan` discovery are a different category — those CAN use rich JS for prototyping, parameter tuning, and drag-and-drop. They're exploration tools, not deliverable renders.) |
 | "The markdown has errors, I'll fix them in the HTML" | Never silently fix source content. Flag issues to CD. The MD is the source of truth. |
 
 ## Integration

@@ -179,6 +179,16 @@ For each approach:
 
 Present sketches side by side. Do NOT rank them or recommend one. The user chooses the direction.
 
+**Interactive exploration artifacts:** When sketches involve visual concepts (UI layouts, interaction flows, data visualizations, component variants), create self-contained HTML files as exploration tools. These are NOT deliverable renders — they're throwaway working artifacts that help CD evaluate options:
+
+- **Side-by-side comparisons** — Render 2-4 visual approaches in a single HTML file so CD can compare them at a glance
+- **Interaction prototypes** — Clickable flows, animation sandboxes, hover states — things that can't be described, only felt
+- **Parameter tuning** — Sliders, knobs, and controls to adjust spacing, timing, thresholds, colors. Include a "copy settings" button so CD can paste chosen values back into the conversation
+- **Architecture diagrams** — Interactive SVG with clickable nodes that reveal module details, data flows, dependency paths
+- **Drag-and-drop prioritization** — When sketching multiple options or requirements, let CD drag to reorder priorities
+
+Write exploration artifacts to `/tmp/` or `docs/current_work/ideas/` with descriptive names (e.g., `{slug}_comparison.html`, `{slug}_prototype.html`). Read the design system from `[sdlc-root]/templates/html-design-system.html` for visual tokens but use whatever JavaScript and interactivity the exploration requires — the "tabs and collapsibles only" constraint applies to deliverable renders, not exploration artifacts.
+
 After presenting: **"Any of these resonate? We can go deeper on one, combine elements, or throw them all out and come at this differently."**
 
 ### 6. Iterate
