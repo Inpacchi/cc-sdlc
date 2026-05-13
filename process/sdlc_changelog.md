@@ -34,6 +34,22 @@ Each entry contains:
 
 ---
 
+## 2026-05-13: Add Content Review Slide Deck to HTML Rendering
+
+**Origin:** Knowledge atlas HTML redesign in Neuroloom — rebuilt 12 discipline pages with slide-based navigation, filter chips, and review checkboxes. The patterns proved substantially better for reviewing structured content and should be ported upstream to the cc-sdlc framework.
+
+**What happened:** Long lists of requirements, findings, and phases are difficult to review in a continuous scroll — readers lose track of what they've read, can't easily filter to a subset, and have no way to mark progress. The Neuroloom atlas session validated that slide-based one-at-a-time navigation with review checkboxes and filter chips dramatically improves content review. This feature ports the patterns to cc-sdlc so all rendered deliverables benefit.
+
+**Changes made:**
+
+1. **`templates/html-design-system.html`** — Added content review deck component (v1.1): `.content-deck` container, `.tab-bar` with `.tab-btn` (auto-generated from H2 sections with count badges), `.filter-bar` with `.filter-btn` (pill-shaped filters with counts), `.entry-slide` (left-aligned content cards with eyebrow/title/body), `.review-check` (upper-right checkbox persisting to localStorage), `.review-progress` counter, keyboard navigation (arrows + spacebar). Added JS for tab switching, filtering, slide navigation, review persistence. Added print styles. Existing `.deck`/`.slide` presentation component unchanged.
+2. **`skills/sdlc-render/SKILL.md`** — Added Step 4b (Determine Layout Mode) with scroll vs. slide per-section concept. Updated content conversion rules for slide-layout sections. Updated interactive elements to include content review decks. Added red flag for whole-document slide mode.
+3. **`process/html-rendering.md`** — Added Layout Modes section (scroll vs. slide, review checkboxes, tab auto-generation, filter chips). Updated all 9 document-type profiles with slide-layout section specifications.
+
+**Rationale:** Per-section layout mode (not per-document) gives the best of both worlds: narrative overview sections stay in scroll layout while enumerable sections get focused slide treatment with review tracking. The content review deck is distinct from the existing presentation deck — left-aligned content review with checkboxes and filters vs. centered presentation with pips.
+
+---
+
 ## 2026-05-13: Agent Selection — Independent Reasoning Over Playbook Defaults
 
 **Origin:** D37 (Sleeved) — meta-analyst was omitted from plan review despite being the agent that produced the gap audit feeding the plan. The playbook's recommended agent list was treated as the determinant rather than a supplement.

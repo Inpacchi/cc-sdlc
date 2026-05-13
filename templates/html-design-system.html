@@ -860,6 +860,228 @@ ul.checklist li.checked::before {
 
 .deck-progress .pip.active { background: var(--clay); }
 
+/* --- Content Review Deck --- */
+.content-deck {
+  background: var(--white);
+  border: var(--border);
+  border-radius: var(--r-lg);
+  overflow: hidden;
+  margin-bottom: var(--sp-5);
+}
+
+.content-deck .tab-bar {
+  display: flex;
+  overflow-x: auto;
+  border-bottom: 2px solid var(--gray-300);
+  background: var(--ivory);
+  padding: 0 var(--sp-4);
+}
+
+.content-deck .tab-btn {
+  padding: var(--sp-3) var(--sp-5);
+  cursor: pointer;
+  font-family: var(--sans);
+  font-size: var(--text-small);
+  font-weight: 600;
+  color: var(--gray-500);
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  transition: color 0.15s, border-color 0.15s;
+  white-space: nowrap;
+}
+
+.content-deck .tab-btn:hover { color: var(--slate); }
+
+.content-deck .tab-btn.active {
+  color: var(--slate);
+  border-bottom-color: var(--clay);
+}
+
+.content-deck .tab-btn .count {
+  font-family: var(--mono);
+  font-size: var(--text-caption);
+  color: var(--gray-300);
+  margin-left: var(--sp-2);
+}
+
+.content-deck .tab-btn.active .count { color: var(--gray-500); }
+
+.content-deck .filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+  padding: var(--sp-3) var(--sp-4);
+  border-bottom: 1px solid var(--gray-150);
+  align-items: center;
+}
+
+.content-deck .filter-btn {
+  padding: var(--sp-1) var(--sp-3);
+  cursor: pointer;
+  font-family: var(--mono);
+  font-size: var(--text-caption);
+  font-weight: 600;
+  border: var(--border);
+  border-radius: 999px;
+  background: var(--white);
+  color: var(--gray-500);
+  transition: all 0.15s;
+}
+
+.content-deck .filter-btn:hover {
+  border-color: var(--clay);
+  color: var(--slate);
+}
+
+.content-deck .filter-btn.active {
+  background: var(--slate);
+  border-color: var(--slate);
+  color: var(--white);
+}
+
+.content-deck .filter-btn .count { margin-left: var(--sp-1); }
+
+.content-deck .review-progress {
+  font-family: var(--mono);
+  font-size: var(--text-caption);
+  color: var(--gray-500);
+  margin-left: auto;
+  padding-left: var(--sp-3);
+}
+
+.content-deck .review-progress .reviewed-count {
+  color: var(--olive);
+  font-weight: 600;
+}
+
+.content-deck .tab-content { display: none; }
+.content-deck .tab-content.active { display: block; }
+
+.content-deck .slide-area {
+  padding: var(--sp-4);
+  min-height: 320px;
+}
+
+.content-deck .entry-slide {
+  display: none;
+  position: relative;
+  background: var(--white);
+  border: var(--border);
+  border-radius: var(--r-md);
+  overflow: hidden;
+}
+
+.content-deck .entry-slide.active { display: block; }
+
+.content-deck .entry-slide.reviewed {
+  border-color: var(--olive-light);
+}
+
+.content-deck .entry-slide .slide-eyebrow {
+  font-family: var(--mono);
+  font-size: var(--text-caption);
+  letter-spacing: 0.04em;
+  color: var(--gray-500);
+  padding: var(--sp-5) var(--sp-5) 0;
+  padding-right: 120px;
+}
+
+.content-deck .entry-slide .slide-title {
+  font-size: var(--text-h2);
+  font-weight: 600;
+  color: var(--slate);
+  line-height: var(--lh-tight);
+  padding: var(--sp-2) var(--sp-5) var(--sp-4);
+}
+
+.content-deck .entry-slide .slide-body {
+  padding: var(--sp-5);
+  border-top: 1px solid var(--gray-150);
+  font-size: var(--text-body);
+  color: var(--gray-700);
+  line-height: var(--lh-normal);
+  background: var(--ivory);
+}
+
+.content-deck .review-check {
+  position: absolute;
+  top: var(--sp-4);
+  right: var(--sp-5);
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  cursor: pointer;
+  user-select: none;
+  padding: var(--sp-1) var(--sp-2);
+  border-radius: var(--r-sm);
+  transition: background 0.1s;
+}
+
+.content-deck .review-check:hover { background: var(--gray-150); }
+
+.content-deck .review-check input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--olive);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.content-deck .review-check .review-label {
+  font-size: var(--text-caption);
+  color: var(--gray-500);
+  font-weight: 600;
+}
+
+.content-deck .review-check input:checked + .review-label {
+  color: var(--olive);
+}
+
+.content-deck .deck-nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--sp-3) var(--sp-5);
+  border-top: 1px solid var(--gray-150);
+  background: var(--ivory);
+}
+
+.content-deck .deck-nav button {
+  background: var(--white);
+  border: var(--border);
+  border-radius: var(--r-md);
+  padding: var(--sp-2) var(--sp-4);
+  font-family: var(--sans);
+  font-size: var(--text-small);
+  font-weight: 600;
+  cursor: pointer;
+  color: var(--slate);
+  transition: all 0.15s;
+}
+
+.content-deck .deck-nav button:hover {
+  background: var(--gray-150);
+  border-color: var(--clay);
+}
+
+.content-deck .deck-nav button:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.content-deck .deck-nav button:disabled:hover {
+  background: var(--white);
+  border-color: var(--border-color);
+}
+
+.content-deck .deck-progress {
+  font-family: var(--mono);
+  font-size: var(--text-small);
+  color: var(--gray-500);
+}
+
 /* --- Finding Row (for audit/review output) --- */
 .finding {
   display: flex;
@@ -945,6 +1167,12 @@ ul.checklist li.checked::before {
   pre { white-space: pre-wrap; word-break: break-all; }
   .tabs { display: none; }
   .tab-panel { display: block !important; }
+  .content-deck .tab-bar,
+  .content-deck .filter-bar,
+  .content-deck .deck-nav,
+  .content-deck .review-check { display: none; }
+  .content-deck .tab-content { display: block !important; }
+  .content-deck .entry-slide { display: block !important; page-break-inside: avoid; margin-bottom: var(--sp-3); }
   .callout, .card, .stat-card { break-inside: avoid; }
 }
 </style>
@@ -965,8 +1193,8 @@ ul.checklist li.checked::before {
     <h1 class="page-title">Component Reference</h1>
     <p class="page-subtitle">Visual vocabulary for rendered HTML deliverables. Every component below is available when converting markdown to HTML.</p>
     <div class="doc-meta">
-      <span><strong>Version:</strong> 1.0</span>
-      <span><strong>Updated:</strong> 2026-05-12</span>
+      <span><strong>Version:</strong> 1.1</span>
+      <span><strong>Updated:</strong> 2026-05-13</span>
     </div>
   </header>
 
@@ -994,6 +1222,7 @@ ul.checklist li.checked::before {
       <li><a href="#copy-table">Copy Tables</a></li>
       <li><a href="#file-tags">File Tags</a></li>
       <li><a href="#deck">Slide Deck</a></li>
+      <li><a href="#content-deck">Content Review Deck</a></li>
     </ol>
   </nav>
 
@@ -1451,13 +1680,97 @@ console.log("Hello from tabs");</code></pre>
     <p style="font-size: var(--text-small); color: var(--gray-500);">Navigate with arrow keys or the prev/next buttons.</p>
   </section>
 
+  <hr class="rule">
+
+  <!-- 21 Content Review Deck -->
+  <section id="content-deck">
+    <h2><span class="section-number">21</span> Content Review Deck</h2>
+    <p>Slide-based review for discrete, enumerable entries. Use when a section contains 3+ items of similar structure — requirements, findings, phases, review items. Each entry gets focused attention on its own slide with a review checkbox that persists to localStorage. Tabs auto-generate from content groupings; filter chips narrow by category.</p>
+    <p style="font-size: var(--text-small); color: var(--gray-500);">Distinct from the presentation slide deck (section 20) — this is left-aligned content review, not centered presentation.</p>
+
+    <div class="content-deck" id="demo-content-deck" data-filename="design-system-demo">
+      <div class="tab-bar">
+        <button class="tab-btn active" data-tab="demo-reqs">Requirements <span class="count">3</span></button>
+        <button class="tab-btn" data-tab="demo-constraints">Constraints <span class="count">2</span></button>
+      </div>
+
+      <div class="tab-content active" id="demo-reqs">
+        <div class="filter-bar">
+          <button class="filter-btn active" data-filter="all">All <span class="count">3</span></button>
+          <button class="filter-btn" data-filter="must-have">Must Have <span class="count">2</span></button>
+          <button class="filter-btn" data-filter="nice-to-have">Nice to Have <span class="count">1</span></button>
+          <span class="review-progress"><span class="reviewed-count">0</span> / 3 reviewed</span>
+        </div>
+
+        <div class="slide-area">
+          <div class="entry-slide active" data-id="req-001" data-tab="demo-reqs" data-filter="must-have">
+            <label class="review-check"><input type="checkbox" class="review-cb"><span class="review-label">Reviewed</span></label>
+            <div class="slide-eyebrow">REQ-001</div>
+            <div class="slide-title">User authentication via OAuth 2.0</div>
+            <div class="slide-body">The system must support Google and GitHub OAuth providers. Session tokens expire after 24 hours with refresh token rotation. Must integrate with existing RBAC middleware.</div>
+          </div>
+          <div class="entry-slide" data-id="req-002" data-tab="demo-reqs" data-filter="must-have">
+            <label class="review-check"><input type="checkbox" class="review-cb"><span class="review-label">Reviewed</span></label>
+            <div class="slide-eyebrow">REQ-002</div>
+            <div class="slide-title">Rate limiting on public endpoints</div>
+            <div class="slide-body">All public API endpoints must enforce rate limiting of 100 requests per minute per API key. Responses must include X-RateLimit-Remaining and Retry-After headers.</div>
+          </div>
+          <div class="entry-slide" data-id="req-003" data-tab="demo-reqs" data-filter="nice-to-have">
+            <label class="review-check"><input type="checkbox" class="review-cb"><span class="review-label">Reviewed</span></label>
+            <div class="slide-eyebrow">REQ-003</div>
+            <div class="slide-title">Webhook delivery with retry</div>
+            <div class="slide-body">Event webhooks should support configurable retry with exponential backoff. Maximum 5 retries over 24 hours. Delivery status visible in dashboard.</div>
+          </div>
+        </div>
+
+        <div class="deck-nav">
+          <button class="nav-prev">&larr; Prev</button>
+          <span class="deck-progress">1 / 3</span>
+          <button class="nav-next">Next &rarr;</button>
+        </div>
+      </div>
+
+      <div class="tab-content" id="demo-constraints">
+        <div class="filter-bar">
+          <button class="filter-btn active" data-filter="all">All <span class="count">2</span></button>
+          <button class="filter-btn" data-filter="technical">Technical <span class="count">1</span></button>
+          <button class="filter-btn" data-filter="business">Business <span class="count">1</span></button>
+          <span class="review-progress"><span class="reviewed-count">0</span> / 2 reviewed</span>
+        </div>
+
+        <div class="slide-area">
+          <div class="entry-slide" data-id="con-001" data-tab="demo-constraints" data-filter="technical">
+            <label class="review-check"><input type="checkbox" class="review-cb"><span class="review-label">Reviewed</span></label>
+            <div class="slide-eyebrow">CON-001</div>
+            <div class="slide-title">No external runtime dependencies</div>
+            <div class="slide-body">All HTML output must be self-contained — no CDN fonts, external CSS frameworks, or JavaScript libraries. Files must work from file:// protocol.</div>
+          </div>
+          <div class="entry-slide" data-id="con-002" data-tab="demo-constraints" data-filter="business">
+            <label class="review-check"><input type="checkbox" class="review-cb"><span class="review-label">Reviewed</span></label>
+            <div class="slide-eyebrow">CON-002</div>
+            <div class="slide-title">Backward compatibility with existing renders</div>
+            <div class="slide-body">Existing HTML deliverables using the scroll layout must continue to work unchanged. The content review deck is additive — it does not replace the scroll layout.</div>
+          </div>
+        </div>
+
+        <div class="deck-nav">
+          <button class="nav-prev">&larr; Prev</button>
+          <span class="deck-progress">1 / 2</span>
+          <button class="nav-next">Next &rarr;</button>
+        </div>
+      </div>
+    </div>
+    <p style="font-size: var(--text-small); color: var(--gray-500);">Navigate with arrow keys, prev/next buttons. Spacebar toggles the review checkbox. Review state persists to localStorage.</p>
+  </section>
+
   <footer class="doc-footer">
-    SDLC HTML Design System v1.0 &mdash; Generated by sdlc-render
+    SDLC HTML Design System v1.1 &mdash; Generated by sdlc-render
   </footer>
 
 </div>
 
 <script>
+/* --- Simple tabs (design system section 11) --- */
 function switchTab(event, panelId) {
   const tabGroup = event.target.closest('section');
   tabGroup.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
@@ -1466,6 +1779,7 @@ function switchTab(event, panelId) {
   tabGroup.querySelector('#' + panelId).classList.add('active');
 }
 
+/* --- Presentation deck (section 20) --- */
 function navigateDeck(deckId, direction) {
   const deck = document.getElementById(deckId);
   const slides = deck.querySelectorAll('.slide');
@@ -1478,7 +1792,209 @@ function navigateDeck(deckId, direction) {
   pips[current].classList.add('active');
 }
 
+/* --- Content review deck (section 21) --- */
+(function() {
+  var deckStates = {};
+  var activeDeckId = null;
+
+  function getFilename(deck) {
+    return deck.dataset.filename || deck.id;
+  }
+
+  function storageKey(deck) {
+    return 'review__' + getFilename(deck);
+  }
+
+  function getReviewed(deck) {
+    try { return JSON.parse(localStorage.getItem(storageKey(deck))) || {}; }
+    catch(e) { return {}; }
+  }
+
+  function setReviewed(deck, slideId, checked) {
+    var r = getReviewed(deck);
+    if (checked) r[slideId] = true;
+    else delete r[slideId];
+    localStorage.setItem(storageKey(deck), JSON.stringify(r));
+  }
+
+  function getActiveTab(deckId) {
+    var s = deckStates[deckId];
+    return s ? s.activeTab : null;
+  }
+
+  function getVisibleSlides(deckId) {
+    var s = deckStates[deckId];
+    if (!s) return [];
+    var tabContent = s.deck.querySelector('#' + s.activeTab);
+    if (!tabContent) return [];
+    var slides = Array.from(tabContent.querySelectorAll('.entry-slide'));
+    if (s.activeFilter === 'all') return slides;
+    return slides.filter(function(sl) { return sl.dataset.filter === s.activeFilter; });
+  }
+
+  function showSlide(deckId, index) {
+    var s = deckStates[deckId];
+    if (!s) return;
+    var tabContent = s.deck.querySelector('#' + s.activeTab);
+    if (!tabContent) return;
+    var allSlides = Array.from(tabContent.querySelectorAll('.entry-slide'));
+    var visible = getVisibleSlides(deckId);
+    allSlides.forEach(function(sl) { sl.classList.remove('active'); });
+    if (visible.length === 0) {
+      updateNav(deckId, 0, 0);
+      return;
+    }
+    index = Math.max(0, Math.min(index, visible.length - 1));
+    s.currentIndex = index;
+    visible[index].classList.add('active');
+    updateNav(deckId, index, visible.length);
+  }
+
+  function updateNav(deckId, index, total) {
+    var s = deckStates[deckId];
+    if (!s) return;
+    var tabContent = s.deck.querySelector('#' + s.activeTab);
+    if (!tabContent) return;
+    var nav = tabContent.querySelector('.deck-nav');
+    if (!nav) return;
+    var progress = nav.querySelector('.deck-progress');
+    var prevBtn = nav.querySelector('.nav-prev');
+    var nextBtn = nav.querySelector('.nav-next');
+    if (total === 0) {
+      progress.textContent = 'No entries match';
+      if (prevBtn) prevBtn.disabled = true;
+      if (nextBtn) nextBtn.disabled = true;
+    } else {
+      progress.textContent = (index + 1) + ' / ' + total;
+      if (prevBtn) prevBtn.disabled = (index === 0);
+      if (nextBtn) nextBtn.disabled = (index === total - 1);
+    }
+  }
+
+  function updateReviewProgress(deckId) {
+    var s = deckStates[deckId];
+    if (!s) return;
+    s.deck.querySelectorAll('.tab-content').forEach(function(tabContent) {
+      var all = tabContent.querySelectorAll('.entry-slide');
+      var done = tabContent.querySelectorAll('.entry-slide.reviewed');
+      var el = tabContent.querySelector('.review-progress');
+      if (el) el.innerHTML = '<span class="reviewed-count">' + done.length + '</span> / ' + all.length + ' reviewed';
+    });
+  }
+
+  function switchContentTab(deckId, tabId) {
+    var s = deckStates[deckId];
+    if (!s) return;
+    s.activeTab = tabId;
+    s.activeFilter = 'all';
+    s.currentIndex = 0;
+    s.deck.querySelectorAll('.tab-btn').forEach(function(t) {
+      t.classList.toggle('active', t.dataset.tab === tabId);
+    });
+    s.deck.querySelectorAll('.tab-content').forEach(function(p) {
+      p.classList.toggle('active', p.id === tabId);
+    });
+    var tabContent = s.deck.querySelector('#' + tabId);
+    if (tabContent) {
+      tabContent.querySelectorAll('.filter-btn').forEach(function(f) {
+        f.classList.toggle('active', f.dataset.filter === 'all');
+      });
+    }
+    showSlide(deckId, 0);
+  }
+
+  function applyFilter(deckId, filter) {
+    var s = deckStates[deckId];
+    if (!s) return;
+    s.activeFilter = filter;
+    s.currentIndex = 0;
+    var tabContent = s.deck.querySelector('#' + s.activeTab);
+    if (tabContent) {
+      tabContent.querySelectorAll('.filter-btn').forEach(function(f) {
+        f.classList.toggle('active', f.dataset.filter === filter);
+      });
+    }
+    showSlide(deckId, 0);
+  }
+
+  function initContentDeck(deck) {
+    var deckId = deck.id;
+    var firstTab = deck.querySelector('.tab-btn');
+    var firstTabId = firstTab ? firstTab.dataset.tab : null;
+    deckStates[deckId] = {
+      deck: deck,
+      activeTab: firstTabId,
+      activeFilter: 'all',
+      currentIndex: 0
+    };
+    var reviewed = getReviewed(deck);
+    deck.querySelectorAll('.entry-slide[data-id]').forEach(function(sl) {
+      if (reviewed[sl.dataset.id]) {
+        sl.classList.add('reviewed');
+        var cb = sl.querySelector('.review-cb');
+        if (cb) cb.checked = true;
+      }
+    });
+    updateReviewProgress(deckId);
+    if (firstTabId) showSlide(deckId, 0);
+  }
+
+  document.addEventListener('click', function(e) {
+    var deck = e.target.closest('.content-deck');
+    if (!deck) return;
+    activeDeckId = deck.id;
+    var tabBtn = e.target.closest('.tab-btn');
+    if (tabBtn) { switchContentTab(deck.id, tabBtn.dataset.tab); return; }
+    var filterBtn = e.target.closest('.filter-btn');
+    if (filterBtn) { applyFilter(deck.id, filterBtn.dataset.filter); return; }
+    var navBtn = e.target.closest('.deck-nav button');
+    if (navBtn) {
+      var s = deckStates[deck.id];
+      if (!s) return;
+      if (navBtn.classList.contains('nav-prev')) showSlide(deck.id, s.currentIndex - 1);
+      else if (navBtn.classList.contains('nav-next')) showSlide(deck.id, s.currentIndex + 1);
+      return;
+    }
+  });
+
+  document.addEventListener('change', function(e) {
+    if (!e.target.classList.contains('review-cb')) return;
+    var slide = e.target.closest('.entry-slide');
+    var deck = e.target.closest('.content-deck');
+    if (!slide || !deck || !slide.dataset.id) return;
+    slide.classList.toggle('reviewed', e.target.checked);
+    setReviewed(deck, slide.dataset.id, e.target.checked);
+    updateReviewProgress(deck.id);
+  });
+
+  document.addEventListener('keydown', function(e) {
+    if (!activeDeckId || !deckStates[activeDeckId]) return;
+    var s = deckStates[activeDeckId];
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+      e.preventDefault();
+      showSlide(activeDeckId, s.currentIndex + 1);
+    } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      showSlide(activeDeckId, s.currentIndex - 1);
+    } else if (e.key === ' ') {
+      e.preventDefault();
+      var visible = getVisibleSlides(activeDeckId);
+      var slide = visible[s.currentIndex];
+      if (!slide) return;
+      var cb = slide.querySelector('.review-cb');
+      if (cb) { cb.checked = !cb.checked; cb.dispatchEvent(new Event('change', {bubbles:true})); }
+    }
+  });
+
+  document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.content-deck').forEach(initContentDeck);
+  });
+})();
+
+/* --- Presentation deck keyboard handler --- */
 document.addEventListener('keydown', function(e) {
+  var contentDeck = document.querySelector('.content-deck');
+  if (contentDeck && contentDeck.contains(document.activeElement)) return;
   if (e.key === 'ArrowRight') navigateDeck('demo-deck', 1);
   if (e.key === 'ArrowLeft') navigateDeck('demo-deck', -1);
 });

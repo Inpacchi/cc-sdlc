@@ -16,6 +16,30 @@ Every deliverable MD file can be rendered to a self-contained HTML file using `s
 
 **Exploration artifacts** — Interactive HTML files created during `sdlc-idea` exploration and `sdlc-plan` discovery to help CD evaluate options. These are throwaway working tools: side-by-side approach comparisons, interaction prototypes, parameter tuning with sliders, drag-and-drop prioritization, animation sandboxes. They use the design system for visual tokens but allow any JavaScript needed for the interaction. They are demand-driven — create them when text descriptions would be insufficient for CD to make a confident decision.
 
+## Layout Modes
+
+Rendered HTML supports two layout modes that can coexist within a single document:
+
+**Scroll layout** — Content flows vertically in a single scrollable page. This is the default for narrative prose, metadata grids, stat cards, timelines, and any content that benefits from continuous reading.
+
+**Slide layout** — Discrete, enumerable entries are rendered one-at-a-time in a content review deck (`.content-deck` from the design system). Readers navigate with prev/next buttons or arrow keys, filter by category, and mark entries as reviewed via checkboxes that persist to localStorage. Use slide layout when a section contains 3+ entries of similar structure (requirements, findings, phases, review items).
+
+Layout mode is determined per-section, not per-document. A plan might render its overview and timeline in scroll mode but its phases as slides. The document-type defaults below specify which sections use which mode.
+
+### Review Checkboxes
+
+All slide-layout sections include review checkboxes on every entry. Checkboxes persist to localStorage using the key `review__{filename}__{slideId}`, enabling incremental review across browser sessions. A review progress counter ("3 / 12 reviewed") appears in the deck navigation bar.
+
+Review checkboxes appear on all document types that use slide layout — they are not restricted to review or audit documents. Any enumerable content benefits from the ability to track reading progress.
+
+### Tab Auto-Generation
+
+When entries within a slide-layout section are grouped under H2 headings (or equivalent structural divisions), tabs are auto-generated from those groupings. Each tab shows a count badge ("Requirements (7)"). Switching tabs filters the visible slides and resets filter chips to "All."
+
+### Filter Chips
+
+Within each tab, filter chips provide quick filtering by a single dimension — typically severity, priority, status, or category. One filter is active at a time; "All" is the default. Each filter chip shows a count for the current tab.
+
 ## When HTML Is Generated
 
 ### Auto-Render (post-skill)
@@ -103,6 +127,7 @@ When auto-rendering (no Q&A), the document type determines which components and 
 - **Layout:** Header with deliverable ID and status → summary grid (status, priority, owner, target) → table of contents → requirement cards → dependency diagram (SVG) → acceptance criteria checklist → open questions callout
 - **Key components:** Requirement cards, callout boxes (open questions, constraints), comparison grid (for alternatives), diagrams
 - **Interactive:** Collapsible sections for detailed requirements, tabs for functional vs. non-functional requirements
+- **Slide-layout sections:** Requirement cards — each requirement as a slide, tabs from requirement categories (functional / non-functional), filters by priority (must-have / should-have / nice-to-have). Review checkboxes on all slides.
 - **Verbatim content rule:** If the spec includes exact API signatures, schema definitions, or acceptance criteria with specific values, these must appear in the HTML — not summarized. Use collapsible code blocks for lengthy specifications.
 
 ### Plan
@@ -110,6 +135,7 @@ When auto-rendering (no Q&A), the document type determines which components and 
 - **Layout:** Header → summary grid (files, phases, findings, review rounds) → timeline visualization → phased sections with milestone markers → per-phase acceptance criteria → agent dispatch summary table → risk table
 - **Key components:** Timeline, stat cards (scope metrics), code blocks, tables, tabs for phase-by-phase view, copy tables (before/after for text replacement plans), file tags for scope
 - **Interactive:** Tabs for phases, collapsible implementation details
+- **Slide-layout sections:** Phases — each phase as a slide, no tabs needed if phases are sequential, filters by status (complete / in-progress / pending). Review checkboxes on all slides.
 - **Verbatim content rule:** Code blocks, replacement strings, import lines, and other verbatim content from the source plan MUST appear in the HTML — render in collapsible `<details>` sections if they would dominate a section, but do not summarize them into prose or table abbreviations. The executing agent needs exact text, not paraphrases.
 - **Per-phase acceptance criteria:** Render each phase's acceptance criteria at the bottom of that phase's section (as a checklist), not flattened into a single end-of-document list. The consolidated post-execution review checklist remains as a summary, but per-phase criteria give phase-level "what does done look like."
 - **Substitution/fallback tables:** If the plan includes icon substitutions, library fallbacks, or alternative approaches, render them in the phase where they apply — don't drop them.
@@ -119,42 +145,49 @@ When auto-rendering (no Q&A), the document type determines which components and 
 - **Layout:** Header with completion status → stat cards (before/after metrics) → what shipped summary → diff summary → review findings table → remaining items
 - **Key components:** Stat cards with deltas, diff viewer, finding rows, banners (status), tables
 - **Interactive:** Collapsible diff views, tabs for shipped vs. remaining
+- **Slide-layout sections:** Review findings — each finding as a slide, tabs by category or file, filters by severity. Review checkboxes on all slides.
 
 ### Exploration (idea brief)
 
 - **Layout:** Header → problem framing → comparison grid of options → tradeoff matrices → recommendation callout → next steps
 - **Key components:** Comparison grid, cards for each option, badges for tradeoffs, callout for recommendation
 - **Interactive:** Tabs for side-by-side option comparison
+- **Slide-layout sections:** Options — each option as a slide when 3+ options, filters by feasibility or recommendation status. Only use when options are discrete cards; comparison grids stay in scroll layout. Review checkboxes on all slides.
 
 ### Report (audit)
 
 - **Layout:** Header → banner (overall status) → stat cards (score, findings count) → findings table with severity → detailed findings with severity rows → recommendations
 - **Key components:** Banners, stat cards, finding rows, severity badges, tables
 - **Interactive:** Collapsible finding details
+- **Slide-layout sections:** Findings — each finding as a slide, tabs by finding category, filters by severity. Review checkboxes on all slides.
 
 ### Incident
 
 - **Layout:** Header with severity banner → timeline (discovery → triage → fix → verification) → impact summary stat cards → root cause diagram (SVG) → remediation checklist → lessons learned callout
 - **Key components:** Timeline, banners (severity), diagrams, stat cards, checklist
 - **Interactive:** Collapsible timeline phases
+- **Slide-layout sections:** None by default — incident docs are narrative/timeline-driven. Individual remediation items could use slide layout if 5+ items.
 
 ### Reference
 
 - **Layout:** Header → deep table of contents → anchored sections → code blocks → cross-reference links
 - **Key components:** TOC, code blocks, tables, callout boxes for gotchas, collapsible sections
 - **Interactive:** All detail sections collapsible, deep anchor linking
+- **Slide-layout sections:** Sections as slides when entries are short, self-contained definitions or patterns (e.g., a glossary, a pattern catalog). Long-form reference sections stay in scroll layout. Review checkboxes on all slides.
 
 ### Handoff
 
 - **Layout:** Header with status banner → what's done / what's left two-column → key files list → decision log → context for next session
 - **Key components:** Banner (status), two-column layout, checklist, callout boxes
 - **Interactive:** Collapsible context sections
+- **Slide-layout sections:** None by default — handoff docs are columnar (done / remaining).
 
 ### Review (code review)
 
 - **Layout:** Header with target description and date → stat cards (finding counts by severity) → file risk map table (per-file changes, severity dots) → annotated diffs with inline margin comments → overengineering summary → CLAUDE.md drift section → agent coverage summary → recurring patterns
 - **Key components:** Diff viewer with inline callout annotations, finding rows with severity badges, stat cards, file risk table with severity dots, banners, code blocks
 - **Interactive:** Collapsible per-file diff sections, tabs for findings-by-severity vs. findings-by-file views
+- **Slide-layout sections:** Findings by file — each file's findings as a slide, tabs by file, filters by severity. Review checkboxes on all slides.
 
 ## Sharing
 
