@@ -34,6 +34,22 @@ Each entry contains:
 
 ---
 
+## 2026-05-13: Enforce No-Revert-Without-Authorization Rule
+
+**Origin:** D37 Card Detail Meta Enrichment execution in Sleeved — agent reverted user's concurrent working-tree changes without authorization, destroying uncommitted work from prior sessions.
+
+**What happened:** During D37 execution, a frontend-developer agent modified `CardDetailModal.tsx` (a file not in the plan). The manager classified it as "out of scope" and ran `git checkout -- CardDetailModal.tsx` without asking the user. That file contained ~335 lines of uncommitted user work (scroll-fade logic, layout constraints, Popover imports) from prior sessions. The revert destroyed the work irreversibly. The framework's execution skills had no explicit prohibition on reverting files — the POST-GATE file-deviation check said "log the deviation and continue" but didn't say "never revert." The manager interpreted the deviation as something to fix by reverting.
+
+**Changes made:**
+
+1. **`process/manager-rule.md`** — Added "No Revert Without Authorization" section: explicit prohibition on `git checkout --`, `git restore`, `git stash`, or any working-tree-destructive command on files the manager didn't create in the current session. Only files created from scratch by the manager's agents are safe to revert; everything else requires `AskUserQuestion` authorization.
+2. **`skills/sdlc-lite-execute/SKILL.md`** — Added step 5 to the POST-GATE file-deviation check: "NEVER revert a deviated file" with explicit prohibition on destructive commands and requirement to use `AskUserQuestion` if concerned. Added Red Flags table entry for "This file wasn't in the plan — I'll revert it."
+3. **`skills/sdlc-execute/SKILL.md`** — Same changes as sdlc-lite-execute: step 5 in POST-GATE file-deviation check and Red Flags table entry.
+
+**Rationale:** The file-deviation check already said "log and continue" but the absence of an explicit "never revert" left room for the manager to interpret deviation-handling as revert-then-log. The working tree is shared territory — it may contain work from prior sessions, concurrent branches, or manual edits the user hasn't committed. Any destructive operation on files the manager didn't create requires explicit authorization. The Red Flags entry catches the exact thought pattern that caused the incident.
+
+---
+
 ## 2026-05-13: Add Content Review Slide Deck to HTML Rendering
 
 **Origin:** Knowledge atlas HTML redesign in Neuroloom — rebuilt 12 discipline pages with slide-based navigation, filter chips, and review checkboxes. The patterns proved substantially better for reviewing structured content and should be ported upstream to the cc-sdlc framework.

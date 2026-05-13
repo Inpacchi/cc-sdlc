@@ -295,6 +295,7 @@ Stubs: [none | list with file:line and disposition: deferred-to-phase-N | defect
 2. List every file the agent actually created or modified (from the git diff or agent report)
 3. Compare the two lists. Any file in list 2 that is NOT in list 1 is a deviation — regardless of whether the agent describes it as "related", "fixing the same pattern", or "obviously necessary"
 4. If any deviation exists: log the deviation (file name and reason) and continue execution. Include all deviations in the result doc's Deviations section. Do not stop for approval — but do not silently absorb them either; they must be visible in the final report.
+5. **NEVER revert a deviated file.** Do not run `git checkout --`, `git restore`, or any command that discards changes in the deviated file. The file may contain the user's concurrent uncommitted work that predates this session. If you believe the deviation is harmful, ask the user via `AskUserQuestion` — but the default is to keep and log, never to revert.
 
 - **Phase bleeding check:** If an agent returns work that covers scope belonging to a subsequent phase (within plan-listed files): (1) output a one-line note to CD identifying which phase was anticipated, (2) in the subsequent phase's dispatch prompt, include a summary of what the earlier agent already implemented and instruct the agent to verify completeness and implement only what remains. If the bleeding substantially changes a subsequent phase (e.g., makes it a verify-only pass), flag to CD rather than silently absorbing. Document any skipped or substantially reduced phases in the result doc under 'Skipped Phases'.
 
@@ -531,6 +532,7 @@ When the deliverable is complete, the "Let's organize the chronicles" command mo
 
 | Thought | Reality |
 |---------|---------|
+| "This file wasn't in the plan — I'll revert it" | NEVER revert files you didn't create. The file may contain the user's concurrent work. Log the deviation; ask via `AskUserQuestion` if concerned. `git checkout --` on someone else's work is destructive and irreversible. |
 | "There's no plan, I'll wing it" | Stop. Use `sdlc-plan` first. |
 | "I'll implement this part myself" | If a worker domain agent exists for it, dispatch them. See Manager Rule. |
 | "This phase is small and well-defined, I'll do it directly" | Size is not an exception. Dispatch the agent. |

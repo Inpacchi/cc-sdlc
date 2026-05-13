@@ -25,6 +25,18 @@ The single most important behavioral principle in the SDLC framework. Every skil
 - **Parallel agents produced a file conflict** (one agent's write overwrote another's): re-dispatch the overwritten agent with the current file state and instructions to re-apply its changes. Framing the situation as a "merge task" does not make self-implementation appropriate.
 - **An agent's work is mostly complete but has gaps or loose ends**: re-dispatch that agent to close the gaps. "Mostly done" is not done. Finishing the last 10% yourself is the same violation as doing 100% yourself.
 
+## No Revert Without Authorization
+
+**Never run `git checkout --`, `git restore`, `git stash`, or any working-tree-destructive command on files you did not create or modify in the current session.** The working tree may contain uncommitted changes from prior sessions or concurrent work by the user. A `git checkout --` on such a file destroys that work irreversibly — there is no undo.
+
+When an agent modifies a file not in the plan:
+1. Log the deviation in the POST-GATE output
+2. Include it in the result doc
+3. **Do not revert the file** — the agent may have had a legitimate reason, or the file may contain the user's concurrent work mixed with the agent's changes
+4. If the deviation is concerning, ask the user via `AskUserQuestion` whether to revert, keep, or investigate
+
+The only files safe to revert are files you (or your dispatched agents) created from scratch in the current session. For everything else, reverting requires explicit user authorization via `AskUserQuestion`.
+
 ## What the Manager CAN Edit Directly
 
 The rule applies to **code files and domain content**. The manager may directly edit:
