@@ -81,6 +81,8 @@ digraph sdlc_lite_planning {
 
 Select from project-level worker agents (`.claude/agents/`). If a worker agent's domain touches any aspect of the task, include them. When in doubt, include — a quick review that finds nothing costs less than a shipped bug.
 
+**Playbooks supplement — they don't determine.** A matching playbook provides a useful starting roster, but agent selection must independently assess domain relevance for the specific task. An agent whose domain is touched by the task's content belongs in the list whether or not any playbook mentions them. Playbooks capture *typical* coverage for a task *type*; the actual task may have domain-specific needs the playbook never anticipated.
+
 Refer to the full agent table in the `sdlc-plan` skill if you need the complete list. The same worker agents are available here.
 
 ## Collaboration Model
@@ -125,7 +127,9 @@ Consult `[sdlc-root]/knowledge/architecture/agent-orchestration-patterns.yaml` f
 
 ### 1. Identify Relevant Worker Domain Agents
 
-**Playbook scan** — before finalizing agent selection, check for a matching playbook:
+**Independent domain assessment** — start from the task, not from a template. Read the task description and assess which agent domains it touches. Consider both technical domains (frontend, backend, data pipeline) and analytical/specialist domains (meta-analysis, design, accessibility, domain-specific expertise). An agent belongs in the list if their expertise would catch issues or improve quality that other agents would miss. Build this initial list before consulting any playbook.
+
+**Playbook scan** — after your independent assessment, check for a matching playbook:
 
 1. Read `[sdlc-root]/playbooks/README.md` — scan the "Available playbooks" table
 2. For each playbook whose task type overlaps with the current task, read the playbook file
@@ -141,6 +145,8 @@ When exploring existing patterns, use LSP (`goToDefinition`, `findReferences`, `
 **Infrastructure domain trigger conditions** — read `[sdlc-root]/process/agent-selection.yaml` § `infrastructure_domains`. For each domain, ask its trigger questions about the task. If any trigger is true, add the specialist.
 
 **CHRONICLE-CONTEXT scan** — scan `docs/chronicle/` for concepts related by name or domain. For each related concept read its `_index.md`; if it references deliverables with relevant decisions or patterns, read those result docs and include the context when dispatching agents. This prevents re-inventing patterns established by prior deliverables.
+
+**Prior-contributor check** — when the chronicle scan surfaces related prior deliverables, check their result docs for which agents contributed (the Worker Agent Reviews section or Agents table). If a prior contributor's domain is relevant to the current task and they aren't already in your list, add them. An agent that shaped the ancestor deliverable likely has context and expertise that applies here — omitting them means losing that continuity.
 
 #### Pre-Dispatch block (compact form — default)
 

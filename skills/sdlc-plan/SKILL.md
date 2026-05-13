@@ -150,6 +150,8 @@ Use `[sdlc-root]/process/agent-selection.yaml` as the canonical agent-to-domain 
 
 If an agent's domain touches **any aspect** of the task, include them. When in doubt, include. A 2-minute review that finds nothing costs less than a missed issue that ships.
 
+**Playbooks supplement — they don't determine.** A matching playbook provides a useful starting roster, but agent selection must independently assess domain relevance for the specific task. An agent whose domain is touched by the task's content belongs in the list whether or not any playbook mentions them. Playbooks capture *typical* coverage for a task *type*; the actual task may have domain-specific needs the playbook never anticipated.
+
 ## Phase Details
 
 ### Agent Dispatch Protocol
@@ -176,6 +178,8 @@ Dispatch prompts must pass through all relevant context — outcomes, constraint
 
 ### 1. Identify Relevant Domain Agents
 
+**Independent domain assessment** — start from the task, not from a template. Read the task description and assess which agent domains it touches. Consider both technical domains (frontend, backend, data pipeline) and analytical/specialist domains (meta-analysis, design, accessibility, domain-specific expertise). An agent belongs in the list if their expertise would catch issues or improve quality that other agents would miss. Build this initial list before consulting any playbook.
+
 List which agents are relevant and why:
 
 ```
@@ -186,7 +190,7 @@ Relevant domain agents for this task:
 - code-reviewer: included by default for implementation tasks
 ```
 
-**Playbook scan** — before finalizing agent selection, check for a matching playbook:
+**Playbook scan** — after your independent assessment, check for a matching playbook:
 
 1. Read `[sdlc-root]/playbooks/README.md` — scan the "Available playbooks" table
 2. For each playbook whose task type overlaps with the current task, read the playbook file
@@ -239,6 +243,8 @@ The goal is to surface unknowns that would become expensive surprises during imp
 4. Include the relevant context when dispatching agents for spec and plan writing
 
 This prevents re-discovering decisions already made. If a prior deliverable established a pattern (e.g., "REST in, WebSocket out" for demo state, array-based health configs), the spec and plan agents should know about it.
+
+**Prior-contributor check** — when the chronicle scan surfaces related prior deliverables, check their result docs for which agents contributed (the Worker Agent Reviews section or Agents table). If a prior contributor's domain is relevant to the current task and they aren't already in your list, add them. An agent that shaped the ancestor deliverable likely has context and expertise that applies here — omitting them means losing that continuity.
 
 Emit the result as a **Prior context** table on the happy path:
 

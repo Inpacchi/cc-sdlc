@@ -34,6 +34,22 @@ Each entry contains:
 
 ---
 
+## 2026-05-13: Agent Selection — Independent Reasoning Over Playbook Defaults
+
+**Origin:** D37 (Sleeved) — meta-analyst was omitted from plan review despite being the agent that produced the gap audit feeding the plan. The playbook's recommended agent list was treated as the determinant rather than a supplement.
+
+**What happened:** The lite-plan skill matched the frontend-feature playbook, which recommended frontend-developer + code-reviewer + data-engineer. The meta-analyst's domain clearly touched the task (card meta enrichment is their core expertise), but they weren't in the playbook roster, aren't an infrastructure domain specialist, and the chronicle scan loaded prior deliverable context without checking which agents contributed. Three layers of selection, and none surfaced the most relevant domain expert.
+
+**Changes made:**
+
+1. **`skills/sdlc-lite-plan/SKILL.md`** — Added "Playbooks supplement — they don't determine" principle to Agent Selection section. Added "Independent domain assessment" substep before playbook scan in Step 1. Added "Prior-contributor check" substep after chronicle context scan.
+2. **`skills/sdlc-plan/SKILL.md`** — Same three additions: playbook-supplement principle in Selection Rule, independent domain assessment before playbook scan in Step 1, prior-contributor check after chronicle context scan.
+3. **`process/agent-selection.yaml`** — Updated Selection Process comments: step 2 now specifies "independently assess" from task content, added step 6 (prior-contributor check), added playbook-supplement principle.
+
+**Rationale:** Playbooks capture typical coverage for a task type, but each task has specific domain needs the playbook may not anticipate. Agent selection must start from the task's content, not from a template — then use playbooks and infrastructure triggers as supplements. The prior-contributor check ensures continuity: an agent that shaped an ancestor deliverable has context that shouldn't be lost just because they aren't in a playbook.
+
+---
+
 ## 2026-05-12: Consolidate Skill Library (32 → 25 skills)
 
 **Origin:** Skill count review identified skills that were underused, overlapping, or better absorbed into existing skills. Goal: reduce maintenance overhead without losing capabilities.

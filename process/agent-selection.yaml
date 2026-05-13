@@ -312,7 +312,15 @@ infrastructure_domains:
 
 # Selection Process:
 # 1. Always add code-reviewer
-# 2. Add Tier 1 agents based on which domains the work touches
+# 2. Independently assess which Tier 1 agent domains the task touches —
+#    start from the task content, not from a playbook or template
 # 3. Assess whether any Tier 2 triggers apply based on the nature of the work
 # 4. For each Tier 2 agent, briefly note WHY it's included or excluded
 # 5. For planning: check infrastructure_domains triggers and add specialists
+# 6. Prior-contributor check: when related prior deliverables are found,
+#    check which agents contributed — if their domain remains relevant, include them
+#
+# Playbooks supplement this process — they don't replace it. A matching playbook
+# provides a useful starting roster, but selection must independently assess
+# domain relevance for the specific task. An agent whose domain is touched by the
+# task belongs in the list whether or not any playbook mentions them.
