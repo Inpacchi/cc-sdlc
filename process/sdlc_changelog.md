@@ -34,6 +34,19 @@ Each entry contains:
 
 ---
 
+## 2026-05-12: Add Active Validation to Compliance Audit (Dimension 6)
+
+**Origin:** Observed that `[NEEDS VALIDATION]` parking lot entries accumulate indefinitely — audit's existing triage only handles obvious promotions and age-based marker transitions, with no step to actually validate entries against codebase evidence.
+
+**What happened:** Considered creating a separate `sdlc-triage` skill but decided the work belongs inside the audit's Dimension 6 scan. A separate skill would grow the skill count without earning its own trigger surface — audit is already scanning parking lots and already has the interactive promotion pipeline (Step 11). The missing piece was the investigative step between passive marker aging and promotion decisions.
+
+**Changes made:**
+
+1. **`.claude/skills/ccsdlc-audit/references/compliance-methodology.md`** — Added section 6e (Active Validation): evidence-based validation pass that searches git history, codebase, and sessions for each `[NEEDS VALIDATION]` entry. Defines evidence strength levels (Strong → `[VALIDATED]`, Redundant → `[REDUNDANT → file]`, Moderate/None → leave as-is). Includes scope control (5 oldest first if >10 entries). Updated triage authority matrix in 6b with two new transitions. Updated Step 7 auto-triage note to reference 6e. Updated Step 11a to prioritize `[VALIDATED]` entries as promotion candidates.
+2. **`.claude/skills/ccsdlc-audit/SKILL.md`** — Updated Dimension 6 summary to mention active validation. Updated Interactive Triage Phase to explain that candidates come from both `[VALIDATED]` entries (6e) and existing `[READY TO PROMOTE]` markers. Added triage-related trigger phrases ("triage parking lot", "triage disciplines", "validate parking lot entries"). Added `--skip-validation` flag to input table for fast structural audits. Changed promotion behavior: full entry is removed from parking lot and replaced with a one-liner in a `### Promoted` section at the bottom of the discipline file.
+
+**Rationale:** Keeps the skill count flat while closing the validation gap. Active validation is a natural sub-step of the discipline health scan — it runs after auto-triage markers and feeds validated entries into the existing Step 11 promotion pipeline. The audit becomes the single place for all parking lot lifecycle management: marker aging (6b), evidence-based validation (6e), and interactive promotion (Step 11).
+
 ## 2026-05-12: Add HTML Rendering Layer (sdlc-render)
 
 **Origin:** CD observation that markdown deliverables are difficult for humans to read beyond ~100 lines, hard to share with stakeholders, and lack the visual richness needed for effective HITL review. Inspired by HTML-as-output patterns emerging in the Claude Code community (Thariq's html-effectiveness work).

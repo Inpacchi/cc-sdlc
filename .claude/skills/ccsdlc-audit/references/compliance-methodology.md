@@ -10,7 +10,7 @@ Full methodology for cc-sdlc framework source repo compliance auditing. Covers a
 4. **Stale Reference Scan**: Grep for old/removed names across the codebase
 5. **Changelog Freshness**: Compare `process/sdlc_changelog.md` against recent commits modifying process files
 6. **Knowledge Store Scan**: Audit YAML structure, README files, `spec_relevant` fields, conventions
-7. **Discipline Health Scan**: Check parking lot entries, triage markers, cross-discipline flow
+7. **Discipline Health Scan**: Check parking lot entries, triage markers, active validation of `[NEEDS VALIDATION]` entries, cross-discipline flow
 8. **Skill/Agent Convention Scan**: Verify frontmatter format, required sections, anti-triggers, tools lists
 9. **Setup.sh Verification**: Verify installation script handles all manifest files correctly
 10. **Report Generation**: Produce structured inline report
@@ -148,11 +148,13 @@ Check each discipline file:
 | Transition | Authority | When |
 |-----------|-----------|------|
 | unmarked → `[NEEDS VALIDATION]` | Auto-apply (step 7) | Unmarked for >=2 audit cycles |
+| `[NEEDS VALIDATION]` → `[VALIDATED]` | Auto-apply (step 7, via 6e) | Evidence found during active validation |
+| `[NEEDS VALIDATION]` → `[REDUNDANT → file]` | Auto-apply (step 7, via 6e) | Existing knowledge rule covers same concept |
 | `[NEEDS VALIDATION]` → `[DEFERRED]` | Auto-apply (step 7) | Unvalidated >=3 cycles AND discipline dormant |
 | Any → `[READY TO PROMOTE]` | User decision (step 11) | Proposed with evidence during interactive triage |
 | `[READY TO PROMOTE]` → Promoted | User decision (step 11) | Actual knowledge file creation during interactive triage |
 
-**Step 7 auto-triage:** Scan entries, apply qualifying low-risk transitions, log actions in report. Collect promotion candidates for step 11.
+**Step 7 auto-triage:** Scan entries, apply qualifying low-risk transitions, log actions in report. Then run active validation (6e) on remaining `[NEEDS VALIDATION]` entries — unless `--skip-validation` was passed, in which case skip 6e entirely. Collect promotion candidates for step 11.
 
 ### 6c. Knowledge-to-Skill Wiring
 
@@ -175,6 +177,42 @@ Five usage signals per discipline:
 | Growth since seeding | Knowledge files added or expanded | Unchanged since initial seed | N/A |
 
 Report as table with interpretation (healthy / formalized-but-dead / alive-but-unformalized / dead).
+
+### 6e. Active Validation
+
+After auto-triage markers (6b), run an evidence-based validation pass on remaining `[NEEDS VALIDATION]` entries. This closes the gap between passive marker aging and interactive promotion — it checks whether unvalidated insights have been confirmed by actual work.
+
+**For each `[NEEDS VALIDATION]` entry:**
+
+1. **Extract search terms** — pull 2-3 distinctive keywords or phrases from the entry
+2. **Search for evidence:**
+   - `git log --all -S "keyword"` — commits that added/removed the concept
+   - `git log --all --grep="keyword"` — commit messages referencing it
+   - `grep -r "pattern" skills/ knowledge/ process/` — framework references
+   - Session history — was the pattern encountered in documented work?
+3. **Check for independent recurrence** — was a similar insight added from a different source or date? Look for related entries in other discipline files or other ingestion batches.
+4. **Check knowledge store coverage** — does an existing rule in `knowledge/` already encode the same concept? If so, the entry is redundant, not unvalidated.
+
+**Evidence strength:**
+
+| Level | Signal | Action |
+|-------|--------|--------|
+| **Strong** | 2+ independent occurrences, OR implemented in framework code, OR referenced in multiple sessions | Mark `[VALIDATED]` — promotion candidate for step 11 |
+| **Moderate** | Single occurrence since seeding, OR related knowledge rule exists but doesn't fully cover it | Leave `[NEEDS VALIDATION]` — note evidence for next cycle |
+| **Redundant** | Existing knowledge store rule covers the same concept | Mark `[REDUNDANT → knowledge/path/file.yaml]` — prune candidate |
+| **None** | No evidence after searching | Leave `[NEEDS VALIDATION]` |
+
+**Scope control:** If a discipline has >10 `[NEEDS VALIDATION]` entries, validate the 5 oldest first. Report remaining count for next cycle. Skip this entire section if `--skip-validation` was passed — report "Active validation: skipped (--skip-validation)" in the Dimension 6 output.
+
+**Output:** Collect `[VALIDATED]` entries as promotion candidates for step 11. Report all validation actions in the Dimension 6 section of the audit report:
+
+```
+Active Validation Results:
+  Validated: N (promotion candidates)
+  Redundant: N (prune candidates)
+  Inconclusive: N (remain [NEEDS VALIDATION])
+  Skipped (scope limit): N
+```
 
 ## Dimension 7: Skill Convention Compliance
 
@@ -280,10 +318,10 @@ After presenting the audit report, run an interactive triage session for all pro
 
 ### Triage Workflow
 
-**11a. Collect candidates.** During step 7, build a candidate list. Each candidate needs:
+**11a. Collect candidates.** During step 7, build a candidate list from two sources: (1) entries marked `[VALIDATED]` by active validation (6e) — these are primary candidates with evidence already gathered, and (2) entries with existing `[READY TO PROMOTE]` markers from previous cycles. Each candidate needs:
 - The entry text (verbatim from parking lot)
 - Source location (discipline file + line)
-- Evidence (why it's promotion-worthy: recurrence, deliverable references, validation status)
+- Evidence (why it's promotion-worthy: validation evidence from 6e, recurrence, deliverable references)
 - Suggested target (which knowledge store file it would go into — existing or new)
 
 **11b. Present candidates grouped by discipline.** Use interactive prompts to present candidates in batches (one discipline at a time):
@@ -301,7 +339,7 @@ For each: (P)romote, (D)efer, (S)kip
 
 **11c. Apply decisions.**
 
-- **Promote:** Create or update the target knowledge store YAML file with the new entry. Mark the parking lot entry as `Promoted → [target file path] ([date])`.
+- **Promote:** Create or update the target knowledge store YAML file with the new entry. Remove the full entry from its current location in the parking lot and add a one-liner to the `### Promoted` section at the bottom of the file (create the section if it doesn't exist). Format: `- **[source tag]** short title → `target file path``. The promoted section is a breadcrumb trail — full content lives in the knowledge store.
 - **Defer:** Update the parking lot entry marker to `[DEFERRED]` with reason appended.
 - **Skip:** Leave the entry unchanged — it stays at its current marker for next audit cycle.
 

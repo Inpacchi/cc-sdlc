@@ -13,7 +13,8 @@ description: >
   framework audit", "compliance audit", "audit this session", "audit for improvements",
   "what can we improve about the framework", "framework health check", "check framework health",
   "validate the framework", "check sdlc compliance", "audit these commits",
-  "process improvement audit".
+  "process improvement audit", "triage parking lot", "triage disciplines",
+  "validate parking lot entries".
   Do NOT use for generating playbooks from sessions — use sdlc-playbook-generate.
   Do NOT use for bulk knowledge import — use sdlc-ingest.
 ---
@@ -39,6 +40,7 @@ Parse `$ARGUMENTS` to determine mode and source:
 |-----------|------|--------|
 | `/ccsdlc-audit` (no args) | Compliance | Current framework state |
 | `/ccsdlc-audit compliance` | Compliance | Current framework state |
+| `/ccsdlc-audit compliance --skip-validation` | Compliance | Current state, skip active validation (6e) — fast structural health check only |
 | `/ccsdlc-audit compliance <session>` | Compliance | Specific session — did it follow framework conventions? |
 | `/ccsdlc-audit compliance <commit(s)>` | Compliance | Specific commits — do they maintain framework consistency? |
 | `/ccsdlc-audit improve` | Improve | Current session |
@@ -72,7 +74,7 @@ DISPATCH AUDITOR → REPORT → TRIAGE → FIX
 3. **Stale reference scan** — Grep for old/removed skill/agent/concept names across the codebase
 4. **Changelog freshness** — Process changes have corresponding entries in `process/sdlc_changelog.md`
 5. **Knowledge store conventions** — YAML structure, README completeness, `spec_relevant` fields
-6. **Discipline health** — Parking lot entries have triage markers, cross-discipline flow
+6. **Discipline health** — Parking lot entries have triage markers, active validation of `[NEEDS VALIDATION]` entries against codebase evidence, cross-discipline flow
 7. **Skill convention compliance** — Frontmatter format (folded scalar descriptions), required sections, anti-triggers
 8. **Agent convention compliance** — Proper frontmatter, tools lists, when-to-use descriptions
 9. **Setup.sh correctness** — Installation script copies all manifest files, agent paths go to `.claude/agents/`
@@ -92,7 +94,7 @@ Present findings to user in a structured format (score/10, verdict, findings tab
 
 After presenting the audit report, if any discipline parking lot entries are promotion candidates (from Dimension 6), run an interactive triage session. See `references/compliance-methodology.md` step 11 for the full workflow.
 
-The triage phase presents candidates grouped by discipline and asks the user to decide on each: promote to knowledge store, defer (with reason), or leave as-is. Promotions are applied immediately — the audit creates or updates the target knowledge store file and marks the parking lot entry as `Promoted -> [target file]`.
+Candidates come from two sources: entries marked `[VALIDATED]` by the active validation pass (§6e — these have codebase evidence already gathered), and entries with existing `[READY TO PROMOTE]` markers. The triage phase presents candidates grouped by discipline and asks the user to decide on each: promote to knowledge store, defer (with reason), or leave as-is. Promotions are applied immediately — the audit creates or updates the target knowledge store file, removes the full entry from the parking lot, and adds a one-liner to the `### Promoted` section at the bottom of the discipline file (`- **[source]** short title → target path`).
 
 ## Improvement Mode
 
