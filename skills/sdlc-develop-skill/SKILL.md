@@ -45,7 +45,7 @@ Clarify with the user:
 - **What does this skill do?** (one sentence)
 - **What skill type?**
   - **Orchestration** — dispatches domain agents, has agent selection criteria, review loops (e.g., sdlc-plan, sdlc-execute, sdlc-review-code)
-  - **Utility** — step-by-step procedure, may or may not dispatch agents (e.g., sdlc-archive, sdlc-reconcile, sdlc-ingest)
+  - **Utility** — step-by-step procedure, may or may not dispatch agents (e.g., sdlc-archive, sdlc-ingest)
   - **Exploration** — open-ended flow, no hard gates, user-directed iteration (e.g., sdlc-idea, sdlc-design-consult)
   - **Domain-specific** — focused on a specific technical domain (e.g., sdlc-tests-create, sdlc-tests-run)
 - **What triggers this skill?** (natural language phrases users would say)
@@ -192,7 +192,7 @@ Generate:
 
 ### 9. Quality Gate
 
-Dispatch the `sdlc-reviewer` subagent on the created skill file. Present its findings. Fix any convention violations before finalizing. Read `[sdlc-root]/knowledge/dx/skill-quality-rubrics.yaml` and audit against SQR-04 (scope calibration line counts), SQR-05 (progressive disclosure to references/), SQR-06 (directive density), and SQR-07 (anti-pattern flags: OVER_CONSTRAINED, EMPTY_DESCRIPTION, MISSING_TRIGGER, BLOATED_SKILL, ORPHAN_REFERENCE).
+Dispatch the `sdlc-reviewer` subagent on the created skill file. The reviewer checks against the conventions in `[sdlc-root]/process/skill-agent-review.md`. Also audit against `[sdlc-root]/knowledge/dx/skill-quality-rubrics.yaml` — SQR-04 (scope calibration line counts), SQR-05 (progressive disclosure to references/), SQR-06 (directive density), and SQR-07 (anti-pattern flags: OVER_CONSTRAINED, EMPTY_DESCRIPTION, MISSING_TRIGGER, BLOATED_SKILL, ORPHAN_REFERENCE). Present findings. Fix any convention violations before finalizing.
 
 ---
 
@@ -253,7 +253,7 @@ For **framework changes**: present the warning and offer alternatives:
 
 ### M4. Quality Gate
 
-Dispatch the `sdlc-reviewer` subagent on the modified skill file. Present its findings.
+Dispatch the `sdlc-reviewer` subagent on the modified skill file. The reviewer checks against `[sdlc-root]/process/skill-agent-review.md`. Present its findings.
 
 ---
 
@@ -282,6 +282,6 @@ Dispatch the `sdlc-reviewer` subagent on the modified skill file. Present its fi
 
 - **Feeds into:** The created/modified skill becomes part of the project's skill library
 - **Uses:** `sdlc-reviewer` (quality gate), existing skills in `.claude/skills/` (as reference patterns), `[sdlc-root]/process/` and `[sdlc-root]/knowledge/` (as extraction targets for shared content)
-- **Complements:** `sdlc-create-agent` (agents vs skills), `sdlc-review` (review existing skills)
+- **Complements:** `sdlc-create-agent` (agents vs skills)
 - **Does NOT replace:** Direct editing of project-owned skills (this adds convention enforcement, migration protection, and DRY discipline)
 - **DRY discipline:** CREATE step 1.5 and MODIFY step M1.5 enforce overlap scans before any write. Extraction targets, in priority order: `[sdlc-root]/process/{topic}.md` (universal protocols), `[sdlc-root]/knowledge/{domain}/{topic}.yaml` (domain rules), per-skill `references/` (single-skill detail). Inline duplication requires a documented justification in the skill's `DRY notes`.

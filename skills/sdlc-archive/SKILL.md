@@ -6,7 +6,9 @@ description: >
   marker before moving. Idea briefs, bug reports, handoffs, and lite deliverables are also handled.
   Use when a deliverable is complete or an idea brief is resolved and needs to move from active work to the chronicle.
   Triggers on "let's organize the chronicles", "archive completed deliverables",
-  "move to chronicle", "archive deliverable", "/sdlc-archive".
+  "move to chronicle", "archive deliverable", "reconcile our recent work",
+  "let's catalog our ad hoc work", "let's catch up the docs", "let's rejoin the process",
+  "/sdlc-archive".
   Do NOT use for deliverables still In Progress or Validated — they stay in current_work until Complete.
   Do NOT use for restructuring or deleting chronicle entries — archive is one-way.
 ---
@@ -16,6 +18,17 @@ description: >
 Move completed work from `docs/current_work/` to `docs/chronicle/`. Follows the process defined in `[sdlc-root]/process/chronicle_organization.md`. Only deliverables in the **Complete** state (per `[sdlc-root]/process/deliverable_lifecycle.md`) are eligible for archival — verify the `**Status:**` marker before proceeding. Idea briefs, bug reports, handoffs, and lite deliverables are also handled.
 
 ## Steps
+
+### 0. Reconciliation Check
+
+Before archiving, detect untracked ad hoc work that happened outside the SDLC process.
+
+1. Find the last archived deliverable ID from `docs/_index.md`
+2. Run `git log --oneline` since the last formal deliverable commit
+3. If commits exist that aren't tied to any tracked deliverable, run the reconciliation process in `[sdlc-root]/process/ad_hoc_reconciliation.md` — this categorizes each commit and assigns resolutions (absorb into parent, lightweight record, batch into polish deliverable, or skip)
+4. If no untracked work is found, skip to Step 1
+
+This step ensures ad hoc work gets cataloged before archival sweeps completed work into the chronicle.
 
 ### 1. Comprehensive Inventory
 
@@ -228,6 +241,7 @@ Ask for confirmation before committing.
 | "Bug reports should always be archived" | Stale, duplicate, or fully-resolved bug reports can be deleted. Only archive bugs with valuable diagnostic context. |
 
 ## Integration
-- **Depends on:** `docs/current_work/` (source of completed deliverables, lite deliverables, idea briefs, bug reports, handoffs), `docs/_index.md` (catalog), `[sdlc-root]/disciplines/*.md` (parking lot entries for knowledge hygiene)
-- **Fed by:** `sdlc-status` (identifies archivable work), `sdlc-reconcile` (catalogs ad hoc work first), `sdlc-idea` (produces idea briefs)
-- **Updates:** `docs/_index.md`, `docs/chronicle/`, `[sdlc-root]/disciplines/*.md` (triage markers)
+- **Feeds into:** `sdlc-status` (chronicle is the source of truth for completed work), `sdlc-reflect` (archived deliverables inform retrospectives)
+- **Uses:** `[sdlc-root]/process/chronicle_organization.md`, `[sdlc-root]/process/ad_hoc_reconciliation.md` (Step 0), `[sdlc-root]/process/deliverable_lifecycle.md`, `docs/current_work/`, `docs/_index.md`, `[sdlc-root]/disciplines/*.md`
+- **Complements:** `sdlc-status` (identifies archivable work), `sdlc-idea` (produces idea briefs that archive triages)
+- **Does NOT replace:** `sdlc-ingest` (knowledge capture — archive only triages existing parking lot entries, does not create new ones)

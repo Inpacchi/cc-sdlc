@@ -8,7 +8,7 @@ description: >
   Triggers on "initialize sdlc", "bootstrap sdlc", "set up sdlc", "sdlc init", "initialize this project",
   "bootstrap this project", "set up the SDLC", "I want to use cc-sdlc", "integrate sdlc",
   "I'd like to bootstrap the SDLC process in this project".
-  Do NOT use for resuming existing SDLC work — use sdlc-resume.
+  Do NOT use for resuming existing SDLC work — use sdlc-status to find active deliverables.
   Do NOT use for creating a single deliverable — use sdlc-plan.
   Do NOT use when SDLC is already initialized (ops/sdlc/ exists and is populated) — use sdlc-status instead.
 ---
@@ -515,7 +515,7 @@ Present the proposed roster to CD via `AskUserQuestion`:
 - Template compliance (agent-template.md structure)
 
 **Mandatory agents (create these regardless of project size):**
-1. **`software-architect`** — dispatched by both review and planning skills, mediates debate in `team-review-fix`, seeds disciplines and knowledge in later initialization phases, and reviews every other agent's plan output. Create first so it's available for dispatch throughout initialization.
+1. **`software-architect`** — dispatched by both review and planning skills, seeds disciplines and knowledge in later initialization phases, and reviews every other agent's plan output. Create first so it's available for dispatch throughout initialization.
 2. **`code-reviewer`** — always dispatched in every review skill (Tier 1, unconditional). Without it, no review skill produces findings. This is the one agent that reviews every diff regardless of what changed.
 
 If CD's proposed roster omits either of these, add them and explain why. These are not optional.
@@ -526,8 +526,8 @@ If CD's proposed roster omits either of these, add them and explain why. These a
 5. Testing and infrastructure (sdet, build-engineer)
 
 **Framework agents (pre-installed by Phase 1 — do NOT create as domain agents):**
-- `sdlc-reviewer` — reviews skill/agent files against cc-sdlc conventions (dispatched by `sdlc-develop-skill`, `sdlc-create-agent`, `sdlc-review`)
-- `sdlc-compliance-auditor` — performs 9-dimension compliance scan (dispatched by `sdlc-audit`)
+- `sdlc-reviewer` — reviews skill/agent files against cc-sdlc conventions (dispatched by `sdlc-develop-skill`, `sdlc-create-agent`)
+- `sdlc-compliance-auditor` — performs 10-dimension compliance scan (dispatched by `sdlc-audit`)
 
 The `sdlc-audit` skill is already installed by Phase 1 — do not recreate it as an agent.
 

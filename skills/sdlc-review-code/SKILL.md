@@ -7,9 +7,9 @@ description: >
   Use when code changes need review — works on uncommitted changes, specific commits, or commit ranges.
   Triggers on "review this commit", "review HEAD", "review the last commit", "code review",
   "review uncommitted changes", "check my diff", "review before committing", "diff review",
-  "review working tree", "look at my changes", "/sdlc-review-code".
-  Do NOT fix findings in this skill — use sdlc-review-fix for that.
-  Do NOT use for reviewing skill/agent files — use sdlc-review for that.
+  "review working tree", "look at my changes", "/sdlc-review-code",
+  "fix review findings", "fix the review", "address the findings", "fix all findings".
+  Do NOT use for reviewing skill/agent files — dispatch the sdlc-reviewer subagent directly.
 ---
 
 # Review Code
@@ -189,19 +189,46 @@ The structured findings report is read by a developer who will act on it. How fi
 *(Fill in actual counts. Rows = agents dispatched; columns = calibrated severity after deduplication.)*
 ```
 
-### 5. Next Steps
+### 5. Fix Gate
 
-After presenting the report:
+After presenting the report, offer to fix:
 
 > **{N} findings** ({critical} critical, {major} major, {minor} minor)
 >
-> Run `/sdlc-review-fix` to fix all findings.
+> Fix these findings?
 
-If the target was uncommitted changes, also include:
+If the user declines, stop here. If the user accepts, proceed to Step 5a.
 
-> Or commit first and run `/sdlc-review-code HEAD` for a post-commit review.
+### 5a. Dispatch Fixes
 
-Do NOT fix anything in this skill. Do NOT offer partial fix options. The review skill only reviews — `/sdlc-review-fix` handles all fixes.
+Read and follow `[sdlc-root]/process/manager-rule.md`. Group findings by the most relevant domain agent to fix them. Consult `[sdlc-root]/knowledge/architecture/agent-orchestration-patterns.yaml` for dispatch discipline (AOP1, AOP9). When dispatching 2+ fixers in parallel, follow `[sdlc-root]/process/parallel-dispatch-monitoring.md`.
+
+Dispatch prompts must describe WHAT/WHY — implementation HOW is the agent's domain. Each agent receives: the specific findings assigned to them, the original diff, cross-domain knowledge files from the finding agent (when fixer differs from finder, consult `[sdlc-root]/knowledge/agent-context-map.yaml`), and instruction to make the minimal change that addresses each finding.
+
+If an agent returns without applying its fix, re-dispatch — do NOT fix it yourself.
+
+After all agents complete, verify the project builds.
+
+### 5b. Review-Fix Loop
+
+Run the loop per `[sdlc-root]/process/review-fix-loop.md`. Agent source: the original review agent list. Classifications: FIX, INVESTIGATE, DECIDE, PRE-EXISTING per `[sdlc-root]/process/finding-classification.md`.
+
+### 5c. Summary and Commit
+
+When the loop exits clean, present:
+
+```markdown
+## Fix Summary
+
+{N} original findings fixed | {M} review rounds | Build: passing
+
+Key feedback incorporated:
+- [agent-name] specific feedback that was incorporated
+```
+
+> All fixes applied, review loop clean, build passes. Want me to commit?
+
+Do NOT commit automatically — wait for user confirmation.
 
 ### 6. Log Recurring Patterns
 
@@ -282,7 +309,8 @@ This is the artifact CD uses for review — it replaces scrolling through termin
 |---------|---------|
 | "The diff is small, skip some lenses" | Small diffs produce the subtlest bugs |
 | "Just do a quick glance, we're about to commit" | Quick glances miss type safety and contract issues. Run the full workflow. |
-| "Agent fixed the issue during review" | Report only — fixes go through `sdlc-review-fix` |
+| "Agent fixed the issue during review" | Report only during review — fixes go through the fix gate (Step 5) |
+| "I'll start fixing without asking" | Always present the fix gate. The user decides whether to fix. |
 | "This is just a refactor, no review needed" | Refactors need architecture and DRY lens review |
 | "Skip Tier 2, it's a small commit" | Read the diff content. Small commits introduce new patterns more often than expected. |
 | "This agent overlaps with another, skip it" | Agents review different concerns. `performance-engineer` and `frontend-developer` both review component code but catch different issues. |
@@ -295,7 +323,7 @@ This is the artifact CD uses for review — it replaces scrolling through termin
 | "CLAUDE.md feels out of date in general — flag it" | The lens is scoped to claims the *current diff* invalidates. Out-of-date content unrelated to this diff is for `claude-md-improver` audits, not commit-scoped review. |
 
 ## Integration
-- **Feeds into:** `sdlc-review-fix` (if findings need fixing)
-- **Siblings:** `sdlc-team-review-fix` (same lenses + inter-agent debate + persistent team fix lifecycle — higher cost, use for high-stakes changes)
-- **Shared reference:** Agent selection in `[sdlc-root]/process/agent-selection.yaml`, lenses in `[sdlc-root]/process/review-lenses.md`
-- **Knowledge routing:** `[sdlc-root]/knowledge/agent-context-map.yaml` (dispatch-time injection), `[sdlc-root]/knowledge/coding/code-quality-principles.yaml` (code-reviewer primary), `[sdlc-root]/knowledge/architecture/agent-orchestration-patterns.yaml` (dispatch template)
+- **Feeds into:** `docs/reviews/recurring-patterns.yaml` (pattern log for `sdlc-audit` Dimension 6 promotion)
+- **Uses:** `[sdlc-root]/process/agent-selection.yaml` (agent dispatch), `[sdlc-root]/process/review-lenses.md` (review lenses), `[sdlc-root]/process/review-fix-loop.md` (fix loop), `[sdlc-root]/knowledge/agent-context-map.yaml` (dispatch-time injection), `[sdlc-root]/knowledge/coding/code-quality-principles.yaml` (code-reviewer primary)
+- **Complements:** `sdlc-execute` (development phase before review), `sdlc-audit` (promotes recurring patterns to knowledge store)
+- **Does NOT replace:** Quality gates in `sdlc-develop-skill` / `sdlc-create-agent` (those are author-facing convention checks, not diff-facing code review)

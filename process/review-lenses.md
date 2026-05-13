@@ -6,7 +6,7 @@ Analytical perspectives that agents apply when reviewing code. Each consuming sk
 
 | Skill Context | Applicable Lenses |
 |--------------|-------------------|
-| Code review (`sdlc-review-code`, `team-review-fix`) | All lenses |
+| Code review (`sdlc-review-code`) | All lenses |
 | Test gap analysis (`sdlc-tests-create`) | Coverage, security at boundaries, contract safety, performance, data integrity, standard |
 | Agent/skill creation (`sdlc-create-agent`, `sdlc-initialize`) | Standard only |
 

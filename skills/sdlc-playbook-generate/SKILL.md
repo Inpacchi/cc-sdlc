@@ -16,7 +16,7 @@ description: >
   Use when a completed session or set of commits should be formalized into a reusable playbook.
   Do NOT use for creating playbooks from scratch without session data — write those directly.
   Do NOT use for bulk knowledge import — use sdlc-ingest.
-  Do NOT use for session resumption — use sdlc-resume.
+  Do NOT use for session resumption — use sdlc-status to find active deliverables.
 ---
 
 # Playbook Generation from Session Analysis
@@ -41,7 +41,7 @@ Signs this skill is appropriate:
 Signs this skill is NOT appropriate:
 - Writing a playbook from scratch without session data → write directly using `[sdlc-root]/playbooks/example-playbook.md` as template
 - Importing knowledge from external content → `sdlc-ingest`
-- Resuming an incomplete session → `sdlc-resume`
+- Resuming an incomplete session → use `sdlc-status` to find active deliverables
 
 ## Core Principles
 

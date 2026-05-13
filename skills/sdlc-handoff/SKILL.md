@@ -9,7 +9,7 @@ description: >
   Triggers on "create a handoff", "hand this off", "save this for a new session",
   "write up a handoff", "this is out of scope here", "let's not handle this now",
   "park this for later", "another session should pick this up", "/sdlc-handoff".
-  Do NOT use for resuming an existing deliverable — use `sdlc-resume`.
+  Do NOT use for resuming an existing deliverable — use `sdlc-status` to find it, then pick up from there.
   Do NOT use for archiving completed or resolved work — use `sdlc-archive`.
   Do NOT use for active production incidents — use `sdlc-debug-incident` directly.
   Do NOT use to write a spec or plan — use `sdlc-plan` or `sdlc-lite-plan`.
@@ -225,6 +225,6 @@ If any check fails, fix the doc before reporting completion.
 - **Depends on:** Active session context (files touched, agent findings, observations); `docs/current_work/ideas/` directory (auto-created if missing).
 - **Feeds into:** `sdlc-idea` (exploration of an unscoped handoff), `sdlc-lite-plan` (lightweight planning), `sdlc-plan` (full planning), `sdlc-debug-incident` (active incidents), direct dispatch (single-agent fixes), `sdlc-archive` (resolves handoffs to chronicle).
 - **Uses:** `AskUserQuestion` for trigger classification and commit confirmation; `LSP`/`Grep` for quick reference confirmation only (no expanded investigation); `Write` for the doc.
-- **Complements:** `sdlc-resume` (picks up an existing deliverable; this skill creates a new starting point for unscoped work); `sdlc-status` (surfaces pending handoffs alongside active deliverables when invoked).
+- **Complements:** `sdlc-status` (surfaces pending handoffs alongside active deliverables when invoked).
 - **Does NOT replace:** `sdlc-idea` — handoffs are session captures, not exploration output. `sdlc-debug-incident` — active production incidents need the incident skill directly, not a handoff routed through it. `sdlc-plan` / `sdlc-lite-plan` — handoffs name the work; planning skills scope it.
 - **DRY notes:** The `*_handoff.md` filename and `docs/current_work/ideas/` location are already canonical conventions used by `sdlc-archive` (which handles archival of resolved handoffs). This skill produces the artifact; `sdlc-archive` cleans it up. Do not invent a parallel directory.

@@ -6,7 +6,6 @@ description: >
   Use when you need a quick read-only overview of active deliverables and project state.
   Triggers on "SDLC status", "show project status", "what are we working on",
   "deliverable dashboard", "show deliverables", "/sdlc-status".
-  Do NOT use for resuming a specific deliverable — use sdlc-resume.
   Do NOT use for compliance or health audits — use sdlc-audit.
 ---
 
@@ -68,5 +67,4 @@ Do NOT suggest or take any follow-up actions beyond what appears in the Next Act
 
 ## Integration
 - **Depends on:** `docs/_index.md`, `docs/current_work/` (reads current state)
-- **Precedes:** `sdlc-resume` (user may want to resume after seeing status)
 - **Display only:** Do NOT invoke any other skill from here

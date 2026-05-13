@@ -32,7 +32,7 @@ For each agent dispatched in this session, compare what knowledge was available 
 When agents were dispatched into cross-domain contexts (e.g., a backend agent fixing a frontend issue), did they produce FIX findings in the foreign domain?
 
 - **For skills with a review-fix loop** (sdlc-execute, sdlc-lite-execute, sdlc-plan, sdlc-lite-plan): check the triage table for FIX findings where the fixing agent worked outside its primary domain.
-- **For sdlc-idea and design-consult** (no triage table): this is a judgment call — did the agent's output reveal it struggled with something outside its domain?
+- **For sdlc-idea and sdlc-design-consult** (no triage table): this is a judgment call — did the agent's output reveal it struggled with something outside its domain?
 
 If yes → write a `CROSS_DOMAIN_FRICTION` GAP entry in the relevant discipline's parking lot.
 
@@ -44,7 +44,7 @@ If the review-fix loop ran >2 rounds, did you observe a finding recurring across
 
 If yes → write a `RESURFACING_PATTERN` GAP entry.
 
-**Not applicable** to sdlc-idea and design-consult (no review-fix loop).
+**Not applicable** to sdlc-idea and sdlc-design-consult (no review-fix loop).
 
 ### Skill applicability
 
@@ -53,9 +53,8 @@ If yes → write a `RESURFACING_PATTERN` GAP entry.
 | sdlc-execute, sdlc-lite-execute | Yes (full triage data) | Yes | Yes |
 | sdlc-plan, sdlc-lite-plan | Yes (planning findings) | Yes | Yes (if >2 rounds) |
 | sdlc-idea | Conditional (no triage table) | Yes (judgment-based) | No |
-| design-consult | Conditional (no triage table) | Yes (judgment-based) | No |
+| sdlc-design-consult | Conditional (no triage table) | Yes (judgment-based) | No |
 | review-fix | Not applicable — commit-scoped findings are too narrow for discipline-level gap detection |
-| sdlc-resume | Inherits from sdlc-execute's capture step |
 
 ### GAP entry format
 
@@ -97,7 +96,7 @@ Append each insight or GAP entry to the relevant `[sdlc-root]/disciplines/*.md` 
 - Execution: `[DNN — phase N]`
 - Planning: `[DNN — planning]`
 - Idea exploration: `[idea: {slug}]`
-- Design consultation: `[design-consult: {slug}]`
+- Design consultation: `[sdlc-design-consult: {slug}]`
 
 **Triage markers:**
 - `[NEEDS VALIDATION]` — default for newly captured insights and all auto-detected GAP entries

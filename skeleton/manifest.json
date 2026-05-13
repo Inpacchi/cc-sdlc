@@ -85,7 +85,8 @@
       "process/source-repo-safety.md",
       "process/path-mappings.md",
       "process/adapter-lifecycle-protocol.md",
-      "process/html-rendering.md"
+      "process/html-rendering.md",
+      "process/skill-agent-review.md"
     ],
     "templates": [
       "templates/spec_template.md",
@@ -212,13 +213,10 @@
       "skills/sdlc-lite-execute/SKILL.md",
       "skills/sdlc-lite-plan/SKILL.md",
       "skills/sdlc-review-code/SKILL.md",
-      "skills/review-fix/SKILL.md",
       "skills/sdlc-tests-create/SKILL.md",
       "skills/sdlc-archive/SKILL.md",
       "skills/sdlc-execute/SKILL.md",
       "skills/sdlc-plan/SKILL.md",
-      "skills/sdlc-reconcile/SKILL.md",
-      "skills/sdlc-resume/SKILL.md",
       "skills/sdlc-status/SKILL.md",
       "skills/sdlc-tests-run/SKILL.md",
       "skills/sdlc-idea/SKILL.md",
@@ -236,10 +234,8 @@
       "skills/sdlc-audit/references/session-reading.md",
       "skills/sdlc-develop-skill/SKILL.md",
       "skills/sdlc-create-agent/SKILL.md",
-      "skills/sdlc-review/SKILL.md",
-      "skills/enrich-agent/SKILL.md",
+      "skills/sdlc-create-agent/references/enrichment-methodology.md",
       "skills/research-external/SKILL.md",
-      "skills/team-review-fix/SKILL.md",
       "skills/sdlc-debug-incident/SKILL.md",
       "skills/sdlc-create-reference-doc/SKILL.md",
       "skills/sdlc-port-opencode/SKILL.md",
@@ -262,10 +258,9 @@
   "bundles": {
     "_comment": "Opt-in skill bundles. sdlc-initialize prompts CD during setup; skills are installed only if the bundle is accepted. sdlc-migrate preserves existing installs and offers any missing bundles without removing skills the project already has.",
     "design": {
-      "description": "UI/UX design consultation and brand asset generation.",
+      "description": "UI/UX design consultation.",
       "skills": [
-        "skills/design-consult/SKILL.md",
-        "skills/sdlc-design-brand-asset/SKILL.md"
+        "skills/sdlc-design-consult/SKILL.md"
       ]
     }
   }

@@ -10,7 +10,7 @@ description: >
   "kick around an idea", "spitball", "before we plan anything", "I want to think through".
   Do NOT use for work that already has clear requirements — use sdlc-plan or sdlc-lite-plan.
   Do NOT use for visual/UI exploration — use sdlc-design-consult.
-  Do NOT use for active bug investigation — use sdlc-review-fix or direct dispatch.
+  Do NOT use for active bug investigation — use sdlc-review-code or direct dispatch.
 ---
 
 # Idea Exploration

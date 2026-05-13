@@ -1,6 +1,6 @@
 # Team Communication Protocol
 
-Defines the inter-agent communication protocol for skills that use agent teams. Reusable by any team-based skill (e.g., `team-review-fix`, future `team-execute`).
+Defines the inter-agent communication protocol for skills that use agent teams.
 
 ---
 

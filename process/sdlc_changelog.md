@@ -34,6 +34,29 @@ Each entry contains:
 
 ---
 
+## 2026-05-12: Consolidate Skill Library (32 → 25 skills)
+
+**Origin:** Skill count review identified skills that were underused, overlapping, or better absorbed into existing skills. Goal: reduce maintenance overhead without losing capabilities.
+
+**What happened:** Reviewed all 32 project skills. Removed 7 by folding capabilities into existing skills, extracting shared methodology into process docs, or dropping unused features. Renamed 1 for naming consistency.
+
+**Changes made:**
+
+1. **`skills/sdlc-reconcile/`** — Removed. Reconciliation folded into `sdlc-archive` as Step 0 (reconciliation check before archival). Archive now references `[sdlc-root]/process/ad_hoc_reconciliation.md` directly and absorbs reconcile's trigger phrases.
+2. **`skills/team-review-fix/`** — Removed. Multi-agent debate review was underused; `sdlc-review-code` covers the same ground.
+3. **`skills/sdlc-design-brand-asset/`** — Removed. Narrow AI image prompt generation with no usage. Design bundle now contains only `sdlc-design-consult`.
+4. **`skills/sdlc-resume/`** — Removed. `sdlc-status` covers the same need. All anti-triggers updated.
+5. **`skills/sdlc-review/`** — Removed. Review methodology extracted to `process/skill-agent-review.md`. Quality gate steps in `sdlc-create-agent` and `sdlc-develop-skill` now reference the process doc.
+6. **`skills/review-fix/`** — Removed. Fix workflow folded into `sdlc-review-code` as Steps 5-5c with a user gate between review and fix phases.
+7. **`skills/enrich-agent/`** — Removed. Enrichment merged into `sdlc-create-agent` as ENRICH mode. Full 6-dimension methodology moved to `skills/sdlc-create-agent/references/enrichment-methodology.md`.
+8. **`skills/design-consult/`** → **`skills/sdlc-design-consult/`** — Renamed for `sdlc-` prefix consistency.
+9. **`process/skill-agent-review.md`** — New file. Shared review checklist for skill and agent conventions.
+10. **`skeleton/manifest.json`** — Removed 7 skill entries, added process doc and enrichment reference, updated design bundle.
+11. **`process/commands.md`** — Removed command rows for removed skills, updated enrich-agent to create-agent enrich mode.
+12. **Cross-reference cleanup** — Updated Integration sections and anti-triggers across 15+ skill and process files.
+
+**Rationale:** Fewer skills means less maintenance overhead, simpler trigger disambiguation, and smaller installation footprint. Every removed skill's core capability is preserved: reconcile lives in archive, review lives in a process doc, resume is covered by status, review-fix is a gated phase in review-code, enrich-agent is a mode of create-agent.
+
 ## 2026-05-12: Add Active Validation to Compliance Audit (Dimension 6)
 
 **Origin:** Observed that `[NEEDS VALIDATION]` parking lot entries accumulate indefinitely — audit's existing triage only handles obvious promotions and age-based marker transitions, with no step to actually validate entries against codebase evidence.

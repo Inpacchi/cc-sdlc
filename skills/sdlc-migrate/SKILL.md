@@ -317,7 +317,7 @@ Before any file copying, compute the **effective install set** for this project 
 
 **Rules:**
 
-- **Never remove** installed bundle skills, even when a bundle is detected as only partially installed (e.g., `design-consult/` exists but `sdlc-design-brand-asset/` does not). The project chose its subset; migration preserves that choice.
+- **Never remove** installed bundle skills, even when a bundle is detected as only partially installed. The project chose its subset; migration preserves that choice.
 - Bundle skill paths are **exempt from §2.1a "Remove Deleted and Moved Files"** — they are not considered upstream-deleted even though they live outside `source_files.skills`.
 - Bundle skills are **eligible for §2.1 direct-copy updates**: if the bundle is installed, its skill files propagate upstream changes the same way `source_files` skills do.
 - Bundles not installed in the project are **not** copied during §2.1 — they are offered at the end of migration (§4.7).

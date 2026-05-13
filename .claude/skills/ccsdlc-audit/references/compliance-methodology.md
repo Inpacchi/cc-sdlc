@@ -13,8 +13,9 @@ Full methodology for cc-sdlc framework source repo compliance auditing. Covers a
 7. **Discipline Health Scan**: Check parking lot entries, triage markers, active validation of `[NEEDS VALIDATION]` entries, cross-discipline flow
 8. **Skill/Agent Convention Scan**: Verify frontmatter format, required sections, anti-triggers, tools lists
 9. **Setup.sh Verification**: Verify installation script handles all manifest files correctly
-10. **Report Generation**: Produce structured inline report
-11. **Interactive Triage**: Present promotion candidates from disciplines for triage decisions
+10. **Cross-Skill DRY Scan**: Detect substantive prose duplicated verbatim or near-verbatim across sibling skills
+11. **Report Generation**: Produce structured inline report
+12. **Interactive Triage**: Present promotion candidates from disciplines for triage decisions
 
 ## Dimension 1: Manifest Completeness
 
@@ -148,8 +149,8 @@ Check each discipline file:
 | Transition | Authority | When |
 |-----------|-----------|------|
 | unmarked → `[NEEDS VALIDATION]` | Auto-apply (step 7) | Unmarked for >=2 audit cycles |
-| `[NEEDS VALIDATION]` → `[VALIDATED]` | Auto-apply (step 7, via 6e) | Evidence found during active validation |
-| `[NEEDS VALIDATION]` → `[REDUNDANT → file]` | Auto-apply (step 7, via 6e) | Existing knowledge rule covers same concept |
+| `[NEEDS VALIDATION]` → `[VALIDATED]` | Auto-apply (step 7, confirmed by 6e) | Evidence found during active validation |
+| `[NEEDS VALIDATION]` → `[REDUNDANT → file]` | Auto-apply (step 7, confirmed by 6e) | Existing knowledge rule covers same concept |
 | `[NEEDS VALIDATION]` → `[DEFERRED]` | Auto-apply (step 7) | Unvalidated >=3 cycles AND discipline dormant |
 | Any → `[READY TO PROMOTE]` | User decision (step 11) | Proposed with evidence during interactive triage |
 | `[READY TO PROMOTE]` → Promoted | User decision (step 11) | Actual knowledge file creation during interactive triage |
@@ -404,6 +405,12 @@ Promoted: N | Deferred: N | Skipped: N
 
 #### Knowledge-to-Skill Wiring
 [wiring status, gaps]
+
+#### Active Validation Results
+- Validated: N (promotion candidates)
+- Redundant: N (prune candidates)
+- Inconclusive: N (remain [NEEDS VALIDATION])
+- Skipped (scope limit / --skip-validation): N
 
 ### Dimension 7: Skill Convention Compliance
 [per-skill findings — frontmatter, sections, content quality]

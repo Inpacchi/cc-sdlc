@@ -57,7 +57,7 @@ Parse `$ARGUMENTS` to determine mode and source:
 
 ## Compliance Mode
 
-Verify the framework's health across 9 audit dimensions. Full methodology in `references/compliance-methodology.md`.
+Verify the framework's health across 10 audit dimensions. Full methodology in `references/compliance-methodology.md`. Pass `--skip-validation` to skip the active evidence-gathering pass in Dimension 6e — useful when parking lots are large and a full validation pass would be slow.
 
 ### Workflow
 
@@ -65,7 +65,7 @@ Verify the framework's health across 9 audit dimensions. Full methodology in `re
 DISPATCH AUDITOR → REPORT → TRIAGE → FIX
 ```
 
-**Dispatch the `sdlc-compliance-auditor` subagent** to perform the 9-dimension scan. The subagent reads the methodology, scans all dimensions, and returns structured findings with a score. This skill then handles the interactive triage and fix phases.
+**Dispatch the `sdlc-compliance-auditor` subagent** to perform the 10-dimension scan. The subagent reads the methodology, scans all dimensions, and returns structured findings with a score. This skill then handles the interactive triage and fix phases.
 
 ### Audit Dimensions (summary)
 
@@ -196,10 +196,10 @@ Update `process/sdlc_changelog.md` for every process change applied.
 
 ## Integration
 
-- **Dispatches:** `sdlc-compliance-auditor` subagent (compliance mode 9-dimension scan)
-- **Complements:** `sdlc-playbook-generate` (playbooks capture "how to repeat"; this captures "how to improve")
 - **Feeds into:** skill modifications, knowledge store updates, discipline parking lots, process doc changes, manifest updates, CLAUDE-SDLC.md updates
-- **Uses:** session JSONL, git history, all framework source files
+- **Uses:** `sdlc-compliance-auditor` subagent (compliance mode 10-dimension scan), session JSONL, git history, all framework source files
+- **Complements:** `sdlc-playbook-generate` (playbooks capture "how to repeat"; this captures "how to improve")
+- **Does NOT replace:** `ccsdlc-ingest` (bulk knowledge import — audit triages existing entries, does not ingest new ones)
 
 ## Additional Resources
 

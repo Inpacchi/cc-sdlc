@@ -21,7 +21,7 @@ This prevents renaming references to skills that don't exist in the project, whi
 
 ## Agent Name References in Dispatching Skills (Guarded Renames)
 
-Skills that dispatch subagents (`sdlc-review-code`, `sdlc-review-fix`, `sdlc-execute`, `sdlc-lite-execute`, `sdlc-plan`, `sdlc-lite-plan`) contain agent names in their examples and dispatch logic. If the upstream cc-sdlc uses different agent names than the project (e.g., `frontend-developer` vs `frontend-engineer`), do NOT rename the project's references to match upstream.
+Skills that dispatch subagents (`sdlc-review-code`, `sdlc-execute`, `sdlc-lite-execute`, `sdlc-plan`, `sdlc-lite-plan`) contain agent names in their examples and dispatch logic. If the upstream cc-sdlc uses different agent names than the project (e.g., `frontend-developer` vs `frontend-engineer`), do NOT rename the project's references to match upstream.
 
 **Guarded rename rule for agents:** Before renaming any agent reference in a dispatching skill:
 1. Build the project's actual agent inventory: `ls .claude/agents/`

@@ -1,25 +1,40 @@
 ---
 name: sdlc-create-agent
 description: >
-  Create a new domain agent following cc-sdlc conventions. Walks through domain definition,
-  frontmatter generation (single-line description with example blocks, model selection,
-  tools list, color, memory setting), body scaffolding (scope, knowledge context,
-  communication protocol, core principles, workflow, anti-rationalization table,
-  self-verification checklist, persistent memory section), agent-context-map update,
-  registration, and wiring into dispatching skills ([sdlc-root]/process/agent-selection.yaml for all review skills,
-  sdlc-plan, sdlc-lite-plan). Dispatches sdlc-reviewer for quality gate.
-  Use when the project needs a new domain agent that doesn't exist yet.
+  Create or enrich domain agents following cc-sdlc conventions. CREATE mode walks through
+  domain definition, frontmatter, body scaffolding, context-map wiring, and registration.
+  ENRICH mode extracts patterns from external sources (articles, agent definitions, docs)
+  using a 6-dimension analytical framework and integrates them into an existing agent.
+  Dispatches sdlc-reviewer for quality gate in both modes.
   Triggers on "create a new agent", "new agent", "add an agent", "scaffold an agent",
-  "I need an agent for", "make an agent", "/sdlc-create-agent".
+  "I need an agent for", "make an agent", "/sdlc-create-agent",
+  "enrich this agent", "extract patterns for [agent]", "what can we learn from these
+  for [agent]", "enrich all agents", "bulk enrich".
   Do NOT use for creating skills — use sdlc-develop-skill.
-  Do NOT use for modifying existing agents — edit directly.
+  Do NOT use for ingesting knowledge into discipline stores — use sdlc-ingest.
 ---
 
-# Agent Creation
+# Agent Creation & Enrichment
+
+Create new domain agents or enrich existing ones with patterns from external sources.
+
+**Argument:** `$ARGUMENTS` (domain for CREATE, or `enrich <agent> <sources>` for ENRICH)
+
+## Mode Resolution
+
+| Invocation | Mode |
+|-----------|------|
+| `/sdlc-create-agent <domain>` | CREATE |
+| `/sdlc-create-agent` (no args) | CREATE (will ask for domain) |
+| `/sdlc-create-agent enrich <agent> <sources>` | ENRICH |
+| "enrich this agent with..." | ENRICH |
+| "bulk enrich" / "enrich all agents" | ENRICH (bulk) |
+
+---
+
+## CREATE Mode
 
 Create a new domain agent that follows cc-sdlc conventions. Scaffold the complete agent file, validate conventions, wire up knowledge context, register, and quality-gate with the reviewer subagent.
-
-**Argument:** `$ARGUMENTS` (what domain the agent owns)
 
 ## Reference
 
@@ -168,7 +183,7 @@ Most agents are multiple types. A `db-engineer` is a reviewer (catches schema is
        - index strategy
        - query patterns
    ```
-   This single entry covers all review skills (`sdlc-review-code`, `team-review-fix`)
+   This single entry covers review skills (`sdlc-review-code`)
 
 2. **`sdlc-plan` agent table** — Add a row with:
    - Agent name and domain description
@@ -203,7 +218,7 @@ Use `agent-wiring-{agent-name}` as the label. This tells `sdlc-migrate` that the
 
 ### 7. Quality Gate
 
-Dispatch the `sdlc-reviewer` subagent on the created agent file. Present its findings. Fix any convention violations before finalizing.
+Dispatch the `sdlc-reviewer` subagent on the created agent file. The reviewer checks against the conventions in `[sdlc-root]/process/skill-agent-review.md`. Present its findings. Fix any convention violations before finalizing.
 
 ## Red Flags
 
@@ -220,11 +235,40 @@ Dispatch the `sdlc-reviewer` subagent on the created agent file. Present its fin
 | "I'll pick a color that looks good" | Pick the color matching the agent's semantic category (green=product, cyan=architecture, etc.). Multiple agents sharing a color is fine if they're in the same group. |
 | "I'll write the agent file directly" | Hand-written agents skip frontmatter validation and convention checks. Use this skill. |
 | "I'll wire it into the skills later" | An agent that isn't in the dispatching skills won't get selected. Wire it now or it's invisible. |
+| "This source is clearly relevant — extract everything" | Premature satisfaction. Check every dimension against the source. Most content won't apply when viewed through the agent's actual lens. |
+| "I'll skip the dismissal defense — all patterns look good" | The defense exists because you feel thorough when you're not. It's mandatory in ENRICH mode. |
+| "I'll apply enrichments directly without presenting a plan" | Always compile and present the integration plan first. The user decides what gets integrated. |
+
+---
+
+## ENRICH Mode
+
+Extract patterns from external sources and integrate them into an existing agent. Full methodology in `references/enrichment-methodology.md`.
+
+### Workflow
+
+```
+LENS → FETCH → EXTRACT → DEFEND DISMISSALS → PLAN → APPLY → REVIEW
+```
+
+1. **Build the analytical lens** — decompose the target agent's domain into questions across 6 dimensions (core operations, failure modes, adjacent knowledge, lifecycle, diagnostics, I/O quality)
+2. **Fetch and read sources** — full content, no pre-summarizing
+3. **Extract through the lens** — direct, adjacent, and reframed patterns
+4. **Defend each dismissal** — guard against surface-level domain mismatch, adjacent blindness, premature satisfaction
+5. **Compile integration plan** — group patterns by agent file section, present for approval
+6. **Apply changes** — edit naturally into existing content, preserve voice
+7. **Verify and review** — completeness check, then `sdlc-reviewer` quality gate
+
+**Bulk mode** handles many sources across many agents via a two-phase structure: Phase 1 (cheap relevance mapping) → Phase 2 (parallel dispatched enrichment in batches of 3-4). See `references/enrichment-methodology.md` for full bulk workflow.
 
 ## Integration
 
-- **Feeds into:** The created agent becomes available for dispatch by orchestration skills
-- **Modifies:** `[sdlc-root]/process/agent-selection.yaml` (tier1 reviewers + infrastructure_domains), `sdlc-plan` (agent table) — see Step 6
-- **Uses:** `[sdlc-root]/templates/agent-template.md` (structural reference), `[sdlc-root]/knowledge/agent-context-map.yaml` (knowledge wiring), `sdlc-reviewer` (quality gate), existing agents (conflict checking)
-- **Complements:** `sdlc-develop-skill` (skills vs agents), `sdlc-review` (review existing agents)
-- **Does NOT replace:** Direct editing of existing agents (this creates new ones only)
+- **Feeds into:** Created/enriched agents become available for dispatch by orchestration skills; enrichment may surface knowledge store gaps for `sdlc-ingest`
+- **Modifies:** `[sdlc-root]/process/agent-selection.yaml` (tier1 reviewers + infrastructure_domains), `sdlc-plan` (agent table) — see CREATE Step 6
+- **Uses:** `[sdlc-root]/templates/agent-template.md` (structural reference), `[sdlc-root]/knowledge/agent-context-map.yaml` (knowledge wiring), `sdlc-reviewer` (quality gate), existing agents (conflict checking), WebFetch (ENRICH mode URL sources)
+- **Complements:** `sdlc-develop-skill` (skills vs agents), `sdlc-ingest` (ingests into knowledge stores; ENRICH mode enriches agent definitions)
+- **Does NOT replace:** `sdlc-ingest` (which targets discipline knowledge stores, not agent files)
+
+## Additional Resources
+
+- **`references/enrichment-methodology.md`** — Full 6-dimension analytical framework, extraction modes, dismissal defense, bulk mode phases
