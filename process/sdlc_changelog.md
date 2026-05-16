@@ -34,6 +34,22 @@ Each entry contains:
 
 ---
 
+## 2026-05-16: Add UX-Focused Review Lenses and Experiential Verification Gate
+
+**Origin:** Post-mortem from a target project session where 5 UI/UX defects shipped despite passing all existing review gates — duplicated filter sections, invisible collapse button, removed text labels, non-sticky sidebars, low-contrast icons. Root cause: the review process checked code quality but never verified the user experience, and plans didn't require specifying what to remove when adding replacements.
+
+**What happened:** Analysis revealed three structural gaps: (1) no review lens for UX regressions — agents checked code patterns but not whether existing affordances were removed; (2) no experiential verification step — the review-fix loop went straight from machine checks to agent dispatch without anyone using the app; (3) no constraint in phased plans requiring replacement phases to specify removal — leading to duplication as the default outcome.
+
+**Changes made:**
+
+1. **`process/review-lenses.md`** — Added four new lenses: UX Regression (affordance removal/degradation), Accessibility (focus management, keyboard nav, ARIA, contrast), State Completeness (loading/error/empty/scroll/concurrent states), API Ergonomics (naming, consistency, pit of success, surface area). Added frontend-conditional applicability note explaining when these lenses apply vs. skip.
+2. **`process/review-fix-loop.md`** — Added Step 0.5: Experiential Verification between machine checks (Step 0) and agent dispatch (Step A). Requires starting the dev server and verifying golden path, adjacent features, scroll/resize behavior, and state transitions for any user-facing change. Failures are functional bugs, not suggestions.
+3. **`process/input-quality-gates.md`** — Added Replacement Clause to the FACTS Scoped dimension. Phases that add UI replacing existing UI must explicitly state what they remove; omitting this caps the S score at ≤ 2. Prevents the "add now, remove later (never)" phased-work defect.
+
+**Rationale:** Code correctness and experiential correctness are orthogonal — a feature can be type-safe, well-tested, lint-clean, and architecturally sound while being unusable. The framework had strong gates for the first category but none for the second. These changes close that gap by (a) giving review agents specific things to look for in UI work, (b) mandating that someone actually uses the app before declaring work complete, and (c) preventing ambiguous phase boundaries that lead to duplication.
+
+---
+
 ## 2026-05-15: Integrate sdlc-reflect into Skills Without Built-in Discipline Capture
 
 **Origin:** Framework gap — six skills that do substantive work (incident response, code review, test loops, test creation, reference doc creation, playbook generation) had no pathway to capture discipline-level insights to parking lots. Skills with built-in discipline capture (sdlc-execute, sdlc-lite-execute, sdlc-plan, sdlc-lite-plan, sdlc-idea, sdlc-design-consult) already run the protocol automatically, but these six produced learnings that evaporated at session end.

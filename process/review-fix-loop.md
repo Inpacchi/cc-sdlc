@@ -39,6 +39,33 @@ Verification gate:
 
 **If no tests exist for the implemented functionality:** This is itself a finding. Note it in the verification summary and flag it to CD before proceeding. The absence of tests means the review loop has no objective ground truth — agent opinions will be the only quality signal, which is insufficient for production code.
 
+## Step 0.5: Experiential Verification (user-facing changes only)
+
+**Applies when:** The implementation touches user-facing code — components, pages, styles, templates, layouts, navigation, or any change that alters what a user sees or interacts with. Skip for backend-only, infrastructure, or purely logic changes.
+
+Machine verification (Step 0) confirms the code is correct. Experiential verification confirms the *experience* is correct. A feature can pass all tests, type checks, and linting while being unusable — duplicated controls, missing scroll behavior, invisible buttons, broken interaction flows. These are not bugs that automated tooling catches; they require using the app.
+
+**Required checks:**
+
+1. **Start the dev server** — the app must be running and reachable. If it cannot be started (missing env, broken deps), flag to CD and skip to Step A with a note that experiential verification was not performed.
+2. **Walk the golden path** — perform the primary user action the implementation enables. Does it work end-to-end as specified?
+3. **Check adjacent features** — interact with features that share screen space or state with the change. Did anything regress?
+4. **Verify scroll and resize** — scroll the page. Resize the viewport. Do controls remain accessible? Do sticky elements stick? Does content overflow correctly?
+5. **Check state transitions** — trigger loading, error, and empty states where applicable. Does the UI communicate each state?
+
+**Output the experiential summary before proceeding:**
+
+```
+Experiential verification:
+- Dev server: ✓ running | ✗ cannot start (reason) — skipping
+- Golden path: ✓ works | ✗ broken (describe)
+- Adjacent features: ✓ no regressions | ✗ regression in (describe)
+- Scroll/resize: ✓ controls accessible | ✗ (describe what breaks)
+- State transitions: ✓ all states handled | ✗ (describe missing states)
+```
+
+**If any check fails, fix it before proceeding to Step A.** Experiential failures are functional bugs — they are not "suggestions" or "nice-to-haves." A sidebar that scrolls away, a button that's invisible, or a duplicated control section is a defect with the same severity as a failing test.
+
 ## Step A: Dispatch ALL Review Agents
 
 Use the plan's agent assignment table (or the original review's agent list) as the starting set — do not re-evaluate relevance from scratch. Add agents if new domains surfaced during implementation; do not remove agents from the list. Dispatch **every single one** — not a subset.

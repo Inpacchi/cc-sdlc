@@ -101,6 +101,8 @@ Score each phase on five dimensions (0–5):
 - 4 — Well-bounded, out-of-scope items listed
 - 5 — Minimal surface area, self-contained
 
+**Replacement clause (S dimension modifier):** If a phase adds UI that replaces existing UI (new sidebar replaces inline filters, new nav replaces old nav, new component replaces legacy component), the phase MUST explicitly state what it removes. A phase that adds a replacement without specifying removal scores S ≤ 2 regardless of other scoping qualities — the scope is undefined because the boundary between old and new is unstated. This prevents the most common phased-work defect: Phase N adds the new thing, Phase N+1 is supposed to remove the old thing, but nobody wrote Phase N+1.
+
 ### Pass Criteria
 
 Mean ≥ 3.0 across all five dimensions, AND C ≥ 3, AND T ≥ 3.
