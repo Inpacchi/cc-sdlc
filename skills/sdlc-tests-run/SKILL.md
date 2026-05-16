@@ -317,6 +317,16 @@ Fixes applied:
 - [{domain-agent}] {what was fixed in app code}
 ```
 
+### 6. Session Learning Capture
+
+Test-fix loops reveal discipline-level insights — testability issues that point to architecture problems, app-code patterns that make testing fragile, testing paradigm gaps, and cross-domain friction between test infrastructure and application code.
+
+If this test loop surfaced non-obvious learnings (recurring classification ambiguities, testability problems requiring app restructuring, stuck failures that reveal knowledge gaps), suggest:
+
+> This test loop surfaced insights that may be worth capturing to discipline parking lots. Consider running `/sdlc-reflect` to surface them.
+
+Skip the suggestion if the loop was straightforward with no broader patterns.
+
 ## Red Flags
 
 | Thought | Reality |
@@ -342,4 +352,5 @@ Fixes applied:
 
 - **SDET agent** — fixes test-code issues (selectors, fixtures, helpers, assertions)
 - **Domain agents** (frontend-developer, backend-developer, realtime-systems-engineer, debug-specialist, build-engineer, performance-engineer) — fix app-code issues
+- **Feeds into:** `sdlc-reflect` (suggests it when the fix loop surfaces discipline-level insights — testability issues, architecture gaps, testing paradigm problems)
 - **sdlc-review-code** — can be run after the auto-commit to verify code quality of the fixes

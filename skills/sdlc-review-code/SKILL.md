@@ -303,6 +303,16 @@ The HTML review should include:
 
 This is the artifact CD uses for review — it replaces scrolling through terminal output. If `docs/reviews/` doesn't exist, create it.
 
+### 8. Session Learning Capture
+
+Code reviews surface cross-discipline insights — gotchas, anti-patterns, cross-domain friction, and knowledge gaps that go beyond the specific diff. Step 6 captures recurring *patterns* to `recurring-patterns.yaml`, but discipline-level insights (e.g., a testing paradigm gap, an architecture anti-pattern, a DX friction point) belong in parking lots.
+
+If this review surfaced non-obvious learnings beyond the findings themselves, suggest:
+
+> This review surfaced insights that may be worth capturing to discipline parking lots. Consider running `/sdlc-reflect` to surface them.
+
+Skip the suggestion if the review was routine with no cross-cutting insights.
+
 ## Red Flags
 
 | Thought | Reality |
@@ -323,7 +333,7 @@ This is the artifact CD uses for review — it replaces scrolling through termin
 | "CLAUDE.md feels out of date in general — flag it" | The lens is scoped to claims the *current diff* invalidates. Out-of-date content unrelated to this diff is for `claude-md-improver` audits, not commit-scoped review. |
 
 ## Integration
-- **Feeds into:** `docs/reviews/recurring-patterns.yaml` (pattern log for `sdlc-audit` Dimension 6 promotion)
+- **Feeds into:** `docs/reviews/recurring-patterns.yaml` (pattern log for `sdlc-audit` Dimension 6 promotion), `sdlc-reflect` (suggests it when cross-discipline insights surface beyond the findings themselves)
 - **Uses:** `[sdlc-root]/process/agent-selection.yaml` (agent dispatch), `[sdlc-root]/process/review-lenses.md` (review lenses), `[sdlc-root]/process/review-fix-loop.md` (fix loop), `[sdlc-root]/knowledge/agent-context-map.yaml` (dispatch-time injection), `[sdlc-root]/knowledge/coding/code-quality-principles.yaml` (code-reviewer primary)
 - **Complements:** `sdlc-execute` (development phase before review), `sdlc-audit` (promotes recurring patterns to knowledge store)
 - **Does NOT replace:** Quality gates in `sdlc-develop-skill` / `sdlc-create-agent` (those are author-facing convention checks, not diff-facing code review)

@@ -5,13 +5,18 @@ description: >
   recent work (commits, changes, conversation context), identifies reusable insights and
   cross-discipline patterns, categorizes them by discipline, and writes them as triage-ready
   parking lot entries. This is the standalone version of the discipline capture protocol —
-  use it after any work session where formal SDLC skills were not invoked.
+  use it after any work session where formal SDLC skills without built-in discipline capture
+  were invoked, or after sessions where no formal SDLC skills ran at all.
+  Several skills suggest running sdlc-reflect at completion: sdlc-debug-incident (after closeout),
+  sdlc-review-code, sdlc-tests-run, sdlc-tests-create, sdlc-create-reference-doc, and
+  sdlc-playbook-generate.
   Triggers on "/sdlc-reflect", "capture learnings", "what did I learn", "surface insights",
   "session retrospective", "reflect on this session", "feed back to SDLC".
   Do NOT use for bulk external knowledge import — use sdlc-ingest.
   Do NOT use for exploring ideas — use sdlc-idea.
   Do NOT use for formal post-mortems — use sdlc-debug-incident closeout.
-  Do NOT use during or after sdlc-execute or sdlc-plan — those skills run discipline capture automatically.
+  Do NOT use during or after sdlc-execute, sdlc-lite-execute, sdlc-plan, sdlc-lite-plan,
+  sdlc-idea, or sdlc-design-consult — those skills run discipline capture automatically.
 ---
 
 # SDLC Reflect — Session Learning Capture
@@ -22,16 +27,27 @@ Surface learnings from a work session into discipline parking lots. The goal is 
 
 ## When This Applies
 
-Use after any work session where you did substantive work but didn't go through `sdlc-plan` / `sdlc-execute` (which have built-in discipline capture). Common scenarios:
+Use after any work session where you did substantive work but discipline capture didn't run automatically. Two main scenarios:
 
+**A. Sessions without formal SDLC skills:**
 - Direct dispatch sessions — CD was steering, agents were doing work, no plan artifact
 - Bug fix sessions — diagnosed and fixed an issue without a deliverable
 - Exploratory coding — prototyped something, learned things, didn't use `sdlc-idea`
 - Refactoring sessions — restructured code, discovered patterns or anti-patterns
 - Integration work — wired up external services, hit gotchas worth recording
 
+**B. After SDLC skills that lack built-in discipline capture:**
+- After `sdlc-debug-incident` closeout — cross-discipline insights beyond the postmortem's Lessons Learned
+- After `sdlc-review-code` — gotchas, cross-domain friction, or anti-patterns surfaced during review
+- After `sdlc-tests-run` — testability issues, architecture gaps, or testing patterns discovered during the fix loop
+- After `sdlc-tests-create` — coverage gaps that reveal missing knowledge or discipline-level blind spots
+- After `sdlc-create-reference-doc` — knowledge gaps and cross-domain friction surfaced during documentation
+- After `sdlc-playbook-generate` — discipline-level insights beyond what the playbook itself captures
+
+These skills suggest running `/sdlc-reflect` at completion when non-obvious learnings surfaced.
+
 Signs this skill is NOT appropriate:
-- You just finished `sdlc-execute` or `sdlc-plan` — those already ran discipline capture
+- You just finished `sdlc-execute`, `sdlc-lite-execute`, `sdlc-plan`, `sdlc-lite-plan`, `sdlc-idea`, or `sdlc-design-consult` — those already ran discipline capture
 - You want to import external articles/transcripts — use `sdlc-ingest`
 - You want to explore an idea — use `sdlc-idea`
 - Nothing non-obvious happened — skip it, don't fabricate entries

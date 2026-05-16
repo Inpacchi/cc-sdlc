@@ -34,6 +34,26 @@ Each entry contains:
 
 ---
 
+## 2026-05-15: Integrate sdlc-reflect into Skills Without Built-in Discipline Capture
+
+**Origin:** Framework gap — six skills that do substantive work (incident response, code review, test loops, test creation, reference doc creation, playbook generation) had no pathway to capture discipline-level insights to parking lots. Skills with built-in discipline capture (sdlc-execute, sdlc-lite-execute, sdlc-plan, sdlc-lite-plan, sdlc-idea, sdlc-design-consult) already run the protocol automatically, but these six produced learnings that evaporated at session end.
+
+**What happened:** Cross-discipline insights from reviews, test loops, incident closeouts, and documentation sessions were not flowing to discipline parking lots. The sdlc-reflect skill existed for standalone use but wasn't wired into the skills that most commonly surface these insights.
+
+**Changes made:**
+
+1. **`skills/sdlc-reflect/SKILL.md`** — Updated description and "When This Applies" section to document the two scenarios: sessions without formal skills AND sessions after skills that lack built-in capture. Lists all six skills that now suggest it. Updated the "NOT appropriate" list to name all six skills with built-in capture.
+2. **`skills/sdlc-debug-incident/SKILL.md`** — Added step C8 (Session Learning Capture) before archival handoff; renumbered C8→C9. Updated Integration to include sdlc-reflect in "Feeds into."
+3. **`skills/sdlc-review-code/SKILL.md`** — Added step 8 (Session Learning Capture) after HTML review artifact. Updated Integration "Feeds into" to include sdlc-reflect.
+4. **`skills/sdlc-tests-run/SKILL.md`** — Added step 6 (Session Learning Capture) after auto-commit. Updated Integration to include sdlc-reflect in "Feeds into."
+5. **`skills/sdlc-tests-create/SKILL.md`** — Added Step 5 (Session Learning Capture) after verify-and-handoff. Updated Integration "Feeds into" to include sdlc-reflect.
+6. **`skills/sdlc-create-reference-doc/SKILL.md`** — Added step 8 (Session Learning Capture) after commit. Updated Integration "Feeds into" to include sdlc-reflect.
+7. **`skills/sdlc-playbook-generate/SKILL.md`** — Added step 8 (Session Learning Capture) after changelog update. Updated Integration "Feeds into" to include sdlc-reflect.
+
+**Rationale:** Discipline parking lots are the framework's learning capture mechanism. Skills that surface non-obvious insights (cross-domain friction, gotchas, anti-patterns, knowledge gaps) should route those insights to parking lots via sdlc-reflect. The integration is lightweight — a conditional suggestion, not a mandatory step — so it doesn't slow down routine runs where nothing non-obvious surfaced.
+
+---
+
 ## 2026-05-13: Enforce No-Revert-Without-Authorization Rule
 
 **Origin:** D37 Card Detail Meta Enrichment execution in Sleeved — agent reverted user's concurrent working-tree changes without authorization, destroying uncommitted work from prior sessions.

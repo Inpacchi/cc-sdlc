@@ -178,6 +178,16 @@ Co-Authored-By: {model-name-and-version} <noreply@anthropic.com>
 
 If the doc was produced as a follow-up to a specific deliverable, include the D-number in the commit scope so the traceability survives git log.
 
+### 8. Session Learning Capture
+
+Documenting a system forces cross-domain investigation that surfaces knowledge gaps, gotchas, and friction points. The reference doc captures the system's structure, but discipline-level insights (e.g., "no existing knowledge covers this integration pattern", "the architecture makes this domain opaque to adjacent agents", "DX friction in discovering this system's behavior") belong in parking lots.
+
+If this documentation session surfaced non-obvious learnings beyond what the reference doc itself captures, suggest:
+
+> This documentation session surfaced cross-discipline insights worth capturing. Consider running `/sdlc-reflect` to surface them to discipline parking lots.
+
+Skip the suggestion if the documentation was straightforward with no broader insights.
+
 ---
 
 ## Principles
@@ -236,7 +246,7 @@ Write for an agent that has never seen this code before. If a human reads it too
 ## Integration
 
 - **Depends on:** at least one code artifact to reference (the skill documents existing systems, not proposed ones — proposed systems use `sdlc-plan` / `sdlc-lite-plan`).
-- **Feeds into:** `docs/reference/_index.md` catalog; future coding-agent investigations into the documented system.
+- **Feeds into:** `docs/reference/_index.md` catalog; future coding-agent investigations into the documented system; `sdlc-reflect` (suggests it when documentation surfaces cross-discipline insights beyond the reference doc itself).
 - **Uses:** domain agents (as author and reviewers), `code-reviewer` (template + anchor verification), `[sdlc-root]/templates/reference_doc_template.md`, `[sdlc-root]/process/agent-selection.yaml`.
 - **Knowledge routing:** `[sdlc-root]/knowledge/agent-context-map.yaml` (dispatch-time injection for author and reviewers), `[sdlc-root]/knowledge/dx/developer-documentation-patterns.yaml` (author dispatch).
 - **Complements:** `sdlc-create-agent` (agent definitions), `sdlc-develop-skill` (skill definitions), `sdlc-lite-plan` / `sdlc-plan` (produces result docs that reference docs often cite).

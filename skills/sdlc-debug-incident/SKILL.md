@@ -587,7 +587,17 @@ For each deliverable in `related_deliverables`:
 - Add a line to the deliverable's result doc: `**Triggered by:** [incident YYYY-MM-DD](../../current_work/incidents/incident_YYYY-MM-DD_{slug}.md)`
 - Optionally add a row for the incident in `docs/_index.md` under a new `## Incidents` section if the project adopts that convention (propose to user — this is a project-level choice).
 
-### C8. Handoff to Archival
+### C8. Session Learning Capture
+
+Incident investigation and closeout surface cross-discipline insights — architecture anti-patterns that enabled the failure, testing gaps that delayed detection, observability blind spots, deployment friction. The postmortem's Lessons Learned section captures incident-specific takeaways, but discipline-level patterns belong in parking lots where they feed the triage cycle.
+
+If this CLOSEOUT surfaced non-obvious learnings beyond the postmortem itself, suggest:
+
+> This incident may have surfaced cross-discipline insights worth capturing (architecture patterns, testing gaps, observability blind spots). Consider running `/sdlc-reflect` to surface them to discipline parking lots.
+
+Skip the suggestion if the postmortem's Lessons Learned already covers everything and no broader discipline patterns emerged.
+
+### C9. Handoff to Archival
 
 STOP. Do not auto-archive. Archival to `docs/chronicle/{concept}/` happens later, when the user invokes `sdlc-archive` and the incident's related deliverables have all completed and themselves been archived.
 
@@ -627,7 +637,7 @@ STOP. Do not auto-archive. Archival to `docs/chronicle/{concept}/` happens later
 ## Integration
 
 - **Depends on:** An observable incident signal — user report, alert, or visible service degradation. Does not run speculatively.
-- **Feeds into:** `sdlc-lite-plan` and `sdlc-plan` for remediation deliverables. `sdlc-archive` eventually, when all related deliverables complete.
+- **Feeds into:** `sdlc-lite-plan` and `sdlc-plan` for remediation deliverables. `sdlc-reflect` (CLOSEOUT suggests it for cross-discipline insights beyond the postmortem). `sdlc-archive` eventually, when all related deliverables complete.
 - **Uses:** `debug-specialist` agent (primary diagnostic during TRIAGE), domain specialists per `[sdlc-root]/process/agent-selection.yaml`, `code-reviewer` for CLOSEOUT review, and project observability tooling (whatever your stack uses) via the corresponding MCPs or CLI access.
 - **Complements:** `sdlc-audit` (proactive systemic review — different trigger, different purpose), `sdlc-review-code` (code-level review), `sdlc-playbook-generate` (turns a resolved incident + its remediation into a reusable playbook — runs AFTER CLOSEOUT).
 - **Does NOT replace:**

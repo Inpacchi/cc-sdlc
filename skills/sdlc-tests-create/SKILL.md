@@ -231,6 +231,16 @@ Target: tests/{path-to-new-tests}
 
 If compilation check fails, re-dispatch SDET with the error output. Do not fix test code yourself.
 
+## Step 5: Session Learning Capture
+
+Coverage gap analysis reveals discipline-level blind spots — entire domains without test coverage, testing paradigm gaps, knowledge store deficiencies that left agents unaware of testable behavior, and architecture patterns that resist testing.
+
+If this test creation session surfaced non-obvious learnings (coverage gaps that reveal missing domain knowledge, architecture patterns that make testing difficult, cross-domain friction between test infrastructure and application structure), suggest:
+
+> This test creation session surfaced insights that may be worth capturing to discipline parking lots. Consider running `/sdlc-reflect` to surface them.
+
+Skip the suggestion if the gaps were straightforward with no broader patterns.
+
 ## Red Flags
 
 | Thought | Reality |
@@ -250,7 +260,7 @@ If compilation check fails, re-dispatch SDET with the error output. Do not fix t
 ## Integration
 
 - **Depends on:** `[sdlc-root]/process/agent-selection.yaml` (agent identification), `[sdlc-root]/process/review-lenses.md` (lens definitions), `[sdlc-root]/knowledge/agent-context-map.yaml` (cross-domain knowledge injection), `[sdlc-root]/knowledge/testing/testing-paradigm.yaml` (SDET dispatch guidelines)
-- **Feeds into:** `sdlc-tests-run` (receives the created tests and runs the red-green fix cycle)
+- **Feeds into:** `sdlc-tests-run` (receives the created tests and runs the red-green fix cycle), `sdlc-reflect` (suggests it when coverage gaps reveal discipline-level blind spots)
 - **Uses:** Domain agents (Step 2 gap analysis), SDET agent (Step 3 implementation), `[sdlc-root]/process/manager-rule.md`, `[sdlc-root]/process/collaboration_model.md`
 - **Complements:** `sdlc-execute` / `sdlc-lite-execute` (invoke after execution to generate tests for the deliverable)
 - **Does NOT replace:** `sdlc-tests-run` (this creates tests; that runs and fixes them). Direct SDET dispatch (appropriate for trivial scope where two-phase is overkill).

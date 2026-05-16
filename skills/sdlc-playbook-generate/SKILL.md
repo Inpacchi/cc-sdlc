@@ -248,6 +248,16 @@ Update `[sdlc-root]/process/sdlc_changelog.md`:
 **Rationale:** Formalizing session learnings into a playbook prevents repeated friction. [N] gotchas documented that would otherwise be rediscovered on the next [task type] integration.
 ```
 
+### 8. Session Learning Capture
+
+Playbook generation involves deep session analysis that surfaces discipline-level insights — process friction patterns, knowledge gaps that caused mid-stream corrections, cross-domain integration gotchas that transcend the specific playbook topic.
+
+If this session surfaced non-obvious learnings beyond what the playbook itself captures (process-improvement insights, knowledge store gaps, discipline-level patterns), suggest:
+
+> This playbook generation surfaced insights that may be worth capturing to discipline parking lots. Consider running `/sdlc-reflect` to surface them.
+
+Skip the suggestion if the playbook already captures all relevant learnings.
+
 ## Red Flags
 
 | Thought | Reality |
@@ -263,7 +273,7 @@ Update `[sdlc-root]/process/sdlc_changelog.md`:
 
 ## Integration
 
-- **Feeds into:** Planning skills (`sdlc-plan`, `sdlc-lite-plan`) — playbooks pre-seed agent selection and knowledge context
+- **Feeds into:** Planning skills (`sdlc-plan`, `sdlc-lite-plan`) — playbooks pre-seed agent selection and knowledge context; `sdlc-reflect` (suggests it when session analysis surfaces discipline-level insights beyond the playbook)
 - **Uses:** Current conversation context (preferred) or session JSONL files, git log, existing playbook template, knowledge stores (for cross-referencing)
 - **Complements:** `sdlc-ingest` imports external knowledge; this skill imports internal session knowledge
 - **Downstream:** `/sdlc-audit` checks playbook freshness as part of knowledge layer health audits
