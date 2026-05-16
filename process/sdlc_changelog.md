@@ -34,6 +34,21 @@ Each entry contains:
 
 ---
 
+## 2026-05-16: Codify CD Iteration as Complementary Post-Review Phase
+
+**Origin:** Target project observation — review agents caught 20+ code-level findings across 3 rounds (raw rgba, ARIA labels, touch targets, memo comparators) but missed all higher-level UX issues (breakpoint strategy, control placement, interaction model). These only surfaced through hands-on CD testing after formal review completed. Without explicit acknowledgment, CD feedback could be misinterpreted as "the review process failed."
+
+**What happened:** The framework positioned the review-fix loop as the final quality gate. CD iteration happened in practice but wasn't documented as a distinct, expected phase. This created ambiguity: was CD finding issues a sign of review failure, or a complementary activity? The answer is the latter — formal review catches code quality, CD iteration catches experience quality. Both are required for user-facing work.
+
+**Changes made:**
+
+1. **`process/review-fix-loop.md`** — Added "What This Loop Does NOT Replace" section. Explicitly distinguishes what agent review catches (code quality, functional correctness, UX bugs) from what CD iteration catches (interaction model choices, control placement, breakpoint strategy, flow and feel). States that CD iteration after a clean loop is the process working correctly.
+2. **`process/deliverable_lifecycle.md`** — Added "CD iteration complete" as a requirement in the In Progress → Validated transition for user-facing changes. Added prerequisite note in Validated → Deployed.
+
+**Rationale:** Formal review and CD iteration are complementary layers. Making this explicit prevents two failure modes: (1) skipping CD iteration because "review passed," and (2) treating CD feedback as evidence the review loop is broken. Both layers are necessary; neither substitutes for the other.
+
+---
+
 ## 2026-05-16: Add No Semantic Revert Rule
 
 **Origin:** Two instances in a target project where the agent "fixed" a bug by removing the feature that had the bug — replacing `columns * 5` with a static `40`, removing dynamic hitsPerPage entirely — then framing it as "the pragmatic fix." User had to reject the edit and explicitly demand the behavior be preserved both times.

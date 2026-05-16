@@ -74,9 +74,10 @@ Moved to chronicles for long-term reference.
 - Test specs written (Phase 2)
 - Tests generated and passing (Phases 3-4)
 - Testing knowledge files updated
+- CD iteration complete (for user-facing changes): CD has used the feature hands-on and confirmed that interaction models, control placement, breakpoint strategy, and overall flow meet product expectations. CD iteration may surface issues that formal review cannot — these are addressed before validation, not after.
 
 ### Validated → Deployed
-- Prerequisite: Validated state reached (all tests green)
+- Prerequisite: Validated state reached (all tests green, CD iteration complete for UI work)
 - Code deployed to target environment
 - Post-deploy smoke tests pass
 

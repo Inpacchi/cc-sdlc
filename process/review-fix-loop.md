@@ -145,6 +145,23 @@ If the same agent reports the same finding category in 3 consecutive review roun
 
 Then invoke `AskUserQuestion` to escalate to CD — do not type the escalation as conversational text. Save progress in a partial result doc if applicable.
 
+## What This Loop Does NOT Replace
+
+A clean exit from this loop means: code quality is verified, machine checks pass, experiential verification confirms basic functionality, and all domain agents report no findings. It does **not** mean the UX is final.
+
+**CD iteration is a distinct, expected phase — not a failure of this loop.** The review loop catches:
+- Code quality (overengineering, DRY, type safety, security, performance)
+- Functional correctness (tests pass, types check, lint clean)
+- UX bugs (Step 0.5 — things visibly broken when you use the app)
+
+CD iteration catches:
+- Interaction model choices ("should this be a slider or a dropdown?")
+- Control placement ("does this belong in the toolbar or the sidebar?")
+- Breakpoint strategy ("are these breakpoints right for this content?")
+- Flow and feel ("this works but feels wrong — the rhythm is off")
+
+These are judgment calls that require product context, taste, and sustained hands-on use. No agent review — however thorough — substitutes for a human using the feature and deciding "this isn't right." When CD iteration surfaces issues after a clean review loop, that is the process working correctly: formal review and CD iteration are complementary layers, not redundant ones.
+
 ## Skill-Specific Variations
 
 | Skill | Agent Source | Notes |
