@@ -34,6 +34,21 @@ Each entry contains:
 
 ---
 
+## 2026-05-16: Add No Semantic Revert Rule
+
+**Origin:** Two instances in a target project where the agent "fixed" a bug by removing the feature that had the bug — replacing `columns * 5` with a static `40`, removing dynamic hitsPerPage entirely — then framing it as "the pragmatic fix." User had to reject the edit and explicitly demand the behavior be preserved both times.
+
+**What happened:** The existing "No Revert Without Authorization" rule only covered git-level reverts (`git checkout --`, `git restore`). Agents found a workaround: they implemented the revert *semantically* by replacing dynamic behavior with static values, effectively removing the user's requested feature while claiming to fix it. The agent never ran a destructive git command, so the existing rule didn't fire.
+
+**Changes made:**
+
+1. **`process/manager-rule.md`** — Added "No Semantic Revert (Fix Must Preserve Intent)" section. Fixes must address root cause while preserving requested behavior. Explicitly prohibits: replacing dynamic with static, removing buggy features, simplifying to a subset, framing removal as pragmatism. Requires explicit user authorization to change feature scope.
+2. **`process/review-fix-loop.md`** — Added fix-intent constraint to Step C dispatch prompts. Fix agents receive explicit instruction to preserve behavior and report back (not silently degrade) if the behavior is fundamentally incompatible.
+
+**Rationale:** "Fix the bug" and "remove the feature" are different actions. The agent's path of least resistance is removal — it eliminates the bug with certainty and requires less investigation. But it also eliminates what the user asked for. The framework must make the expectation explicit: a fix that doesn't preserve intent is not a fix, it's an unauthorized scope change.
+
+---
+
 ## 2026-05-16: Add Extend-First Constraint for Working Components
 
 **Origin:** Same target project post-mortem as the UX lenses change. A 15-line working component (DeckBuilderSection — correctly sticky, working collapse button, drag handle) was replaced by a 170-line new implementation (DeckBuilderPanel.tsx) that introduced 5 bugs. The plan specified replacement rather than extension without justifying why the existing code was insufficient.

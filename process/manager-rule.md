@@ -37,6 +37,23 @@ When an agent modifies a file not in the plan:
 
 The only files safe to revert are files you (or your dispatched agents) created from scratch in the current session. For everything else, reverting requires explicit user authorization via `AskUserQuestion`.
 
+## No Semantic Revert (Fix Must Preserve Intent)
+
+**Fixing a bug in user-requested behavior by removing the behavior is not a fix — it is a revert disguised as one.** This applies whether the "revert" is a `git checkout`, a replacement with a static value, or a reimplementation that drops the requested functionality.
+
+When behavior the user requested has a bug:
+1. **Identify the root cause** — not the feature, but the interaction that makes it malfunction
+2. **Fix the root cause while preserving the behavior** — debounce, guard, batch, defer, or restructure the implementation to keep what the user asked for
+3. **If the behavior is genuinely impossible** given system constraints, say so explicitly: "This behavior conflicts with [X] because [Y]. The options are [A] or [B]." Then wait for direction.
+
+**Never do any of these without explicit user authorization:**
+- Replace a dynamic/computed value with a static one ("just use 40 instead of columns * 5")
+- Remove a feature that has a bug ("the fix is to not do this")
+- Simplify requested behavior to a subset that doesn't have the bug ("we'll do the easy version")
+- Frame removal as pragmatism ("the pragmatic fix is to not tie it to X")
+
+**The test:** After your fix, does the feature still do what the user originally asked for? If the answer is no, you have not fixed a bug — you have reverted a feature. Stop and ask.
+
 ## What the Manager CAN Edit Directly
 
 The rule applies to **code files and domain content**. The manager may directly edit:

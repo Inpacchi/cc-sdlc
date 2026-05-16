@@ -121,6 +121,8 @@ Classify each finding using the finding classification protocol per `[sdlc-root]
 
 Dispatch the most relevant domain agent to fix each FIX finding — this is often the agent who found it, but may be a different agent with deeper expertise in the affected file. If multiple findings need fixes, dispatch all of them before re-reviewing.
 
+**Fix-intent constraint:** Per the No Semantic Revert rule (`[sdlc-root]/process/manager-rule.md`), fix dispatch prompts must include this constraint: "Fix this issue while preserving the existing behavior. Do not remove, simplify, or replace the feature to avoid the bug — address the root cause. If the behavior is fundamentally incompatible with the fix, report back instead of changing it." A fix agent that returns a "solution" that removes the feature it was asked to fix has not completed the task.
+
 For anything that isn't a FIX, state what you don't know:
 ```
 **Unknown**: [specific thing you haven't verified]
