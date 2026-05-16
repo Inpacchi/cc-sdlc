@@ -24,6 +24,7 @@ Analytical perspectives that agents apply when reviewing code. Each consuming sk
 - Added types, interfaces, or enums that aren't needed yet
 - Comments explaining obvious code
 - Defensive checks that duplicate what the framework already guarantees
+- Replacement of a working component with a new, larger implementation when extending the existing component would suffice — a 15-line component that works correctly replaced by a 170-line component that introduces bugs is not an improvement. Every replacement must justify what the existing code cannot do that requires starting over rather than adding to it
 
 ## Type Safety Lens (review only)
 

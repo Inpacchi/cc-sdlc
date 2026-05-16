@@ -34,6 +34,21 @@ Each entry contains:
 
 ---
 
+## 2026-05-16: Add Extend-First Constraint for Working Components
+
+**Origin:** Same target project post-mortem as the UX lenses change. A 15-line working component (DeckBuilderSection — correctly sticky, working collapse button, drag handle) was replaced by a 170-line new implementation (DeckBuilderPanel.tsx) that introduced 5 bugs. The plan specified replacement rather than extension without justifying why the existing code was insufficient.
+
+**What happened:** The planning process had no constraint requiring justification when replacing working code. A plan that says "create NewThing.tsx" looks the same to the FACTS gate whether or not OldThing.tsx already works. Review agents caught code-quality issues in the new file but had no lens to ask "why wasn't the existing component extended?"
+
+**Changes made:**
+
+1. **`process/review-lenses.md`** — Added extend-first check to the Overengineering lens: replacement of a working component with a larger new implementation must justify what the existing code cannot do.
+2. **`process/input-quality-gates.md`** — Added Extend-First Clause to the FACTS Feasible dimension: phases that replace working code without justifying why extension is insufficient score F ≤ 2.
+
+**Rationale:** Extending working code is lower-risk than replacing it — the existing code has proven behavior, known interactions, and established test coverage. Replacement discards all of that and reintroduces the full surface area for bugs. The framework should default to extension and require explicit justification for replacement, both at plan time (FACTS gate) and review time (overengineering lens).
+
+---
+
 ## 2026-05-16: Add UX-Focused Review Lenses and Experiential Verification Gate
 
 **Origin:** Post-mortem from a target project session where 5 UI/UX defects shipped despite passing all existing review gates — duplicated filter sections, invisible collapse button, removed text labels, non-sticky sidebars, low-contrast icons. Root cause: the review process checked code quality but never verified the user experience, and plans didn't require specifying what to remove when adding replacements.

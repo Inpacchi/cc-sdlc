@@ -77,6 +77,8 @@ Score each phase on five dimensions (0–5):
 - 4 — Straightforward with known patterns
 - 5 — Configuration-only or trivial change
 
+**Extend-first clause (F dimension modifier):** If a phase proposes replacing a working component with a new implementation, the phase must state what the existing component cannot do that requires replacement rather than extension. A phase that replaces working code without this justification scores F ≤ 2 — the feasibility of extending the existing code has not been evaluated, so the plan is choosing the riskier path without evidence that the simpler path is insufficient.
+
 **Atomic:**
 - 2 — Spans multiple systems, unclear boundaries
 - 3 — Single responsibility, 2–5 file changes
