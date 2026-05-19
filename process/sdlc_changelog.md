@@ -34,6 +34,22 @@ Each entry contains:
 
 ---
 
+## 2026-05-18: Add VERIFICATION-GATE to Planning Skills
+
+**Origin:** Target project incident — a spec was dispatched to agents without verifying external library APIs via Context7 or checking existing infrastructure. The resulting spec contained wrong library versions, incorrect API patterns, and greenfield pricing assumptions for a platform the project already ran on. All claims were written with high confidence, making them hard to catch during review.
+
+**What happened:** The `sdlc-plan` and `sdlc-lite-plan` skills had library verification marked as "MANDATORY" in prose, but no structural checkpoint enforced it. The model read the instruction, understood it, and skipped it anyway — proving that advisory language without a gate is insufficient. Infrastructure/cost verification had no process at all.
+
+**Changes made:**
+
+1. **`skills/sdlc-plan/SKILL.md`** — Added infrastructure verification protocol (4 steps) parallel to existing library verification. Added WebSearch/WebFetch fallback when Context7 can't resolve a library (step 3). Added VERIFICATION-GATE — a structured block (modeled on DISCOVERY-GATE) that must appear before spec-writing agent dispatch. Block requires evidence of library verification (Context7 ID + version, or WebSearch/WebFetch + official docs URL), infrastructure claims (existing services, cost basis, verification method), and external API contracts. Gate emits PASS/FAIL; FAIL blocks dispatch. Added three Red Flags entries for pricing assumptions, post-hoc verification, and library overconfidence.
+2. **`skills/sdlc-lite-plan/SKILL.md`** — Same VERIFICATION-GATE, infrastructure verification protocol, and Context7 fallback added before plan-writing agent dispatch. Same three Red Flags entries added.
+3. **`process/sdlc_changelog.md`** — This entry.
+
+**Rationale:** Advisory language ("MANDATORY", "You MUST") failed because there's no structural consequence for ignoring it. Gates work because they require emitting a structured evidence block — either the evidence exists (PASS) or it doesn't (FAIL). The model must visibly skip the gate, which is harder to do silently than skipping a prose instruction. Infrastructure verification fills a gap where no process existed at all — cost claims were never verified against existing project setup.
+
+---
+
 ## 2026-05-16: Codify CD Iteration as Complementary Post-Review Phase
 
 **Origin:** Target project observation — review agents caught 20+ code-level findings across 3 rounds (raw rgba, ARIA labels, touch targets, memo comparators) but missed all higher-level UX issues (breakpoint strategy, control placement, interaction model). These only surfaced through hands-on CD testing after formal review completed. Without explicit acknowledgment, CD feedback could be misinterpreted as "the review process failed."

@@ -121,9 +121,35 @@ Consult `[sdlc-root]/knowledge/architecture/agent-orchestration-patterns.yaml` f
 
 1. **Resolve library ID:** `mcp__context7__resolve-library-id` for each external library
 2. **Query docs:** `mcp__context7__query-docs` — hooks, APIs, props, usage patterns
-3. **Check installed version:** Read `package.json` / lock files
-4. **Extract concrete details:** Hook names, signatures, required props, patterns
-5. **Pass to writing agent:** Include verified API details in dispatch prompt
+3. **Fallback if Context7 fails:** If the library ID doesn't resolve or docs are too sparse, fall back to WebSearch (find official docs) → WebFetch (read them). Context7 is the preferred path, not the only path — the requirement is *verified API details*, not *verified via a specific tool*.
+4. **Check installed version:** Read `package.json` / lock files
+5. **Extract concrete details:** Hook names, signatures, required props, patterns
+6. **Pass to writing agent:** Include verified API details in dispatch prompt
+
+**Infrastructure verification (MANDATORY when the plan involves deployment, hosting, or cost claims):** You MUST check the project's existing infrastructure BEFORE dispatching the plan-writing agent.
+
+1. **Check existing services:** Read project config, deployment files, or ask the user what's already running and on which platform
+2. **Determine cost basis:** Is this incremental (adding to an existing plan/platform) or greenfield (new account/platform)?
+3. **Verify pricing claims:** Cross-check against the platform's current pricing — do not use training-data pricing
+4. **Pass to writing agent:** Include verified infrastructure context in dispatch prompt
+
+**VERIFICATION-GATE** — you cannot dispatch agents to write the plan until this block appears in your response. If there are no external libraries and no infrastructure/cost claims, emit the block with `none` entries — the block must still appear.
+
+```
+VERIFICATION-GATE
+External libraries:
+- [library]: Context7 ID [resolved-id], verified version [X.Y.Z], installed version [X.Y.Z]
+- [library]: WebSearch + WebFetch [official docs URL], verified version [X.Y.Z], installed version [X.Y.Z]
+Infrastructure claims:
+- Existing services checked: [list services found on current platform, or "N/A — no infra claims in this plan"]
+- Cost basis: incremental (existing plan) | greenfield | N/A
+- Verified via: [project config | deployment files | user confirmation | N/A]
+External API contracts:
+- [service/API]: verified via [Context7 | WebSearch | official docs | user confirmation]
+Gate: PASS | FAIL (unverified: [list what's missing])
+```
+
+If the gate shows FAIL, resolve the unverified items before proceeding. Do not dispatch agents with unverified claims — the agent will write confidently from training data, producing plausible but wrong details that survive into the approved spec.
 
 ### 1. Identify Relevant Worker Domain Agents
 
@@ -338,7 +364,9 @@ The Manager Rule remains in effect per `[sdlc-root]/process/manager-rule.md` —
 | "Only one domain is involved" | Most tasks touch 2+ domains. Check again. |
 | "I'll write the plan mode content from memory" | Follow step 5 exactly: Read the file with the Read tool, then paste the full Read output into EnterPlanMode. Working from memory produces summaries. |
 | "The plan is done, let me just quickly fix this other thing" | Manager Rule applies for the full session. Dispatch the domain agent. |
-| "I know how this library works" | Verify external library APIs via Context7. Never assume. |
+| "I know how this library works" | Verify external library APIs via Context7. Never assume. VERIFICATION-GATE must show the resolved ID and version. |
+| "The pricing is $X/month for this service" | Check existing infrastructure first. If the project already runs on that platform, incremental cost differs dramatically from greenfield pricing. VERIFICATION-GATE must show what you checked. |
+| "I'll verify after the plan is written" | Verification happens BEFORE dispatch. Post-hoc verification means the plan was written from unverified claims and the agent's confident tone makes errors invisible. |
 
 ## Integration
 
