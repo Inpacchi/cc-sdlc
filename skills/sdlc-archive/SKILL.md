@@ -25,7 +25,14 @@ Before archiving, detect untracked ad hoc work that happened outside the SDLC pr
 
 1. Find the last archived deliverable ID from `docs/_index.md`
 2. Run `git log --oneline` since the last formal deliverable commit
-3. If commits exist that aren't tied to any tracked deliverable, run the reconciliation process in `[sdlc-root]/process/ad_hoc_reconciliation.md` — this categorizes each commit and assigns resolutions (absorb into parent, lightweight record, batch into polish deliverable, or skip)
+3. If commits exist that aren't tied to any tracked deliverable, run the reconciliation process in `[sdlc-root]/process/ad_hoc_reconciliation.md`. The process has 5 phases:
+   1. **Discovery** — identify the boundary (last formal commit), list ad hoc commits, categorize each
+   2. **Reconciliation** — for each commit, pick the resolution: absorb into parent / lightweight record / batch into polish deliverable / skip
+   3. **Spec Maintenance** — identify specs that need updating based on what was learned
+   4. **Git State** — ensure clean state before resuming
+   5. **Path Forward** — ask the user what comes next
+   
+   Do not skip the categorization step — every commit gets classified before a resolution is chosen.
 4. If no untracked work is found, skip to Step 1
 
 This step ensures ad hoc work gets cataloged before archival sweeps completed work into the chronicle.

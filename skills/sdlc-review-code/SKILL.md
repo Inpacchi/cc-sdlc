@@ -199,19 +199,36 @@ After presenting the report, offer to fix:
 
 If the user declines, stop here. If the user accepts, proceed to Step 5a.
 
-### 5a. Dispatch Fixes
+### 5a. Fix Findings
 
-Read and follow `[sdlc-root]/process/manager-rule.md`. Group findings by the most relevant domain agent to fix them. Consult `[sdlc-root]/knowledge/architecture/agent-orchestration-patterns.yaml` for dispatch discipline (AOP1, AOP9). When dispatching 2+ fixers in parallel, follow `[sdlc-root]/process/parallel-dispatch-monitoring.md`.
+**You are the manager.** The canonical rule is in `[sdlc-root]/process/manager-rule.md`. The critical guardrails are inlined here so that skipping the read does not skip the behavior:
 
-Dispatch prompts must describe WHAT/WHY — implementation HOW is the agent's domain. Each agent receives: the specific findings assigned to them, the original diff, cross-domain knowledge files from the finding agent (when fixer differs from finder, consult `[sdlc-root]/knowledge/agent-context-map.yaml`), and instruction to make the minimal change that addresses each finding.
+**Trivial fixes — you may self-apply** when ALL three are true: (1) the fix is mechanical — no design judgment, no ambiguity about what to change; (2) single-site — one file, one location; (3) self-evident — a reader can verify correctness from the fix alone without reading surrounding code. Examples: typos, missing imports, unused variables, obvious type annotations, missing `key` props.
 
-If an agent returns without applying its fix, re-dispatch — do NOT fix it yourself.
+**Non-trivial fixes — dispatch domain agents.** If you need to read surrounding code to decide HOW to fix, it is not trivial. Group non-trivial findings by the most relevant domain agent. Consult `[sdlc-root]/knowledge/architecture/agent-orchestration-patterns.yaml` for dispatch discipline (AOP1, AOP9). When dispatching 2+ fixers in parallel, follow `[sdlc-root]/process/parallel-dispatch-monitoring.md`. Each agent receives: the specific findings assigned to them, the original diff, cross-domain knowledge files from the finding agent (when fixer differs from finder, consult `[sdlc-root]/knowledge/agent-context-map.yaml`), and instruction to make the minimal change that addresses each finding.
 
-After all agents complete, verify the project builds.
+**If an agent returns without applying its fix, re-dispatch — do NOT fix it yourself.** The rule is re-dispatch, not self-implement.
+
+**Self-check before proceeding:** Count findings you self-fixed as trivial. Count findings dispatched to agents. The two numbers must equal the total finding count. If any finding is neither self-fixed nor dispatched, stop — you missed one.
+
+After all fixes (self-applied and agent-applied), verify the project builds.
 
 ### 5b. Review-Fix Loop
 
-Run the loop per `[sdlc-root]/process/review-fix-loop.md`. Agent source: the original review agent list. Classifications: FIX, INVESTIGATE, DECIDE, PRE-EXISTING per `[sdlc-root]/process/finding-classification.md`.
+**This loop is mandatory — whether fixes were self-applied or agent-applied.** No shortcuts, no skipping, no claiming it ran without a clean review round.
+
+The full protocol is in `[sdlc-root]/process/review-fix-loop.md`. The critical mechanics are inlined here:
+
+1. **Verification gate** — tests, type checks, and lint must pass before dispatching reviewers. Fix failures first.
+2. **Dispatch ALL review agents** from the original review (Step 3) as **subagents** — separate context windows, not inline. Context separation prevents confirmation bias: a reviewer in the same context that wrote the fix is biased toward approving it.
+3. **Collect findings.** If ALL agents report zero findings → loop exits clean. Zero means zero — not "only minor," not "only pre-existing."
+4. **Classify each finding** per `[sdlc-root]/process/finding-classification.md`: FIX, INVESTIGATE, DECIDE, PRE-EXISTING.
+5. **Fix classified findings** — dispatch agents for non-trivial, self-fix trivial (same rules as Step 5a).
+6. **Return to step 2 — mandatory.** Dispatch ALL agents again, not just the ones who found issues. Fixes can introduce new problems in other domains.
+
+The loop repeats until step 3 shows all agents clean. **Do not claim the loop exited clean without a review round that produced zero findings.**
+
+**3-strike rule:** If the same finding recurs across 3 consecutive rounds, stop iterating and escalate to the user via `AskUserQuestion`.
 
 ### 5c. Summary and Commit
 

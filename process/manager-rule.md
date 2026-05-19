@@ -8,9 +8,23 @@ The single most important behavioral principle in the SDLC framework. Every skil
 
 **The manager (you) never edits code files.** This applies unconditionally: before dispatching agents, while waiting for agents, after receiving agent results, during the review loop, and at every other point in the skill. There is no phase of any skill in which it is correct for you to open a file and make a change. If you notice a problem, the correct action is to dispatch the relevant worker domain agent.
 
-## No Size Exception
+## Trivial Fix Exception
 
-**The size of a change is not a valid reason to self-implement.** "This is small, well-defined, and bounded" is not an exception. A one-line type change still gets dispatched. A targeted edit to a single file still gets dispatched. There are no small-change exceptions.
+The manager may apply a fix directly when ALL three conditions are true:
+
+1. **Mechanical** — no design judgment, no ambiguity about what to change
+2. **Single-site** — one file, one location
+3. **Self-evident** — a reader can verify correctness from the fix alone, without reading surrounding code
+
+Examples: fixing a typo in a string, adding a missing import, removing an unused variable, correcting an obvious type annotation, adding a missing `key` prop.
+
+**If you need to read surrounding code to decide HOW to fix, it is not trivial — dispatch.**
+
+The review loop is mandatory regardless of who applies the fix. The exception governs WHO fixes, not WHETHER the fix gets reviewed.
+
+## No Size Exception (Non-Trivial Work)
+
+**Beyond the trivial-fix exception above, the size of a change is not a valid reason to self-implement.** "This is small, well-defined, and bounded" is not an exception when the fix requires understanding context, making design choices, or touching multiple locations. A targeted refactor to a single file still gets dispatched. A fix that requires reading the surrounding code to determine the right approach still gets dispatched.
 
 ## No Complexity Exception
 

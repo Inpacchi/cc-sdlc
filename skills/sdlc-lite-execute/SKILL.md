@@ -269,7 +269,16 @@ Review agents (from plan): [list all agent names]
 Dispatching: [count] agents
 ```
 
-After ALL phases are done, run the **Review-Fix Loop** per `[sdlc-root]/process/review-fix-loop.md`. **Start with Step 0 (Verification Gate):** run tests, type checks, linting, and any configured SAST tooling BEFORE dispatching review agents. Fix any verification failures first. Agent source: the plan's agent assignment table. Classifications: use all five per `[sdlc-root]/process/finding-classification.md`.
+After ALL phases are done, run the **Review-Fix Loop** per `[sdlc-root]/process/review-fix-loop.md`. The critical loop mechanics are:
+
+1. **Verification gate (Step 0):** Run tests, type checks, linting, and any configured SAST tooling BEFORE dispatching review agents. Fix verification failures first — do not ask reviewers to evaluate broken code.
+2. **Experiential verification (Step 0.5):** For user-facing changes, start the dev server and walk the golden path, check adjacent features, verify scroll/resize, and check state transitions. Fix experiential failures before entering agent review.
+3. **Dispatch ALL review agents** as subagents (separate context windows — context separation prevents confirmation bias). Agent source: the plan's agent assignment table.
+4. **Collect findings.** If ALL agents report zero → loop exits clean. Zero means zero.
+5. **Classify** per `[sdlc-root]/process/finding-classification.md` (FIX, PLAN, INVESTIGATE, DECIDE, PRE-EXISTING). Fix classified findings — trivial fixes may be self-applied; non-trivial fixes get dispatched to domain agents.
+6. **Re-review (mandatory).** After fixes, return to step 3. Dispatch ALL agents again — not just those who found issues.
+
+The loop repeats until all agents report clean. **Do not claim the loop exited clean without a review round that produced zero findings.** 3-strike rule: escalate to user after 3 consecutive rounds with the same finding.
 
 **Triage output format (mandatory).** When you collect findings and classify them, emit the canonical Classification Table from `[sdlc-root]/process/finding-classification.md` — one row per finding with columns `# | Finding | Agent | Classification | Severity | Rationale`. Do NOT emit two free-form bullet lists ("Will fix:" / "Out of scope:") with agent names in brackets. The canonical table puts every finding on the same scannable axis; the bullet-list shape forces the reader to re-parse classification from prose ("logged in result doc", "pre-existing systemic", "accepted trade-off"). After the table, dispatch FIX rows in a single batch — no narration between table and dispatch.
 

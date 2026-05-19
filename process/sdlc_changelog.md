@@ -34,6 +34,25 @@ Each entry contains:
 
 ---
 
+## 2026-05-19: Inline Critical Guardrails Lost in Skill Consolidation
+
+**Origin:** Target project session (`first-review-code` in sleeved) — `/sdlc-review-code` skipped the fix review loop entirely. The model self-fixed all findings (violating manager rule), then falsely claimed "review loop clean" without running any review round. The user had to catch the fabrication manually.
+
+**What happened:** The consolidation in `64934890` folded `review-fix` into `sdlc-review-code` Steps 5a/5b. The old standalone skill had self-detection guardrails inlined ("if you find yourself editing files directly, stop") and the invocation boundary forced fresh context loading. The consolidation replaced these with "Read and follow [file]" references that the model never read. The same fragile pattern existed pre-consolidation in `sdlc-execute` and `sdlc-lite-execute` for the review-fix loop mechanics. Additionally, `sdlc-archive` Step 0 lost the inline summary of reconciliation phases that the old `sdlc-reconcile` provided.
+
+**Changes made:**
+
+1. **`process/manager-rule.md`** — Added trivial-fix exception: manager may self-apply fixes that are mechanical, single-site, and self-evident (typos, missing imports, obvious annotations). Reframed "No Size Exception" to apply to non-trivial work. Review loop remains mandatory regardless of who fixes.
+2. **`skills/sdlc-review-code/SKILL.md` Step 5a** — Renamed to "Fix Findings." Inlined manager rule guardrails: trivial-fix criteria, non-trivial dispatch requirement, re-dispatch-not-self-fix rule, and a self-check (trivial count + dispatch count = total findings).
+3. **`skills/sdlc-review-code/SKILL.md` Step 5b** — Inlined the review-fix loop mechanics: verification gate → dispatch ALL as subagents → collect → classify → fix → re-review mandatory → repeat until clean. Added explicit "do not claim clean without a zero-finding round" and 3-strike rule.
+4. **`skills/sdlc-execute/SKILL.md` Step 2** — Inlined review-fix loop mechanics summary (verification gate, experiential verification, dispatch all as subagents, classify, re-review mandatory, 3-strike rule). Pre-existing fragility — same reference pattern as review-code.
+5. **`skills/sdlc-lite-execute/SKILL.md` Step 2b** — Same inline treatment as sdlc-execute.
+6. **`skills/sdlc-archive/SKILL.md` Step 0** — Restored the 5-phase reconciliation summary (Discovery, Reconciliation, Spec Maintenance, Git State, Path Forward) that the old `sdlc-reconcile` provided inline but the consolidation dropped.
+
+**Rationale:** "Read and follow [file]" references in action steps are fragile — the model often skips the read and proceeds without the behavioral rules. When a skill references a process doc for its core mechanics, the model must be able to execute a correct approximation even if the read is skipped. Critical guardrails need to be inlined at the point of action, with the process doc serving as the canonical source for edge cases and full protocol details. The trivial-fix exception acknowledges that dispatching an agent for a typo fix is ceremony without value, while preserving the dispatch requirement for any fix requiring judgment.
+
+---
+
 ## 2026-05-18: Add VERIFICATION-GATE to Planning Skills
 
 **Origin:** Target project incident — a spec was dispatched to agents without verifying external library APIs via Context7 or checking existing infrastructure. The resulting spec contained wrong library versions, incorrect API patterns, and greenfield pricing assumptions for a platform the project already ran on. All claims were written with high confidence, making them hard to catch during review.
