@@ -67,7 +67,11 @@ digraph sdlc_lite_execution {
 
 ## Collaboration Model
 
-Read `[sdlc-root]/process/collaboration_model.md` for the CD/CC role definitions, communication patterns (AskUserQuestion rule), decision authority table, and anti-patterns. All questions to the user must use `AskUserQuestion`. All anti-patterns in that doc apply during execution.
+The full model is in `[sdlc-root]/process/collaboration_model.md` (role definitions, decision authority table, autonomy spectrum). The critical directives:
+
+**AskUserQuestion mandate:** every question directed at the user MUST use the `AskUserQuestion` tool — do not type questions as conversational text. Status updates and completion reports that need no response use normal text.
+
+**Anti-patterns to avoid:** (1) code assertion without verification — never answer "how does X work" from memory; grep/read the code first; (2) trajectory poisoning — if the agent is off track after 2-3 corrections, clear context and start fresh rather than continuing to correct in a poisoned trajectory.
 
 ## Deliverable Lifecycle
 
@@ -77,13 +81,19 @@ Follow the state machine in `[sdlc-root]/process/deliverable_lifecycle.md`. Upda
 
 ### Manager Rule
 
-Read and follow `[sdlc-root]/process/manager-rule.md` — the canonical definition of this rule. It applies unconditionally for the entire session.
+**You are the manager — you orchestrate, you do not implement.** The canonical rule is in `[sdlc-root]/process/manager-rule.md`. The critical constraints:
+
+- **Default: dispatch domain agents** for all code and domain content changes. You never write code yourself.
+- **Trivial fix exception:** you may self-apply a fix when ALL three are true: (1) mechanical — no design judgment; (2) single-site — one file, one location; (3) self-evident — verifiable from the fix alone without reading surrounding code.
+- **Failed dispatch:** if an agent returns without applying its work, re-dispatch — do not self-implement.
+- **No semantic revert:** fixing a bug by removing the feature is not a fix — preserve the user's requested behavior.
+- **Session scope:** this rule stays active for the entire session. There is no post-commit wind-down mode.
 
 **No pre-dispatch narration.** Status comes from the gates (PRE-GATE, POST-GATE, REVIEW-GATE) — not from sentences around them. Do not type filler describing what you are about to do: "Plan loaded.", "Let me check the catalog.", "Proceeding to Phase N.", "Now updating the catalog and committing.", "Staged set looks correct. Committing." The gates ARE the protocol; commentary around them is noise the user has to scroll past. The two acceptable exceptions are: (1) a one-line note conveying genuinely new information — a deviation observed, a phase-bleeding decision, a serialization choice forced by mid-stream discovery, a triage rationale; (2) the explicit announcements other rules require ("Review loop complete — all agents clean.", REVIEW-GATE block, etc.). When in doubt, prefer the gate over a sentence.
 
 ### Agent Dispatch Protocol
 
-Consult `[sdlc-root]/knowledge/architecture/agent-orchestration-patterns.yaml` for dispatch discipline — especially AOP1 (decompose by file ownership for parallel work), AOP8 (wide-shallow dependency graphs), AOP9 (dispatch prompts must include acceptance criteria, owned files, and out-of-scope), and AOP10 (detect workload imbalance between agents). When dispatching 2+ agents in parallel, follow `[sdlc-root]/process/parallel-dispatch-monitoring.md` — read every agent's output before deciding next steps, check for file conflicts, and apply the 3-strike rule for stuck agents.
+Consult `[sdlc-root]/knowledge/architecture/agent-orchestration-patterns.yaml` for dispatch discipline — especially AOP1 (decompose by file ownership for parallel work), AOP8 (wide-shallow dependency graphs), AOP9 (dispatch prompts must include acceptance criteria, owned files, and out-of-scope), and AOP10 (detect workload imbalance between agents). When dispatching 2+ agents in parallel, follow `[sdlc-root]/process/parallel-dispatch-monitoring.md`. The critical rules: (1) read EVERY agent's output before deciding next steps — do not act on the first agent's result while others are still pending; (2) check for file conflicts via `git diff --stat` after parallel agents return; (3) apply the 3-strike rule for stuck agents; (4) on retry, revise the prompt — do not re-send the same prompt verbatim.
 
 Dispatch prompts must pass through all relevant context from the plan — outcomes, constraints, acceptance criteria, and any implementation guidance the planning agent included. Never narrate readiness ("Ready to dispatch") and wait for user confirmation. The plan is already approved; execution means continuous forward motion.
 
@@ -324,7 +334,16 @@ The result doc lives alongside the plan file in `docs/current_work/sdlc-lite/`. 
 
 ### 3c. Discipline Capture
 
-Run the discipline capture protocol per `[sdlc-root]/process/discipline_capture.md`. Context format: `[DNN — phase N]`. This includes structured gap detection (using the review-fix triage table and agent dispatch data from this session) followed by the freeform insight scan.
+Run the discipline capture protocol from `[sdlc-root]/process/discipline_capture.md`. Context format: `[DNN — phase N]`. The procedure:
+
+1. **Structured gap detection** — 3 comparisons using session data:
+   - Knowledge loaded vs. needed: could a knowledge file have prevented any FIX finding?
+   - Cross-domain friction: did agents struggle outside their primary domain?
+   - Iteration cost: did the review-fix loop run >2 rounds with recurring findings?
+2. **Freeform insight scan** — look for insights that are reusable, non-obvious, and cross-discipline
+3. **Write to parking lots** — append to `[sdlc-root]/disciplines/*.md` under `## Parking Lot`, one bullet per insight, marked `[NEEDS VALIDATION]`
+
+Skip if nothing surfaced — do not fabricate entries. Budget: <3 minutes total. The manager writes these directly (process documentation, not domain content).
 
 Entry format:
 ```markdown

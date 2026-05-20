@@ -34,6 +34,24 @@ Each entry contains:
 
 ---
 
+## 2026-05-20: Inline All Directive References Across Skill Library
+
+**Origin:** Follow-up to the 2026-05-19 guardrail inlining — the pattern of "read and follow [file]" references containing directives the model skips was not limited to the consolidation commit. Systematic audit of all 25 skills found the same fragility in 3 cross-cutting patterns across 10 skills.
+
+**What happened:** Audited every `[sdlc-root]` reference in action steps across all skills. Classified each as DIRECTIVE (behavioral rules the model must follow), DATA (tables/templates/catalogs to look up), or MIXED. Found 22 actionable findings: 7 HIGH (manager rule), 7+ MEDIUM (collaboration model, discipline capture, parallel dispatch), and several LOW. The principle applied: references are fine for data tables; directives must be inlined at the point of action.
+
+**Changes made:**
+
+1. **Manager Rule inlined in 8 skills** — `sdlc-plan`, `sdlc-lite-plan`, `sdlc-execute`, `sdlc-lite-execute`, `sdlc-tests-create`, `sdlc-debug-incident`, `sdlc-create-reference-doc`, `research-external`. Each now has the core constraints inline: default dispatch, trivial fix exception (3 conditions), failed dispatch re-dispatch rule, no semantic revert, session scope. Skill-specific emphasis preserved (tests-create: "you never write test code"; debug-incident: "you orchestrate, agents investigate"; research-external: "you do not WebFetch").
+2. **Collaboration Model inlined in 7 skills** — `sdlc-plan`, `sdlc-lite-plan`, `sdlc-execute`, `sdlc-lite-execute`, `sdlc-tests-create`, `sdlc-debug-incident`, `sdlc-create-reference-doc`. Each now has the AskUserQuestion mandate and the two critical anti-patterns (code assertion without verification, trajectory poisoning) inline. Decision authority table and autonomy spectrum remain as data references.
+3. **Discipline Capture inlined in 4 skills** — `sdlc-plan`, `sdlc-lite-plan`, `sdlc-execute`, `sdlc-lite-execute`. Each now has the 3-comparison structured gap detection procedure, freeform scan, write rules, skip-if-empty rule, and <3 minute budget inline.
+4. **Parallel Dispatch Monitoring enhanced in 2 skills** — `sdlc-execute`, `sdlc-lite-execute`. Added "do not act on first result while others pending" and "prompt revision not repetition" to the existing inline summary.
+5. **Review-Fix Loop enhanced in `sdlc-create-reference-doc`** — Added re-dispatch rule, trivial-fix allowance, and anti-fabrication language to the fix loop section.
+
+**Rationale:** The model treats "read and follow [file]" as optional when the surrounding skill text gives it enough context to proceed. For DATA references (agent-selection.yaml, review-lenses.md, knowledge YAML files), this is fine — the model looks up what it needs. For DIRECTIVE references (manager-rule.md, collaboration_model.md, discipline_capture.md), skipping the read means the model operates without the behavioral constraints. Inlining the critical directives ensures they survive even when the model skips the reference read. The process docs remain canonical for edge cases, full protocol details, and audit traceability.
+
+---
+
 ## 2026-05-19: Inline Critical Guardrails Lost in Skill Consolidation
 
 **Origin:** Target project session (`first-review-code` in sleeved) — `/sdlc-review-code` skipped the fix review loop entirely. The model self-fixed all findings (violating manager rule), then falsely claimed "review loop clean" without running any review round. The user had to catch the fabrication manually.

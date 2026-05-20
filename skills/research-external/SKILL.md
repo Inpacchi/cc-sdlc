@@ -39,7 +39,10 @@ Signs this skill is NOT appropriate:
 
 ## Manager Rule
 
-Read and follow `[sdlc-root]/process/manager-rule.md`. The research-analyst agents do the fetching, reading, and classification. You orchestrate — you do not fetch articles yourself. If you notice a source needs more investigation, dispatch another agent — do not WebFetch it yourself.
+**You are the manager — you orchestrate, you do not research.** The canonical rule is in `[sdlc-root]/process/manager-rule.md`. The research-analyst agents do the fetching, reading, and classification. You dispatch and curate — you do not WebFetch articles yourself. If a source needs more investigation, dispatch another agent.
+
+- **Failed dispatch:** if an agent returns without useful results, re-dispatch with refined instructions — do not fetch the content yourself.
+- **Session scope:** this rule stays active for the entire session.
 
 ## Workflow
 

@@ -24,7 +24,11 @@ Domain agents own the planning lifecycle: they write the spec, they write the pl
 
 ## Collaboration Model
 
-Read `[sdlc-root]/process/collaboration_model.md` for the CD/CC role definitions, communication patterns (proposal-first, AskUserQuestion rule), decision authority table, and anti-patterns. Planning is where proposal-first and decision authority matter most — CC proposes approaches, CD approves.
+The full model is in `[sdlc-root]/process/collaboration_model.md` (role definitions, decision authority table, autonomy spectrum). The critical directives:
+
+**AskUserQuestion mandate:** every question directed at the user MUST use the `AskUserQuestion` tool — do not type questions as conversational text. Status updates and completion reports that need no response use normal text. Planning is where this matters most — CC proposes approaches, CD approves.
+
+**Anti-patterns to avoid:** (1) code assertion without verification — never answer "how does X work" from memory; grep/read the code first; (2) trajectory poisoning — if the agent is off track after 2-3 corrections, clear context and start fresh rather than continuing to correct in a poisoned trajectory.
 
 ## Deliverable Lifecycle
 
@@ -32,7 +36,13 @@ Follow the state machine in `[sdlc-root]/process/deliverable_lifecycle.md`. When
 
 ## Manager Rule
 
-Read and follow `[sdlc-root]/process/manager-rule.md` — the canonical definition of this rule. It applies unconditionally for the entire session.
+**You are the manager — you orchestrate, you do not implement.** The canonical rule is in `[sdlc-root]/process/manager-rule.md`. The critical constraints:
+
+- **Default: dispatch domain agents** for all code, specs, plans, and domain content. You never write these yourself.
+- **Trivial fix exception:** you may self-apply a fix when ALL three are true: (1) mechanical — no design judgment; (2) single-site — one file, one location; (3) self-evident — verifiable from the fix alone without reading surrounding code.
+- **Failed dispatch:** if an agent returns without applying its work, re-dispatch — do not self-implement.
+- **No semantic revert:** fixing a bug by removing the feature is not a fix — preserve the user's requested behavior.
+- **Session scope:** this rule stays active for the entire session. There is no post-commit wind-down mode.
 
 ## Mode Selection
 
@@ -567,7 +577,16 @@ Key feedback incorporated:
 
 ### 5a. Discipline Capture
 
-Run the discipline capture protocol per `[sdlc-root]/process/discipline_capture.md`. Context format: `[DNN — planning]`. This includes structured gap detection (using the finding classification table and agent dispatch data from this session) followed by the freeform insight scan.
+Run the discipline capture protocol from `[sdlc-root]/process/discipline_capture.md`. Context format: `[DNN — planning]`. The procedure:
+
+1. **Structured gap detection** — 3 comparisons using session data:
+   - Knowledge loaded vs. needed: could a knowledge file have prevented any FIX finding?
+   - Cross-domain friction: did agents struggle outside their primary domain?
+   - Iteration cost: did the review loop run >2 rounds with recurring findings?
+2. **Freeform insight scan** — look for insights that are reusable, non-obvious, and cross-discipline
+3. **Write to parking lots** — append to `[sdlc-root]/disciplines/*.md` under `## Parking Lot`, one bullet per insight, marked `[NEEDS VALIDATION]`
+
+Skip if nothing surfaced — do not fabricate entries. Budget: <3 minutes total. The manager writes these directly (process documentation, not domain content).
 
 ### 6. Prompt for Execution
 

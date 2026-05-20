@@ -112,7 +112,11 @@ digraph execution {
 
 ## Collaboration Model
 
-Read `[sdlc-root]/process/collaboration_model.md` for the CD/CC role definitions, communication patterns (AskUserQuestion rule), decision authority table, and anti-patterns. All questions to the user must use `AskUserQuestion`. All anti-patterns in that doc apply during execution.
+The full model is in `[sdlc-root]/process/collaboration_model.md` (role definitions, decision authority table, autonomy spectrum). The critical directives:
+
+**AskUserQuestion mandate:** every question directed at the user MUST use the `AskUserQuestion` tool — do not type questions as conversational text. Status updates and completion reports that need no response use normal text.
+
+**Anti-patterns to avoid:** (1) code assertion without verification — never answer "how does X work" from memory; grep/read the code first; (2) trajectory poisoning — if the agent is off track after 2-3 corrections, clear context and start fresh rather than continuing to correct in a poisoned trajectory.
 
 ## Deliverable Lifecycle
 
@@ -120,7 +124,13 @@ Follow the state machine in `[sdlc-root]/process/deliverable_lifecycle.md`. Upda
 
 ## Manager Rule
 
-Read and follow `[sdlc-root]/process/manager-rule.md` — the canonical definition of this rule. It applies unconditionally for the entire session.
+**You are the manager — you orchestrate, you do not implement.** The canonical rule is in `[sdlc-root]/process/manager-rule.md`. The critical constraints:
+
+- **Default: dispatch domain agents** for all code and domain content changes. You never write code yourself.
+- **Trivial fix exception:** you may self-apply a fix when ALL three are true: (1) mechanical — no design judgment; (2) single-site — one file, one location; (3) self-evident — verifiable from the fix alone without reading surrounding code.
+- **Failed dispatch:** if an agent returns without applying its work, re-dispatch — do not self-implement.
+- **No semantic revert:** fixing a bug by removing the feature is not a fix — preserve the user's requested behavior.
+- **Session scope:** this rule stays active for the entire session. There is no post-commit wind-down mode.
 
 **No pre-dispatch narration.** Status comes from the gates (PRE-GATE, POST-GATE, REVIEW-GATE) — not from sentences around them. Do not type filler describing what you are about to do: "Plan loaded.", "Let me check the catalog.", "Proceeding to Phase N.", "Now updating the catalog and committing.", "Staged set looks correct. Committing." The gates ARE the protocol; commentary around them is noise the user has to scroll past. The two acceptable exceptions are: (1) a one-line note conveying genuinely new information — a deviation observed, a phase-bleeding decision, a serialization choice forced by mid-stream discovery, a triage rationale; (2) the explicit announcements other rules require ("Review loop complete — all agents clean.", REVIEW-GATE block, etc.). When in doubt, prefer the gate over a sentence.
 
@@ -252,7 +262,7 @@ When the plan has a parallel phase set where one phase defines a contract and an
 6. **Library verification instructions** — when the phase involves external library/framework APIs, tell the agent to verify API usage via Context7 (`mcp__context7__resolve-library-id` → `mcp__context7__query-docs`) before writing integration code. Include the library names and versions from the project's dependency files. Agents must not rely on training data for API signatures, parameter names, or default behaviors.
 Consult `[sdlc-root]/knowledge/architecture/agent-orchestration-patterns.yaml` for dispatch discipline — especially AOP1 (decompose by file ownership for parallel work), AOP8 (wide-shallow dependency graphs), AOP9 (dispatch prompts must include acceptance criteria, owned files, and out-of-scope), and AOP10 (detect workload imbalance between agents).
 
-Dispatch independent phases in parallel using multiple Agent tool calls in a single message. If you find yourself editing files directly instead of dispatching an agent, stop — that violates the Manager Rule. When dispatching 2+ agents in parallel, follow `[sdlc-root]/process/parallel-dispatch-monitoring.md` — read every agent's output before deciding next steps, check for file conflicts via `git diff --stat`, and apply the 3-strike rule for stuck agents.
+Dispatch independent phases in parallel using multiple Agent tool calls in a single message. If you find yourself editing files directly instead of dispatching an agent, stop — that violates the Manager Rule. When dispatching 2+ agents in parallel, follow `[sdlc-root]/process/parallel-dispatch-monitoring.md`. The critical rules: (1) read EVERY agent's output before deciding next steps — do not act on the first agent's result while others are still pending; (2) check for file conflicts via `git diff --stat` after parallel agents return; (3) apply the 3-strike rule for stuck agents; (4) on retry, revise the prompt — do not re-send the same prompt verbatim.
 
 **Cross-domain knowledge injection:** When a phase requires an agent to work in a context outside its primary domain, consult `[sdlc-root]/knowledge/agent-context-map.yaml` for the other domain's agent and include those knowledge files in the dispatch prompt. Use judgment — only inject when the agent is genuinely crossing into unfamiliar territory (e.g., a backend agent implementing a feature that depends on real-time patterns, a frontend agent touching data layer code). Do not inject for routine single-domain work.
 
@@ -373,7 +383,16 @@ Key feedback incorporated:
 
 ### 3a. Discipline Capture
 
-Run the discipline capture protocol per `[sdlc-root]/process/discipline_capture.md`. Context format: `[DNN — phase N]`. This includes structured gap detection (using the review-fix triage table and agent dispatch data from this session) followed by the freeform insight scan.
+Run the discipline capture protocol from `[sdlc-root]/process/discipline_capture.md`. Context format: `[DNN — phase N]`. The procedure:
+
+1. **Structured gap detection** — 3 comparisons using session data:
+   - Knowledge loaded vs. needed: could a knowledge file have prevented any FIX finding?
+   - Cross-domain friction: did agents struggle outside their primary domain?
+   - Iteration cost: did the review-fix loop run >2 rounds with recurring findings?
+2. **Freeform insight scan** — look for insights that are reusable, non-obvious, and cross-discipline
+3. **Write to parking lots** — append to `[sdlc-root]/disciplines/*.md` under `## Parking Lot`, one bullet per insight, marked `[NEEDS VALIDATION]`
+
+Skip if nothing surfaced — do not fabricate entries. Budget: <3 minutes total. The manager writes these directly (process documentation, not domain content).
 
 Entry format:
 ```markdown

@@ -51,9 +51,16 @@ When the user asks for a specific incident ("close out last week's OOM"), accept
 
 ## Manager Rule and Collaboration
 
-Read and follow `[sdlc-root]/process/manager-rule.md`. It applies unconditionally for the entire session. You orchestrate; domain agents investigate. Never self-investigate past a single layer of code reading — if the root cause isn't obvious after one read of the suspected file, dispatch a domain agent. The incident doc is *your* artifact; the investigation work is the agents'.
+**You are the manager — you orchestrate, domain agents investigate.** The canonical rule is in `[sdlc-root]/process/manager-rule.md`. Never self-investigate past a single layer of code reading — if the root cause isn't obvious after one read of the suspected file, dispatch a domain agent. The incident doc is *your* artifact; the investigation work is the agents'.
 
-Ask-user gates in this skill (the Mode Resolution ambiguity prompt, the T6 escalation after three unconverging dispatch rounds, the C1 partial-closeout choice) follow `[sdlc-root]/process/collaboration_model.md` — use `AskUserQuestion` for structured decisions, not free-text prompts.
+- **Default: dispatch domain agents** for all investigation, debugging, and code analysis. You read one file to orient, then dispatch.
+- **Failed dispatch:** if an agent returns without useful findings, re-dispatch with refined context — do not investigate yourself.
+- **No semantic revert:** fixing a bug by removing the feature is not a fix — preserve the user's requested behavior.
+- **Session scope:** this rule stays active for the entire session. There is no post-incident wind-down mode.
+
+**AskUserQuestion mandate:** every question directed at the user MUST use the `AskUserQuestion` tool — do not type questions as conversational text. This applies to: the Mode Resolution ambiguity prompt, the T6 escalation after three unconverging dispatch rounds, and the C1 partial-closeout choice. The full collaboration model is in `[sdlc-root]/process/collaboration_model.md`.
+
+**Anti-patterns to avoid:** (1) code assertion without verification — never answer "how does X work" from memory; grep/read the code first; (2) trajectory poisoning — if the agent is off track after 2-3 corrections, clear context and start fresh.
 
 Status transitions on the incident doc (`triage-active` → `remediation-scoped` → `complete` / `partial`) and on linked deliverables follow the state machine in `[sdlc-root]/process/deliverable_lifecycle.md`. Do not invent custom states.
 

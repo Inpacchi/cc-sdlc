@@ -57,11 +57,19 @@ digraph sdlc_create_reference_doc {
 
 ## Collaboration Model
 
-Read `[sdlc-root]/process/collaboration_model.md` for the CD/CC role definitions, communication patterns (AskUserQuestion rule), and decision authority. All questions to the user during Intake MUST use `AskUserQuestion` — never inline conversational prompts. The anti-patterns in that doc apply for the full skill run.
+The full model is in `[sdlc-root]/process/collaboration_model.md` (role definitions, decision authority table). The critical directives:
+
+**AskUserQuestion mandate:** every question directed at the user MUST use the `AskUserQuestion` tool — do not type questions as conversational text. All Intake questions must use this tool.
+
+**Anti-patterns to avoid:** (1) code assertion without verification — never answer "how does X work" from memory; grep/read the code first; (2) trajectory poisoning — if the agent is off track after 2-3 corrections, clear context and start fresh.
 
 ## Manager Rule
 
-Read and follow `[sdlc-root]/process/manager-rule.md`. The skill does not hand-write reference docs. Domain agents draft; domain agents review. You orchestrate, dispatch, and keep the loop moving.
+**You are the manager — you orchestrate, you do not implement.** The canonical rule is in `[sdlc-root]/process/manager-rule.md`. Domain agents draft reference docs; domain agents review them. You dispatch and keep the loop moving.
+
+- **Default: dispatch domain agents** for all content authoring and review. You never write reference docs yourself.
+- **Failed dispatch:** if an agent returns without applying its work, re-dispatch — do not write it yourself.
+- **Session scope:** this rule stays active for the entire session.
 
 ## Agent Dispatch Protocol
 
@@ -143,14 +151,14 @@ CLEAN: [...]
 
 ### 5. Fix Loop
 
-Follow the review-fix loop pattern at `[sdlc-root]/process/review-fix-loop.md`:
+Follow the review-fix loop pattern from `[sdlc-root]/process/review-fix-loop.md`. The critical mechanics:
 
-1. Collect all findings across reviewers.
-2. Triage: who owns each fix? Usually the primary author; template/anchor fixes can go to code-reviewer if the finding is mechanical.
-3. Dispatch the fixing agent(s) with the specific findings list.
-4. Re-dispatch ALL reviewers (not just the one who raised the finding). Repeat until every reviewer reports clean.
+1. **Collect** all findings across reviewers.
+2. **Triage:** who owns each fix? Usually the primary author; template/anchor fixes can go to code-reviewer if the finding is mechanical. Trivial fixes (typos, formatting) may be self-applied; non-trivial fixes get dispatched.
+3. **Dispatch** the fixing agent(s) with the specific findings list. If an agent returns without applying its fix, re-dispatch — do not fix it yourself.
+4. **Re-dispatch ALL reviewers** (not just the one who raised the finding). Re-review is mandatory after every fix round. Repeat until every reviewer reports clean.
 
-Exit condition: every reviewer returns no CRITICAL, HIGH, or MEDIUM findings. LOW findings can be deferred to the doc's next revision if explicitly acknowledged in the commit.
+Exit condition: every reviewer returns no CRITICAL, HIGH, or MEDIUM findings. LOW findings can be deferred to the doc's next revision if explicitly acknowledged in the commit. **Do not claim the loop exited clean without a review round that produced zero actionable findings.**
 
 ### 6. Register
 
