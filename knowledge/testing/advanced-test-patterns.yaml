@@ -1132,6 +1132,119 @@ test_naming_convention:
   source: python-testing-patterns/SKILL.md
 
 # ─────────────────────────────────────────────
+# Playwright MCP — Execution-Time UI Verification
+# ─────────────────────────────────────────────
+
+playwright_mcp_verification:
+  description: >
+    Using browser automation MCP tools to verify UI changes during plan execution —
+    not writing test code, but interactively checking the running app between phases.
+    This catches "did it render" failures immediately after a phase completes, before
+    they compound into multi-phase debugging sessions. A canvas that renders blank in
+    Phase 1 is a 5-minute fix; discovered in Phase 6, it's an archaeology project.
+
+  tool_selection:
+    primary: "@playwright/mcp"
+    fallback_note: >
+      If no Playwright MCP server is configured in the project's .mcp.json, fall
+      back to manual experiential verification (start dev server, walk golden path
+      in a browser). The skill language uses generic phrasing ("navigate to", "take
+      a screenshot", "check console") that maps to whichever tool is available.
+    graceful_degradation: >
+      When dispatching an agent that needs browser verification, include this in the
+      prompt: "If Playwright MCP tools are available, use them to verify visually.
+      If not, describe what manual checks the user should perform and flag that
+      automated verification was not possible."
+
+  auto_detect_heuristic:
+    description: >
+      UI verification triggers automatically when a phase modifies files matching
+      UI patterns AND a dev server command is known from the project's CLAUDE.md.
+      Both conditions must be true — modifying a .tsx file in a library with no
+      runnable app does not trigger verification.
+    file_patterns:
+      - "*.tsx, *.jsx, *.vue, *.svelte"
+      - "*.cshtml, *.razor, *.html (when part of a web app, not static docs)"
+      - "*.css, *.scss, *.less, *.module.css"
+      - "*/components/*, */pages/*, */views/*, */layouts/*"
+      - "*/templates/* (server-rendered template directories)"
+    skip_when:
+      - "Phase modifies only backend files (controllers, models, migrations, services)"
+      - "Phase modifies only test files (no production UI change)"
+      - "Phase modifies only build config (webpack, esbuild, vite config)"
+      - "No dev server command is documented in the project's CLAUDE.md"
+
+  inline_vs_subagent:
+    description: >
+      The manager (execution skill) owns quick smoke checks inline. Thorough
+      interaction testing is dispatched to review subagents. This split matches
+      the existing POST-GATE (manager) / review-loop (subagent) boundary.
+
+    inline_smoke_check:
+      who: "Manager (sdlc-execute / sdlc-lite-execute) — part of POST-GATE"
+      when: "After every UI-affecting phase, before starting the next phase"
+      duration: "30-60 seconds"
+      what_to_check:
+        - "Navigate to the affected page — does it render without a blank screen or crash?"
+        - "Take a screenshot — does the layout match the phase's expected outcome?"
+        - "Check browser console — are there runtime errors (TypeError, failed imports, 404s)?"
+        - "If the phase added a new component, verify it appears in the DOM"
+      failure_action: >
+        If the smoke check fails, re-dispatch the phase agent with the screenshot
+        and console errors before proceeding to the next phase. Do not proceed with
+        a broken render — downstream phases will build on a broken foundation.
+      output_format: |
+        UI smoke: ✓ renders clean | ✗ [describe failure]
+        Console: ✓ no errors | ✗ [error count and summary]
+
+    subagent_thorough_verification:
+      who: "Review subagents (sdet, frontend-developer, accessibility-auditor)"
+      when: "During the review-fix loop (Step 0.5 and Step A)"
+      duration: "2-5 minutes per agent"
+      what_to_check:
+        - "Walk the golden path — complete the primary user flow end-to-end"
+        - "Test keyboard navigation — tab order, focus management, shortcut keys"
+        - "Test interaction sequences — drag-drop, click-to-select, panel open/close"
+        - "Check responsive behavior — resize viewport to common breakpoints"
+        - "Verify state transitions — loading, error, empty states"
+        - "Check accessibility — screen reader announcements, aria-live regions, focus traps"
+      failure_action: >
+        Report findings back to the manager for classification. Do not fix inline —
+        fixes go through the standard triage gate (FIX / PLAN / INVESTIGATE / DECIDE).
+
+  mcp_tool_patterns:
+    description: >
+      Common tool call sequences for Playwright MCP verification. These are
+      patterns, not exact tool names — the actual MCP tool names depend on the
+      server implementation (@playwright/mcp uses browser_navigate, browser_screenshot,
+      browser_console, etc.).
+
+    quick_smoke_sequence:
+      - step: "Navigate to the page"
+        pattern: "browser_navigate → target URL (from dev server base + route)"
+      - step: "Wait for render"
+        pattern: "browser_wait_for_selector → key element that proves the page loaded"
+      - step: "Screenshot"
+        pattern: "browser_screenshot → capture viewport, return image for visual check"
+      - step: "Console check"
+        pattern: "browser_console → read console.error entries since navigation"
+
+    interaction_verification_sequence:
+      - step: "Navigate and wait"
+        pattern: "browser_navigate → page URL; browser_wait_for_selector → interactive element"
+      - step: "Interact"
+        pattern: "browser_click / browser_type / browser_drag → perform the user action"
+      - step: "Assert result"
+        pattern: "browser_wait_for_selector → expected outcome element; browser_screenshot"
+      - step: "Check for errors"
+        pattern: "browser_console → verify no new errors after interaction"
+
+  what_this_is_not:
+    - "This is NOT about writing Playwright test files (.spec.ts) — those are covered by the Playwright CI, fixture, and waiting strategy sections above"
+    - "This is NOT a replacement for the E2E test suite — it's execution-time spot-checking"
+    - "This is NOT required for every phase — only UI-affecting phases per the auto-detect heuristic"
+
+# ─────────────────────────────────────────────
 # Maintenance
 # ─────────────────────────────────────────────
 

@@ -480,6 +480,14 @@ The plan MUST include:
 
 **Tests-first consideration:** When the spec defines precise expected behavior with clear acceptance criteria, consider writing tests as an early implementation phase (Phase 1 or 2) so subsequent phases implement code to pass them. This front-loads verification and catches spec ambiguity early. The planning template includes a Test Phase Ordering checkbox — select the appropriate strategy. Tests-first is especially valuable for bug fixes (write a failing test that reproduces the bug, then fix it) and for features with well-defined input/output contracts.
 
+**UI verification checkpoints:** When any phase in the plan modifies user-facing code (components, pages, styles, templates, layouts, interactions), its acceptance criteria must include what to verify visually — not just what code to produce. This applies to every UI-touching phase regardless of deliverable size: a single button change needs "navigate to X, verify the button renders with label Y" just as much as a 6-phase visual editor needs per-phase canvas verification. The execution skill auto-detects UI phases and runs inline smoke checks (screenshot + console error check via Playwright MCP if available), but the plan must tell the executor WHAT to look for. Include per-phase visual checkpoints:
+
+  - **What to navigate to:** The specific page or route to load after the phase completes
+  - **What to verify renders:** The key visual elements that prove the phase's outcome (e.g., "canvas renders with nodes", "sidebar shows grouped catalog items", "button appears with correct label and state")
+  - **What interactions to test (if applicable):** The primary interaction the phase enables (e.g., "drag a page from catalog to canvas — node appears at drop position", "click the button — modal opens")
+
+  These checkpoints feed directly into the POST-GATE UI smoke check during execution and the experiential verification in the review loop. Without them, the executor can only check "does the page render" — not "does the phase's specific outcome appear."
+
 **Phase limit:** Plans are capped at 7 phases. If a plan reaches phase 8, **stop writing and split into sub-deliverables** (D1a, D1b) before continuing. Over-phased plans signal insufficient decomposition.
 
 **The writing agent must produce the complete plan AND save it to disk.** The dispatch prompt must instruct the agent to use the `Write` tool to save the plan to `docs/current_work/planning/dNN_name_plan.md` (pass the exact path computed from the deliverable ID). The agent returns a short confirmation — not the plan body. If the agent returns the plan body instead of saving the file, re-dispatch with explicit instructions to use the `Write` tool. **The manager does not save the plan** — saving the agent's returned body yourself risks transcription drift and violates the Manager Rule.

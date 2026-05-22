@@ -34,6 +34,25 @@ Each entry contains:
 
 ---
 
+## 2026-05-22: Wire UI testing and verification into planning and execution skills
+
+**Origin:** Observed gap during D15 (Visual Workflow Editor) planning — a 6-phase UI-heavy deliverable had no visual verification until the post-execution review, allowing render failures to compound across phases.
+
+**What happened:** The existing experiential verification (Step 0.5) was manual-only and occurred only at the end of execution. UI-heavy deliverables need visual checks after each phase to catch render failures early. Browser automation MCP tools (Playwright MCP) were available but not wired into the execution workflow.
+
+**Changes made:**
+
+1. **`knowledge/testing/advanced-test-patterns.yaml`** — Added `playwright_mcp_verification` section: Playwright MCP tool patterns for execution-time UI verification, auto-detect heuristic (file patterns + dev server availability), inline vs subagent decision framework, smoke check and thorough verification sequences.
+2. **`knowledge/agent-context-map.yaml`** — Wired `advanced-test-patterns.yaml` to `frontend-developer` and `accessibility-auditor` mappings (previously only mapped to `sdet`). These agents now receive browser testing knowledge when dispatched for review.
+3. **`process/review-fix-loop.md`** — Step 0.5 upgraded from manual-only to Playwright-MCP-automated with manual fallback. Added console error check (step 6), tooling line to output format, and subagent browser verification guidance for review dispatch.
+4. **`skills/sdlc-execute/SKILL.md`** — POST-GATE section gains auto-detected UI smoke check: when a phase modifies UI files and a dev server is available, navigate to the affected page, screenshot, check console errors. Failure triggers re-dispatch before the next phase.
+5. **`skills/sdlc-lite-execute/SKILL.md`** — Same POST-GATE UI smoke check addition.
+6. **`skills/sdlc-plan/SKILL.md`** — Step 4 (plan writing) gains UI verification checkpoint guidance: any phase that modifies user-facing code must specify what page to navigate to, what to verify renders, and what interactions to test. Applies to all UI work, not just UI-heavy deliverables. These checkpoints feed the execution skill's POST-GATE smoke check.
+
+**Rationale:** UI bugs compound across phases. A blank canvas in Phase 1 becomes an archaeology project in Phase 6. The hybrid model — inline smoke checks at POST-GATE (manager, 30s), thorough browser verification at review (subagents, 2-5min) — catches render failures early without blocking execution. The auto-detect heuristic skips backend-only phases. Graceful degradation ensures the workflow works with or without Playwright MCP configured.
+
+---
+
 ## 2026-05-22: Rename research-external → sdlc-research and sdlc-create-agent → sdlc-develop-agent
 
 **Origin:** Naming convention review — aligning skill names for consistency and clarity.

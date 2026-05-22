@@ -69,6 +69,7 @@ mappings:
     - "[sdlc-root]/knowledge/design/interaction-patterns.yaml"
     - "[sdlc-root]/knowledge/design/layout-principles.yaml"
     - "[sdlc-root]/knowledge/coding/typescript-patterns.yaml"
+    - "[sdlc-root]/knowledge/testing/advanced-test-patterns.yaml"
     - "[sdlc-root]/knowledge/architecture/agent-communication-protocol.yaml"
 
   # ── Backend ────────────────────────────────────────────────────────
@@ -122,6 +123,7 @@ mappings:
     - "[sdlc-root]/knowledge/design/accessibility-testability-principles.yaml"
     - "[sdlc-root]/knowledge/design/component-patterns.yaml"
     - "[sdlc-root]/knowledge/design/interaction-animation.yaml"
+    - "[sdlc-root]/knowledge/testing/advanced-test-patterns.yaml"
     - "[sdlc-root]/knowledge/architecture/agent-communication-protocol.yaml"
     - "[sdlc-root]/knowledge/architecture/investigation-report-format.yaml"
 

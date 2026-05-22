@@ -45,13 +45,16 @@ Verification gate:
 
 Machine verification (Step 0) confirms the code is correct. Experiential verification confirms the *experience* is correct. A feature can pass all tests, type checks, and linting while being unusable — duplicated controls, missing scroll behavior, invisible buttons, broken interaction flows. These are not bugs that automated tooling catches; they require using the app.
 
+**Tooling:** If Playwright MCP (`@playwright/mcp` or equivalent) is configured in the project's `.mcp.json`, use it to automate the checks below — navigate, screenshot, inspect the DOM, read console errors. This replaces manual browser inspection with programmatic verification that produces artifacts (screenshots, console logs) the review agents can reference. If no browser automation MCP is available, perform the checks manually or flag to CD that automated experiential verification was not possible.
+
 **Required checks:**
 
 1. **Start the dev server** — the app must be running and reachable. If it cannot be started (missing env, broken deps), flag to CD and skip to Step A with a note that experiential verification was not performed.
-2. **Walk the golden path** — perform the primary user action the implementation enables. Does it work end-to-end as specified?
+2. **Walk the golden path** — navigate to the affected page and perform the primary user action the implementation enables. Does it work end-to-end as specified? With Playwright MCP: navigate to the page, interact with the primary flow, screenshot at each key state.
 3. **Check adjacent features** — interact with features that share screen space or state with the change. Did anything regress?
 4. **Verify scroll and resize** — scroll the page. Resize the viewport. Do controls remain accessible? Do sticky elements stick? Does content overflow correctly?
 5. **Check state transitions** — trigger loading, error, and empty states where applicable. Does the UI communicate each state?
+6. **Check console errors** — read the browser console for runtime errors (TypeError, failed imports, 404s, unhandled promise rejections). Console errors that appeared after the implementation are defects even if the page renders correctly.
 
 **Output the experiential summary before proceeding:**
 
@@ -62,9 +65,13 @@ Experiential verification:
 - Adjacent features: ✓ no regressions | ✗ regression in (describe)
 - Scroll/resize: ✓ controls accessible | ✗ (describe what breaks)
 - State transitions: ✓ all states handled | ✗ (describe missing states)
+- Console: ✓ no errors | ✗ [error count] errors (describe)
+- Tooling: Playwright MCP | manual | not available (reason)
 ```
 
 **If any check fails, fix it before proceeding to Step A.** Experiential failures are functional bugs — they are not "suggestions" or "nice-to-haves." A sidebar that scrolls away, a button that's invisible, or a duplicated control section is a defect with the same severity as a failing test.
+
+**Subagent browser verification (review dispatch):** When dispatching review agents in Step A for UI-heavy deliverables, include this in the dispatch prompt for `sdet`, `frontend-developer`, and `accessibility-auditor`: "If Playwright MCP tools are available, use them to verify your findings in the running app — navigate, interact, screenshot. Report what you observed alongside your code-level findings." This gives review subagents the ability to catch interaction bugs (broken drag-drop, missing focus management, keyboard trap) that code review alone cannot detect.
 
 ## Step A: Dispatch ALL Review Agents
 
