@@ -1,5 +1,5 @@
 ---
-name: sdlc-create-agent
+name: sdlc-develop-agent
 description: >
   Create or enrich domain agents following cc-sdlc conventions. CREATE mode walks through
   domain definition, frontmatter, body scaffolding, context-map wiring, and registration.
@@ -7,7 +7,7 @@ description: >
   using a 6-dimension analytical framework and integrates them into an existing agent.
   Dispatches sdlc-reviewer for quality gate in both modes.
   Triggers on "create a new agent", "new agent", "add an agent", "scaffold an agent",
-  "I need an agent for", "make an agent", "/sdlc-create-agent",
+  "I need an agent for", "make an agent", "/sdlc-develop-agent",
   "enrich this agent", "extract patterns for [agent]", "what can we learn from these
   for [agent]", "enrich all agents", "bulk enrich".
   Do NOT use for creating skills — use sdlc-develop-skill.
@@ -24,11 +24,20 @@ Create new domain agents or enrich existing ones with patterns from external sou
 
 | Invocation | Mode |
 |-----------|------|
-| `/sdlc-create-agent <domain>` | CREATE |
-| `/sdlc-create-agent` (no args) | CREATE (will ask for domain) |
-| `/sdlc-create-agent enrich <agent> <sources>` | ENRICH |
+| `/sdlc-develop-agent <domain>` | CREATE |
+| `/sdlc-develop-agent` (no args) | CREATE (will ask for domain) |
+| `/sdlc-develop-agent enrich <agent> <sources>` | ENRICH |
 | "enrich this agent with..." | ENRICH |
 | "bulk enrich" / "enrich all agents" | ENRICH (bulk) |
+
+---
+
+## Manager Rule
+
+**You are the manager — you orchestrate, you do not write agent files directly.** The canonical rule is in `[sdlc-root]/process/manager-rule.md`. The `sdlc-reviewer` agent handles quality review. You scaffold, validate, wire, and dispatch — you do not skip the quality gate.
+
+- **Failed dispatch:** if `sdlc-reviewer` returns without actionable results, re-dispatch with refined context — do not skip the review step.
+- **Session scope:** this rule stays active for the entire session.
 
 ---
 
@@ -36,11 +45,11 @@ Create new domain agents or enrich existing ones with patterns from external sou
 
 Create a new domain agent that follows cc-sdlc conventions. Scaffold the complete agent file, validate conventions, wire up knowledge context, register, and quality-gate with the reviewer subagent.
 
-## Reference
+### Reference
 
 Read `[sdlc-root]/templates/agent-template.md` before proceeding — it is the canonical structural pattern with full frontmatter reference.
 
-## Steps
+### Steps
 
 ### 1. Domain Definition
 
@@ -245,27 +254,39 @@ Dispatch the `sdlc-reviewer` subagent on the created agent file. The reviewer ch
 
 Extract patterns from external sources and integrate them into an existing agent. Full methodology in `references/enrichment-methodology.md`.
 
-### Workflow
+### Steps
 
 ```
 LENS → FETCH → EXTRACT → DEFEND DISMISSALS → PLAN → APPLY → REVIEW
 ```
 
-1. **Build the analytical lens** — decompose the target agent's domain into questions across 6 dimensions (core operations, failure modes, adjacent knowledge, lifecycle, diagnostics, I/O quality)
-2. **Fetch and read sources** — full content, no pre-summarizing
-3. **Extract through the lens** — direct, adjacent, and reframed patterns
-4. **Defend each dismissal** — guard against surface-level domain mismatch, adjacent blindness, premature satisfaction
-5. **Compile integration plan** — group patterns by agent file section, present for approval
-6. **Apply changes** — edit naturally into existing content, preserve voice
-7. **Verify and review** — completeness check, then `sdlc-reviewer` quality gate
+### 1. Build the Analytical Lens
+Decompose the target agent's domain into questions across 6 dimensions (core operations, failure modes, adjacent knowledge, lifecycle, diagnostics, I/O quality).
+
+### 2. Fetch and Read Sources
+Full content, no pre-summarizing.
+
+### 3. Extract Through the Lens
+Direct, adjacent, and reframed patterns.
+
+### 4. Defend Each Dismissal
+Guard against surface-level domain mismatch, adjacent blindness, premature satisfaction.
+
+### 5. Compile Integration Plan
+Group patterns by agent file section, present for approval.
+
+### 6. Apply Changes
+Edit naturally into existing content, preserve voice.
+
+### 7. Verify and Review
+Completeness check, then `sdlc-reviewer` quality gate.
 
 **Bulk mode** handles many sources across many agents via a two-phase structure: Phase 1 (cheap relevance mapping) → Phase 2 (parallel dispatched enrichment in batches of 3-4). See `references/enrichment-methodology.md` for full bulk workflow.
 
 ## Integration
 
 - **Feeds into:** Created/enriched agents become available for dispatch by orchestration skills; enrichment may surface knowledge store gaps for `sdlc-ingest`
-- **Modifies:** `[sdlc-root]/process/agent-selection.yaml` (tier1 reviewers + infrastructure_domains), `sdlc-plan` (agent table) — see CREATE Step 6
-- **Uses:** `[sdlc-root]/templates/agent-template.md` (structural reference), `[sdlc-root]/knowledge/agent-context-map.yaml` (knowledge wiring), `sdlc-reviewer` (quality gate), existing agents (conflict checking), WebFetch (ENRICH mode URL sources)
+- **Uses:** `[sdlc-root]/templates/agent-template.md` (structural reference), `[sdlc-root]/knowledge/agent-context-map.yaml` (knowledge wiring), `sdlc-reviewer` (quality gate), existing agents (conflict checking), WebFetch (ENRICH mode URL sources), `[sdlc-root]/process/agent-selection.yaml` (tier1 reviewers + infrastructure_domains), `sdlc-plan` (agent table) — see CREATE Step 6
 - **Complements:** `sdlc-develop-skill` (skills vs agents), `sdlc-ingest` (ingests into knowledge stores; ENRICH mode enriches agent definitions)
 - **Does NOT replace:** `sdlc-ingest` (which targets discipline knowledge stores, not agent files)
 

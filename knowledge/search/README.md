@@ -20,7 +20,7 @@ Retrieval pipeline patterns, scoring mathematics, and evaluation frameworks for 
 
 ## Agent Naming Note
 
-Several entries reference roles like `search-engineer` and `db-engineer` that may not exist in every project. Substitute your project's equivalent — typically `backend-developer` or `data-architect` covers retrieval-pipeline work in projects without a dedicated search specialist. Use `/sdlc-create-agent` to scaffold a `search-engineer` agent if your project warrants one.
+Several entries reference roles like `search-engineer` and `db-engineer` that may not exist in every project. Substitute your project's equivalent — typically `backend-developer` or `data-architect` covers retrieval-pipeline work in projects without a dedicated search specialist. Use `/sdlc-develop-agent` to scaffold a `search-engineer` agent if your project warrants one.
 
 ## Relationship to Other Knowledge Stores
 

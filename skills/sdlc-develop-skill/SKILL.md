@@ -16,7 +16,7 @@ description: >
   Triggers on "create a new skill", "new skill", "add a skill", "scaffold a skill",
   "I need a skill for", "make a skill", "modify a skill", "update a skill", "customize a skill",
   "/sdlc-develop-skill", "/sdlc-create-skill".
-  Do NOT use for creating agents — use sdlc-create-agent.
+  Do NOT use for creating agents — use sdlc-develop-agent.
 ---
 
 # Skill Development
@@ -282,6 +282,6 @@ Dispatch the `sdlc-reviewer` subagent on the modified skill file. The reviewer c
 
 - **Feeds into:** The created/modified skill becomes part of the project's skill library
 - **Uses:** `sdlc-reviewer` (quality gate), existing skills in `.claude/skills/` (as reference patterns), `[sdlc-root]/process/` and `[sdlc-root]/knowledge/` (as extraction targets for shared content)
-- **Complements:** `sdlc-create-agent` (agents vs skills)
+- **Complements:** `sdlc-develop-agent` (agents vs skills)
 - **Does NOT replace:** Direct editing of project-owned skills (this adds convention enforcement, migration protection, and DRY discipline)
 - **DRY discipline:** CREATE step 1.5 and MODIFY step M1.5 enforce overlap scans before any write. Extraction targets, in priority order: `[sdlc-root]/process/{topic}.md` (universal protocols), `[sdlc-root]/knowledge/{domain}/{topic}.yaml` (domain rules), per-skill `references/` (single-skill detail). Inline duplication requires a documented justification in the skill's `DRY notes`.

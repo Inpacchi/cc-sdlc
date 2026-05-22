@@ -9,7 +9,7 @@ description: >
   agent-dispatching skills, and mandatory sections. Dispatches sdlc-reviewer for quality gate.
   Triggers on "create a new skill", "new skill", "add a skill", "scaffold a skill",
   "I need a skill for", "make a skill", "create a framework skill", "/ccsdlc-create-skill".
-  Do NOT use for creating agents — use sdlc-create-agent.
+  Do NOT use for creating agents — use sdlc-develop-agent.
   Do NOT use for modifying existing skills — edit directly.
 ---
 
@@ -166,5 +166,5 @@ Dispatch the `sdlc-reviewer` subagent on the created skill file. Present its fin
 
 - **Feeds into:** The created skill becomes part of the cc-sdlc framework skill library (installed to child projects via setup.sh)
 - **Uses:** `skeleton/manifest.json` (registration), `CLAUDE-SDLC.md` (command table), `sdlc-reviewer` (quality gate), existing skills (as reference patterns)
-- **Complements:** `sdlc-create-agent` (agents vs skills), `sdlc-review` (review existing skills)
+- **Complements:** `sdlc-develop-agent` (agents vs skills), `sdlc-review` (review existing skills)
 - **Does NOT replace:** Direct editing of existing skills (this creates new ones only)

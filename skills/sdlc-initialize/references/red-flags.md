@@ -5,7 +5,7 @@
 | "I'll skip ideation and go straight to scaffolding" | Agents and knowledge seeded without stack context are generic and unhelpful. Define the project first. |
 | "I should dispatch an agent for the spec" | No agents exist yet in greenfield. CC writes the spec directly. This is the one exception to the Manager Rule. |
 | "The user described the project, I have enough to create agents" | You have enough to create agents when you have an approved spec with tech stack and repo structure. Not before. |
-| "I'll write the agent files directly — the skill is slow" | `/sdlc-create-agent` validates frontmatter, descriptions, and template compliance. Hand-written agents skip these gates. |
+| "I'll write the agent files directly — the skill is slow" | `/sdlc-develop-agent` validates frontmatter, descriptions, and template compliance. Hand-written agents skip these gates. |
 | "The context map ships with reasonable defaults" | The defaults use generic role names. If they don't match your agent filenames, self-discovery is broken. |
 | "Disciplines can be seeded later" | A few bullets now costs 2 minutes; discovering the gap mid-execution costs a review round. |
 | "Context7 is optional for now" | Without it, agents will hallucinate library APIs from training data. Install it before any agent work begins. |

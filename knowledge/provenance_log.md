@@ -6,7 +6,7 @@ Append-only record of where knowledge entered the SDLC knowledge layer. Enables 
 - Entries in reverse-chronological order (newest first)
 - IDs are sequential per date: `prov-YYYY-MM-DD-NNN`
 - Conditional fields (`files-created`, `files-updated`, `rule-count`, `ingested-by`) only required when `status: ingested`
-- Optional fields (`tier-1-count`, `tier-2-count`) used by `research-external` for research entries
+- Optional fields (`tier-1-count`, `tier-2-count`) used by `sdlc-research` for research entries
 - Status transitions: `pending-review` -> `approved-for-ingest` -> `ingested` (or `rejected` at any point)
 
 ## Entry Format

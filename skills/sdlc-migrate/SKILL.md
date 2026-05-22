@@ -248,7 +248,7 @@ Group the changed cc-sdlc files by migration strategy:
 
 ## PROJECT-SECTION Marker Convention
 
-Read and follow `[sdlc-root]/process/project-section-markers.md` — the canonical definition of the marker convention. It defines the syntax (Markdown and YAML), label format, rules, and validation. Producing skills that add markers to process/skill files (`sdlc-create-agent`, `sdlc-develop-skill`, `sdlc-audit` improvement mode) reference that document. Note: markers are only for process docs and skill files — knowledge files, discipline files, and agent-context-map are project-specific and don't need markers.
+Read and follow `[sdlc-root]/process/project-section-markers.md` — the canonical definition of the marker convention. It defines the syntax (Markdown and YAML), label format, rules, and validation. Producing skills that add markers to process/skill files (`sdlc-develop-agent`, `sdlc-develop-skill`, `sdlc-audit` improvement mode) reference that document. Note: markers are only for process docs and skill files — knowledge files, discipline files, and agent-context-map are project-specific and don't need markers.
 
 This migration skill is responsible for **consuming** markers: extracting, preserving, and re-injecting marked blocks during framework updates. Existing project content that lacks markers is detected by the deviation detection step (§2.1c).
 
@@ -588,7 +588,7 @@ Skills have two layers:
 
 **Key rule:** If a section exists in cc-sdlc but not in the project, add it. If a section was removed from cc-sdlc, remove it from the project. If a section was modified in cc-sdlc, update the framework logic while keeping project-specific values.
 
-**PROJECT-SECTION preservation with review:** If `PROJECT-SECTION` blocks exist within a skill being content-merged, apply the §2.1d content review process. Present findings to user before re-injection. These blocks contain project-specific content (e.g., dispatcher table entries added by `sdlc-create-agent`, custom modifications from `sdlc-develop-skill`) that survive migration — but may need updating if upstream changed the surrounding framework patterns.
+**PROJECT-SECTION preservation with review:** If `PROJECT-SECTION` blocks exist within a skill being content-merged, apply the §2.1d content review process. Present findings to user before re-injection. These blocks contain project-specific content (e.g., dispatcher table entries added by `sdlc-develop-agent`, custom modifications from `sdlc-develop-skill`) that survive migration — but may need updating if upstream changed the surrounding framework patterns.
 
 ### 2.3 Content-Merge: Disciplines
 

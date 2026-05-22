@@ -44,7 +44,7 @@ ls .claude/agents/ .claude/skills/ 2>/dev/null
 
 - **Do not delete `[sdlc-root]/` to force a clean retry.** That loses any project customizations and knowledge wiring. Use mode detection + repair instead.
 - **Do not delete `.sdlc-manifest.json`.** It tracks version and drift baselines; reconstructing is not trivial.
-- **Do not hand-write agent files to skip `/sdlc-create-agent`.** Skipping validation is the fastest way to ship broken agents.
+- **Do not hand-write agent files to skip `/sdlc-develop-agent`.** Skipping validation is the fastest way to ship broken agents.
 
 ## Step 4: Last resort — reset
 

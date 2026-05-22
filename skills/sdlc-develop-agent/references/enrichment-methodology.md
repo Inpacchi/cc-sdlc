@@ -1,6 +1,6 @@
 # Agent Enrichment Methodology
 
-Detailed methodology for ENRICH mode of `sdlc-create-agent`. Extracts relevant patterns from external sources and integrates them into an existing agent using a 6-dimension analytical framework.
+Detailed methodology for ENRICH mode of `sdlc-develop-agent`. Extracts relevant patterns from external sources and integrates them into an existing agent using a 6-dimension analytical framework.
 
 ## Preconditions
 

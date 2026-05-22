@@ -218,3 +218,17 @@ changes:
       overrides for sdlc-initialize and sdlc-migrate; ship adapter.json and
       a handler doc (references/adapter-lifecycle.md) instead. Migrate must:
       install process/adapter-lifecycle-protocol.md to [sdlc-root]/process/.
+
+  - id: "0012"
+    date: "2026-05-22"
+    title: "Rename research-external → sdlc-research, sdlc-create-agent → sdlc-develop-agent"
+    type: rename_skill
+    renames:
+      - [sdlc-research-external, sdlc-research]
+      - [sdlc-create-agent, sdlc-develop-agent]
+    changelog_ref: "2026-05-22: Rename research-external → sdlc-research and sdlc-create-agent → sdlc-develop-agent"
+    notes: >
+      research-external lacked the sdlc- prefix and was overly verbose.
+      sdlc-create-agent renamed to sdlc-develop-agent to parallel
+      sdlc-develop-skill. Migrate removes old directories via §2.1a and
+      rewrites all cross-references.

@@ -8,7 +8,7 @@ Analytical perspectives that agents apply when reviewing code. Each consuming sk
 |--------------|-------------------|
 | Code review (`sdlc-review-code`) | All lenses |
 | Test gap analysis (`sdlc-tests-create`) | Coverage, security at boundaries, contract safety, performance, data integrity, standard |
-| Agent/skill creation (`sdlc-create-agent`, `sdlc-initialize`) | Standard only |
+| Agent/skill creation (`sdlc-develop-agent`, `sdlc-initialize`) | Standard only |
 
 **Frontend-conditional lenses:** UX Regression, Accessibility, and State Completeness apply only when the diff touches user-facing code (components, pages, styles, templates). API Ergonomics applies when the diff introduces new public interfaces (endpoints, exported functions, component props). Agents should skip these lenses entirely for backend-only or infrastructure changes.
 

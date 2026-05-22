@@ -82,11 +82,11 @@ Present the summary, then ask **once** using `AskUserQuestion`:
 
 Record the user's answer verbatim — it feeds every agent's scope, tool list, and core principles.
 
-### Step 3: Create the 3 agents (lite orchestration of `/sdlc-create-agent`)
+### Step 3: Create the 3 agents (lite orchestration of `/sdlc-develop-agent`)
 
 Read `/tmp/cc-sdlc-lite-bootstrap/templates/agent-template.md` as the structural reference. For each of the 3 agents below, generate the frontmatter + body using the detected stack + user input from Step 2, then write to `.claude/agents/{name}.md`.
 
-**Simplifications vs. full `/sdlc-create-agent`:**
+**Simplifications vs. full `/sdlc-develop-agent`:**
 - No domain-conflict check across existing agents (lite roster is fixed)
 - No `agent-context-map` round-trip (handled in Step 5 as one shot)
 - No `sdlc-reviewer` quality gate (not installed in lite)
@@ -553,7 +553,7 @@ Full SDLC adds:
 - **Review skills** — `/sdlc-review-code`, `/sdlc-review-fix` — formal review loops over git ranges or uncommitted changes
 - **Test skills** — `/sdlc-tests-create`, `/sdlc-tests-run` — structured test authoring and verification
 - **Audit skill** — `/sdlc-audit` — compliance + improvement audits of the framework and your sessions
-- **Research/ingest** — `/ccsdlc-research`, `/sdlc-ingest` — pull external knowledge into the store
+- **Research/ingest** — `/sdlc-research`, `/sdlc-ingest` — pull external knowledge into the store
 - **Chronicle** — `docs/chronicle/` — concept-level memory that persists across deliverables
 - **Playbooks** — `ops/sdlc/playbooks/` — reusable agent-selection recipes for recurring task types
 - **Discipline capture protocol** — structured gap detection (knowledge-loaded-vs-needed, cross-domain friction, resurfacing patterns)

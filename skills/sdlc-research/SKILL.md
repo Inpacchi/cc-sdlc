@@ -1,5 +1,5 @@
 ---
-name: sdlc-research-external
+name: sdlc-research
 description: >
   Research external knowledge sources (engineering blogs, conference talks, papers, documentation)
   to find content relevant to the project's technology domains.
@@ -7,7 +7,7 @@ description: >
   discover, fetch, classify, and curate articles into tiered reference docs.
   Produces company profiles, article catalogs with URLs, and cross-cutting insight summaries.
   Triggers on "research [company] blog", "find articles from [source]", "what has [company] published",
-  "look into [company] engineering", "curate [source] for us", "/sdlc-research-external".
+  "look into [company] engineering", "curate [source] for us", "/sdlc-research".
   Do NOT use for ingesting content into SDLC knowledge stores — use sdlc-ingest.
   Do NOT use for exploring project-internal ideas — use sdlc-idea.
   Do NOT use for web searches about specific bugs or library APIs — use direct WebSearch or Context7.
@@ -44,7 +44,7 @@ Signs this skill is NOT appropriate:
 - **Failed dispatch:** if an agent returns without useful results, re-dispatch with refined instructions — do not fetch the content yourself.
 - **Session scope:** this rule stays active for the entire session.
 
-## Workflow
+## Steps
 
 ```
 SCOPE ──> DISCOVER ──> RESEARCH ──> CURATE ──> SAVE ──> PROVENANCE ──> REPORT
@@ -201,9 +201,9 @@ Present a summary to the user:
 
 ## Integration
 
-- **Depends on:** A research/reference directory in the project, project domain knowledge (from agent definitions, knowledge stores, or user input)
 - **Feeds into:** `sdlc-ingest` (when the team wants to extract rules from discovered articles into SDLC knowledge stores). The provenance log (`[sdlc-root]/knowledge/provenance_log.md`) is the prepared handoff mechanism — research creates `pending-review` entries, the user approves them to `approved-for-ingest`, and `sdlc-ingest` can consume approved entries directly via "ingest from provenance"
 - **Uses:** `research-analyst` agent (primary), `general-purpose` agent (doc writing), WebFetch, WebSearch
 - **Complements:** `sdlc-ingest` (this discovers, ingest absorbs), `sdlc-idea` (research may spark ideas)
 - **Does NOT replace:** `sdlc-ingest` (that extracts rules into knowledge stores; this catalogs external articles), direct WebSearch (for specific one-off questions)
+- **Depends on:** A research/reference directory in the project, project domain knowledge (from agent definitions, knowledge stores, or user input)
 - **DRY notes:** This skill discovers and catalogs external content. `sdlc-ingest` takes content (potentially discovered by this skill) and extracts structured knowledge rules into SDLC disciplines. The boundary: this skill produces reference docs; `sdlc-ingest` produces knowledge YAML in `[sdlc-root]/knowledge/`.

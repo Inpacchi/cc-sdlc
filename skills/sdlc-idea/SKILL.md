@@ -151,7 +151,7 @@ A project-tier agent fits the unknown when its `dispatch_when` triggers, `covers
 | "Which auth/input-validation pattern applies here?" | `security-engineer` |
 | "How should this real-time/WebSocket flow be structured?" | `realtime-systems-engineer` |
 
-If no project-tier agent's domain matches the unknown, fall back to direct tools — WebSearch for narrow facts, Context7 for library/API verification. Do not synthesize a personal-tier dispatch; if the project lacks a specialist for this domain, that's a signal to either keep the research narrow or surface the gap to the user (they may want to add an agent via `sdlc-create-agent`).
+If no project-tier agent's domain matches the unknown, fall back to direct tools — WebSearch for narrow facts, Context7 for library/API verification. Do not synthesize a personal-tier dispatch; if the project lacks a specialist for this domain, that's a signal to either keep the research narrow or surface the gap to the user (they may want to add an agent via `sdlc-develop-agent`).
 
 Dispatch rules when a project-tier agent fits:
 - One agent per emerged unknown. If you can't articulate which specific question the agent is answering, you're not ready to dispatch.

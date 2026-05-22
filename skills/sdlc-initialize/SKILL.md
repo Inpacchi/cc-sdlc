@@ -509,7 +509,7 @@ Present the proposed roster to CD via `AskUserQuestion`:
 
 **4b. Create each agent.**
 
-**MANDATORY: Invoke `/sdlc-create-agent` for each agent.** Do NOT write agent files directly. The skill handles:
+**MANDATORY: Invoke `/sdlc-develop-agent` for each agent.** Do NOT write agent files directly. The skill handles:
 - Frontmatter validation (name format, description with `<example>` blocks)
 - System prompt scaffolding (Knowledge Context, Communication Protocol, Anti-Rationalization Table)
 - Template compliance (agent-template.md structure)
@@ -526,7 +526,7 @@ If CD's proposed roster omits either of these, add them and explain why. These a
 5. Testing and infrastructure (sdet, build-engineer)
 
 **Framework agents (pre-installed by Phase 1 — do NOT create as domain agents):**
-- `sdlc-reviewer` — reviews skill/agent files against cc-sdlc conventions (dispatched by `sdlc-develop-skill`, `sdlc-create-agent`)
+- `sdlc-reviewer` — reviews skill/agent files against cc-sdlc conventions (dispatched by `sdlc-develop-skill`, `sdlc-develop-agent`)
 - `sdlc-compliance-auditor` — performs 10-dimension compliance scan (dispatched by `sdlc-audit`)
 
 The `sdlc-audit` skill is already installed by Phase 1 — do not recreate it as an agent.
@@ -557,7 +557,7 @@ Present deviations to CD. This prevents the neuroloom-bootstrap gap where spec-l
 
 **4e. Verify dispatcher wiring.**
 
-`/sdlc-create-agent` Step 6 wires each agent into the dispatching tables during creation. After all agents are created, verify that nothing was missed:
+`/sdlc-develop-agent` Step 6 wires each agent into the dispatching tables during creation. After all agents are created, verify that nothing was missed:
 
 ```
 DISPATCHER WIRING CHECK
@@ -802,7 +802,7 @@ Skeleton & Infrastructure:
 [ ] Catalog: docs/_index.md has D1 registered
 
 Agents:
-[ ] All agents created via /sdlc-create-agent — confirmed
+[ ] All agents created via /sdlc-develop-agent — confirmed
     Created: [list all agents]
 [ ] Mandatory agents created: software-architect, code-reviewer
 [ ] Spec-vs-roster reconciliation complete — all spec-listed roles created or deviation logged
@@ -896,7 +896,7 @@ Common anti-patterns: see `references/red-flags.md`.
 ## Integration
 
 - **Feeds into:** `sdlc-plan` (first deliverable), `sdlc-lite-plan` (first lightweight task), `sdlc-status` (health check), `sdlc-migrate` (consumes `.sdlc-manifest.json` for version tracking and path detection)
-- **Uses:** `/sdlc-create-agent` (agent creation), Context7 (knowledge verification), `AskUserQuestion` (CD gates)
+- **Uses:** `/sdlc-develop-agent` (agent creation), Context7 (knowledge verification), `AskUserQuestion` (CD gates)
 - **Produces:** Fully initialized SDLC framework with project-specific agents, knowledge, and disciplines; `.sdlc-manifest.json` with `sdlc_root`, `source_version`, and `installed_files` fields
 - **Borrows from:** `sdlc-idea` (ideation principles for Phase 0), spec template (Phase 0c structure)
 - **Adapter-aware:** when `manifest.adapter` is declared, delegates knowledge-seed, post-file-write, and post-operation phases per `[sdlc-root]/process/adapter-lifecycle-protocol.md`

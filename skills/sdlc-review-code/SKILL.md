@@ -353,4 +353,4 @@ Skip the suggestion if the review was routine with no cross-cutting insights.
 - **Feeds into:** `docs/reviews/recurring-patterns.yaml` (pattern log for `sdlc-audit` Dimension 6 promotion), `sdlc-reflect` (suggests it when cross-discipline insights surface beyond the findings themselves)
 - **Uses:** `[sdlc-root]/process/agent-selection.yaml` (agent dispatch), `[sdlc-root]/process/review-lenses.md` (review lenses), `[sdlc-root]/process/review-fix-loop.md` (fix loop), `[sdlc-root]/knowledge/agent-context-map.yaml` (dispatch-time injection), `[sdlc-root]/knowledge/coding/code-quality-principles.yaml` (code-reviewer primary)
 - **Complements:** `sdlc-execute` (development phase before review), `sdlc-audit` (promotes recurring patterns to knowledge store)
-- **Does NOT replace:** Quality gates in `sdlc-develop-skill` / `sdlc-create-agent` (those are author-facing convention checks, not diff-facing code review)
+- **Does NOT replace:** Quality gates in `sdlc-develop-skill` / `sdlc-develop-agent` (those are author-facing convention checks, not diff-facing code review)

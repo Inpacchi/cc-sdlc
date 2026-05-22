@@ -190,7 +190,7 @@ Route each extracted insight to its target artifact type. This is the step that 
 
 **Do NOT auto-create skills.** Skill candidates are noted in the report with a proposed structure. The user decides whether to invoke `/sdlc-create-skill` for them. Skills are complex artifacts that need intentional design.
 
-**Do NOT auto-create new agent files.** Agent suggestions go into `AGENT_SUGGESTIONS.md`. Creating actual agent `.md` files requires `/sdlc-create-agent`.
+**Do NOT auto-create new agent files.** Agent suggestions go into `AGENT_SUGGESTIONS.md`. Creating actual agent `.md` files requires `/sdlc-develop-agent`.
 
 ### 5. Structure
 
@@ -372,7 +372,7 @@ After writing artifacts:
 | "I'll summarize the content" | Extract actionable artifacts, not summaries. |
 | "Everything in here is useful" | Filter aggressively. Most external content doesn't meet the bar. |
 | "I'll auto-create a skill from this" | Note skill candidates in the report. Skills need intentional design via `/sdlc-create-skill`. |
-| "I'll create a new agent .md file" | Agent suggestions go to `AGENT_SUGGESTIONS.md`. Creating agent files requires `/sdlc-create-agent`. |
+| "I'll create a new agent .md file" | Agent suggestions go to `AGENT_SUGGESTIONS.md`. Creating agent files requires `/sdlc-develop-agent`. |
 | "I'll skip reading existing artifacts" | Deduplication is mandatory. Don't create entries that already exist. |
 | "I'll put everything in knowledge YAML" | Route to the right artifact type. A workflow isn't a rule. A checklist isn't a rule. |
 | "This content spans 5 artifact types" | That's fine — classify and route each insight independently. |

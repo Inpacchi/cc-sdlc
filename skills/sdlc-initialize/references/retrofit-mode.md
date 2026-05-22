@@ -35,7 +35,7 @@ For existing projects with code and documentation that need cc-sdlc integrated.
 3. Create concept directories in `docs/chronicle/` based on approved proposal
 4. Move/copy existing docs to appropriate locations
 5. Backfill `docs/_index.md` with entries for substantial completed work
-6. Create domain agents (same as Greenfield Phase 4 — via `/sdlc-create-agent`)
+6. Create domain agents (same as Greenfield Phase 4 — via `/sdlc-develop-agent`)
 7. Wire agent-context map (same as Greenfield Phase 5)
 8. Seed knowledge and disciplines (same as Greenfield Phases 6–8, informed by existing codebase patterns)
 9. Assess initial maturity levels (same as Greenfield Phase 9a)

@@ -1,9 +1,9 @@
 # Agent Selection Rules
 # Defines which agents to dispatch based on file scope and work characteristics.
-# Used by: sdlc-review-code, sdlc-tests-create, sdlc-tests-run, sdlc-plan, sdlc-create-agent, sdlc-initialize
+# Used by: sdlc-review-code, sdlc-tests-create, sdlc-tests-run, sdlc-plan, sdlc-develop-agent, sdlc-initialize
 #
 # Project-specific: Customize agent names and dispatch triggers for your stack.
-# Use /sdlc-create-agent to add new agents.
+# Use /sdlc-develop-agent to add new agents.
 
 tiers:
   # Tier 1: Domain Agents — dispatch when work involves their domain

@@ -74,7 +74,6 @@ Verify that framework components are properly cross-referenced across key files.
 Grep across the entire codebase for references to old, removed, or renamed concepts.
 
 **Known stale references to check:**
-- `plugin-dev:agent-development` (replaced by `sdlc-create-agent`)
 - Any recently renamed or removed skill names
 - Any recently renamed or removed agent names
 - References to old directory structures or file paths

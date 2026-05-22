@@ -13,7 +13,7 @@ description: >
   Do NOT use for customer-facing product docs — those are project-specific (typically a docs site).
   Do NOT use for SDLC deliverable artifacts (spec, plan, result) — use sdlc-plan / sdlc-lite-plan / sdlc-execute.
   Do NOT use for on-call runbooks (procedural response to a specific alert) — runbooks are a separate concern.
-  Do NOT use for skill or agent definitions — use sdlc-develop-skill / sdlc-create-agent.
+  Do NOT use for skill or agent definitions — use sdlc-develop-skill / sdlc-develop-agent.
   Do NOT use for blog posts or external narrative content.
 ---
 
@@ -257,6 +257,6 @@ Write for an agent that has never seen this code before. If a human reads it too
 - **Feeds into:** `docs/reference/_index.md` catalog; future coding-agent investigations into the documented system; `sdlc-reflect` (suggests it when documentation surfaces cross-discipline insights beyond the reference doc itself).
 - **Uses:** domain agents (as author and reviewers), `code-reviewer` (template + anchor verification), `[sdlc-root]/templates/reference_doc_template.md`, `[sdlc-root]/process/agent-selection.yaml`.
 - **Knowledge routing:** `[sdlc-root]/knowledge/agent-context-map.yaml` (dispatch-time injection for author and reviewers), `[sdlc-root]/knowledge/dx/developer-documentation-patterns.yaml` (author dispatch).
-- **Complements:** `sdlc-create-agent` (agent definitions), `sdlc-develop-skill` (skill definitions), `sdlc-lite-plan` / `sdlc-plan` (produces result docs that reference docs often cite).
+- **Complements:** `sdlc-develop-agent` (agent definitions), `sdlc-develop-skill` (skill definitions), `sdlc-lite-plan` / `sdlc-plan` (produces result docs that reference docs often cite).
 - **Does NOT replace:** SDLC result docs (deliverable-bound, archived with the deliverable), customer-facing product docs (project-specific docs site), runbooks (alert-triggered procedural).
 - **DRY notes:** a reference doc often cites an SDLC result doc (e.g. "the schema was introduced in D122 — see `docs/current_work/sdlc-lite/completed/d122_.._result.md`"). The reference doc is the long-lived source of truth; the result doc is the deliverable-bound narrative. If content has to live in exactly one place, pick the reference doc.

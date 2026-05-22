@@ -34,6 +34,28 @@ Each entry contains:
 
 ---
 
+## 2026-05-22: Rename research-external → sdlc-research and sdlc-create-agent → sdlc-develop-agent
+
+**Origin:** Naming convention review — aligning skill names for consistency and clarity.
+
+**What happened:** `research-external` lacked the `sdlc-` prefix and was unnecessarily verbose — the "external" qualifier is implied since you wouldn't use a skill to research your own repo. `sdlc-create-agent` was renamed to `sdlc-develop-agent` to parallel `sdlc-develop-skill`.
+
+**Changes made:**
+
+1. **`skills/research-external/` → `skills/sdlc-research/`** — Directory renamed, frontmatter `name` updated to `sdlc-research`, trigger phrase updated to `/sdlc-research`
+2. **`skills/sdlc-create-agent/` → `skills/sdlc-develop-agent/`** — Directory renamed, frontmatter `name` updated to `sdlc-develop-agent`, trigger phrases and mode resolution table updated
+3. **`skeleton/manifest.json`** — Updated both skill paths
+4. **`skeleton/contract_changes.yaml`** — Added entry `0012` for both renames
+5. **`process/commands.md`** — Updated command table entries
+6. **Cross-references updated in 19 files** — All references to `sdlc-create-agent` and `research-external` updated across skills, agents, knowledge docs, and process docs (changelog entries remain historical)
+7. **`BOOTSTRAP-LITE.md`** — Fixed `/ccsdlc-research` → `/sdlc-research` in graduation template (was referencing framework-only namespace)
+8. **`skills/sdlc-research/SKILL.md`** — `## Workflow` → `## Steps` per convention; Integration field ordering normalized (Feeds into first)
+9. **`skills/sdlc-develop-agent/SKILL.md`** — Added `## Manager Rule` section (orchestration skill was missing it); demoted `## Reference`/`## Steps` to h3 under `## CREATE Mode`; ENRICH mode workflow converted from prose list to numbered `### N.` step headers; `**Modifies:**` merged into canonical `**Uses:**` field
+
+**Rationale:** Consistent naming convention (`sdlc-develop-*` for creation skills, `sdlc-` prefix on all skills) reduces cognitive load and improves discoverability. Structural fixes align both skills with cc-sdlc conventions surfaced by the sdlc-reviewer.
+
+---
+
 ## 2026-05-20: Inline All Directive References Across Skill Library
 
 **Origin:** Follow-up to the 2026-05-19 guardrail inlining — the pattern of "read and follow [file]" references containing directives the model skips was not limited to the consolidation commit. Systematic audit of all 25 skills found the same fragility in 3 cross-cutting patterns across 10 skills.
