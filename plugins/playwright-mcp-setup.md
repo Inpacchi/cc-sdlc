@@ -20,30 +20,10 @@ For UI-heavy deliverables (visual editors, multi-phase component work, layout ov
 
 ## Installation
 
-### Option 1: MCP Configuration (Recommended)
+Install via Claude Code:
 
-Add to your project's `.mcp.json` for project-level configuration or to `~/.claude/mcp.json` for global configuration:
-
-```json
-{
-  "playwright": {
-    "command": "npx",
-    "args": ["@playwright/mcp@latest"]
-  }
-}
 ```
-
-### Option 2: With Custom Browser Options
-
-For projects that need specific viewport sizes or headed mode:
-
-```json
-{
-  "playwright": {
-    "command": "npx",
-    "args": ["@playwright/mcp@latest", "--browser", "chromium", "--headless"]
-  }
-}
+/plugin install playwright-mcp
 ```
 
 ## Verification

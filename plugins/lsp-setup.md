@@ -12,36 +12,35 @@ Language Server Protocol gives Claude Code type-aware code intelligence — go-t
 | Navigate to source | Glob for filename, then Read | `goToDefinition` — exact location |
 | Type errors | Run build command, parse output | Real-time diagnostics as files change |
 
-## Which Plugin to Install
+## Installation
 
-Install the LSP plugin matching your project's primary language(s):
+Install the LSP plugin matching your project's primary language(s) via Claude Code:
 
-| Language | Plugin | Install Command |
-|----------|--------|----------------|
-| TypeScript / JavaScript | `typescript-lsp` | `npm install -g typescript-language-server typescript` |
-| Python | `pyright-lsp` | `npm install -g pyright` or `pip install pyright` |
-| Go | `gopls-lsp` | `go install golang.org/x/tools/gopls@latest` |
-| Rust | `rust-analyzer-lsp` | Install via rustup or your package manager |
-| C / C++ | `clangd-lsp` | Install clangd via your package manager |
-| Java | `jdtls-lsp` | Requires Eclipse JDT.LS — see plugin README |
-| Kotlin | `kotlin-lsp` | Requires Kotlin Language Server — see plugin README |
-| C# | `csharp-lsp` | Requires OmniSharp — see plugin README |
-| Ruby | `ruby-lsp` | `gem install ruby-lsp` |
-| PHP | `php-lsp` | Requires Intelephense — see plugin README |
-| Swift | `swift-lsp` | Requires SourceKit-LSP (bundled with Xcode) |
-| Lua | `lua-lsp` | Requires lua-language-server — see plugin README |
+| Language | Install Command |
+|----------|----------------|
+| TypeScript / JavaScript | `/plugin install typescript-lsp` |
+| Python | `/plugin install pyright-lsp` |
+| Go | `/plugin install gopls-lsp` |
+| Rust | `/plugin install rust-analyzer-lsp` |
+| C / C++ | `/plugin install clangd-lsp` |
+| Java | `/plugin install jdtls-lsp` |
+| Kotlin | `/plugin install kotlin-lsp` |
+| C# | `/plugin install csharp-lsp` |
+| Ruby | `/plugin install ruby-lsp` |
+| PHP | `/plugin install php-lsp` |
+| Swift | `/plugin install swift-lsp` |
+| Lua | `/plugin install lua-lsp` |
 
 **Multi-language projects:** Install all relevant LSP plugins. They coexist without conflict.
 
-### Installation Steps
+### Verification
 
-1. **Install the language server binary** using the install command above
-2. **Enable the plugin** in Claude Code: the plugin should be available in your plugin marketplace
-3. **Verify** by opening a file in the relevant language and checking that `LSP` tool calls work:
-   ```
-   Try: LSP goToDefinition on a function name
-   Try: LSP hover on a variable
-   ```
+After installation, verify that `LSP` tool calls work:
+
+```
+Try: LSP goToDefinition on a function name
+Try: LSP hover on a variable
+```
 
 ## How LSP Is Used in the SDLC
 

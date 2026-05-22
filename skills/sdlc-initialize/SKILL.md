@@ -757,14 +757,17 @@ Check whether required plugins are installed:
 
 **context7 (required):**
 ```bash
-grep -r "context7" ~/.claude/settings.json ~/.claude/settings.local.json .claude/settings.json .claude/settings.local.json 2>/dev/null
+grep -r "context7" ~/.claude/settings.json ~/.claude/settings.local.json .claude/settings.json .claude/settings.local.json .mcp.json 2>/dev/null
 ```
 
 If not found, tell CD:
-> context7 is required for library verification. See `ops/sdlc/plugins/context7-setup.md` for installation.
+> context7 is required for library verification. Install via `/plugin install context7` or see `ops/sdlc/plugins/context7-setup.md`.
 
 **LSP (highly recommended):**
 Check for language-appropriate LSP plugin based on the spec's technology stack.
+
+If not found, tell CD:
+> LSP is recommended for type-aware code navigation. Install via `/plugin install <language>-lsp` (e.g., `/plugin install typescript-lsp`). See `ops/sdlc/plugins/lsp-setup.md` for the full language list.
 
 **Playwright MCP (recommended for projects with UI):**
 If the project has user-facing UI (frontend components, web pages, templates), check for Playwright MCP:
@@ -773,7 +776,7 @@ grep -r "playwright" ~/.claude/settings.json ~/.claude/settings.local.json .clau
 ```
 
 If not found and the project has UI, tell CD:
-> Playwright MCP is recommended for automated UI verification during execution. See `ops/sdlc/plugins/playwright-mcp-setup.md` for installation.
+> Playwright MCP is recommended for automated UI verification during execution. Install via `/plugin install playwright-mcp` or see `ops/sdlc/plugins/playwright-mcp-setup.md`.
 
 
 ### Phase 9a: Assess Initial Maturity Levels

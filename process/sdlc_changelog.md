@@ -34,6 +34,22 @@ Each entry contains:
 
 ---
 
+## 2026-05-22: Standardize plugin installation on `/plugin install` across all setup guides
+
+**Origin:** Plugin setup guides used inconsistent installation methods — context7 had `/install-plugin`, LSP had manual binary installation, Playwright MCP had only MCP config. All three should lead with `/plugin install` as the primary method.
+
+**Changes made:**
+
+1. **`plugins/context7-setup.md`** — Consolidated from 3 options to 2. Primary: `/plugin install context7`. Fallback: MCP config.
+2. **`plugins/lsp-setup.md`** — Replaced manual binary install + marketplace enable with `/plugin install <language>-lsp` table. Simplified verification section.
+3. **`plugins/playwright-mcp-setup.md`** — Added `/plugin install playwright-mcp` as primary option. MCP config remains as fallback with custom browser options.
+4. **`skills/sdlc-initialize/SKILL.md`** — Phase 9 plugin recommendations now include the `/plugin install` command inline for all three plugins.
+5. **`skills/sdlc-migrate/SKILL.md`** — §4.4b plugin recommendations now include the `/plugin install` command inline for all three plugins.
+
+**Rationale:** `/plugin install` is the simplest path — one command, managed updates, no manual config editing. MCP config remains as a fallback for custom setups. Giving the command inline in initialize/migrate means users can act immediately without opening the setup guide.
+
+---
+
 ## 2026-05-22: Add plugin readiness check to sdlc-migrate (§4.4b)
 
 **Origin:** LSP was checked during initialize (Phase 9) but not during migrate — same gap Playwright MCP would have had. All three recommended plugins (context7, LSP, Playwright MCP) need a runtime install-check on every migration, not just first-time setup.

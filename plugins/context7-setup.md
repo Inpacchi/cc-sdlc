@@ -17,41 +17,13 @@ Context7 closes this gap by providing real-time documentation for the libraries 
 
 ## Installation
 
-### Option 1: Claude Code Plugin (Recommended)
-
-Install via Claude Code's plugin system:
+Install via Claude Code:
 
 ```
-/install-plugin context7@claude-plugins-official
+/plugin install context7
 ```
 
 This installs Context7 as a managed plugin with automatic updates.
-
-### Option 2: Project-Level MCP Configuration
-
-Add to your project's `.mcp.json`:
-
-```json
-{
-  "context7": {
-    "command": "npx",
-    "args": ["-y", "@upstash/context7-mcp"]
-  }
-}
-```
-
-### Option 3: Global MCP Configuration
-
-Add to `~/.claude/mcp.json` to enable Context7 across all projects:
-
-```json
-{
-  "context7": {
-    "command": "npx",
-    "args": ["-y", "@upstash/context7-mcp"]
-  }
-}
-```
 
 ## Verification
 
