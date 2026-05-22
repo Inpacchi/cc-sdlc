@@ -251,7 +251,8 @@
     "plugins": [
       "plugins/README.md",
       "plugins/context7-setup.md",
-      "plugins/lsp-setup.md"
+      "plugins/lsp-setup.md",
+      "plugins/playwright-mcp-setup.md"
     ],
     "optional_plugins": []
   },

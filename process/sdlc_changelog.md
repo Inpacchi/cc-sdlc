@@ -34,6 +34,25 @@ Each entry contains:
 
 ---
 
+## 2026-05-22: Add Playwright MCP plugin setup and surface during initialize/migrate
+
+**Origin:** Follow-up to UI verification wiring — the Playwright MCP dependency needs to be discoverable during project setup and upgrades, not just referenced in execution skills.
+
+**What happened:** The previous change wired Playwright MCP into execution and planning skills but didn't tell users to install it. Plugin setup guides are the established pattern (context7-setup.md, lsp-setup.md); Playwright MCP needs the same treatment.
+
+**Changes made:**
+
+1. **`plugins/playwright-mcp-setup.md`** — New setup guide: what Playwright MCP provides, installation options (project-level, global, custom browser), how it's used in the SDLC (POST-GATE smoke check, Step 0.5, review subagents), graceful degradation when not installed.
+2. **`plugins/README.md`** — Added Playwright MCP to the Highly Recommended table with description paragraph.
+3. **`skeleton/manifest.json`** — Registered `plugins/playwright-mcp-setup.md` in `source_files.plugins`.
+4. **`skills/sdlc-initialize/SKILL.md`** — Phase 9 checks for Playwright MCP installation (for projects with UI). Phase 10 verification checklist includes Playwright MCP status.
+5. **`skills/sdlc-migrate/SKILL.md`** — Migration report template includes "Plugin setup guides added" line to surface new plugin files to existing projects.
+6. **`CLAUDE-SDLC.md`** — Added "UI Verification via Playwright MCP" subsection under Code Verification Rule, referencing the setup guide.
+
+**Rationale:** The plugin setup guide pattern ensures Playwright MCP is discoverable at the same touchpoints as context7 and LSP — initialize, migrate, and CLAUDE-SDLC.md. Projects upgrading via migration will see the new setup guide in their `[sdlc-root]/plugins/` directory and in the migration report.
+
+---
+
 ## 2026-05-22: Wire UI testing and verification into planning and execution skills
 
 **Origin:** Observed gap during D15 (Visual Workflow Editor) planning — a 6-phase UI-heavy deliverable had no visual verification until the post-execution review, allowing render failures to compound across phases.

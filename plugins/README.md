@@ -15,6 +15,9 @@ See `context7-setup.md` for installation instructions.
 | Plugin | What It Does | Skills That Use It |
 |--------|-------------|-------------------|
 | **LSP** (language-specific) | Type-aware code intelligence — go-to-definition, find-references, hover, diagnostics. Replaces Grep-based guesswork with precise type-system navigation. | All planning and execution skills (discovery, pattern reuse, code verification) |
+| **Playwright MCP** (`@playwright/mcp`) | Browser automation — navigate, click, type, screenshot, read console. Enables automated UI verification during execution. | Execution skills (POST-GATE UI smoke check, Step 0.5 experiential verification), review subagents (interaction testing, accessibility checks) |
 
 **Install the LSP plugin for your project's primary language(s).** Without it, agents fall back to Grep for code navigation, missing type relationships, interface implementations, and call hierarchies. See `lsp-setup.md` for the full plugin list and installation instructions.
+
+**Install Playwright MCP for projects with user-facing UI.** Without it, POST-GATE UI smoke checks and experiential verification fall back to manual browser inspection. For UI-heavy deliverables, automated verification catches render failures immediately after each phase instead of at post-execution review. See `playwright-mcp-setup.md` for installation instructions.
 

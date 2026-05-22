@@ -936,6 +936,7 @@ echo "$MANIFEST" > .sdlc-manifest.json
 - Agents updated: N (Knowledge Context / Communication Protocol sections)
 - Agent-context-map paths updated: N (moved/removed file paths corrected)
 - Auditor updated: yes/no
+- Plugin setup guides added: N [list new plugin setup files — recommend installation to user]
 - CLAUDE-SDLC.md merged into CLAUDE.md: yes/no/not needed
 
 ### Legacy Cleanup

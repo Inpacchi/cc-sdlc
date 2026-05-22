@@ -766,6 +766,15 @@ If not found, tell CD:
 **LSP (highly recommended):**
 Check for language-appropriate LSP plugin based on the spec's technology stack.
 
+**Playwright MCP (recommended for projects with UI):**
+If the project has user-facing UI (frontend components, web pages, templates), check for Playwright MCP:
+```bash
+grep -r "playwright" ~/.claude/settings.json ~/.claude/settings.local.json .claude/settings.json .claude/settings.local.json .mcp.json 2>/dev/null
+```
+
+If not found and the project has UI, tell CD:
+> Playwright MCP is recommended for automated UI verification during execution. See `ops/sdlc/plugins/playwright-mcp-setup.md` for installation.
+
 
 ### Phase 9a: Assess Initial Maturity Levels
 
@@ -822,6 +831,7 @@ Knowledge & Disciplines:
 Plugins:
 [ ] context7: [installed / NOT INSTALLED]
 [ ] LSP: [installed / not applicable / NOT INSTALLED]
+[ ] Playwright MCP: [installed / not applicable (no UI) / NOT INSTALLED]
 ```
 
 Present the checklist to CD. If any items failed, note them and suggest remediation.
