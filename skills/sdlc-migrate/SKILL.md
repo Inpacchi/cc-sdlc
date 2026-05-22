@@ -873,7 +873,39 @@ If the audit returns findings:
 
 If the adapter's handler specifies `warn-continue` on failure (recommended for this phase), log the warning and proceed to §4.5. If `halt`, stop and report.
 
-When no adapter is declared, skip to §4.5.
+When no adapter is declared, skip to §4.4b.
+
+### 4.4b Verify Plugin Readiness
+
+Check whether recommended plugins are installed. This mirrors `sdlc-initialize` Phase 9 and ensures plugin gaps are surfaced on every migration, not just first-time setup.
+
+**context7 (required):**
+```bash
+grep -r "context7" ~/.claude/settings.json ~/.claude/settings.local.json .claude/settings.json .claude/settings.local.json .mcp.json 2>/dev/null
+```
+
+If not found, tell CD:
+> context7 is required for library verification. See `[sdlc-root]/plugins/context7-setup.md` for installation.
+
+**LSP (highly recommended):**
+Check for language-appropriate LSP plugin based on the project's technology stack:
+```bash
+grep -rE "typescript-language-server|pyright|gopls|rust-analyzer|clangd|omnisharp" ~/.claude/settings.json ~/.claude/settings.local.json .claude/settings.json .claude/settings.local.json .mcp.json 2>/dev/null
+```
+
+If not found, tell CD:
+> LSP is recommended for type-aware code navigation. See `[sdlc-root]/plugins/lsp-setup.md` for the plugin matching your language.
+
+**Playwright MCP (recommended for projects with UI):**
+If the project has user-facing UI (frontend components, web pages, templates — check for `*.tsx`, `*.jsx`, `*.vue`, `*.svelte`, `*.cshtml` files in the codebase), check for Playwright MCP:
+```bash
+grep -r "playwright" ~/.claude/settings.json ~/.claude/settings.local.json .claude/settings.json .claude/settings.local.json .mcp.json 2>/dev/null
+```
+
+If not found and the project has UI, tell CD:
+> Playwright MCP is recommended for automated UI verification during execution. See `[sdlc-root]/plugins/playwright-mcp-setup.md` for installation.
+
+Log the results for the migration report (§4.6).
 
 ### 4.5 Update Manifest
 
@@ -973,6 +1005,11 @@ echo "$MANIFEST" > .sdlc-manifest.json
 - §2.5 Content-merge verification: tracker intact, parking lots preserved, skills spot-checked
 - §3.4 Downstream impact: user reviewed findings
 - §4.3a CLAUDE-SDLC.md compatibility: no stale references / [list fixes]
+
+### Plugins
+- context7: [installed / NOT INSTALLED — see [sdlc-root]/plugins/context7-setup.md]
+- LSP: [installed / not applicable / NOT INSTALLED — see [sdlc-root]/plugins/lsp-setup.md]
+- Playwright MCP: [installed / not applicable (no UI) / NOT INSTALLED — see [sdlc-root]/plugins/playwright-mcp-setup.md]
 
 ### Verification
 - All agent-context-map paths resolve: yes/no

@@ -34,6 +34,20 @@ Each entry contains:
 
 ---
 
+## 2026-05-22: Add plugin readiness check to sdlc-migrate (§4.4b)
+
+**Origin:** LSP was checked during initialize (Phase 9) but not during migrate — same gap Playwright MCP would have had. All three recommended plugins (context7, LSP, Playwright MCP) need a runtime install-check on every migration, not just first-time setup.
+
+**What happened:** Projects that initialized before a plugin was added to the framework never got a recommendation to install it. Migration copied the setup guide file but didn't check whether the plugin was actually installed.
+
+**Changes made:**
+
+1. **`skills/sdlc-migrate/SKILL.md`** — Added §4.4b "Verify Plugin Readiness" between the compliance audit and manifest update. Checks context7 (required), LSP (highly recommended), and Playwright MCP (recommended for UI projects). Mirrors `sdlc-initialize` Phase 9. Also added a Plugins section to the §4.6 migration report template showing install status for all three.
+
+**Rationale:** Plugin readiness should be verified on every migration, not just initialization. A project that initialized before Playwright MCP existed would never learn about it otherwise. The check runs after the compliance audit (§4.4) so all framework files are already in place, and before the manifest update (§4.5) so the report can include the status.
+
+---
+
 ## 2026-05-22: Add Playwright MCP plugin setup and surface during initialize/migrate
 
 **Origin:** Follow-up to UI verification wiring — the Playwright MCP dependency needs to be discoverable during project setup and upgrades, not just referenced in execution skills.
