@@ -34,6 +34,21 @@ Each entry contains:
 
 ---
 
+## 2026-05-26: Add spec, plan, and idea brief to final commit staging checklists
+
+**Origin:** CD observed that sdlc-execute and sdlc-lite-execute final commits frequently omit the spec, plan, and associated idea brief — only the result doc and catalog update get staged.
+
+**What happened:** The Step 4 staging checklists in both execute skills listed result docs and catalog updates but did not explicitly list the spec file, plan file, or idea brief. Since executors treat the checklist as exhaustive, unlisted artifacts were silently dropped from the final commit.
+
+**Changes made:**
+
+1. **`skills/sdlc-execute/SKILL.md`** — Added spec file, plan file, and idea brief (if associated) to the Step 4 staging checklist, positioned immediately after the result doc entry
+2. **`skills/sdlc-lite-execute/SKILL.md`** — Added plan file and idea brief (if associated) to the Step 4 staging checklist (lite has no spec)
+
+**Rationale:** The staging checklist is the executor's exhaustive guide for what to commit. Anything not listed gets forgotten. Making plan artifacts explicit ensures they ship with their work rather than being left as uncommitted changes.
+
+---
+
 ## 2026-05-26: Promote software-architect to always-dispatch reviewer
 
 **Origin:** CD review of a 28-commit, 89-file review where software-architect was skipped ("follows existing patterns, no new abstractions"). CD noted that architecture drift compounds silently across routine changes and the architect should serve as a persistent guardrail.

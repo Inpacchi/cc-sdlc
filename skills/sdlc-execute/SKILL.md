@@ -459,6 +459,9 @@ Before claiming the work is done:
 4. Update `docs/_index.md` — change the deliverable's status from "In Progress" to "Complete" in the Active Work table
 5. Stage any remaining modified files — **all categories, not just application code:**
    - Result doc (`docs/current_work/results/dNN_*_result.md`)
+   - Spec file (`docs/current_work/specs/dNN_*_spec.md`) — status marker updated to Complete
+   - Plan file (`docs/current_work/planning/dNN_*_plan.md`)
+   - Idea brief (`docs/current_work/ideas/dNN_*_idea.md`) if associated with this deliverable
    - Catalog updates (`docs/_index.md`)
    - Discipline parking lot entries (`[sdlc-root]/disciplines/*.md`)
    - Knowledge store updates (`[sdlc-root]/knowledge/*.md`)

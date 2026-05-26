@@ -392,6 +392,8 @@ If no triggers fired, emit `CLAUDE.md refresh: no changes needed` and proceed. D
 4. Stage **all** modified files — not just application code. Check every category:
    - Application code and test files
    - Result doc (`docs/current_work/sdlc-lite/dNN_*_result.md`)
+   - Plan file (`docs/current_work/sdlc-lite/dNN_*_plan.md`) — status marker updated
+   - Idea brief (`docs/current_work/ideas/dNN_*_idea.md`) if associated with this deliverable
    - Discipline parking lot entries (`[sdlc-root]/disciplines/*.md`)
    - Knowledge store updates (`[sdlc-root]/knowledge/*.md`)
    - CLAUDE.md updates from step 3d (root and any module-level files)
