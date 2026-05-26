@@ -12,6 +12,22 @@ tiers:
       dispatch: always
       description: Covers overengineering, DRY, correctness, and codebase conventions
 
+    software-architect:
+      dispatch: always
+      description: Structural guardrail — catches architecture drift, scope creep, and extraction gaps before they compound
+      covers:
+        - module boundary health — are responsibilities leaking across boundaries?
+        - dependency direction — do imports flow the right way, or are lower layers reaching up?
+        - pattern consistency — does new code follow established patterns, or silently introduce a parallel approach?
+        - extraction signals — is a function, component, or module growing beyond its responsibility and due for extraction?
+        - abstraction fitness — are abstractions earning their complexity, or adding indirection without value?
+        - scope creep — does the change stay within its stated intent, or quietly expand into adjacent concerns?
+      note: >
+        Macro-level structural lens. Does NOT overlap with code-reviewer's micro concerns
+        (DRY, correctness, naming, overengineering at the expression/function level).
+        software-architect evaluates whether the codebase structure is staying healthy
+        across changes — code-reviewer evaluates whether the code itself is clean.
+
     frontend-developer:
       dispatch_when:
         - frontend source files
@@ -192,20 +208,6 @@ tiers:
 
   # Tier 2: Structural Agents — dispatch only when warranted
   tier2:
-    software-architect:
-      dispatch_when:
-        - introduces new directory boundaries or moves files between directories
-        - creates new abstraction layers (context providers, store patterns, shared hooks)
-        - changes how packages depend on each other
-        - introduces a pattern that doesn't exist elsewhere in the codebase
-        - modifies a domain adapter interface or registry
-      skip_when:
-        - routine additions that follow existing patterns
-        - store selectors
-        - style changes
-        - bug fixes
-        - work where code-reviewer and frontend/backend-developer already cover architecture
-
     refactor-engineer:
       dispatch_when:
         - moves files between directories or renames exports with consumer updates
@@ -311,7 +313,7 @@ infrastructure_domains:
     specialist: accessibility-auditor
 
 # Selection Process:
-# 1. Always add code-reviewer
+# 1. Always add code-reviewer and software-architect (both dispatch: always)
 # 2. Independently assess which Tier 1 agent domains the task touches —
 #    start from the task content, not from a playbook or template
 # 3. Assess whether any Tier 2 triggers apply based on the nature of the work

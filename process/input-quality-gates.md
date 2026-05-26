@@ -148,7 +148,7 @@ Overall Mean: 3.40  |  Floors: C≥3 ✗ (Phase 2)  T≥3 ✓
 ## What These Gates Do NOT Catch
 
 - **Correctness** — a plan can score well on FACTS while describing the wrong approach. Agent review and human judgment own correctness.
-- **Architecture fitness** — whether the approach fits the system is a domain judgment. Tier 2 agent dispatch (software-architect) catches this.
+- **Architecture fitness** — whether the approach fits the system is a domain judgment. Always-dispatch agent `software-architect` catches this.
 - **The plan-reading illusion** — plans that read coherently but contain flawed assumptions pass FACTS. FACTS is necessary but not sufficient.
 
 ## Research Basis

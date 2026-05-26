@@ -563,7 +563,7 @@ Present deviations to CD. This prevents the neuroloom-bootstrap gap where spec-l
 DISPATCHER WIRING CHECK
 Agent                    | agent-selection.yaml | sdlc-plan agent table | sdlc-plan infra triggers
 -------------------------|--------------------------|----------------------|------------------------
-software-architect       | Tier 2                   | yes                  | n/a
+software-architect       | Tier 1 (always)          | yes                  | n/a
 frontend-developer       | Tier 1                   | yes                  | yes
 backend-developer        | Tier 1                   | yes                  | yes
 code-reviewer            | Tier 1 (always)          | yes                  | n/a

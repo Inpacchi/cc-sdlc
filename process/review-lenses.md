@@ -105,6 +105,15 @@ Analytical perspectives that agents apply when reviewing code. Each consuming sk
 - Pit of success — is it hard to misuse the API? Required parameters before optional ones; invalid states unrepresentable in the type system; sensible defaults that don't surprise
 - Surface area — does the interface expose only what consumers need? Internal implementation details leaking into public props, return types, or endpoint responses indicate a missing abstraction boundary
 
+## Architecture Guardrail Lens (review only)
+
+- Module boundary health — are responsibilities bleeding across module or package boundaries? A utility importing from a feature module, a component reaching into another feature's store, or a shared package depending on an app-specific one are all boundary violations
+- Dependency direction — imports should flow downward (features → shared → core). Upward or lateral dependencies between peer features create hidden coupling that makes changes cascade unpredictably
+- Pattern consistency — when the codebase has an established way to do something (state management, API calls, data fetching, error handling), new code should follow it or explicitly justify the divergence. Silent pattern drift creates two ways to do the same thing, confusing future contributors
+- Extraction signals — a file, function, or component that has grown to handle multiple concerns is due for extraction. Watch for: functions with multiple unrelated branches, components with 3+ responsibilities, files that are the "go-to dumping ground" for new logic in their area
+- Abstraction fitness — every abstraction (wrapper, provider, adapter, base class) must justify its existence by serving 2+ consumers or encapsulating genuine complexity. Abstractions that pass through without transforming, or that serve exactly one call site, are premature and add navigation cost without value
+- Scope creep in changes — does the diff stay within its stated intent? A bug fix that also reorganizes imports, adds a utility, and refactors an adjacent function has expanded beyond its scope. Each concern should be a separate change
+
 ## Standard Lens — Always Applied
 
 - DRY violations (duplicated logic that should be shared)

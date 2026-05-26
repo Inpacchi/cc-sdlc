@@ -59,11 +59,11 @@ Files changed: N
 
 Dispatching reviewers:
 - [ ] code-reviewer (always)
+- [ ] software-architect (always)
 - [ ] frontend-developer (touches frontend components)
 - [ ] performance-engineer (new store selectors)
 
 Not dispatching:
-- software-architect — follows existing pattern, no new abstractions
 - ui-ux-designer — logic-only changes, no visual modifications
 ```
 
@@ -98,6 +98,22 @@ The diff may invalidate documented project knowledge. Ask `code-reviewer` to com
 > **CLAUDE.md alignment check:** For each file changed in this diff, check whether the project's CLAUDE.md (or a CLAUDE.md in the file's package) makes claims that the diff invalidates — file paths that moved or were deleted, conventions that changed, build/test/lint commands that no longer work, dependencies that were swapped or removed, or architecture statements that no longer describe the codebase. Cite the CLAUDE.md line that needs updating and the diff change that invalidated it. Flag stale documentation as `minor` with category `claude-md-staleness`. Escalate to `major` only when the staleness would actively misdirect a future agent (e.g., wrong build command, removed module still listed as canonical).
 
 This is a documentation-correctness check, not a "should we add more documentation" prompt. Do not flag CLAUDE.md for missing context the diff *could* be added to — only for content the diff *invalidates*.
+
+**Pre-dispatch — Architecture Guardrail Lens**
+
+The software-architect runs on every review as the structural counterpart to code-reviewer. Where code-reviewer catches micro issues (DRY, correctness, naming, overengineering at the expression level), software-architect catches macro drift that compounds across changes. Include this instruction in `software-architect`'s dispatch prompt:
+
+> **Architecture guardrail check:** Review this diff for structural health, not code quality (code-reviewer handles that). Specifically:
+> - **Boundary violations:** Are responsibilities leaking across module or package boundaries? Imports flowing the wrong direction? Features reaching into each other's internals?
+> - **Pattern drift:** Does new code silently introduce a second way to do something the codebase already has a pattern for? If so, flag which existing pattern it diverges from.
+> - **Extraction signals:** Are any files, functions, or components growing beyond a single responsibility? Would this change be the right time to extract, or is it premature?
+> - **Abstraction fitness:** Are new or existing abstractions earning their complexity? Flag wrappers that pass through without transforming, or indirection that serves exactly one consumer.
+> - **Scope discipline:** Does the diff stay within its stated intent, or does it quietly expand into adjacent concerns that should be separate changes?
+> - **Dependency health:** Are new dependencies (imports, packages) justified? Do they create coupling that will make future changes harder?
+>
+> Flag boundary violations and pattern drift as `major` with category `architecture`. Flag extraction signals and scope observations as `minor` with category `architecture`. Escalate to `critical` only when the structural issue would force a rewrite if left to compound (e.g., circular dependency between packages).
+
+This lens complements, not duplicates, the Standard lens's "Architecture adherence" bullet — that bullet checks convention conformance; this lens checks whether the codebase structure is staying healthy over time.
 
 **Pre-dispatch — Commit Message Quality Lens**
 
@@ -340,6 +356,7 @@ Skip the suggestion if the review was routine with no cross-cutting insights.
 | "I'll start fixing without asking" | Always present the fix gate. The user decides whether to fix. |
 | "This is just a refactor, no review needed" | Refactors need architecture and DRY lens review |
 | "Skip Tier 2, it's a small commit" | Read the diff content. Small commits introduce new patterns more often than expected. |
+| "software-architect will catch what code-reviewer catches" | They have non-overlapping scopes. code-reviewer handles micro (DRY, correctness, naming). software-architect handles macro (boundaries, dependency direction, pattern drift). Neither substitutes for the other. |
 | "This agent overlaps with another, skip it" | Agents review different concerns. `performance-engineer` and `frontend-developer` both review component code but catch different issues. |
 | "No security concerns in this diff" | Check the boundaries lens anyway. User input flows through surprising paths. |
 | "Two agents flagged the same line, merge them" | Same line, same issue — merge and credit both. Same line, different issues — keep separate and tag `co-located`. Merging by location erases real findings. |

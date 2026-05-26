@@ -34,6 +34,22 @@ Each entry contains:
 
 ---
 
+## 2026-05-26: Promote software-architect to always-dispatch reviewer
+
+**Origin:** CD review of a 28-commit, 89-file review where software-architect was skipped ("follows existing patterns, no new abstractions"). CD noted that architecture drift compounds silently across routine changes and the architect should serve as a persistent guardrail.
+
+**What happened:** software-architect was Tier 2 in `agent-selection.yaml` — dispatched only for explicit structural changes (new directories, new abstraction layers, inter-package dependency changes). In practice this meant it was skipped for most reviews, including large ones where structural health should have been evaluated.
+
+**Changes made:**
+
+1. **`process/agent-selection.yaml`** — Moved `software-architect` from Tier 2 to Tier 1 with `dispatch: always`. Defined coverage areas: module boundary health, dependency direction, pattern consistency, extraction signals, abstraction fitness, scope creep. Added note clarifying macro/micro split with code-reviewer. Updated selection process comment.
+2. **`process/review-lenses.md`** — Added Architecture Guardrail Lens defining six structural patterns to check: boundary violations, dependency direction, pattern drift, extraction signals, abstraction fitness, scope creep in changes.
+3. **`skills/sdlc-review-code/SKILL.md`** — Added pre-dispatch Architecture Guardrail Lens with specific dispatch prompt for software-architect. Updated example dispatch checklist to show software-architect as always-dispatched. Added red flag entry for macro/micro scope confusion.
+
+**Rationale:** Architecture drift is incremental — each individual change "follows existing patterns" but the cumulative effect can be structural decay. Promoting software-architect to always-dispatch with a clear macro lens (boundaries, dependencies, patterns) complementing code-reviewer's micro lens (DRY, correctness, naming) creates a two-layer guardrail that catches both code-level and structure-level issues on every review.
+
+---
+
 ## 2026-05-26: Add dual-audience skill detection to prevent content-merge overwrites
 
 **Origin:** v1.5.7 migration session overwrote three project-customized skills (`sdlc-audit/references/compliance-methodology.md`, `sdlc-ingest/SKILL.md`, `sdlc-develop-skill/SKILL.md`) with their cc-sdlc source versions. The source versions serve a different audience (auditing/ingesting into the framework itself) than the installed project versions (auditing/ingesting for the child project).
