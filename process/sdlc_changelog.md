@@ -34,6 +34,55 @@ Each entry contains:
 
 ---
 
+## 2026-05-26: Add dual-audience skill detection to prevent content-merge overwrites
+
+**Origin:** v1.5.7 migration session overwrote three project-customized skills (`sdlc-audit/references/compliance-methodology.md`, `sdlc-ingest/SKILL.md`, `sdlc-develop-skill/SKILL.md`) with their cc-sdlc source versions. The source versions serve a different audience (auditing/ingesting into the framework itself) than the installed project versions (auditing/ingesting for the child project).
+
+**What happened:** The migrate skill's §2.2 content-merge and §2.4 audit-skill merge treated all `skills/` files as having a single canonical upstream version. But four skills have both a project-installable version (`skills/sdlc-X/`) and a framework-development counterpart (`.claude/skills/ccsdlc-X/`), indicating fundamentally different audiences. Content-merging the source template into a heavily customized project version destroys the customization.
+
+**Changes made:**
+
+1. **`skills/sdlc-migrate/SKILL.md` §2.2** — Added "Step 0: Dual-audience skill detection" gate. If cc-sdlc source has `.claude/skills/ccsdlc-{name}/`, the corresponding `skills/sdlc-{name}/` is dual-audience and uses additive-only merge (new sections only, never overwrite existing).
+2. **`skills/sdlc-migrate/SKILL.md` §2.4** — Rewrote audit skill merge to follow additive-only rules. Reference docs in dual-audience skills are never overwritten — only genuinely new files/sections are added.
+3. **`process/path-mappings.md`** — Added "Dual-Audience Skills" section documenting the four affected skills and the detection mechanism.
+
+**Rationale:** The `ccsdlc-*` prefix naming convention already signals "this is framework-specific, don't install." The missing piece was the converse: if a framework-specific skill exists, its project counterpart is inherently divergent and should not be content-merged from the generic template. The naming convention becomes a structural detection mechanism — no heuristics, no threshold, no git-blame analysis needed.
+
+---
+
+## 2026-05-26: Normalize non-standard knowledge-layer phrasings for adapter transformability
+
+**Origin:** Post-migration audit of a Neuroloom-adapted project found 162 pattern hits across 9 files — operational violations where agents/skills gave file-based instructions despite the project using a memory-graph backend. Root cause: transformer scope gaps (files excluded or not in scope) plus a handful of cc-sdlc phrasings using non-standard compounds no transformer rule covers.
+
+**What happened:** `sdlc-reviewer.md` and `sdlc-compliance-auditor.md` were hard-excluded from transformation. `skills/*/references/*.md` weren't in the transformer's file scope. Additionally, cc-sdlc source used compound forms like "parking lot file exists", "knowledge store directory", "discipline parking lot files" that don't match any concept-terminology rule in pattern-mapping-rules.md.
+
+**Changes made:**
+
+1. **`skills/sdlc-audit/references/compliance-methodology.md`** — Replaced "parking lot file exists" with "discipline parking lot entries exist", "knowledge store directory" with "knowledge stores", "knowledge store YAML file" with "knowledge YAML file", "Check each discipline file:" with "Check each discipline:". All forms now match existing transformer concept-terminology rules.
+2. **`skills/sdlc-reflect/SKILL.md`** — Replaced "Discipline parking lot files" with "Discipline parking lots", "target discipline file" with canonical `Append to [sdlc-root]/disciplines/*.md`. Forms now match phrasing-contract or concept-terminology rules.
+3. **`skills/sdlc-initialize/SKILL.md`** — Replaced "parking lot file exists" and "knowledge store directory exists" with forms matching concept-terminology rules.
+4. **Adapter: `neuroloom-sdlc-plugin/agents/neuroloom-transformer.md`** — Removed `sdlc-reviewer.md` and `sdlc-compliance-auditor.md` from hard-exclusion list. Added checklist-item exclusion rule so `- [ ]` validation criteria aren't falsely transformed.
+5. **Adapter: `neuroloom-sdlc-plugin/references/adapter-lifecycle.md`** — Expanded post-file-write scope to include `.claude/skills/*/references/*.md`.
+6. **Adapter: `neuroloom-sdlc-plugin/references/pattern-mapping-rules.md`** — Updated legitimate-retention context list to match new exclusion set; added checklist-item exemption.
+
+**Rationale:** The phrasing contract guarantees cc-sdlc uses a fixed set of phrases the adapter can transform. Non-standard compounds that no rule covers leak file-based instructions into adapted projects. Normalizing cc-sdlc's language to use forms covered by existing rules makes the adapter's job tractable without requiring NLP-level pattern matching. Removing hard exclusions and expanding scope ensures ALL installed operational files get transformed. [contract-change]
+
+---
+
+## 2026-05-26: Add procedural exclusion gate to §2.1 direct-copy loop
+
+**Origin:** Downstream project overwrite of `agent-selection.yaml` during migration. The exclusion instruction existed (parenthetical note, red-flags table, path-mappings.md) but was missed during batch `process/*` copy because it was informational, not procedural.
+
+**What happened:** Despite multiple documentation points saying "don't copy agent-selection.yaml," an agent performing a migration still included it in the process/ batch copy. The exclusion was buried in prose rather than enforced as a numbered step in the operation sequence.
+
+**Changes made:**
+
+1. **`skills/sdlc-migrate/SKILL.md`** — Added "Step 0" to §2.1: load the exclusion list from path-mappings.md before any writes, verify each file against it. Makes the check procedural (a gate before the loop) rather than informational (a parenthetical within a list item).
+
+**Rationale:** Prose exclusions get missed during batch operations. A numbered pre-write gate forces the check to happen as part of the procedure, not as something the operator must remember from reading earlier documentation. Defense in depth: the parenthetical notes remain as reinforcement, but the gate is the primary enforcement mechanism.
+
+---
+
 ## 2026-05-22: Standardize plugin installation on `/plugin install` across all setup guides
 
 **Origin:** Plugin setup guides used inconsistent installation methods — context7 had `/install-plugin`, LSP had manual binary installation, Playwright MCP had only MCP config. All three should lead with `/plugin install` as the primary method.

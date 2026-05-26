@@ -55,7 +55,7 @@ Signs this skill is NOT appropriate:
 ## Preconditions
 
 - At least one substantive work action in the current session (commits, file edits, agent dispatches, research)
-- Discipline parking lot files exist at `[sdlc-root]/disciplines/`
+- Discipline parking lots exist at `[sdlc-root]/disciplines/`
 
 ## Steps
 
@@ -147,7 +147,7 @@ Wait for confirmation. The user may adjust categorization, remove entries, or ad
 
 ### 4. Write to Parking Lots
 
-For each confirmed learning, append to the target discipline file under `## Parking Lot`.
+For each confirmed learning, Append to `[sdlc-root]/disciplines/*.md` under `## Parking Lot`.
 
 **Entry format:**
 
@@ -213,7 +213,7 @@ NEXT STEPS
 
 ## Integration
 
-- **Depends on:** Substantive work in the current session; discipline parking lot files at `[sdlc-root]/disciplines/`
+- **Depends on:** Substantive work in the current session; discipline parking lots at `[sdlc-root]/disciplines/`
 - **Feeds into:** Discipline triage cycle (sdlc-audit scans parking lots for threshold breaches and untriaged entries)
 - **Uses:** `git log`, `git diff`, `git status` (session survey); `[sdlc-root]/disciplines/*.md` (write targets); `[sdlc-root]/process/discipline_capture.md` (structured gap detection methodology)
 - **Complements:** Built-in discipline capture in sdlc-execute, sdlc-plan, sdlc-idea (those run automatically; this is for sessions without those skills)

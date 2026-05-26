@@ -60,7 +60,7 @@ For each active deliverable, verify the expected artifact chain:
 
 ### 6a. Discipline Parking Lots (`[sdlc-root]/disciplines/`)
 
-Check each discipline file:
+Check each discipline:
 
 | File | Discipline |
 |------|-----------|
@@ -83,8 +83,8 @@ Check each discipline file:
 
 **Maturity level verification:**
 - Read Process Maturity Tracker in `process-improvement.md`
-- Level 1 claim: parking lot file exists with entries
-- Level 2 claim: knowledge store directory with YAML files + agent-context-map wired + at least one triage pass
+- Level 1 claim: discipline parking lot entries exist
+- Level 2 claim: knowledge stores populated with YAML files + agent-context-map wired + at least one triage pass
 - Flag claims lacking supporting evidence
 
 ### 6b. Knowledge Stores (`[sdlc-root]/knowledge/`)
@@ -207,7 +207,7 @@ Identify areas where the knowledge layer has structural gaps.
 
 3. **Agents with empty knowledge mappings** — agents listed in `[sdlc-root]/knowledge/agent-context-map.yaml` with an empty file list, or agents in `.claude/agents/` not present in the context map at all. Severity: **Info** (possibly intentional for simple utility agents).
 
-4. **Discipline-to-knowledge store alignment** — disciplines at Level 2+ in the Process Maturity Tracker should have a corresponding knowledge store directory. Flag Level 2+ disciplines without stores. Severity: **Warning**.
+4. **Discipline-to-knowledge store alignment** — disciplines at Level 2+ in the Process Maturity Tracker should have corresponding knowledge stores. Flag Level 2+ disciplines without stores. Severity: **Warning**.
 
 ### 6k. Orphaned Knowledge Pruning
 
@@ -362,7 +362,7 @@ After presenting the audit report, run an interactive triage session for all pro
 - The entry text (verbatim from parking lot or agent memory)
 - Source location (discipline file + line, or agent memory file)
 - Evidence (why it's promotion-worthy: recurrence count, agent feedback, deliverable references)
-- Suggested target (which knowledge store file it would go into — existing or new)
+- Suggested target (which knowledge store it would go into — existing or new)
 
 **11b. Present candidates grouped by discipline.** Use `AskUserQuestion` to present candidates in batches (one discipline at a time):
 
@@ -384,7 +384,7 @@ For each: (P)romote, (D)efer, (S)kip
 
 **11c. Apply CD decisions.**
 
-- **Promote:** Create or update the target knowledge store YAML file with the new entry. Mark the parking lot entry as `Promoted → [target file path] ([date])`. If the source was an agent memory, add the entry to the relevant discipline parking lot as `Promoted → [target file path] ([date])` for traceability.
+- **Promote:** Create or update the target knowledge YAML file with the new entry. Mark the parking lot entry as `Promoted → [target file path] ([date])`. If the source was an agent memory, add the entry to the relevant discipline parking lot as `Promoted → [target file path] ([date])` for traceability.
 - **Defer:** Update the parking lot entry marker to `[DEFERRED]` with CD's reason appended.
 - **Skip:** Leave the entry unchanged — it stays at its current marker for next audit cycle.
 

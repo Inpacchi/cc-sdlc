@@ -783,9 +783,9 @@ If not found and the project has UI, tell CD:
 
 Read the maturity level definitions in `ops/sdlc/disciplines/process-improvement.md` (§ Process Maturity Levels). For each of the 9 disciplines, assess the initial level based on what was just set up:
 
-**Level 1 (Initial)** — parking lot file exists with at least one entry but no knowledge store directory for this discipline.
+**Level 1 (Initial)** — discipline parking lot entries exist but no knowledge store for this discipline.
 
-**Level 2 (Managed)** — knowledge store directory exists with at least one validated YAML file AND the agent-context-map wires those files to relevant agents AND parking lot has been seeded.
+**Level 2 (Managed)** — knowledge store exists with at least one validated YAML file AND the agent-context-map wires those files to relevant agents AND parking lot has been seeded.
 
 For most fresh installations, the assessment is straightforward:
 - Disciplines that received knowledge seeding in Phases 6-8 AND have entries in `agent-context-map.yaml` → Level 2

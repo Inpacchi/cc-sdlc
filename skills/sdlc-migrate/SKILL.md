@@ -324,9 +324,11 @@ Before any file copying, compute the **effective install set** for this project 
 
 ### 2.1 Direct Copy Files
 
+**Step 0 — Load exclusion list before any writes.** Read `[sdlc-root]/process/path-mappings.md` § "Project-Specific Files (Never Overwrite)". For every file about to be written in this phase, confirm it does NOT appear on that list. If it does, skip it — no exceptions, no "I'll just update the header" rationalizations. Current exclusions: `agent-selection.yaml`, `agent-context-map.yaml`, `provenance_log.md`.
+
 For files with no project customizations, copy directly from cc-sdlc to the project's `[sdlc-root]/` directory:
 
-- `process/*.md` (framework process docs — `agent-selection.yaml` is NOT copied; it's project-specific, see "Project-Specific Files")
+- `process/*.md` (excluding `agent-selection.yaml` — project-specific, protected by Step 0)
 - `knowledge/**/*.yaml` (but NOT `agent-context-map.yaml`)
 - `knowledge/README.md` (to `[sdlc-root]/knowledge/`) — NOT `knowledge/provenance_log.md`; that's project-specific (see "Project-Specific Files")
 - `README.md` (to `[sdlc-root]/`)
@@ -568,11 +570,15 @@ Options:
 
 ### 2.2 Content-Merge: Skills
 
+**Step 0 — Dual-audience skill detection.** Before content-merging any skill, check whether cc-sdlc source has a framework-dev counterpart at `.claude/skills/ccsdlc-{name}/` (e.g., `ccsdlc-ingest` exists alongside `skills/sdlc-ingest/`). If a `ccsdlc-*` counterpart exists, the installed skill is **dual-audience** — its source version is a generic template that projects customize heavily after installation. Dual-audience skills use **additive-only merge**: propagate genuinely new framework sections (sections that exist in upstream but not in the project at all) but never overwrite or content-merge existing sections. This prevents replacing a project's customized methodology with the generic template version.
+
+Current dual-audience skills: `sdlc-audit`, `sdlc-ingest`, `sdlc-develop-skill`, `sdlc-research`.
+
 Skills have two layers:
 1. **Framework structure** — dispatch patterns, gate logic, manager rules, cross-domain injection
 2. **Project customizations** — build commands, agent names, project-specific examples, tech stack references
 
-**Migration process for each skill:**
+**Migration process for each non-dual-audience skill:**
 
 1. Read the cc-sdlc source version of the skill
 2. Read the project's version of the skill
@@ -608,15 +614,15 @@ Discipline files have:
 
 ### 2.4 Content-Merge: Audit Skill
 
-The `sdlc-audit` skill has framework audit methodology in `SKILL.md` and `references/` that must stay current:
+`sdlc-audit` is a **dual-audience skill** (see §2.2 Step 0). Its reference docs (`compliance-methodology.md`, `improvement-methodology.md`) are heavily customized by projects to match their audit scope (deliverable catalogs, artifact chains, project-specific dimensions). The cc-sdlc source version audits the framework source repo itself — a fundamentally different audience.
+
+**Additive-only merge for dual-audience reference docs:**
 
 1. Read the cc-sdlc source versions of all audit skill files
 2. Read the project's versions
-3. Update SKILL.md workflow, modes, and reference pointers — **verbatim from cc-sdlc source, not rephrased**
-4. Update the project's `sdlc-audit/references/compliance-methodology.md` audit dimensions and report format
-5. Update the project's `sdlc-audit/references/improvement-methodology.md` extraction patterns and categorization
-6. Update the project's `sdlc-audit/references/session-reading.md` JSONL format reference
-7. Preserve any project-specific audit dimensions or improvement categories added by the project
+3. For `SKILL.md`: update only the skill's frontmatter (description, triggers) and add any genuinely new sections not present in the project. Do NOT overwrite existing workflow, modes, or dispatch logic that the project has customized.
+4. For `references/*.md`: add new reference files that don't exist in the project. For existing reference files, add only new sections (identified by H2/H3 headings not present in the project version). Never overwrite existing sections — the project's audit dimensions and methodology reflect its own structure.
+5. Preserve all project-specific audit dimensions, improvement categories, and report formats.
 
 **Migration note:** The `sdlc-compliance-auditor` agent has been restored as a subagent dispatched by `sdlc-audit`. If the project has an old version, update it to the current version. If the project removed it during a prior migration, re-install it.
 
