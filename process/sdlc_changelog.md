@@ -34,6 +34,23 @@ Each entry contains:
 
 ---
 
+## 2026-05-27: Add estimation model — validity, correctness, effort instead of cardinal time
+
+**Origin:** CD directive. AI-assisted development compresses implementation timelines so dramatically that traditional time-based estimates (hours, days, sprints) are misleading. A feature that would take a solo developer two weeks can be developed and iterated in 1–3 days with AI-driven workflows.
+
+**What happened:** The SDLC had no guidance on how to estimate work. Teams using the framework were defaulting to pre-AI time estimates, which overestimate implementation duration and underestimate iteration needs.
+
+**Changes made:**
+
+1. **`process/collaboration_model.md`** — Added "Estimation Model" subsection under Workflow Design Rationale. Defines three estimation dimensions (Validity, Correctness, Effort) with scales, interaction patterns, and rationale for why cardinal time is the wrong unit.
+2. **`process/overview.md`** — Added Key Principle #11: "Estimate validity, correctness, and effort — not time"
+3. **`templates/spec_template.md`** — Added Section 8 (Estimation) with a dimension/rating/rationale table; renumbered former sections 8–9 to 9–10
+4. **`CLAUDE-SDLC.md`** — Added "Estimation" subsection under Three Tiers of Work with a compact summary of the model and a cross-reference to the full rationale
+
+**Rationale:** The unit of estimation should match what actually varies in AI-assisted development. Implementation time is near-constant across a wide range of feature sizes — what varies is iteration cycles, which are driven by requirement clarity (validity) and domain complexity (correctness). Estimating in these dimensions drives teams to invest in the right phase (discovery, testing, review) rather than padding calendar time.
+
+---
+
 ## 2026-05-26: Add spec, plan, and idea brief to final commit staging checklists
 
 **Origin:** CD observed that sdlc-execute and sdlc-lite-execute final commits frequently omit the spec, plan, and associated idea brief — only the result doc and catalog update get staged.

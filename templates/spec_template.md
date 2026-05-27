@@ -90,13 +90,23 @@
 
 ---
 
-## 8. Out of Scope
+## 8. Estimation
+
+| Dimension | Rating | Rationale |
+|-----------|--------|-----------|
+| **Validity** | [Low / Medium / High] | [How confident are we that the requirements are right?] |
+| **Correctness** | [Low / Medium / High] | [How likely is the implementation to be correct on the first pass?] |
+| **Effort** | [Light / Moderate / Heavy] | [How many human–AI coordination cycles will this need?] |
+
+---
+
+## 9. Out of Scope
 
 - [What this deliverable explicitly does NOT include]
 
 ---
 
-## 9. Open Questions / Unknowns
+## 10. Open Questions / Unknowns
 
 Each unknown is a risk the plan must address or accept.
 

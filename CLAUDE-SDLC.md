@@ -45,6 +45,17 @@ CC produces SDLC artifacts across two skills:
 
 **Before touching any file:** If you identify non-trivial complexity (cross-domain, non-obvious approach, new subsystems), surface the scope and ask CD which tier to use. The user should never be in the position of catching a missed planning gate.
 
+### Estimation
+**Do not estimate in cardinal time.** AI-assisted development compresses implementation so dramatically that calendar-time estimates are misleading. Estimate deliverables on three dimensions instead:
+
+| Dimension | What It Measures |
+|-----------|-----------------|
+| **Validity** | Are the requirements right and complete? (Low / Medium / High) |
+| **Correctness** | Will the implementation be correct on the first pass? (Low / Medium / High) |
+| **Effort** | How many human–AI coordination cycles are needed? (Light / Moderate / Heavy) |
+
+Low validity → invest in spec/discovery. Low correctness → invest in testing and iteration. Heavy effort → full SDLC with phased execution. See `[sdlc-root]/process/collaboration_model.md` § Estimation Model for the full rationale.
+
 ### Direct Dispatch Rules
 
 Direct dispatch is not "no process" — it's process without a plan file. These rules apply whenever you're doing work without invoking a planning or execution skill:

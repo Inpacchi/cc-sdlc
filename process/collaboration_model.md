@@ -132,6 +132,27 @@ A 2-file change touching real-time + database warrants a lite plan. A 10-file re
 
 As AI-generated code throughput increases, plan review becomes the primary mechanism for maintaining shared understanding of how the codebase is evolving. CD reads plans to stay aligned on approach and intent. This is more efficient than reviewing hundreds of lines of generated code after the fact. Plans compress intent — a reviewer can assess correctness at the approach level before any code is written, catching architectural missteps that would be expensive to fix post-implementation.
 
+### Estimation Model
+
+**Do not estimate in cardinal time.** Traditional time estimates (hours, days, sprints) assume a solo developer working from scratch. AI-assisted development compresses implementation timelines so dramatically that calendar-time estimates are misleading — what would take a solo developer two weeks can be developed and iterated in 1–3 days with AI-driven workflows. Time estimates anchored to pre-AI development create false expectations in both directions: they overestimate how long implementation takes and underestimate how much iteration is needed to get it right.
+
+Estimate deliverables on three dimensions instead:
+
+| Dimension | What It Measures | Scale |
+|-----------|-----------------|-------|
+| **Validity** | Is this the right thing to build? How confident are we that the requirements are correct and complete? | Low / Medium / High |
+| **Correctness** | How likely is the implementation to be correct on the first pass? Accounts for domain complexity, edge cases, subtle invariants, and integration surface area. | Low / Medium / High |
+| **Effort** | How many human–AI coordination cycles will this require? Accounts for review rounds, iteration on feedback, cross-domain handoffs, and verification depth — not wall-clock time. | Light / Moderate / Heavy |
+
+**How the dimensions interact:**
+
+- **High validity + High correctness + Light effort** → Direct dispatch or SDLC-Lite. Requirements are clear, the domain is well-understood, and the implementation path is straightforward.
+- **Low validity** → Invest in the spec phase. The risk is building the wrong thing, not building it slowly. `sdlc-idea` or extended discovery before committing to a plan.
+- **Low correctness** → Invest in testing and review. The implementation will need multiple iteration cycles. Plan for heavier agent review, edge-case testing, and possibly a spike phase.
+- **Heavy effort** → Full SDLC with phased execution. Many coordination cycles means many opportunities for drift — the plan artifact keeps everyone aligned across context clears.
+
+**Why not time?** A deliverable with High validity, High correctness, and Light effort might take 30 minutes. The same deliverable with Low correctness (subtle concurrency bugs, complex state management) might take the same 30 minutes of AI-driven implementation but 2 days of iteration to get right. The implementation time is identical — the iteration time is what varies, and iteration time is driven by correctness risk, not by the size of the feature.
+
 ---
 
 ## Autonomy Spectrum

@@ -217,6 +217,7 @@ See `[sdlc-root]/process/sdlc_changelog.md` for the change history.
 8. **Validation before deployment** — Tests must pass before code ships
 9. **Deploy is a process step** — Not an afterthought; gated by validation, verified by smoke tests
 10. **Deployment is documented** — Execution skills produce deployment guides when infrastructure changes require manual steps beyond automatic CI/CD
+11. **Estimate validity, correctness, and effort — not time** — AI-assisted development compresses implementation; what varies is iteration cycles driven by correctness risk and requirement clarity, not wall-clock hours
 
 ## Tooling Integration
 
