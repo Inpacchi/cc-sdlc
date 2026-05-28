@@ -66,12 +66,11 @@ Normal SDLC: spec → plan → implement
 
 *Add design insights here as they emerge during work. Include date and source context.*
 
-### Seeded Insights
-
-- **Accessibility and testability are the same problem.** Promoted → `[sdlc-root]/knowledge/design/accessibility-testability-principles.yaml` (unified_concern section) + `[sdlc-root]/knowledge/testing/gotchas.yaml` (color-only-status-indicators entry)
-
 - **Advanced components as product differentiators.** [NEEDS VALIDATION] Complex UI components (Gantt charts, flowcharts, custom widgets, rich data visualizations) are what make apps look purposeful. The shared component library is a design asset, not just a code asset. Test automation strategies for these components protect design investment.
 
-- **Never convey meaning through color alone.** Promoted → `[sdlc-root]/knowledge/design/accessibility-testability-principles.yaml` (color_meaning_rule section) + `[sdlc-root]/knowledge/testing/gotchas.yaml` (color-only-status-indicators entry)
-
 - **Visual verification requires computed style checks.** [NEEDS VALIDATION] DOM correctness does not equal visual correctness. Design should ensure that visual states have programmatic equivalents (aria attributes, data attributes) that can be verified without pixel comparison.
+
+### Promoted
+
+- **Accessibility and testability are the same problem.** Promoted → `[sdlc-root]/knowledge/design/accessibility-testability-principles.yaml` (unified_concern section) + `[sdlc-root]/knowledge/testing/gotchas.yaml` (color-only-status-indicators entry)
+- **Never convey meaning through color alone.** Promoted → `[sdlc-root]/knowledge/design/accessibility-testability-principles.yaml` (color_meaning_rule section) + `[sdlc-root]/knowledge/testing/gotchas.yaml` (color-only-status-indicators entry)

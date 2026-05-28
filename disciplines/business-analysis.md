@@ -11,10 +11,8 @@ Requirements elicitation, domain modeling, stakeholder needs, acceptance criteri
 
 *Add business analysis insights here as they emerge during work. Include date and source context.*
 
-### Seeded Insights
+### Promoted
 
 - **Test data design is lightweight domain modeling.** Promoted → `[sdlc-root]/knowledge/business-analysis/requirements-feedback-loops.yaml` (test_data_as_domain_modeling section)
-
 - **Acceptance criteria flow both directions.** Promoted → `[sdlc-root]/knowledge/business-analysis/requirements-feedback-loops.yaml` (bidirectional_acceptance_criteria section)
-
 - **Architect-proposed expected values need domain validation.** Promoted → `[sdlc-root]/knowledge/business-analysis/requirements-feedback-loops.yaml` (domain_validation_of_computed_values section)

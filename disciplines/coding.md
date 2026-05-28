@@ -26,26 +26,17 @@ This applies during plan review (architects check for I/O-logic entanglement) an
 
 *Add coding insights here as they emerge during work. Include date and source context.*
 
-### Seeded Insights
-
-- **Testability is a code quality concern.** Promoted → `[sdlc-root]/knowledge/coding/code-quality-principles.yaml` (testability_as_code_quality section)
-
 - **Validation gaps found via test data design.** [NEEDS VALIDATION] Designing boundary test cases often reveals missing or incomplete validation in the implementation (e.g., no numeric range validation, no string length limits). These are coding concerns surfaced by the testing discipline. The architect decides whether to fix or accept.
 
 - **Reusable patterns belong in a shared library.** [DEFERRED] When a pattern solves a recurring problem (e.g., a hook pattern for React StrictMode double-mount, or a slot replacement pattern for a UI library), document it as a coding pattern for the shared library — not buried in a single component file. *Reason: generic advice, not actionable until a project builds a patterns library.*
 
-- **Mocking is a code smell.** Promoted → `[sdlc-root]/knowledge/coding/code-quality-principles.yaml` (mocking_stance section)
-
-### Code Assertion Without Verification (Anti-Pattern)
-
-Promoted → `[sdlc-root]/process/collaboration_model.md` (CC Anti-Patterns section, "Code assertion without verification" bullet)
-
-### External Ingestion — 2026-03-30 (Tessl Engineering Blog)
-
-*Bulk import from Tessl Engineering Blog. See `docs/research/Tessl-Engineering-Blog-Reference.md` for full catalog.*
-
-- **Prompt engineering is dead; context engineering is the replacement.** [NEEDS VALIDATION] Controlled experiment across 3 models (Codex, Claude Code, Gemini), 2 task types, and 4 prompt framing conditions showed zero measurable difference from prompt phrasing variations (adding reviewer mentions, motivational framing, etc.) on any metric. The replacement: durable context systems — skills, structured docs, rules, plugins, evaluators. "Context is the product surface now." Caveat: this applies to "strong current models" as of early 2026 — prompt phrasing may still matter for weaker models. Promoted to knowledge: `[sdlc-root]/knowledge/coding/context-engineering-patterns.yaml` (durable_systems section). (Source: Tessl "Stop Prompt Hacking" — Macey Baker, March 2026)
-
 ### External Ingestion — 2026-04-22 (Generic logging patterns)
 
 - **Logger backend choice (stdlib vs structured) silently changes `extra=` semantics.** [NEEDS VALIDATION] In Python (and similar dual-logger ecosystems), passing `extra={...}` to a stdlib `logging` call attaches the dict to the LogRecord but does NOT promote fields to queryable structured outputs — they vanish in JSON formatters that don't explicitly extract them. The same `extra={...}` call to a `structlog` (or equivalent) logger DOES promote the fields. Mixing the two backends in a single module produces logs that "should" be queryable but aren't. Pick one logger per module; if a module must straddle both backends, write a thin wrapper that normalizes the call shape, and document the choice at the top of the file.
+
+### Promoted
+
+- **Testability is a code quality concern.** Promoted → `[sdlc-root]/knowledge/coding/code-quality-principles.yaml` (testability_as_code_quality section)
+- **Mocking is a code smell.** Promoted → `[sdlc-root]/knowledge/coding/code-quality-principles.yaml` (mocking_stance section)
+- **Code assertion without verification (anti-pattern).** Promoted → `[sdlc-root]/process/collaboration_model.md` (CC Anti-Patterns section)
+- **Prompt engineering is dead; context engineering is the replacement.** Promoted → `[sdlc-root]/knowledge/coding/context-engineering-patterns.yaml` (durable_systems section)

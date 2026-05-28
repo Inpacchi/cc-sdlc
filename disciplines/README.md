@@ -96,7 +96,7 @@ disciplines/
 
 1. Promote `[READY TO PROMOTE]` items directly to structured knowledge (knowledge/ YAML files)
 2. Design skill definitions from the validated patterns
-3. Parking lot entries remain as history — mark them `Promoted → [target file]`
+3. Move promoted entries from the active parking lot to the `### Promoted` section at the bottom — mark them `Promoted → [target file]`. See `[sdlc-root]/process/discipline_capture.md` § Promotion Workflow.
 
 ## Creating a New Discipline
 

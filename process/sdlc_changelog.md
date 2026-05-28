@@ -34,6 +34,27 @@ Each entry contains:
 
 ---
 
+## 2026-05-28: Define promotion workflow — move promoted entries to ### Promoted section
+
+**Origin:** Observed that promoted entries in discipline files were marked `Promoted →` in place but never moved out of the active parking lot, cluttering the working set.
+
+**What happened:** No process doc defined what should happen structurally when an entry is promoted. The triage marker changed but the entry stayed in the active section, making triage passes harder and burying active entries under promoted ones.
+
+**Changes made:**
+
+1. **`process/discipline_capture.md`** — Added "Promotion Workflow" section: when promoted, move the entry from `## Parking Lot` to `### Promoted` at the bottom of the file. Defines the promoted entry format.
+2. **`disciplines/architecture.md`** — Moved 3 promoted entries to new `### Promoted` section.
+3. **`disciplines/business-analysis.md`** — Moved 3 promoted entries to new `### Promoted` section.
+4. **`disciplines/coding.md`** — Moved 4 promoted entries to new `### Promoted` section.
+5. **`disciplines/design.md`** — Moved 2 promoted entries to new `### Promoted` section.
+6. **`disciplines/deployment.md`** — Moved 1 promoted entry to new `### Promoted` section.
+7. **`disciplines/process-improvement.md`** — Moved 2 promoted entries to new `### Promoted` section.
+8. **`disciplines/README.md`** — Updated maturation instructions to reference the promotion workflow.
+
+**Rationale:** The parking lot is a working set — promoted entries are historical ledger items. Mixing them makes it harder to scan what's active. Separating them keeps the active section clean while preserving the promotion record.
+
+---
+
 ## 2026-05-28: Add ADR template section discipline and review checklist
 
 **Origin:** Neuroloom handoff (`adr-template-discipline-upstream_handoff.md`) — project had richer ADR practice content from real usage that upstream should adopt.

@@ -119,6 +119,23 @@ These are the ONLY valid context formats. Do not invent variants like `[session:
 - `[READY TO PROMOTE]` — use only if you're confident the insight is validated, reusable, and stable
 - `[DEFERRED]` — acknowledged but not a priority (include reason)
 
+## Promotion Workflow
+
+When an entry is promoted to a knowledge store, it must be **moved** from the `## Parking Lot` section to a `### Promoted` section at the bottom of the discipline file. Do not leave promoted entries mixed in with active entries — they clutter the working set and make triage harder.
+
+1. Remove the entry from its current position in the parking lot
+2. Append it to the `### Promoted` section (create the section if it doesn't exist)
+3. Replace the triage marker with `Promoted →` followed by the target location
+
+**Promoted entry format:**
+```markdown
+### Promoted
+
+- **Entry title.** Promoted → `[sdlc-root]/knowledge/{domain}/{file}.yaml` ({section} section)
+```
+
+The promoted section is a ledger — it records what was promoted and where, so triage passes don't re-discover the same insight. Keep the entry text short; the full content now lives in the knowledge store.
+
 ## Rules
 
 - **Skip if nothing surfaced.** Do not fabricate entries. Empty is fine — discipline capture is pulled, not pushed.

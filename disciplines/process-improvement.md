@@ -76,15 +76,9 @@ The discipline has documented, reusable knowledge. Methodology exists, patterns 
 
 *Add process improvement insights here as they emerge during work. Include date and source context.*
 
-### Seeded Insights
-
-- **CMMI maturity progression as roadmap.** Promoted → Process Maturity Levels section above. Formal definitions for Levels 1-5 with evidence requirements and transition triggers.
-
 - **Disciplines → Skills progression.** [DEFERRED] Each discipline parking lot is raw material for a future Claude Code skill. The pattern: parking lot insight → `[READY TO PROMOTE]` triage → knowledge YAML → skill definition → skill suite. Each discipline follows the same path at its own pace. *Reason: meta-observation already documented in README and discipline files.*
 
 - **The self-improving loop generalizes.** [NEEDS VALIDATION] A layered knowledge store with a capture-accumulate-feed-forward cycle applies to every discipline. Design knowledge, architecture knowledge, BA knowledge all benefit from the same structure. Consider a generic "discipline knowledge store" template.
-
-- **Cross-discipline remediation flow.** Promoted → `[sdlc-root]/knowledge/architecture/knowledge-management-methodology.yaml` (cross_discipline_remediation section)
 
 - **Disciplines-as-skills orchestration.** [DEFERRED] When individual discipline skills exist, the SDLC becomes an orchestrator that invokes discipline skills at appropriate phases with appropriate intensity. *Reason: future vision, no discipline skills exist yet.*
 
@@ -109,6 +103,11 @@ The discipline has documented, reusable knowledge. Methodology exists, patterns 
 - **AVOID examples in skills are a regression risk.** [NEEDS VALIDATION] Tessl's Fastify skill contained a callback-style AVOID example in hooks.md. The agent followed the anti-pattern example rather than the instruction, causing a regression (baseline outperformed the skill on that criterion). AVOID sections require special care — consider showing only the correct pattern, or explicitly framing the anti-pattern with "DO NOT do this: [example] — instead do: [correct pattern]." (Source: Tessl "Skill-Optimizer" — hooks.md finding in database-plugin-architecture scenario)
 
 - **Context volume is not quality — strip what doesn't move the needle.** [NEEDS VALIDATION] Unvalidated developer-written context files improved performance by only +4%; LLM-generated context files degraded performance by -3%. Both increased cost by >20%. Meanwhile, validated Tessl registry skills showed 1.79x improvement. A 200-line context file the model ignores is worse than a 10-line file with three reliable instructions. The feedback loop: add an instruction → run evals → keep only what moves pass rates up. (Source: Tessl "Your AGENTS.md File Isn't the Problem" — external study statistics via Theo/t3.gg, primary study not identified. Treat as directionally suggestive.)
+
+### Promoted
+
+- **CMMI maturity progression as roadmap.** Promoted → Process Maturity Levels section above
+- **Cross-discipline remediation flow.** Promoted → `[sdlc-root]/knowledge/architecture/knowledge-management-methodology.yaml` (cross_discipline_remediation section)
 
 ### Process Maturity Tracker
 
