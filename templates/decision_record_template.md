@@ -15,21 +15,44 @@ informs: []                # [D-61, DR-5] or empty
 **Decider:** CD / role-name / joint
 **Triggered by:** D-number, DR-number, idea brief, external signal, or ad hoc
 
+## Context
+
+[What forced this decision — problem statement, constraints, scope. Future readers cannot reconstruct rationale without this.]
+
+## Decision Drivers
+
+[The specific criteria the decision was scored against — must-haves vs nice-to-haves]
+
 ## Decision
 
 [One paragraph: what was decided]
 
 ## Alternatives Considered
 
-[What else was on the table and why it lost]
+[What else was on the table and why it lost. At least two options; "do nothing" is valid when reversibility is asymmetric.]
 
 ## Rationale
 
 [Why this option won — the "why" that's worth preserving]
 
+## Consequences
+
+**Positive:**
+- [Expected benefit]
+
+**Negative:**
+- [Honest cost or tradeoff]
+
+**Risks:**
+- [Risk — mitigation]
+
 ## Assumptions (unvalidated)
 
 [What has to be true for this decision to be correct]
+
+## Implementation Notes
+
+[Links to migrations, fitness functions, observed metrics. Fill in as the decision is implemented.]
 
 ## Expiration / Revisit Conditions
 

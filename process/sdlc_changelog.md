@@ -34,6 +34,21 @@ Each entry contains:
 
 ---
 
+## 2026-05-28: Add ADR template section discipline and review checklist
+
+**Origin:** Neuroloom handoff (`adr-template-discipline-upstream_handoff.md`) — project had richer ADR practice content from real usage that upstream should adopt.
+
+**What happened:** Neuroloom's ADRs in practice used a richer section structure (Context, Decision Drivers, Consequences, Implementation Notes) than what the upstream template prescribed. The project also developed an 8-point review checklist for ADR quality gating. Both were framework-generic, not project-specific, and lived behind PROJECT-SECTION markers.
+
+**Changes made:**
+
+1. **`process/adr-practice.md`** — Added two new sections: "Template Section Discipline" (mandatory section list with purpose descriptions, length guidance, splitting heuristic) and "Review Checklist" (8-point quality gate for merging ADRs). Checklist item 8 uses `[sdlc-root]` phrasing for adapter compatibility.
+2. **`templates/decision_record_template.md`** — Added four missing sections to align with the section discipline: Context, Decision Drivers, Consequences (with Positive/Negative/Risks structure), and Implementation Notes. Existing sections preserved.
+
+**Rationale:** The template was undersized for how ADRs are actually written. Real ADRs (e.g., Neuroloom's ADR-6) already used these sections organically — the template hadn't kept up. The review checklist fills the gap between "dispatch the architect to draft an ADR" and "is this ADR actually good enough to merge."
+
+---
+
 ## 2026-05-28: Standardize discipline parking lot entry format for archive traceability
 
 **Origin:** Manual review of the sdlc-archive skill's knowledge hygiene step (step 9a) revealed it expects parking lot entries to be tagged with deliverable context (e.g., `[D05 — phase 2]`) at the start of the entry — but upstream capture skills placed the context at the end as a trailing `(Source: ...)` attribution.

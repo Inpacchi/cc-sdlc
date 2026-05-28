@@ -91,6 +91,35 @@ ADR immutability has two narrow exceptions that do not require a superseding ADR
 
 Everything else — including rewording the Decision section to say something substantively different, adding new constraints, or removing existing constraints — is a narrative edit and requires a superseding ADR. When in doubt, supersede. The cost of an unnecessary supersession ADR is one extra file; the cost of a misclassified in-place edit is a broken reasoning chain.
 
+## Template Section Discipline
+
+The decision-record template (`[sdlc-root]/templates/decision_record_template.md`) is loosely MADR-style. The following sections are mandatory; sections may be omitted only when explicitly N/A:
+
+- **Status** — Proposed | Accepted | Deprecated | Superseded by ADR-N | Rejected
+- **Context** — what forced the decision (problem statement, constraints, scope). Future readers cannot reconstruct rationale without this.
+- **Decision Drivers** — the specific criteria the decision was scored against (must-haves vs nice-to-haves)
+- **Considered Options** — at least two; "do nothing" is a valid option when reversibility is asymmetric
+- **Decision** — the option taken, named explicitly
+- **Rationale** — why the chosen option won against the alternatives; trade-offs explicit
+- **Consequences** — Positive, Negative, Risks (mitigations noted). Honest negatives required — ADRs that read as press releases lose their value as future reference.
+- **Implementation Notes** — links to migrations, fitness functions, observed metrics
+- **Related Decisions** — backlinks to ADRs this complements, supersedes, or depends on
+
+ADRs should target 1-2 pages. Longer than that means either the decision contains multiple sub-decisions (split into separate ADRs) or the Context is doing the work of a research doc (move analysis to a research deliverable, link from ADR).
+
+## Review Checklist
+
+Before merging an ADR:
+
+- [ ] Context clearly explains the problem and the constraints
+- [ ] At least two viable options considered (or "do nothing" justified)
+- [ ] Pros / Cons / Risks are balanced and honest — not a single-option promotion
+- [ ] Consequences (positive, negative, risks) documented with mitigations
+- [ ] Related ADRs linked (Supersedes, Complements, Depends on)
+- [ ] Implementation notes link to migrations, fitness functions, observed metrics
+- [ ] Reversibility assessed — one-way door vs two-way door explicitly stated
+- [ ] Affected agents (per `[sdlc-root]/knowledge/agent-context-map.yaml`) consume the ADR or are notified that they should
+
 ## Directory Conventions
 
 - **Numbering:** ADR-1, ADR-2, ... sequential, never reused
