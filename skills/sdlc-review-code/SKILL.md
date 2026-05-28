@@ -176,7 +176,7 @@ The structured findings report is read by a developer who will act on it. How fi
 
 | # | Finding | Agent | Severity | Category |
 |---|---------|-------|----------|----------|
-| 1 | specific finding | agent-name | critical/major/minor | overengineering/type-safety/security/contract/DRY/architecture/correctness/test-quality/commit-quality/claude-md-staleness |
+| 1 | specific finding | agent-name | critical/major/minor | overengineering/type-safety/security/contract/DRY/architecture/correctness/test-quality/commit-quality/claude-md-staleness/adr-drift |
 | 2 | ... | ... | ... | ... |
 
 ### Overengineering Summary

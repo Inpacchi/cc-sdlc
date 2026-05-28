@@ -587,6 +587,10 @@ Dispatch `code-reviewer` on the final postmortem with the following lens:
 
 Apply findings before marking closeout complete.
 
+### C6a. Architecture Decision Crystallization Check (skip-if-absent)
+
+If `docs/architecture/decisions/` does not exist, skip. If it does and the remediation changed architecture (new service boundary, dependency direction change, safety default, defensive pattern — see `[sdlc-root]/process/adr-practice.md` § Crystallization Signals), dispatch the architect agent to draft an ADR with `triggered_by` citing this postmortem. Pure bugfixes skip the ADR; the check runs either way.
+
 ### C7. Link from Catalog and Deliverables
 
 For each deliverable in `related_deliverables`:

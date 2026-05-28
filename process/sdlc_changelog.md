@@ -34,6 +34,34 @@ Each entry contains:
 
 ---
 
+## 2026-05-28: Wire ADR workflow routing — READ, PRODUCE, RESPECT across planning, execution, and review skills
+
+**Origin:** ChronoCore game development discipline session surfaced 6 architectural decisions that had no workflow to route them into proper decision records. The `decision_record_template.md` was promoted from Neuroloom (2026-04-22) but only the template was promoted — the workflow routing that makes ADRs discoverable, producible, and enforceable was left as Neuroloom-local PROJECT-SECTION customizations.
+
+**What happened:** Investigation revealed a structural gap: the template existed but four pieces of routing infrastructure were never promoted alongside it. No skill classified discoveries as "architectural decision," no default directory existed for decision records, planning skills didn't surface prior ADRs as constraints, and review skills didn't check implementations against active decisions. Neuroloom solved all four locally with PROJECT-SECTION markers; the framework needed the pattern baked in as optional, skip-if-absent behavior.
+
+**Changes made:**
+
+1. **`process/adr-practice.md`** (new) — Shared process reference for ADR conventions: what an ADR is, immutability rules, crystallization signals (8 triggers), contradiction handling (3 paths), three-function model (READ/PRODUCE/RESPECT), negative-constraint discipline ("What This ADR Forbids / Does NOT Decide"), amendment vs. supersession classification (placeholder corrections and rendering updates are in-place; everything else supersedes), lightweight variants (Y-statement, abbreviated ADR), and directory conventions. Generalized from Neuroloom's `knowledge/architecture/adr-practice.md` — removed Neuroloom-specific references (memory_relationships, Fumadocs, C4 diagram conventions) and project-specific content (automation tooling, review checklist, template discipline from external sources). Negative constraints and amendment categories promoted from Neuroloom's architecture discipline parking lot (D139, D140 validated patterns).
+
+2. **`skills/sdlc-plan/SKILL.md`** — Added ADR-CONTEXT discovery block after CHRONICLE-CONTEXT in step 1. Skip-if-absent: checks for `docs/architecture/decisions/_index.md`; if present, reads active ADRs and includes them as technical constraints in agent dispatch prompts and as rows in the Prior context table.
+
+3. **`skills/sdlc-lite-plan/SKILL.md`** — Same ADR-CONTEXT block added after the chronicle scan in step 1, with the same skip-if-absent behavior.
+
+4. **`skills/sdlc-execute/SKILL.md`** — Added step 3a (Architecture Decision Crystallization Check) between Worker Agent Reviews output and Discipline Capture. Skip-if-absent: if `docs/architecture/decisions/` exists, scans completed work for crystallization signals and dispatches the architect agent to draft an ADR when triggered. Renumbered subsequent steps (3a→3b Discipline Capture, 3b→3c Per-Phase Commits, 3c→3d CLAUDE.md Refresh).
+
+5. **`skills/sdlc-lite-execute/SKILL.md`** — Added step 3c (Architecture Decision Crystallization Check) with the same skip-if-absent behavior. Renumbered subsequent steps (3c→3d Discipline Capture, 3d→3e CLAUDE.md Refresh).
+
+6. **`skills/sdlc-debug-incident/SKILL.md`** — Added step C6a (Architecture Decision Crystallization Check) in CLOSEOUT after self-review. Skip-if-absent: if remediation changed architecture, dispatches architect to draft an ADR with `triggered_by` citing the postmortem.
+
+7. **`process/review-lenses.md`** — Added ADR Drift Lens (review only, skip-if-absent). Flags violations of active ADRs as `major` with category `adr-drift`. Catches code changes that contradict active ADRs without a co-committed supersession ADR, and in-place edits to prior ADRs.
+
+8. **`skills/sdlc-review-code/SKILL.md`** — Added `adr-drift` to the findings category list.
+
+9. **`skeleton/manifest.json`** — Added `docs/architecture` and `docs/architecture/decisions` to directories list. Added `process/adr-practice.md` to source_files.process.
+
+**Rationale:** The decision record template has existed since April 2026 but was inert — a template without a workflow produces no decision records. The skip-if-absent pattern means this adds zero overhead to projects that don't use ADRs (every integration point checks for the directory and no-ops if absent), while projects that do adopt ADRs get full lifecycle support: planning surfaces them as constraints, execution detects when new ones should be written, and review catches drift.
+
 ## 2026-05-27: Add estimation model — validity, correctness, effort instead of cardinal time
 
 **Origin:** CD directive. AI-assisted development compresses implementation timelines so dramatically that traditional time-based estimates (hours, days, sprints) are misleading. A feature that would take a solo developer two weeks can be developed and iterated in 1–3 days with AI-driven workflows.

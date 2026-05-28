@@ -11,6 +11,8 @@
     "docs/current_work/audits",
     "docs/current_work/sdlc-lite",
     "docs/current_work/ideas",
+    "docs/architecture",
+    "docs/architecture/decisions",
     "docs/reviews",
     "docs/chronicle",
     "docs/testing",
@@ -86,7 +88,8 @@
       "process/path-mappings.md",
       "process/adapter-lifecycle-protocol.md",
       "process/html-rendering.md",
-      "process/skill-agent-review.md"
+      "process/skill-agent-review.md",
+      "process/adr-practice.md"
     ],
     "templates": [
       "templates/spec_template.md",

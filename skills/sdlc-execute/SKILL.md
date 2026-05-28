@@ -388,7 +388,20 @@ Key feedback incorporated:
 
 **Post-write: HTML render.** Render the result doc to a self-contained HTML file for human reading. Read the design system from `[sdlc-root]/templates/html-design-system.html`, apply **result** document-type defaults from `[sdlc-root]/process/html-rendering.md`, and write a `.html` file alongside the markdown.
 
-### 3a. Discipline Capture
+### 3a. Architecture Decision Crystallization Check (skip-if-absent)
+
+If `docs/architecture/decisions/` does not exist, emit `Architecture decisions: directory not present — skipped` and proceed to 3b.
+
+If the directory exists, scan the completed work for crystallization signals (see `[sdlc-root]/process/adr-practice.md` § Crystallization Signals). If any signal fired:
+
+1. Dispatch the architect agent to draft an ADR using `[sdlc-root]/templates/decision_record_template.md`
+2. The ADR is saved to `docs/architecture/decisions/adr-NN_{slug}.md` with the next sequential number
+3. Update `docs/architecture/decisions/_index.md` with the new entry
+4. The ADR is committed with the code that crystallized it — same commit (step 3b or step 4)
+
+If no crystallization signal fired, emit `Architecture decisions: none — conforms to existing ADRs` in the result doc and proceed.
+
+### 3b. Discipline Capture
 
 Run the discipline capture protocol from `[sdlc-root]/process/discipline_capture.md`. Context format: `[DNN — phase N]`. The procedure:
 
@@ -408,7 +421,7 @@ Entry format:
 
 No PROJECT-SECTION markers needed — discipline files are project-specific and not overwritten during framework migrations.
 
-### 3b. Per-Phase Commits (Mandatory)
+### 3c. Per-Phase Commits (Mandatory)
 
 After each phase's POST-GATE clears, commit the phase's work before starting the next phase. **Documentation artifacts ship with their work** — discipline entries, knowledge updates, and any other SDLC artifacts produced during the phase go in the same commit as the code, not in a separate doc commit.
 
@@ -423,7 +436,7 @@ This ensures each phase is independently reviewable, bisectable, and revertable.
 
 **Exception:** If two phases run in parallel and both pass their POST-GATEs, they may share a single commit if the files don't overlap. Document which phases are included.
 
-### 3c. CLAUDE.md Refresh
+### 3d. CLAUDE.md Refresh
 
 After discipline capture and per-phase commits, scan the deliverable for changes that invalidate or extend the project's CLAUDE.md. The work just shipped — this is the moment to update project memory before context fades. Refresh updates ship in the step 4 final commit alongside the work that motivated them; do not commit CLAUDE.md separately.
 
@@ -465,7 +478,7 @@ Before claiming the work is done:
    - Catalog updates (`docs/_index.md`)
    - Discipline parking lot entries (`[sdlc-root]/disciplines/*.md`)
    - Knowledge store updates (`[sdlc-root]/knowledge/*.md`)
-   - CLAUDE.md updates from step 3c (root and any module-level files)
+   - CLAUDE.md updates from step 3d (root and any module-level files)
    - Process changelog (`[sdlc-root]/process/sdlc_changelog.md`) if updated
    - Review fixes from the review loop
 6. Commit using the cc-sdlc commit format:

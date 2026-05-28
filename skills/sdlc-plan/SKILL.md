@@ -284,6 +284,15 @@ Key context loaded:
 Context included in agent dispatch: yes | no (none relevant)
 ```
 
+**ADR-CONTEXT (skip-if-absent)** — after the CHRONICLE-CONTEXT, check whether `docs/architecture/decisions/_index.md` exists. If it does not, emit `**ADR context:** directory not present — skipped` and move on. If it does:
+
+1. Read `docs/architecture/decisions/_index.md`
+2. List active ADRs whose domain overlaps with the current task
+3. Include active ADRs as technical constraints in agent dispatch prompts — agents must not re-litigate decided questions
+4. Add active ADRs as rows in the Prior context table with `Source = ADR-NN`, `Ref = ADR-NN`, `Takeaway = [1-line decision]`
+
+See `[sdlc-root]/process/adr-practice.md` for conventions, immutability rules, and the full three-function model (READ / PRODUCE / RESPECT).
+
 **Interactive exploration artifacts:** During discovery — especially for MEDIUM/COMPLEX tasks — create self-contained HTML files when they help CD evaluate options before committing to a spec. These are exploration tools, not deliverables:
 
 - **Side-by-side approach comparisons** — When 2+ architectural approaches exist, render them visually in a single HTML file: data flow diagrams, component trees, tradeoff matrices. CD compares at a glance instead of parsing paragraphs.

@@ -184,6 +184,15 @@ When exploring existing patterns, use LSP (`goToDefinition`, `findReferences`, `
 
 **Prior-contributor check** — when the chronicle scan surfaces related prior deliverables, check their result docs for which agents contributed (the Worker Agent Reviews section or Agents table). If a prior contributor's domain is relevant to the current task and they aren't already in your list, add them. An agent that shaped the ancestor deliverable likely has context and expertise that applies here — omitting them means losing that continuity.
 
+**ADR-CONTEXT (skip-if-absent)** — after the chronicle scan, check whether `docs/architecture/decisions/_index.md` exists. If it does not, emit `**ADR context:** directory not present — skipped` and move on. If it does:
+
+1. Read `docs/architecture/decisions/_index.md`
+2. List active ADRs whose domain overlaps with the current task
+3. Include active ADRs as technical constraints in agent dispatch prompts — agents must not re-litigate decided questions
+4. Add active ADRs as rows in the Prior context table with `Source = ADR-NN`, `Ref = ADR-NN`, `Takeaway = [1-line decision]`
+
+See `[sdlc-root]/process/adr-practice.md` for conventions, immutability rules, and the full three-function model (READ / PRODUCE / RESPECT).
+
 #### Pre-Dispatch block (compact form — default)
 
 Emit agent coverage and chronicle context as two tables. **Use this form on the happy path.**

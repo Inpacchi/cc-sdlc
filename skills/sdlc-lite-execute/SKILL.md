@@ -338,7 +338,20 @@ The result doc lives alongside the plan file in `docs/current_work/sdlc-lite/`. 
 
 **Post-write: HTML render.** Render the result doc to a self-contained HTML file for human reading. Read the design system from `[sdlc-root]/templates/html-design-system.html`, apply **result** document-type defaults from `[sdlc-root]/process/html-rendering.md`, and write a `.html` file alongside the markdown.
 
-### 3c. Discipline Capture
+### 3c. Architecture Decision Crystallization Check (skip-if-absent)
+
+If `docs/architecture/decisions/` does not exist, emit `Architecture decisions: directory not present — skipped` and proceed to 3d.
+
+If the directory exists, scan the completed work for crystallization signals (see `[sdlc-root]/process/adr-practice.md` § Crystallization Signals). If any signal fired:
+
+1. Dispatch the architect agent to draft an ADR using `[sdlc-root]/templates/decision_record_template.md`
+2. The ADR is saved to `docs/architecture/decisions/adr-NN_{slug}.md` with the next sequential number
+3. Update `docs/architecture/decisions/_index.md` with the new entry
+4. The ADR is committed with the code that crystallized it — same commit (step 4)
+
+If no crystallization signal fired, emit `Architecture decisions: none — conforms to existing ADRs` in the result doc and proceed.
+
+### 3d. Discipline Capture
 
 Run the discipline capture protocol from `[sdlc-root]/process/discipline_capture.md`. Context format: `[DNN — phase N]`. The procedure:
 
@@ -358,7 +371,7 @@ Entry format:
 
 No PROJECT-SECTION markers needed — discipline files are project-specific and not overwritten during framework migrations.
 
-### 3d. CLAUDE.md Refresh
+### 3e. CLAUDE.md Refresh
 
 After discipline capture, scan the deliverable for changes that invalidate or extend the project's CLAUDE.md. The work just shipped — this is the moment to update project memory before context fades. Refresh updates ship in the step 4 final commit alongside the work that motivated them; do not commit CLAUDE.md separately.
 
@@ -396,7 +409,7 @@ If no triggers fired, emit `CLAUDE.md refresh: no changes needed` and proceed. D
    - Idea brief (`docs/current_work/ideas/dNN_*_idea.md`) if associated with this deliverable
    - Discipline parking lot entries (`[sdlc-root]/disciplines/*.md`)
    - Knowledge store updates (`[sdlc-root]/knowledge/*.md`)
-   - CLAUDE.md updates from step 3d (root and any module-level files)
+   - CLAUDE.md updates from step 3e (root and any module-level files)
    - Plan and result archive move (step 3 above)
    - Any other SDLC artifacts modified during execution
 5. Commit using the cc-sdlc commit format:

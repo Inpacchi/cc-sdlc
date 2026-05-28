@@ -114,6 +114,16 @@ Analytical perspectives that agents apply when reviewing code. Each consuming sk
 - Abstraction fitness — every abstraction (wrapper, provider, adapter, base class) must justify its existence by serving 2+ consumers or encapsulating genuine complexity. Abstractions that pass through without transforming, or that serve exactly one call site, are premature and add navigation cost without value
 - Scope creep in changes — does the diff stay within its stated intent? A bug fix that also reorganizes imports, adds a utility, and refactors an adjacent function has expanded beyond its scope. Each concern should be a separate change
 
+## ADR Drift Lens (review only, skip-if-absent)
+
+Skip this lens entirely if `docs/architecture/decisions/` does not exist in the project. When the directory exists:
+
+- For each active ADR relevant to the changed files, verify the change does not violate the ADR's decision. Flag violations as `major` with category `adr-drift`.
+- Intentional supersessions require a matching supersession ADR staged in the same diff. A code change that contradicts an active ADR without a co-committed supersession ADR is itself an `adr-drift` finding.
+- ADRs are immutable — edits to a prior ADR's Decision or Rationale sections (rather than writing a new superseding ADR) are `major` with category `adr-drift`.
+
+See `[sdlc-root]/process/adr-practice.md` for conventions and contradiction handling.
+
 ## Standard Lens — Always Applied
 
 - DRY violations (duplicated logic that should be shared)
