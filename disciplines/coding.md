@@ -30,13 +30,10 @@ This applies during plan review (architects check for I/O-logic entanglement) an
 
 - **Reusable patterns belong in a shared library.** [DEFERRED] When a pattern solves a recurring problem (e.g., a hook pattern for React StrictMode double-mount, or a slot replacement pattern for a UI library), document it as a coding pattern for the shared library — not buried in a single component file. *Reason: generic advice, not actionable until a project builds a patterns library.*
 
-### External Ingestion — 2026-04-22 (Generic logging patterns)
-
-- **Logger backend choice (stdlib vs structured) silently changes `extra=` semantics.** [NEEDS VALIDATION] In Python (and similar dual-logger ecosystems), passing `extra={...}` to a stdlib `logging` call attaches the dict to the LogRecord but does NOT promote fields to queryable structured outputs — they vanish in JSON formatters that don't explicitly extract them. The same `extra={...}` call to a `structlog` (or equivalent) logger DOES promote the fields. Mixing the two backends in a single module produces logs that "should" be queryable but aren't. Pick one logger per module; if a module must straddle both backends, write a thin wrapper that normalizes the call shape, and document the choice at the top of the file.
-
 ### Promoted
 
 - **Testability is a code quality concern.** Promoted → `[sdlc-root]/knowledge/coding/code-quality-principles.yaml` (testability_as_code_quality section)
 - **Mocking is a code smell.** Promoted → `[sdlc-root]/knowledge/coding/code-quality-principles.yaml` (mocking_stance section)
 - **Code assertion without verification (anti-pattern).** Promoted → `[sdlc-root]/process/collaboration_model.md` (CC Anti-Patterns section)
 - **Prompt engineering is dead; context engineering is the replacement.** Promoted → `[sdlc-root]/knowledge/coding/context-engineering-patterns.yaml` (durable_systems section)
+- **Logger backend choice (stdlib vs structured) silently changes extra= semantics.** Promoted → `[sdlc-root]/knowledge/coding/code-quality-principles.yaml` (logger_backend_consistency section)

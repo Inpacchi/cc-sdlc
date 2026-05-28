@@ -17,6 +17,6 @@
 
 *Core rules promoted to `skill-quality-rubrics.yaml` (SQR-01 through SQR-10).*
 
-- **Static anti-pattern check as a pre-commit gate.** [NEEDS VALIDATION] SQR-07 describes five automatically detectable anti-patterns (OVER_CONSTRAINED, EMPTY_DESCRIPTION, MISSING_TRIGGER, BLOATED_SKILL, ORPHAN_REFERENCE). A lightweight script (or a rule in the SDLC audit skill) could check these against all SKILL.md files on every commit. Cost: ~1 hour to implement; value: catches structural issues before they accumulate. (Source: `plugin-eval/skills/evaluation-methodology/SKILL.md`)
+- **Static anti-pattern check as a pre-commit gate.** [DEFERRED — implementable but not urgent, revisit when skill library exceeds 20 skills] SQR-07 describes five automatically detectable anti-patterns (OVER_CONSTRAINED, EMPTY_DESCRIPTION, MISSING_TRIGGER, BLOATED_SKILL, ORPHAN_REFERENCE). A lightweight script (or a rule in the SDLC audit skill) could check these against all SKILL.md files on every commit. Cost: ~1 hour to implement; value: catches structural issues before they accumulate. (Source: `plugin-eval/skills/evaluation-methodology/SKILL.md`)
 
 - **Elo ranking concept for comparing skills.** [DEFERRED] The PluginEval framework includes an Elo/Bradley-Terry ranking system for comparing skills against a "gold corpus." Only relevant if the SDLC skill library grows large enough to need quality comparison across versions or variants. Revisit when the SDLC has 30+ skills. (Source: `plugin-eval/skills/evaluation-methodology/SKILL.md`)

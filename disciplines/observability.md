@@ -107,6 +107,6 @@ This is not a separate review pass — it's part of what the code-reviewer and b
 
 *Add observability insights here as they emerge during work. Include date and source context.*
 
-### External Ingestion — 2026-04-22 (Generic monitoring patterns)
+### Promoted
 
-- **Absence-of-logs monitors need a guaranteed signal floor.** [NEEDS VALIDATION] "Alert if no logs from service X in 5 minutes" sounds reasonable, but breaks down for services with bursty emission — zero rows is the steady state when traffic is low. Either (a) emit a periodic heartbeat log explicitly so absence is meaningful, or (b) gate the absence alarm on an upstream traffic signal ("alert only if upstream sent N requests AND we got zero log rows"). Naked absence-of-logs alerts produce alert fatigue or, worse, silent outages when bursty services genuinely fail.
+- **Absence-of-logs monitors need a guaranteed signal floor.** Promoted → `[sdlc-root]/knowledge/architecture/observability-patterns.yaml` (absence_of_logs_monitoring section)

@@ -34,6 +34,34 @@ Each entry contains:
 
 ---
 
+## 2026-05-28: Bulk parking lot triage — promote 12 entries, defer 10, fix 1 stale marker
+
+**Origin:** Scheduled parking lot triage pass across all discipline files.
+
+**What happened:** Discipline parking lots accumulated validated entries from the 2026-04-22 external ingestion batch. 12 entries had sufficient production evidence for promotion to knowledge YAML files. 10 entries were reclassified as deferred (project-specific, theoretical, or narrow scope). 1 entry had a stale [NEEDS VALIDATION] marker despite already being promoted.
+
+**Changes made:**
+
+1. **`knowledge/architecture/domain-boundary-gotchas.yaml`** — Added 4 gotcha entries: async-session-factory-concurrency, advisory-lock-pool-release, lazy-init-test-shortcircuit, metadata-only-flag-drift. Updated last_updated.
+2. **`knowledge/coding/code-quality-principles.yaml`** — Added logger_backend_consistency rule entry. Updated last_updated.
+3. **`knowledge/data-modeling/anti-patterns/common-modeling-mistakes.yaml`** — Added 4 gotcha entries: multi-tenant-cte-isolation, left-join-on-vs-where, orm-onupdate-synchronize-session, idle-in-transaction-async. Updated last_updated.
+4. **`knowledge/testing/gotchas.yaml`** — Added 2 gotcha entries: test-name-scenario-drift, stub-fixture-shape-drift. Updated last_updated.
+5. **`knowledge/architecture/observability-patterns.yaml`** — Added absence_of_logs_monitoring entry. Updated last_updated.
+6. **`disciplines/architecture.md`** — Removed 4 promoted entries from active lot, added to ### Promoted.
+7. **`disciplines/coding.md`** — Removed 1 promoted entry from active lot, added to ### Promoted.
+8. **`disciplines/data-modeling.md`** — Removed 4 promoted entries from active lot, created ### Promoted section.
+9. **`disciplines/testing.md`** — Removed 2 promoted entries and 1 stale-marker entry from active lot, created ### Promoted section. Deferred 2 entries.
+10. **`disciplines/observability.md`** — Removed 1 promoted entry from active lot, created ### Promoted section.
+11. **`disciplines/deployment.md`** — Deferred 1 entry (project-specific deployment coordination).
+12. **`disciplines/design.md`** — Deferred 2 entries (generic/untested observations).
+13. **`disciplines/product-research.md`** — Deferred 2 entries (generic/overlapping observations).
+14. **`disciplines/data-modeling.md`** — Deferred 2 entries (theoretical/UDM-specific).
+15. **`disciplines/dx.md`** — Deferred 1 entry (not urgent, revisit at 20+ skills).
+
+**Rationale:** Parking lot entries validated through production evidence (Neuroloom sessions D111-D129) are ready for knowledge store promotion. Deferred entries lack practical application or overlap with other disciplines. Cleaning the active lot keeps triage passes focused on actionable items.
+
+---
+
 ## 2026-05-28: Define promotion workflow — move promoted entries to ### Promoted section
 
 **Origin:** Observed that promoted entries in discipline files were marked `Promoted →` in place but never moved out of the active parking lot, cluttering the working set.

@@ -23,7 +23,7 @@ spec_relevant: false
 project_applicability:
   relevant_when: "Always relevant — all production services need observability"
   action_if_irrelevant: keep
-last_updated: 2026-04-24
+last_updated: 2026-05-28
 
 # ─────────────────────────────────────────────
 # Signal Frameworks: What to Measure First
@@ -89,9 +89,9 @@ sli_slo_framework:
       durability: "Fraction of writes that are successfully stored and retrievable"
       quality: "Fraction of requests that return a correct/useful result"
     bad_sli_examples:
-      - "CPU utilization" — internal resource metric, not user-visible
-      - "Memory usage percent" — internal resource metric
-      - "Container restart count" — symptom, not user-facing outcome
+      - "CPU utilization — internal resource metric, not user-visible"
+      - "Memory usage percent — internal resource metric"
+      - "Container restart count — symptom, not user-facing outcome"
     source: observability-monitoring/slo-implementation
 
   slo_target_selection:
@@ -184,7 +184,7 @@ burn_rate_alerting:
     - "Is the runbook URL embedded in the alert payload?"
     - "Was this alert verified to fire on a historical incident or synthetic event?"
     - "Does every alert have a documented response procedure?"
-    source: observability-monitoring/slo-implementation
+  source: observability-monitoring/slo-implementation
 
 # ─────────────────────────────────────────────
 # Structured Logging
@@ -352,7 +352,7 @@ distributed_tracing:
       why: "Exception details in the span enable root cause analysis without cross-referencing logs"
     - rule: "Do NOT add user-controlled or high-cardinality values as span attributes that feed into aggregate queries"
       why: "Same cardinality concern as metric labels — memory_id as a span attribute is fine for per-trace drill-down, not for aggregate analysis"
-    source: observability-monitoring/distributed-tracing
+  source: observability-monitoring/distributed-tracing
 
   sampling_strategies:
     principle: "Sample at 1–10% in production for high-traffic paths. Always sample errors (100% of error traces)."
@@ -430,10 +430,11 @@ dashboard_design:
     source: observability-monitoring/grafana-dashboards
 
   slo_dashboard_required_panels:
-    - "Current SLO compliance (single number + green/amber/red threshold coloring)"
-    - "Error budget remaining as percentage + countdown bar"
-    - "SLI trend over the SLO window (28 days)"
-    - "Burn rate over short and long windows side by side"
+    panels:
+      - "Current SLO compliance (single number + green/amber/red threshold coloring)"
+      - "Error budget remaining as percentage + countdown bar"
+      - "SLI trend over the SLO window (28 days)"
+      - "Burn rate over short and long windows side by side"
     why: "The burn rate panels diagnose whether a current problem is acute (fast burn) or chronic (slow burn) — you cannot tell from compliance percentage alone."
     source: observability-monitoring/slo-implementation
 
@@ -501,3 +502,38 @@ timed_operations:
     - "Does the success path log duration_ms as a numeric field (not a string)?"
     - "Does the error path log both duration_ms and error_type for correlation?"
   source: python-development/python-observability
+
+# ─────────────────────────────────────────────
+# Absence-of-Logs Monitoring
+# ─────────────────────────────────────────────
+# Plain-language note:
+#   "Alert if no logs from service X in 5 minutes" breaks for bursty services where
+#   zero logs is the normal steady state during low traffic. Without a guaranteed
+#   minimum signal (heartbeat), absence is ambiguous — is the service healthy-but-idle,
+#   or dead?
+
+absence_of_logs_monitoring:
+  rule: >
+    Absence-of-logs monitors need a guaranteed signal floor. Either (a) emit a
+    periodic heartbeat log explicitly so absence is always meaningful, or (b) gate
+    the absence alarm on an upstream traffic signal ("alert only if upstream sent
+    N requests AND we got zero log rows"). Naked absence-of-logs alerts produce
+    alert fatigue or, worse, silent outages when bursty services genuinely fail.
+
+  patterns:
+    heartbeat_approach:
+      description: "Emit a periodic heartbeat log (e.g., every 60s) so zero logs always means failure"
+      advantage: "Simple to implement; absence is unambiguous"
+      disadvantage: "Adds log volume; must filter heartbeats from business log queries"
+    traffic_gated_approach:
+      description: "Gate the absence alert on an upstream traffic signal — only fire if traffic was sent but no logs appeared"
+      advantage: "No extra log volume; works for naturally bursty services"
+      disadvantage: "Requires reliable upstream traffic metrics; more complex alert configuration"
+
+  checklist:
+    - "Does every absence-of-logs alert have a guaranteed signal floor (heartbeat or traffic gate)?"
+    - "For heartbeat-based monitoring, is the heartbeat interval shorter than the absence threshold?"
+    - "For traffic-gated monitoring, is the upstream traffic signal reliable and independently monitored?"
+    - "Are bursty services explicitly identified and their monitoring approach documented?"
+
+  source: "Neuroloom D121 heartbeat monitor design"

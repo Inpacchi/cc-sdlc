@@ -11,7 +11,7 @@ spec_relevant: false
 project_applicability:
   relevant_when: "Project has a persistent data model (database, document store)"
   action_if_irrelevant: remove
-last_updated: 2026-02-25
+last_updated: 2026-05-28
 
 gotchas:
   - id: premature-concreteness
@@ -86,3 +86,51 @@ gotchas:
       "Status isn't a property — it's a history. Every status change is an event
       worth recording."
     applies_to: "all subject areas"
+
+  - id: multi-tenant-cte-isolation
+    severity: critical
+    symptom: "Recursive CTE returns rows belonging to other tenants; data leaks across tenant boundaries"
+    cause: >
+      Tenant filter is applied only on the anchor query of a recursive CTE. The
+      recursive step joins from the previous level into new rows that may belong
+      to other tenants — the filter is not inherited.
+    resolution: "Apply the tenant_id filter on BOTH the anchor query AND the recursive step. Verify with EXPLAIN that the filter appears at every level."
+    prevention: "In any iterated query (CTEs, repeated joins, graph traversals), audit that isolation holds at every hop, not just at the entry point"
+    name: "Multi-tenant isolation gap in recursive CTEs"
+    applies_to: "any multi-tenant schema with recursive queries or graph traversals"
+
+  - id: left-join-on-vs-where
+    severity: high
+    symptom: "LEFT JOIN silently behaves as INNER JOIN; parent rows with no children disappear from results"
+    cause: >
+      Filter on the right table is placed in the WHERE clause instead of the ON
+      clause. WHERE filters run after the join and remove NULL rows, turning the
+      outer join into an inner join.
+    resolution: "Move right-table filters from WHERE to the ON clause: LEFT JOIN child ON child.parent_id = parent.id AND child.tenant_id = ?."
+    prevention: "During data-modeling review, check every LEFT JOIN for WHERE clauses that reference the right table. Each such clause is a potential semantic error."
+    name: "LEFT JOIN filter placement: ON vs WHERE semantics"
+    applies_to: "all SQL databases — especially multi-tenant queries with outer joins"
+
+  - id: orm-onupdate-synchronize-session
+    severity: medium
+    symptom: "Bulk UPDATE with synchronize_session=False still bumps updated_at timestamps unexpectedly"
+    cause: >
+      In SQLAlchemy (and similar ORMs), synchronize_session=False only suppresses
+      cache synchronization — it does NOT skip column-level onupdate hooks
+      (e.g., updated_at = func.now()).
+    resolution: "For true bypass of onupdate hooks (e.g., backfills), use raw SQL or set execution_options to skip compiled hooks. Verify with echo=True."
+    prevention: "When writing bulk DML through an ORM, check generated SQL with echo=True to verify which hooks fire. Document any 'skip' flags that don't actually skip everything."
+    name: "ORM onupdate hooks fire despite synchronize_session=False"
+    applies_to: "SQLAlchemy and similar ORMs with column-level hooks"
+
+  - id: idle-in-transaction-async
+    severity: high
+    symptom: "Connection killed mid-operation by idle_in_transaction_session_timeout; intermittent query failures in async code"
+    cause: >
+      In async runtimes, an implicit transaction is left open across an await
+      boundary. The connection sits in idle-in-transaction state, vulnerable to
+      timeout enforcement killing it mid-operation.
+    resolution: "Wrap async work in an explicit async with session.begin(): block, or call session.commit() before any long-running async gap."
+    prevention: "Review async code paths for await boundaries that span open transactions. Use explicit transaction blocks and commit before long-running awaits."
+    name: "Idle-in-transaction timeout in async code"
+    applies_to: "any async runtime with database transactions — especially Python asyncio with SQLAlchemy async"

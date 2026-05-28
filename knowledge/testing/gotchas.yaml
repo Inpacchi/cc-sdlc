@@ -12,7 +12,7 @@ spec_relevant: false
 project_applicability:
   relevant_when: "Always relevant — cross-project failure patterns"
   action_if_irrelevant: keep
-last_updated: 2026-03-22
+last_updated: 2026-05-28
 
 gotchas:
   - id: dom-not-visual
@@ -129,6 +129,22 @@ gotchas:
     prevention: "Design specs must define both visual and programmatic indicators for every state. See knowledge/design/accessibility-testability-principles.yaml"
     discovered: "Promoted from disciplines/design.md — pattern observed across multiple projects where visual states had no programmatic equivalent"
     applies_to: "all projects — any component with color-based status indicators"
+
+  - id: test-name-scenario-drift
+    severity: medium
+    symptom: "Test failure triggers debugging of a scenario that doesn't match what the test actually asserts"
+    cause: "Test name describes one scenario but assertions verify a different one — caused by copy-paste scaffolding, refactored assertions without rename, or partially disabled tests"
+    resolution: "Rename the test to match what the assertions actually verify. If the named scenario should also be tested, write a separate test for it."
+    prevention: "During code review of test files, explicitly check that each test name describes what the assertions verify. Flag any test where the name and assertions diverge."
+    applies_to: "all test frameworks — any it()/test()/def test_ naming convention"
+
+  - id: stub-fixture-shape-drift
+    severity: medium
+    symptom: "Tests pass against stale fixture shapes while production code paths fail on the real API response"
+    cause: "Hand-written dict/JSON fixtures drift from live API shapes — fields get renamed, defaults change, wrapper objects are added — and the tests never catch it"
+    resolution: "Add a source-of-truth comment to every fixture file (e.g., '# Verified against api/schemas/user.py:42 on 2026-05-28') and re-verify when touching the same surface."
+    prevention: "Before authoring a test fixture, read the live schema or production payload sample. Schedule periodic fixture-shape audits as part of test maintenance."
+    applies_to: "all projects with test fixtures that mock API or service responses"
 
   # ─── Project-Specific Gotchas ───
   # Add project-specific gotchas here as they are discovered.

@@ -12,7 +12,7 @@ spec_relevant: false
 project_applicability:
   relevant_when: "Always relevant — governs multi-agent orchestration"
   action_if_irrelevant: keep
-last_updated: 2026-03-22
+last_updated: 2026-05-28
 
 gotchas:
   - id: frontend-triggers-api-change
@@ -62,6 +62,52 @@ gotchas:
     prevention: "Include a 'risk areas for testing' section in plan review output that gets injected into SDET agent dispatch context"
     pattern: "Architect sees code patterns that imply testing risk but testing agent doesn't know about them"
     example: "Architect reads code during plan review, spots a race condition in state management — testing agent wouldn't probe for it without being told"
+
+  - id: async-session-factory-concurrency
+    severity: high
+    symptom: "Concurrent async tasks silently corrupt each other's database operations or produce intermittent integrity errors"
+    cause: "A single shared database session/connection is passed to multiple concurrent tasks; tasks interleave their statements on one connection"
+    resolution: >
+      Pass a session_factory (callable returning a fresh session) instead of a shared
+      session instance. Each concurrent task opens its own session. The same applies to
+      HTTP clients with connection state, transaction handles, and any resource with
+      implicit per-call state.
+    prevention: "In any async fan-out pattern, audit whether the shared resource has per-call state. If it does, pass a factory instead of an instance."
+    applies_to: "any async runtime (Python asyncio, Node.js, Go) with database or stateful connections"
+
+  - id: advisory-lock-pool-release
+    severity: high
+    symptom: "Advisory lock appears held but concurrent processes bypass it; lock-protected invariant is violated"
+    cause: "Database advisory locks are scoped to the connection that acquired them. When the connection is returned to a pool mid-job, the lock releases silently — application code thinks it still holds the lock."
+    resolution: >
+      Pin the connection for the duration of the locked work (disable pool return),
+      or use a different coordination primitive (Redis lock, distributed lock service).
+      Same hazard exists with SET LOCAL Postgres settings, prepared statements, and
+      any session-level state.
+    prevention: "When using advisory locks with connection pooling, verify the connection is not returned to the pool until the lock scope ends. Add integration tests that simulate pool recycling mid-lock."
+    applies_to: "Postgres pg_advisory_lock, MySQL GET_LOCK, any database advisory lock with connection pooling"
+
+  - id: lazy-init-test-shortcircuit
+    severity: medium
+    symptom: "Tests are slow, flaky, or depend on production initialization paths (network calls, filesystem reads, model loading)"
+    cause: "Service-level lazy initialization (resolve config, load models, open connections on first request) runs during tests without a bypass mechanism"
+    resolution: >
+      Add an _initialized flag and a reset_for_tests() method. The get_or_init()
+      pattern checks the flag; test setup calls reset before each scenario or sets
+      _resolved=True to skip initialization entirely.
+    prevention: "Every lazy-init pattern must include a test short-circuit from the start. Review new service classes for initialization paths that would run in tests."
+    applies_to: "any service with lazy initialization — especially those loading ML models, opening connections, or resolving config"
+
+  - id: metadata-only-flag-drift
+    severity: medium
+    symptom: "A field labeled 'metadata only' or 'display only' silently gates behavior in downstream code"
+    cause: "Schema fields or config flags are documented as metadata-only, but downstream code branches on them. Over time the behavioral dependency grows undocumented."
+    resolution: >
+      Audit downstream code for reads of the flag. Document the actual enforcement
+      points: which functions read it, what they do with it, and whether the
+      'metadata only' label is accurate. If behavior depends on the flag, relabel it.
+    prevention: "When adding a field labeled 'metadata only' or 'display only', grep for reads of that field in the codebase. Add a code comment at the field definition listing known behavioral consumers."
+    applies_to: "any schema with boolean flags or enum fields that claim to be metadata-only"
 
 recognition_signals:
   - "Editing files outside the dispatched agent's 'owns' path"

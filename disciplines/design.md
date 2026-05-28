@@ -66,9 +66,9 @@ Normal SDLC: spec → plan → implement
 
 *Add design insights here as they emerge during work. Include date and source context.*
 
-- **Advanced components as product differentiators.** [NEEDS VALIDATION] Complex UI components (Gantt charts, flowcharts, custom widgets, rich data visualizations) are what make apps look purposeful. The shared component library is a design asset, not just a code asset. Test automation strategies for these components protect design investment.
+- **Advanced components as product differentiators.** [DEFERRED — generic product observation, project-specific] Complex UI components (Gantt charts, flowcharts, custom widgets, rich data visualizations) are what make apps look purposeful. The shared component library is a design asset, not just a code asset. Test automation strategies for these components protect design investment.
 
-- **Visual verification requires computed style checks.** [NEEDS VALIDATION] DOM correctness does not equal visual correctness. Design should ensure that visual states have programmatic equivalents (aria attributes, data attributes) that can be verified without pixel comparison.
+- **Visual verification requires computed style checks.** [DEFERRED — not tested in production projects yet] DOM correctness does not equal visual correctness. Design should ensure that visual states have programmatic equivalents (aria attributes, data attributes) that can be verified without pixel comparison.
 
 ### Promoted
 

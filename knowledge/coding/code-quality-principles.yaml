@@ -17,7 +17,7 @@ spec_relevant: false
 project_applicability:
   relevant_when: "Always relevant — applies to all codebases"
   action_if_irrelevant: keep
-last_updated: 2026-03-22
+last_updated: 2026-05-28
 
 # ─────────────────────────────────────────────
 # Testability Is a Code Quality Concern
@@ -492,3 +492,31 @@ git_worktrees_parallel_work:
     - "When using worktrees inside a monorepo with embedded subrepos, is the git -C <path> flag used to avoid ambiguous repo context?"
 
   source: "git-advanced-workflows (wshobson)"
+
+# ─────────────────────────────────────────────
+# Python: Logger Backend Consistency
+# ─────────────────────────────────────────────
+
+logger_backend_consistency:
+  rule: >
+    Pick one logger backend (stdlib logging or structlog) per module and do not mix
+    them. Passing extra={...} to a stdlib logging call attaches the dict to the
+    LogRecord but does NOT promote fields to queryable structured outputs — they
+    vanish in JSON formatters that don't explicitly extract them. The same extra={...}
+    call to structlog DOES promote the fields. Mixing backends in a single module
+    produces logs that "should" be queryable but aren't.
+
+  rationale: >
+    When structured logging is partially adopted, some modules use structlog and
+    others use stdlib logging. Code that passes extra= fields to the wrong backend
+    silently loses observability data. The fields exist in the LogRecord but never
+    appear in the structured output, making production debugging impossible for
+    those code paths.
+
+  checklist:
+    - "Does each module use exactly one logger backend (not a mix of stdlib and structlog)?"
+    - "If a module must straddle both backends, is there a thin wrapper that normalizes the call shape?"
+    - "Is the logger backend choice documented at the top of the file or module?"
+    - "Are extra= fields verified to appear in the actual log output (not just passed to the call)?"
+
+  source: "Neuroloom D113 test_logging.py — stdlib extra= fields invisible in structlog JSON output"
