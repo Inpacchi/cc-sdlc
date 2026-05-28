@@ -34,6 +34,25 @@ Each entry contains:
 
 ---
 
+## 2026-05-28: Standardize discipline parking lot entry format for archive traceability
+
+**Origin:** Manual review of the sdlc-archive skill's knowledge hygiene step (step 9a) revealed it expects parking lot entries to be tagged with deliverable context (e.g., `[D05 — phase 2]`) at the start of the entry — but upstream capture skills placed the context at the end as a trailing `(Source: ...)` attribution.
+
+**What happened:** Three instructions were inconsistent: (1) `discipline_capture.md` defined the format with context in bold at the start, (2) `sdlc-execute` and `sdlc-lite-execute` overrode this with their own format placing context at the end, and (3) `sdlc-archive` step 9a expected to scan for context tags in the bold header. The mismatch meant archival hygiene triage would find few or zero matching parking lot entries, silently skipping the correlation between archived work and its discipline insights.
+
+**Changes made:**
+
+1. **`process/discipline_capture.md`** — Added concrete examples showing the standardized entry format with `[date] [context]` in the bold header. Added explicit note that the context tag placement is required for `sdlc-archive` traceability. Listed the four valid context formats and explicitly forbade non-standard variants like `[session: DNN-execution]`.
+2. **`skills/sdlc-execute/SKILL.md`** — Replaced custom entry format `(Source: [DNN — phase N])` with protocol-aligned format `**[YYYY-MM-DD] [DNN — phase N]**: [Insight title] — [description]. [NEEDS VALIDATION]`.
+3. **`skills/sdlc-lite-execute/SKILL.md`** — Same format alignment as sdlc-execute.
+4. **`skills/sdlc-archive/SKILL.md`** — Tightened step 9a to explicitly describe the search pattern: scan bold headers for context tags per the discipline capture protocol format. Added legacy tolerance note for older entries using non-standard formats (e.g., `[session: DNN-execution]`) — archive falls back to bare deliverable number substring matching and flags non-standard entries for normalization.
+
+**Rationale:** Parking lot entries are the bridge between active work and archival hygiene. If the capture format doesn't match the archive scan format, the triage step becomes a no-op — entries exist but can't be correlated with the deliverable being archived. Standardizing on a single format with context at the start makes entries scannable by both humans and the archive skill.
+
+5. **`process/discipline_capture.md`** — `[contract-change]` Added adapter-backed installation note: when storing via `memory_store`, include the deliverable context as a structured tag (`sdlc:deliverable:DNN` for deliverable entries, `sdlc:context:{type}:{slug}` for idea/design-consult entries). Enables `sdlc-archive` step 9a to filter by tag rather than scanning entry content in adapter-backed installations. Paired change in `neuroloom-sdlc-plugin/references/pattern-mapping-rules.md`: store rules updated to include `sdlc:deliverable:{id}` tag, search rules updated to use tag filtering when the query contains a deliverable ID.
+
+---
+
 ## 2026-05-28: Wire ADR workflow routing — READ, PRODUCE, RESPECT across planning, execution, and review skills
 
 **Origin:** ChronoCore game development discipline session surfaced 6 architectural decisions that had no workflow to route them into proper decision records. The `decision_record_template.md` was promoted from Neuroloom (2026-04-22) but only the template was promoted — the workflow routing that makes ADRs discoverable, producible, and enforceable was left as Neuroloom-local PROJECT-SECTION customizations.

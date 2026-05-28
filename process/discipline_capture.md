@@ -86,17 +86,33 @@ Common signals:
 
 ## How to Capture
 
-Append each insight or GAP entry to the relevant `[sdlc-root]/disciplines/*.md` parking lot under the `## Parking Lot` heading:
+Append each insight or GAP entry to the relevant `[sdlc-root]/disciplines/*.md` parking lot under the `## Parking Lot` heading.
+
+**Entry format:**
 
 ```
-- **[date] [context]**: [insight]. [triage marker]
+- **[date] [context]**: [Insight title] — [description]. [triage marker]
 ```
+
+The `[context]` tag MUST appear in the bold header at the start of the entry. This is what `sdlc-archive` uses to correlate parking lot entries with the deliverable being archived. Entries without a context tag in the header are invisible to archival hygiene.
 
 **Context formats by skill:**
 - Execution: `[DNN — phase N]`
 - Planning: `[DNN — planning]`
 - Idea exploration: `[idea: {slug}]`
 - Design consultation: `[sdlc-design-consult: {slug}]`
+
+These are the ONLY valid context formats. Do not invent variants like `[session: DNN-execution]`, `[DNN execution]`, or bare `[DNN]`. The `sdlc-archive` skill scans for these exact patterns — non-standard formats are invisible to archival hygiene.
+
+**Concrete examples:**
+
+```markdown
+- **[2026-05-28] [D12 — phase 2]**: Async session factories — pass a factory, never a shared session, to avoid cross-request state leaks. [NEEDS VALIDATION]
+- **[2026-05-28] [D12 — planning]**: [GAP:MISSING_KNOWLEDGE] No knowledge file covers WebSocket reconnection patterns. Source: realtime-systems-engineer finding. [NEEDS VALIDATION]
+- **[2026-05-28] [idea: caching]**: Cache invalidation via TTL is simpler but stale reads are acceptable for this use case. [NEEDS VALIDATION]
+```
+
+**Adapter-backed installations:** When storing via `memory_store`, include the deliverable context as a structured tag alongside the discipline and parking-lot tags. This enables `sdlc-archive` step 9a to filter by tag rather than scanning entry content. Derive the tag from the context format: `[DNN — phase N]` or `[DNN — planning]` → `sdlc:deliverable:DNN`; `[idea: {slug}]` → `sdlc:context:idea:{slug}`; `[sdlc-design-consult: {slug}]` → `sdlc:context:design-consult:{slug}`.
 
 **Triage markers:**
 - `[NEEDS VALIDATION]` — default for newly captured insights and all auto-detected GAP entries

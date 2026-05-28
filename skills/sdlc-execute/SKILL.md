@@ -414,9 +414,9 @@ Run the discipline capture protocol from `[sdlc-root]/process/discipline_capture
 
 Skip if nothing surfaced — do not fabricate entries. Budget: <3 minutes total. The manager writes these directly (process documentation, not domain content).
 
-Entry format:
+Entry format (context tag in bold header — required for `sdlc-archive` traceability):
 ```markdown
-- **[Insight title].** [NEEDS VALIDATION] [Description]. (Source: [DNN — phase N])
+- **[YYYY-MM-DD] [DNN — phase N]**: [Insight title] — [description]. [NEEDS VALIDATION]
 ```
 
 No PROJECT-SECTION markers needed — discipline files are project-specific and not overwritten during framework migrations.

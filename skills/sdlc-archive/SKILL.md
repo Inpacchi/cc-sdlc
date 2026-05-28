@@ -193,9 +193,11 @@ Archival is a natural triage checkpoint for parking lot entries generated during
 
 #### 9a. Scan Related Parking Lot Entries
 
-For each deliverable being archived, read `[sdlc-root]/disciplines/*.md` and find parking lot entries tagged with that deliverable's ID (e.g., `[D05 — phase 2]`, `[D05 — planning]`).
+For each deliverable being archived, read `[sdlc-root]/disciplines/*.md` and find parking lot entries whose bold header contains the deliverable's context tag. The discipline capture protocol requires context tags at the start of each entry in the format `**[date] [context]**:`. Scan for entries matching the deliverable's ID pattern (e.g., `[D05 — phase 2]`, `[D05 — planning]`).
 
-For each idea brief being archived, scan for entries tagged with its context (e.g., `[idea: caching]`).
+For each idea brief being archived, scan for entries whose bold header contains the idea's context tag (e.g., `[idea: caching]`).
+
+**Legacy tolerance:** Older entries may use non-standard context formats (e.g., `[session: D05-execution]` instead of `[D05 — phase N]`). When scanning, also match the deliverable number as a bare substring (e.g., `D05`) to catch these. Flag non-standard entries in the triage table so the user can decide whether to normalize them.
 
 Collect all entries that are still marked `[NEEDS VALIDATION]`.
 
