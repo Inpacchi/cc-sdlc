@@ -20,11 +20,11 @@ Severity applies only to FIX findings. Other classifications leave Severity blan
 
 | Classification | When | Action |
 |---------------|------|--------|
-| **FIX** | Confident in diagnosis AND fix, AND the correct resolution is clear without user input | Dispatch the most relevant domain agent to fix it. In planning skills: include in revision dispatch. |
+| **FIX** | Confident in diagnosis AND fix, AND the correct resolution is clear without user input | Dispatch the most relevant domain agent to fix it. In planning skills: include in revision dispatch. Once classified as FIX, the finding cannot be reclassified or closed without CD approval (see `[sdlc-root]/process/manager-rule.md` § No Unilateral Finding Demotion). |
 | **PLAN** | Systemic issue (many files, architecture change) that exceeds a single fix | Needs a sub-plan. Flag to CD. |
 | **INVESTIGATE** | Need more information before classifying | Dispatch relevant agent to diagnose, then reclassify |
 | **DECIDE** | Trade-off, product decision, or resolution requires choosing between alternatives the user should weigh in on | Invoke `AskUserQuestion` with the finding description and options. Do not type the question as conversational text. Block until CD answers. |
-| **PRE-EXISTING** | Finding exists in code this work did not touch | No action — cite the file and explain why it's out of scope |
+| **PRE-EXISTING** | Finding exists in code this work did not touch | Present to CD via `AskUserQuestion` with options: fix now, create a handoff for a future session, or skip. Do not silently dismiss. |
 | **PRE-DELIVERABLE-SPLIT** | Real finding requiring action, but scope is too large or decision-heavy for the current cycle | File as a future-deliverable candidate (D-suffix) with all options preserved. In-cycle work may include foundational pieces; the heavy lift is deferred. |
 
 **Use only these six classifications.** If a finding doesn't fit, use DECIDE.
@@ -46,6 +46,9 @@ Before dispatching FIX findings, scan each one. If you are about to type a quest
 
 ### PRE-EXISTING Qualification
 A finding qualifies as PRE-EXISTING **only if** the finding's file is not in the plan's Files list AND was not created or modified by an agent during this work. If the file appears in the Files list, or if an agent touched it during this execution, any finding about that file is in scope — regardless of whether the finding is about the specific function that was modified.
+
+### PRE-EXISTING Escalation
+A PRE-EXISTING finding is still a real finding — it just wasn't introduced by this work. The decision to skip it belongs to CD, not the reviewer. When classifying a finding as PRE-EXISTING, invoke `AskUserQuestion` with the finding description and these options: (1) fix it now, (2) create a handoff for a future session, (3) skip it. Do not silently dismiss PRE-EXISTING findings or assume CD wants them deferred.
 
 ### No Invented Classifications
 Do not invent new classification types (STALE, DUPLICATE, INTENTIONAL, WONTFIX, or any other). If a finding doesn't fit the six canonical classifications, it's DECIDE.

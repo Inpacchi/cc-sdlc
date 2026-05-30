@@ -68,6 +68,24 @@ When behavior the user requested has a bug:
 
 **The test:** After your fix, does the feature still do what the user originally asked for? If the answer is no, you have not fixed a bug — you have reverted a feature. Stop and ask.
 
+## No Unilateral Finding Demotion
+
+A FIX-classified finding cannot be reclassified, downgraded, or closed as "accepted risk" by the manager without CD approval. This applies to all severities but is mandatory for major and critical.
+
+**Permitted reclassifications (with evidence):**
+
+- **FIX → INVESTIGATE:** Additional investigation would materially change the fix approach. State the open question.
+- **FIX → DECIDE:** The finding reveals a genuine trade-off between acceptable alternatives. Present the alternatives to CD.
+- **FIX → PRE-EXISTING:** The affected code was not touched by this work (per `[sdlc-root]/process/finding-classification.md` § PRE-EXISTING Qualification).
+
+**Not permitted without CD approval:**
+
+- Converting a code fix to documented-risk annotations (inline comments, TODO markers, or "accepted risk" labels do not resolve a FIX finding)
+- Deferring a major/critical finding to a follow-up without CD sign-off
+- Reframing a recommended implementation as unnecessary for the current change
+
+**Escalation procedure:** When the manager believes a finding should be accepted rather than fixed, present it to CD via `AskUserQuestion` with: the finding, the recommended fix, the rationale for acceptance, and the conditions that would change the assessment. Do not close the finding until CD responds.
+
 ## What the Manager CAN Edit Directly
 
 The rule applies to **code files and domain content**. The manager may directly edit:

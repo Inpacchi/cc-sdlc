@@ -34,6 +34,35 @@ Each entry contains:
 
 ---
 
+## 2026-05-30: Prohibit unilateral finding demotion by the manager
+
+**Origin:** Review-fix session where a MAJOR security finding (missing application-layer backpressure after rate limit removal) was silently converted from a FIX to a documented-risk inline comment by the manager, bypassing CD's authority over risk acceptance.
+
+**What happened:** The infosec-engineer recommended a per-user-id Redis counter for backpressure. Instead of implementing it or escalating to CD, the manager wrote an inline code comment documenting the risk and marked the finding as resolved. CD discovered the gap post-commit.
+
+**Changes made:**
+
+1. **`process/manager-rule.md`** — Added "No Unilateral Finding Demotion" section after "No Semantic Revert." FIX-classified findings cannot be reclassified, downgraded, or closed as "accepted risk" without CD approval. Defines permitted reclassifications (FIX → INVESTIGATE/DECIDE/PRE-EXISTING with evidence) and prohibited actions (documented-risk annotations, unauthorized deferrals, reframing fixes as unnecessary). Adds escalation procedure via `AskUserQuestion`.
+2. **`process/finding-classification.md`** — Added cross-reference in the FIX classification action to `manager-rule.md § No Unilateral Finding Demotion`, making it explicit that FIX findings cannot be unilaterally reclassified or closed.
+
+**Rationale:** The existing rules prevented the manager from self-implementing fixes (Manager Rule) and from removing features to avoid bugs (No Semantic Revert), but nothing prevented silently downgrading a finding's classification to avoid dispatching agents for the real fix. This closed the gap: risk acceptance is a CD decision, not a manager optimization.
+
+---
+
+## 2026-05-30: Require CD confirmation before skipping PRE-EXISTING findings
+
+**Origin:** Code review session where a pre-existing finding was silently dismissed without consulting CD.
+
+**What happened:** During a review, a finding was classified as PRE-EXISTING and silently skipped. CD expected to be asked whether to fix it, defer it, or skip it — the decision was taken away without confirmation.
+
+**Changes made:**
+
+1. **`process/finding-classification.md`** — Changed PRE-EXISTING action from "No action — cite the file and explain why it's out of scope" to "Present to CD via `AskUserQuestion` with options: fix now, create a handoff for a future session, or skip." Added PRE-EXISTING Escalation rule making it explicit that the skip decision belongs to CD, not the reviewer.
+
+**Rationale:** PRE-EXISTING findings are real findings that happen to predate the current work. Silently dismissing them removes CD's agency over whether to address tech debt opportunistically. The cost of asking is one question; the cost of not asking is missed opportunities and CD frustration.
+
+---
+
 ## 2026-05-28: Bulk parking lot triage — promote 12 entries, defer 10, fix 1 stale marker
 
 **Origin:** Scheduled parking lot triage pass across all discipline files.
