@@ -318,9 +318,11 @@ Mark patterns "at threshold" when they reach 3+ occurrences — these are candid
 
 Do NOT ingest into the knowledge store from within this skill. Do NOT create parking-lot entries. The pattern log feeds `sdlc-audit` Dimension 6l, which handles promotion recommendations.
 
-### 7. HTML Review Artifact
+### 7. HTML Review Artifact (opt-in)
 
-After completing the review report, render it as a self-contained HTML file for human reading. Read the design system from `[sdlc-root]/templates/html-design-system.html` and apply **review** document-type defaults from `[sdlc-root]/process/html-rendering.md`.
+After completing the review report, ask CD whether they want an HTML render of it for reading/sharing — don't render unprompted. If CD declines, the markdown report stands as the deliverable and you skip the rest of this step.
+
+If CD accepts, render it as a self-contained HTML file: read the design system from `[sdlc-root]/templates/html-design-system.html` and apply **review** document-type defaults from `[sdlc-root]/process/html-rendering.md`.
 
 Write to: `docs/reviews/{target_slug}_review.html` (e.g., `docs/reviews/HEAD_review.html`, `docs/reviews/abc1234_review.html`, `docs/reviews/uncommitted_review.html`).
 

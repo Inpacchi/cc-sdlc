@@ -20,13 +20,13 @@ Render a markdown deliverable to a self-contained HTML document using the SDLC d
 
 Use this skill in two modes:
 
-**Auto mode (post-skill):** After any skill writes a deliverable MD file to `docs/current_work/`, auto-render the engineer variant. No Q&A — use document-type defaults. This mode is triggered by the workflow rule in CLAUDE-SDLC.md, not by direct user invocation.
+**Post-skill mode (opt-in):** After a skill writes a deliverable MD file to `docs/current_work/`, it asks CD whether they want a render. When CD accepts, render the engineer variant with document-type defaults — no further Q&A. This mode runs only on CD's acceptance of a skill's render offer, never unprompted.
 
 **Manual mode (user-invoked):** CD invokes `/sdlc-render <path>` or says "render this as HTML." Opens with interactive scoping before generating. Use when:
 - CD wants audience variants beyond the default engineer version
 - CD wants to customize emphasis or include specific elements
 - CD wants to re-render with different framing
-- The auto-rendered version needs refinement
+- A previously rendered version needs refinement
 
 Signs this skill is NOT appropriate:
 - Creating an interactive tool, editor, or playground → build it directly, not through this skill
@@ -51,7 +51,7 @@ Verify the file exists and is a markdown file before proceeding.
 
 ### Step 2: Interactive Scoping (manual mode only)
 
-Skip this step entirely in auto mode. In manual mode, ask CD the following questions to shape the output.
+Skip this step entirely in post-skill mode. In manual mode, ask CD the following questions to shape the output.
 
 **Question 1 — Audience (multi-select):**
 
@@ -209,7 +209,7 @@ Rendered: docs/current_work/specs/d01_feature_spec.md
 Open in browser: open docs/current_work/specs/d01_feature_spec.html
 ```
 
-In auto mode, keep the report to a single line confirming the HTML was written.
+In post-skill mode, keep the report to a single line confirming the HTML was written.
 
 If this is a re-render (existing HTML was overwritten), note it: `Re-rendered: d01_feature_spec.html (source updated since last render)`
 
@@ -227,5 +227,5 @@ If this is a re-render (existing HTML was overwritten), note it: `Re-rendered: d
 ## Integration
 
 - **Depends on:** `[sdlc-root]/templates/html-design-system.html` (design system — including `.content-deck`, `.entry-slide`, `.review-check`, `.filter-bar`, `.tab-bar` components for slide layout), `[sdlc-root]/process/html-rendering.md` (conventions, type profiles, and slide-layout section defaults)
-- **Called by:** All skills that write deliverables to `docs/current_work/` (auto mode), or CD directly (manual mode)
+- **Called by:** Skills that write deliverables to `docs/current_work/`, when CD accepts their post-write render offer (post-skill mode); or CD directly (manual mode)
 - **Does not dispatch agents.** This is a direct-action skill — CC reads the markdown and generates the HTML directly.

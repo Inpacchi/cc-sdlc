@@ -85,7 +85,7 @@ Installed only when CD opts into the `design` bundle during `/sdlc-initialize`.
 
 | Command | Action |
 |---------|--------|
-| `/sdlc-render` | Render a markdown deliverable as a self-contained HTML file. Interactive scoping for audience (multi-select), purpose, and emphasis. Auto-invoked after skills write deliverables. |
+| `/sdlc-render` | Render a markdown deliverable as a self-contained HTML file. Interactive scoping for audience (multi-select), purpose, and emphasis. Offered (opt-in) after skills write deliverables — CD chooses whether to render. |
 
 ## Testing
 

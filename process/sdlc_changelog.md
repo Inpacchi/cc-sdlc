@@ -34,6 +34,25 @@ Each entry contains:
 
 ---
 
+## 2026-06-16: Make post-skill HTML rendering opt-in (ask before rendering)
+
+**Origin:** CD directive — "instead of auto HTML rendering, ask the user if they want renders." In this repo a behavioral directive means a framework change, not a session-only preference (see new "Directives Are Framework Changes" guidance in `CLAUDE.md`).
+
+**What happened:** The framework auto-rendered an engineer-audience HTML version after every deliverable-producing skill, silently, with no Q&A. This produces HTML the CD may not want and writes artifacts unprompted. CD asked for rendering to be opt-in: offer the render, render only on acceptance.
+
+**Changes made:**
+
+1. **`CLAUDE.md`** — Added "Directives Are Framework Changes" section: a CD directive in this repo means change the framework source (skill/process/knowledge/agent/`CLAUDE-SDLC.md`), log it in the changelog, and run consistency checks — not just change in-session behavior.
+2. **`process/html-rendering.md`** — Renamed "Auto-Render (post-skill)" → "Post-skill render offer (opt-in)": CC asks CD before rendering; renders engineer variant with document-type defaults only on acceptance. Updated the intro, the "Deliverable renders" definition, the Staleness subsection (re-render offered only when an HTML already exists), and the document-type-defaults preamble to drop the "auto/silent" framing.
+3. **`CLAUDE-SDLC.md`** — Rewrote the post-write workflow rule from "auto-render it to HTML" to "ask CD whether they want an HTML render — do not render unprompted; render with `sdlc-render` only if CD accepts."
+4. **`skills/sdlc-render/SKILL.md`** — Renamed "Auto mode" → "Post-skill mode (opt-in)" (runs only on CD's acceptance of a skill's render offer); updated Step 2 skip condition, Step 7 report note, and the "Called by" integration line.
+5. **`process/commands.md`** — `/sdlc-render` row: "Auto-invoked after skills" → "Offered (opt-in) after skills write deliverables — CD chooses whether to render."
+6. **Ten deliverable-skill post-write steps** — `sdlc-plan` (spec + plan), `sdlc-lite-plan`, `sdlc-execute`, `sdlc-lite-execute`, `sdlc-idea`, `sdlc-handoff`, `sdlc-audit`, `sdlc-debug-incident`, `sdlc-create-reference-doc`, and `sdlc-review-code`: changed "**Post-write: HTML render.** Render the X..." to "**Post-write: offer HTML render.** Ask CD whether they want an HTML render... If CD accepts, render...; if CD declines, the markdown stands as the deliverable."
+
+**Rationale:** The markdown is the source of truth and a complete deliverable on its own. Generating HTML unprompted writes artifacts the CD may not want and presumes a sharing/reading need that may not exist. Making the render an explicit opt-in respects CD authority over what gets produced while keeping the one-keystroke path to a rich view when they do want it. Exploration artifacts (`sdlc-idea`/`sdlc-plan` discovery tools) were already demand-driven and are unchanged.
+
+---
+
 ## 2026-05-30: Prohibit unilateral finding demotion by the manager
 
 **Origin:** Review-fix session where a MAJOR security finding (missing application-layer backpressure after rate limit removal) was silently converted from a FIX to a documented-risk inline comment by the manager, bypassing CD's authority over risk acceptance.

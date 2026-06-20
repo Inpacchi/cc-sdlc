@@ -2,7 +2,7 @@
 
 Markdown is the source of truth for all SDLC deliverables — agents read it, version control tracks it, templates define its structure. HTML is the human-readable view: richer, more visual, easier to share and easier to actually read.
 
-Every deliverable MD file can be rendered to a self-contained HTML file using `sdlc-render`. The HTML is generated alongside the markdown, not instead of it.
+Every deliverable MD file can be rendered to a self-contained HTML file using `sdlc-render`. Rendering is opt-in: CC offers a render after writing a deliverable and CD chooses whether to generate one. The HTML, when produced, is generated alongside the markdown, not instead of it.
 
 ## Philosophy
 
@@ -12,7 +12,7 @@ Every deliverable MD file can be rendered to a self-contained HTML file using `s
 
 ## Two Categories of HTML
 
-**Deliverable renders** — Post-write conversions of finished markdown deliverables (specs, plans, results, reviews, etc.) into styled, readable HTML. These use design system tokens and keep JavaScript minimal (tabs, collapsibles). Produced by `sdlc-render` or auto-render steps in skills.
+**Deliverable renders** — Post-write conversions of finished markdown deliverables (specs, plans, results, reviews, etc.) into styled, readable HTML. These use design system tokens and keep JavaScript minimal (tabs, collapsibles). Produced by `sdlc-render` — invoked directly by CD, or when CD accepts a skill's post-write render offer.
 
 **Exploration artifacts** — Interactive HTML files created during `sdlc-idea` exploration and `sdlc-plan` discovery to help CD evaluate options. These are throwaway working tools: side-by-side approach comparisons, interaction prototypes, parameter tuning with sliders, drag-and-drop prioritization, animation sandboxes. They use the design system for visual tokens but allow any JavaScript needed for the interaction. They are demand-driven — create them when text descriptions would be insufficient for CD to make a confident decision.
 
@@ -42,11 +42,13 @@ Within each tab, filter chips provide quick filtering by a single dimension — 
 
 ## When HTML Is Generated
 
-### Auto-Render (post-skill)
+### Post-skill render offer (opt-in)
 
-After any skill writes a deliverable MD file to `docs/current_work/`, CC auto-renders an engineer-audience HTML version using document-type defaults. No Q&A — the render happens silently as a final step.
+After a skill writes a deliverable MD file to `docs/current_work/`, CC **asks CD whether they want an HTML render** — it does not render unprompted. The markdown deliverable stands on its own; the HTML is an optional human-reading view CD opts into.
 
-Skills that trigger auto-render:
+If CD accepts, CC renders the engineer-audience variant using document-type defaults — no further Q&A, the document type selects components and layout. If CD declines, no HTML is written.
+
+Skills that offer a post-skill render:
 
 | Skill | Deliverable | Document Type |
 |-------|-------------|---------------|
@@ -97,13 +99,13 @@ Neither approach is prescribed. The MD file is always the source of truth.
 
 An HTML render becomes stale when its source markdown is modified after generation. Stale HTML is dangerous — humans read the HTML version and miss updates that only exist in the markdown.
 
-**Auto-render handles this:** When a skill writes or updates a deliverable MD file, the post-write render step regenerates the HTML. This keeps the HTML current as long as changes go through skills.
+**Re-render when an HTML already exists:** If CD previously opted into a render and a skill later updates that deliverable, the skill offers to re-render so the HTML doesn't fall behind the markdown. If no HTML exists, there's nothing to keep current — rendering stays opt-in.
 
-**Manual edits require re-rendering:** If the markdown is updated outside a skill (direct edit, review-fix revisions, CD feedback incorporated manually), the HTML is now stale. The next skill that touches the file should re-render, or CD can invoke `/sdlc-render` manually.
+**Manual edits require re-rendering:** If the markdown is updated outside a skill (direct edit, review-fix revisions, CD feedback incorporated manually) and an HTML render exists, that HTML is now stale. The next skill that touches the file should offer to re-render, or CD can invoke `/sdlc-render` manually.
 
 **Footer timestamps:** Every rendered HTML includes a generation timestamp in the footer. When comparing an HTML file to its source, check this timestamp against the markdown's last-modified date. If the markdown is newer, re-render before using the HTML for review.
 
-**Re-render on plan revision:** When a plan undergoes review-fix revisions (findings incorporated, DECIDE items resolved), re-render the HTML after the final revision — not after each intermediate revision. The HTML should reflect the approved plan, not a mid-revision snapshot.
+**Re-render on plan revision:** When a plan that CD has rendered undergoes review-fix revisions (findings incorporated, DECIDE items resolved), re-render the HTML after the final revision — not after each intermediate revision. The HTML should reflect the approved plan, not a mid-revision snapshot.
 
 ## Audience Variants
 
@@ -120,7 +122,7 @@ Each variant reshapes the same source content — it does not fabricate new info
 
 ## Document-Type Defaults
 
-When auto-rendering (no Q&A), the document type determines which components and layout patterns to use.
+When rendering with document-type defaults (no Q&A — the engineer variant CD opts into post-skill), the document type determines which components and layout patterns to use.
 
 ### Spec
 

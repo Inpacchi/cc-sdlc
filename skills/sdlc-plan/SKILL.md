@@ -369,7 +369,7 @@ Reference the template at `[sdlc-root]/templates/spec_template.md`. Required fie
 
 Save to: `docs/current_work/specs/dNN_name_spec.md`
 
-**Post-write: HTML render.** Render the spec to a self-contained HTML file for human reading. Read the design system from `[sdlc-root]/templates/html-design-system.html`, apply **spec** document-type defaults from `[sdlc-root]/process/html-rendering.md`, and write a `.html` file alongside the markdown (same directory, same base name, `.html` extension). This is the version CD reviews for approval.
+**Post-write: offer HTML render.** Ask CD whether they want an HTML render of the spec for reading/sharing — don't render unprompted. If CD accepts, render a self-contained HTML file: read the design system from `[sdlc-root]/templates/html-design-system.html`, apply **spec** document-type defaults from `[sdlc-root]/process/html-rendering.md`, and write a `.html` file alongside the markdown (same directory, same base name, `.html` extension) — a richer view for the approval review. If CD declines, they review the markdown for approval.
 
 ### 3. CD Approves the Spec
 
@@ -509,7 +509,7 @@ Every section required by the template — package impact, phase dependencies ta
 
 Writer saves to: `docs/current_work/planning/dNN_name_plan.md`
 
-**Post-write: HTML render.** Render the plan to a self-contained HTML file for human reading. Read the design system from `[sdlc-root]/templates/html-design-system.html`, apply **plan** document-type defaults from `[sdlc-root]/process/html-rendering.md`, and write a `.html` file alongside the markdown.
+**Post-write: offer HTML render.** Ask CD whether they want an HTML render of the plan for reading/sharing — don't render unprompted. If CD accepts, render a self-contained HTML file: read the design system from `[sdlc-root]/templates/html-design-system.html`, apply **plan** document-type defaults from `[sdlc-root]/process/html-rendering.md`, and write a `.html` file alongside the markdown. If CD declines, the markdown stands as the deliverable.
 
 ### 5. Domain Agent Plan Review
 

@@ -109,7 +109,7 @@ Action Items
 - No narrative between findings — the table IS the report
 - Offer to fix actionable items at the end
 
-**Post-write: HTML render.** Render the audit report to a self-contained HTML file for human reading. Read the design system from `[sdlc-root]/templates/html-design-system.html`, apply **report** document-type defaults from `[sdlc-root]/process/html-rendering.md`, and write a `.html` file alongside the markdown.
+**Post-write: offer HTML render.** Ask CD whether they want an HTML render of the audit report for reading/sharing — don't render unprompted. If CD accepts, render a self-contained HTML file: read the design system from `[sdlc-root]/templates/html-design-system.html`, apply **report** document-type defaults from `[sdlc-root]/process/html-rendering.md`, and write a `.html` file alongside the markdown. If CD declines, the markdown stands as the deliverable.
 
 ### 3. Triage
 

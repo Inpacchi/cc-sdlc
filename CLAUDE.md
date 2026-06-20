@@ -2,6 +2,12 @@
 
 This is the **source repository** for the cc-sdlc framework. It contains SDLC skills, agents, knowledge stores, and compliance tooling that get installed into target projects via the `sdlc-initialize` skill.
 
+## Directives Are Framework Changes
+
+When the user gives a directive in this repo — a preference, a behavior change, a "from now on do X," a "stop doing Y" — it almost always means **change the framework**, not just change how you behave for this one session. Find where that behavior is defined in the SDLC (a skill, process doc, knowledge store, agent, `CLAUDE-SDLC.md`, or template), update it there, log it in `process/sdlc_changelog.md` in the same step, and run the consistency checks below. A directive that only changes your in-session behavior and leaves the framework source untouched is almost always a mistake here.
+
+Example: "ask before rendering HTML instead of auto-rendering" is not a session preference — it's an edit to the post-skill render behavior across the rendering skills, `process/html-rendering.md`, and `CLAUDE-SDLC.md`. Treat directives this way by default; only skip the framework edit if the directive is unmistakably about this conversation alone.
+
 ## Project Structure
 
 | Directory | Purpose |

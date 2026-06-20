@@ -249,7 +249,7 @@ Save to: `docs/current_work/ideas/{slug}_idea-brief.md`
 
 If the `docs/current_work/ideas/` directory doesn't exist, create it.
 
-**Post-write: HTML render.** Render the idea brief to a self-contained HTML file for human reading. Read the design system from `[sdlc-root]/templates/html-design-system.html`, apply **exploration** document-type defaults from `[sdlc-root]/process/html-rendering.md`, and write a `.html` file alongside the markdown.
+**Post-write: offer HTML render.** Ask CD whether they want an HTML render of the idea brief for reading/sharing — don't render unprompted. If CD accepts, render a self-contained HTML file: read the design system from `[sdlc-root]/templates/html-design-system.html`, apply **exploration** document-type defaults from `[sdlc-root]/process/html-rendering.md`, and write a `.html` file alongside the markdown. If CD declines, the markdown stands as the deliverable.
 
 **Recommend next step based on what emerged:**
 - Clear requirements, bounded scope → `sdlc-lite-plan`

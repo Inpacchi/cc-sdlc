@@ -118,7 +118,7 @@ If you're in direct dispatch and ANY of these become true, stop and ask CD about
 
 **After a direct-dispatch or ad-hoc session**, consider invoking `sdlc-reflect` to surface learnings into discipline parking lots — especially if the work involved gotchas, cross-domain friction, or patterns worth recording. This is optional; skip it if nothing non-obvious surfaced.
 
-**After any skill writes a deliverable MD file to `docs/current_work/`,** auto-render it to HTML using `sdlc-render` with document-type defaults and engineer audience. This produces a self-contained `.html` file alongside the markdown for human reading. No Q&A in auto mode — use the document type to select components and layout. See `[sdlc-root]/process/html-rendering.md` for conventions.
+**After any skill writes a deliverable MD file to `docs/current_work/`,** ask CD whether they want an HTML render — do not render unprompted. The markdown is the deliverable; HTML is an optional human-reading view. If CD accepts, render with `sdlc-render` using document-type defaults and engineer audience (no further Q&A — the document type selects components and layout), producing a self-contained `.html` file alongside the markdown. If CD declines, skip the render. See `[sdlc-root]/process/html-rendering.md` for conventions.
 
 **When starting any session:** Check `docs/current_work/` for in-progress deliverables before accepting new work.
 
