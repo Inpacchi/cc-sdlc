@@ -88,16 +88,27 @@ When complete, prompt the user to begin execution:
 >
 > (Recommend clearing context first — execution benefits from a fresh context budget.)
 
-## Prototype Gate
+## Feasibility Gate
 
-For tasks with genuine technical uncertainty ("can we parse this data format?", "will [service] support this query?"), run a prototype BEFORE writing the spec:
+For tasks with genuine technical uncertainty, **resolve the uncertainty BEFORE writing the spec** — not during execution. Pick the resolution method by where the uncertainty lives:
 
-1. Define the single question to answer
-2. Write ≤50 lines of throwaway code on a branch
+| Uncertainty lives in | Method | Example questions |
+|---------------------|--------|-------------------|
+| **External** systems you don't own | **Throwaway prototype** — ≤50 lines on a branch | "Can we parse this data format?" "Will [service] support this query?" |
+| **Internal** code you own | **Feasibility audit** — dispatch the owning domain agent to READ the actual subsystems and render a per-candidate verdict | "Do these engine primitives already exist?" "Is this composable from existing helpers, or new engine work — and how big?" |
+
+For your own codebase you do **not** need throwaway prototype code. The faster, more accurate move is a feasibility audit: the engine/subsystem owner reads the real code and returns a verdict per candidate — **exists / composable from existing helpers / needs new work + size estimate**. This makes the plan accurate instead of speculative.
+
+Either way:
+
+1. Define the question(s) to answer
+2. Run the prototype (external) or feasibility audit (internal)
 3. Document the finding in `docs/current_work/prototypes/dNN_name_prototype.md`
-4. Use the finding to inform the spec — proceed if feasible, flag to CD if not
+4. Use the finding to inform the spec and the phasing — proceed if feasible, flag to CD if not
 
-**Skip decision must be explicit:** If skipping, state the precedent: "Skipping prototype — this follows the same pattern as [prior implementation]." Do not skip silently.
+**The deferral anti-pattern (the core rule):** If a feasibility question's answer would change the plan's *structure* — one deliverable vs. split, phase count, scope, sequencing, or a one-vs-many decision — it MUST be resolved here, at planning time. Scheduling a "prove the primitives" spike as the *first execution phase* (P0), then phasing the rest of the plan on the speculative answer with a mid-execution GO/NO-GO checkpoint, is the smell. The spike's whole purpose is to answer a planning-time question; run it now and let the *real* engine cost shape the plan, rather than committing to a structure you may have to unwind. Verifying against the actual code now resolves most open questions before phasing — cheaper than discovering them mid-execution.
+
+**Skip decision must be explicit:** If skipping, state the precedent: "Skipping feasibility check — this follows the same pattern as [prior implementation]." Do not skip silently.
 
 ## Worktree Rule
 
@@ -651,7 +662,9 @@ Not every invocation needs a deliverable ID. For ad hoc work (bug fixes, small t
 | "I'll use opus for everything to be safe" | Model tiers are pre-assigned in agent frontmatter. Trust the assignment. |
 | "The agent will figure out what skills to load" | Iron Law 2: subagents don't inherit skill awareness. Load skills in the prompt. |
 | "I'll ask all my questions at once to save time" | Batched questions get shallow answers. One question at a time surfaces real constraints. |
-| "The approach is obvious, no prototype needed" | Have we built this integration before? If no, define the question a prototype would answer. If yes, cite the precedent. |
+| "The approach is obvious, no prototype needed" | Have we built this integration before? If no, define the question a prototype or feasibility audit would answer. If yes, cite the precedent. |
+| "P0 will prove the primitives, then we'll phase the rest" | If the answer changes the plan's structure (one deliverable vs. split, phase count, scope), it's a planning-time question — run the Feasibility Gate now, don't defer it to an execution spike and phase on a guess. |
+| "It's our own engine, I'll just write a quick prototype" | For code you own, a feasibility audit (owning agent reads the real subsystems, returns exists/composable/new-work-with-size per candidate) is faster and more accurate than throwaway prototype code. |
 | "I don't have unknowns for this task" | All tasks have unknowns. If none surface, the spec hasn't been examined deeply enough. State at minimum: integration risks, performance unknowns, and third-party compatibility unknowns. |
 | "This plan needs 8+ phases" | Stop. Split into sub-deliverables before continuing. Over-phased plans mean insufficient decomposition. |
 | "I'll paste a full code block so the executor can copy it" | Verbatim code goes stale across context clears. Include approach guidance, key functions, and file relationships — but not copy-paste code blocks. |

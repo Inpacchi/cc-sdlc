@@ -112,4 +112,5 @@ Each unknown is a risk the plan must address or accept.
 
 - [ ] **Unknown**: [What you don't know]
   - **Risk**: [What could go wrong]
-  - **Mitigation**: [How the plan should handle this — prototype, spike, or accept]
+  - **Mitigation**: [How the plan should handle this — prototype (external), feasibility audit (own code), or accept]
+  - **Plan-shaping?**: [Yes/No — does the answer change the plan's structure (split, phase count, scope, sequencing)? If yes, it MUST be resolved at planning time via the Feasibility Gate, NOT deferred to an execution spike.]

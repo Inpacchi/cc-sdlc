@@ -34,6 +34,22 @@ Each entry contains:
 
 ---
 
+## 2026-06-26: Feasibility Gate — resolve plan-shaping unknowns at planning time, not via execution spikes
+
+**Origin:** CD observation from a D26 planning session (a 94-definition "Full Card Set" deliverable). The spec scheduled a P0 "spike" as the *first execution phase* to prove whether engine primitives existed, then phased the entire plan on the speculative answer with a mid-execution GO/NO-GO checkpoint and a pre-baked split contingency. CD asked: "why would we wait until execution to prove primitives rather than checking and verifying now?" — correctly identifying that a question whose answer changes the plan's structure is a planning-time question, not execution work.
+
+**What happened:** The existing **Prototype Gate** in `sdlc-plan` was framed only for *external* uncertainty resolved via throwaway code ("can we parse this format?"). It had no path for *internal/own-codebase* feasibility ("do these engine primitives exist, and how big is the work?"), where the right move is a code-reading audit, not a prototype. Worse, nothing named the anti-pattern of deferring a plan-shaping feasibility unknown into an execution spike and committing to a phase structure built on a guess. The spec template even listed "spike" as a generic mitigation, implicitly blessing the deferral.
+
+**Changes made:**
+
+1. **`skills/sdlc-plan/SKILL.md`** — Renamed "Prototype Gate" → "**Feasibility Gate**". Added a method-selection table (external uncertainty → throwaway prototype; internal/own-code → feasibility audit where the owning domain agent reads the real subsystems and returns *exists / composable / new-work-with-size* per candidate). Added "**The deferral anti-pattern (the core rule)**": any feasibility question whose answer changes the plan's structure (one deliverable vs. split, phase count, scope, sequencing) MUST be resolved at planning time, not scheduled as a P0 execution spike.
+2. **`skills/sdlc-plan/SKILL.md`** — Added two Red Flags rows: the "P0 will prove the primitives, then we'll phase the rest" deferral smell, and the "it's our own engine, I'll just write a quick prototype" smell (favor the feasibility audit for owned code).
+3. **`templates/spec_template.md`** — Open Questions section: mitigation options now distinguish prototype (external) vs. feasibility audit (own code); added a **Plan-shaping?** field forcing each unknown to declare whether its answer changes plan structure (and therefore must be resolved at planning time, not deferred to a spike).
+
+**Rationale:** Verifying feasibility against the actual code at planning time makes the plan accurate instead of speculative and resolves most open questions before phasing — far cheaper than discovering primitive cost mid-execution and unwinding a committed phase structure. The fix also legitimizes the lighter-weight feasibility audit for code you own, instead of forcing throwaway-prototype ceremony.
+
+---
+
 ## 2026-06-16: Make post-skill HTML rendering opt-in (ask before rendering)
 
 **Origin:** CD directive — "instead of auto HTML rendering, ask the user if they want renders." In this repo a behavioral directive means a framework change, not a session-only preference (see new "Directives Are Framework Changes" guidance in `CLAUDE.md`).
