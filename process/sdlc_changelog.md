@@ -34,6 +34,21 @@ Each entry contains:
 
 ---
 
+## 2026-06-26: Playbook scan — require scan evidence, not a bare verdict (close the "match: none" fabrication gap)
+
+**Origin:** CD post-mortem of a planning session. The plan emitted `Playbook match: none` in its pre-dispatch block, then built the agent roster from a prior deliverable's chronicle instead. A directly-matching playbook (`build-extend-streaming-overlay.md`, distilled from that same precedent and validated the same day) was sitting in the catalog. The roster came out close *only because* the playbook shared a source with the precedent — but the prescribed scan (read `playbooks/README.md` → scan table → read overlapping files) was never run. The model later admitted it had written "none" without looking.
+
+**What happened:** The playbook scan emitted only a verdict — `Playbook match: [slug] | none` — which is trivially asserted without doing the work. Nothing in the output structure forced evidence that the catalog was actually read. This is the same fabrication failure mode the **DISCOVERY-GATE** already solves for codebase searches by requiring `Codebase searches: [list what you searched for and what you found]` — a conclusion you can only write by having done the work.
+
+**Changes made:**
+
+1. **`skills/sdlc-plan/SKILL.md`** — Reworked the Playbook scan step. Instruction now requires reading the catalog before emitting any verdict, judging every playbook in the table for overlap (and reading the file of any plausible candidate before rejecting it — a one-line table description is not enough to rule out). The emitted block changed from a single `Playbook match` line to an evidence-bearing **`Playbook scan:`** line that lists every catalog slug with a per-candidate match/no-match reason, followed by the `Playbook match:` verdict. You cannot write the scan line without naming the real slugs, and cannot list a slug without judging its overlap — that is what closes the gap. Added a Red Flags row: a bare "Playbook match: none" without listed slugs is fabrication.
+2. **`skills/sdlc-lite-plan/SKILL.md`** — Same change to its Playbook scan instruction and its compact Pre-Dispatch block (added the `**Playbook scan:**` evidence line above `**Playbook match:**`).
+
+**Rationale:** "No match" is a fine *outcome*, but it must be *earned* by a scan, not asserted as a default. Forcing the model to enumerate the catalog and judge each entry makes skipping the scan visible — a real overlapping playbook can no longer hide behind an unsubstantiated "none." The scan stays a soft gate on the result; the scan itself becomes mandatory.
+
+---
+
 ## 2026-06-26: Feasibility Gate — resolve plan-shaping unknowns at planning time, not via execution spikes
 
 **Origin:** CD observation from a D26 planning session (a 94-definition "Full Card Set" deliverable). The spec scheduled a P0 "spike" as the *first execution phase* to prove whether engine primitives existed, then phased the entire plan on the speculative answer with a mid-execution GO/NO-GO checkpoint and a pre-baked split contingency. CD asked: "why would we wait until execution to prove primitives rather than checking and verifying now?" — correctly identifying that a question whose answer changes the plan's structure is a planning-time question, not execution work.

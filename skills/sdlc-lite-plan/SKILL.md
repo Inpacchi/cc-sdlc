@@ -165,16 +165,16 @@ If the gate shows FAIL, resolve the unverified items before proceeding. Do not d
 
 **Independent domain assessment** — start from the task, not from a template. Read the task description and assess which agent domains it touches. Consider both technical domains (frontend, backend, data pipeline) and analytical/specialist domains (meta-analysis, design, accessibility, domain-specific expertise). An agent belongs in the list if their expertise would catch issues or improve quality that other agents would miss. Build this initial list before consulting any playbook.
 
-**Playbook scan** — after your independent assessment, check for a matching playbook:
+**Playbook scan** — after your independent assessment, check for a matching playbook. Actually read the catalog before emitting a verdict — "no match" is earned by listing what you scanned, not asserted as a default.
 
-1. Read `[sdlc-root]/playbooks/README.md` — scan the "Available playbooks" table
-2. For each playbook whose task type overlaps with the current task, read the playbook file
+1. Read `[sdlc-root]/playbooks/README.md` — scan the "Available playbooks" table. If the directory or README does not exist, the scan is genuinely empty; record that explicitly.
+2. For each playbook in the table, judge task-type overlap. Read the file of any whose task type plausibly overlaps before ruling it out — a one-line table description is not enough to reject a candidate.
 3. If a match is found, extract and incorporate:
    - **Recommended agents** → merge into your agent list (add any you missed)
    - **Knowledge context** → include these files when dispatching the relevant agents
    - **Typical phases** → use as the starting phase structure (adapt, don't copy blindly)
    - **Common gotchas** → surface as constraints in the plan
-4. If no playbooks exist yet or none match, move on — this is a lookup, not a gate
+4. Report the scan as evidence in the Pre-Dispatch block (see below) — list every playbook in the catalog with a per-candidate verdict, not just the final match. The scan is mandatory even though "no match" is a fine result.
 
 When exploring existing patterns, use LSP (`goToDefinition`, `findReferences`, `goToImplementation`) for type-system and call-graph questions. Use Grep for string literals and non-TypeScript content.
 
@@ -198,6 +198,7 @@ See `[sdlc-root]/process/adr-practice.md` for conventions, immutability rules, a
 Emit agent coverage and chronicle context as two tables. **Use this form on the happy path.**
 
 ```
+**Playbook scan:** <N> in catalog — [slug-1: matched, <why> | no-match, <why>], [slug-2: ...]  (or: catalog absent — skipped)
 **Playbook match:** [playbook-slug] — [1-line reason] | none
 
 **Agent coverage**

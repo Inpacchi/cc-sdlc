@@ -211,23 +211,24 @@ Relevant domain agents for this task:
 - code-reviewer: included by default for implementation tasks
 ```
 
-**Playbook scan** — after your independent assessment, check for a matching playbook:
+**Playbook scan** — after your independent assessment, check for a matching playbook. You must actually read the catalog before emitting a verdict — "no match" is a conclusion you earn by listing what you scanned, not a default you assert.
 
-1. Read `[sdlc-root]/playbooks/README.md` — scan the "Available playbooks" table
-2. For each playbook whose task type overlaps with the current task, read the playbook file
+1. Read `[sdlc-root]/playbooks/README.md` — scan the "Available playbooks" table. If the directory or README does not exist, the scan is genuinely empty; record that explicitly.
+2. For each playbook in the table, judge task-type overlap. Read the file of any whose task type plausibly overlaps before ruling it out — a one-line table description is not enough to reject a candidate.
 3. If a match is found, extract and incorporate:
    - **Recommended agents** → merge into your agent list (add any you missed)
    - **Knowledge context** → include these files when dispatching the relevant agents
    - **Typical phases** → use as the starting phase structure (adapt, don't copy blindly)
    - **Common gotchas** → surface as constraints in the spec and plan
    - **Key decisions** → add to discovery questions
-4. Report the match in the Pre-Dispatch block:
+4. Report the scan as **evidence, not a verdict** in the Pre-Dispatch block. List every playbook in the catalog with a per-candidate match/no-match reason, then the chosen match:
 
 ```
+Playbook scan: <N> in catalog — [slug-1: matched, <why> | no-match, <why>], [slug-2: ...]   (or: catalog absent — skipped)
 Playbook match: [playbook-slug] — [1-line reason for match] | none
 ```
 
-If no playbooks exist yet or none match, emit `Playbook match: none` and move on. This is a lookup, not a gate — no match is fine.
+You cannot write the scan line without having read `README.md` (you have to name the actual slugs), and you cannot list a slug without judging its overlap — that is what closes the fabrication gap. Reaching `Playbook match: none` while a real, overlapping playbook sits in the catalog is a process miss, not an acceptable default. This is still a soft gate on the *result* (no match is a fine outcome), but the *scan itself is mandatory* — emit the evidence line every time.
 
 **DISCOVERY-GATE** — you cannot dispatch agents to write the spec until this block appears in your response:
 
@@ -661,6 +662,7 @@ Not every invocation needs a deliverable ID. For ad hoc work (bug fixes, small t
 | "Ready to dispatch" / "Let me dispatch now" | Never narrate readiness — just dispatch. The plan is already approved. |
 | "I'll use opus for everything to be safe" | Model tiers are pre-assigned in agent frontmatter. Trust the assignment. |
 | "The agent will figure out what skills to load" | Iron Law 2: subagents don't inherit skill awareness. Load skills in the prompt. |
+| "Playbook match: none" (without having read the catalog) | A bare "none" is fabrication unless you can list the slugs you scanned. Read `playbooks/README.md`, name every candidate, and give a per-candidate verdict. Deriving the roster from a precedent instead of scanning is how a real, overlapping playbook gets missed. |
 | "I'll ask all my questions at once to save time" | Batched questions get shallow answers. One question at a time surfaces real constraints. |
 | "The approach is obvious, no prototype needed" | Have we built this integration before? If no, define the question a prototype or feasibility audit would answer. If yes, cite the precedent. |
 | "P0 will prove the primitives, then we'll phase the rest" | If the answer changes the plan's structure (one deliverable vs. split, phase count, scope), it's a planning-time question — run the Feasibility Gate now, don't defer it to an execution spike and phase on a guess. |
