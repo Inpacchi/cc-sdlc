@@ -34,6 +34,21 @@ Each entry contains:
 
 ---
 
+## 2026-06-27: Rebuild sdlc-port-opencode against OpenCode's current docs
+
+**Origin:** CD planning to run cc-sdlc through OpenCode on a local model endpoint (2×3090). Asked to verify the port skill maps to OpenCode's *current* conventions. Research against `opencode.ai/docs` (agents, skills, commands, config, providers, rules, tools, mcp, permissions) + `sst/opencode` source surfaced several wrong or guessed assumptions in the skill.
+
+**What happened:** The skill was full of `(verify)` placeholders and at least three concrete errors: (1) it copied skills into `.opencode/skills/` — but OpenCode natively discovers `.claude/skills/*/SKILL.md`, so a copy collides on skill name; (2) it scaffolded `opencode.json` as `{"agents": {}}`, which is not a real OpenCode config shape (agents auto-discover from markdown; config is for provider/model/mcp/permission); (3) it marked tools as "verify" that OpenCode actually ships — `question` (AskUserQuestion), `skill`, `Task`+`@mention` (subagent dispatch), `webfetch`/`websearch`. It also had no path for the actual goal — wiring a local OpenAI-compatible model endpoint.
+
+**Changes made:**
+
+1. **`skills/sdlc-port-opencode/SKILL.md`** — Rewrote against confirmed OpenCode docs. Added a "What OpenCode discovers natively (do NOT port)" section: skills are shared from `.claude/skills/`, instructions fall back to `CLAUDE.md`, `[sdlc-root]` is shared. Scaffold reduced to `.opencode/agents/` + `.opencode/commands/` (dropped speculative `skills/` and `tools/` dirs). Step 5 changed from "copy adapted skills" to "verify skills are discovered, do not copy" with a tool-reference caveat and an anti-collision Red Flag. Agent adaptation now sets `mode: subagent`, prefers omitting `model` (subagents inherit the project default — sidesteps Claude tier names), and maps `tools`. Rewrote the opencode.json step with the real schema (`https://opencode.ai/config.json`), a **local OpenAI-compatible provider block** (vLLM/llama.cpp/Ollama), `model`/`small_model`, `mcp` (context7), and `permission`. Rewrote the Tool Mapping table with exact lowercase OpenCode identifiers and confirmed/absent statuses (`question`, `skill`, `Task`, `webfetch`, `websearch`, `apply_patch`; `SendMessage`/`Monitor`/worktree/cron = none). Updated COMPAT_GAPS template, Red Flags, and Integration/DRY notes accordingly. Co-existence with the Claude Code setup preserved and reinforced throughout.
+2. **`process/commands.md`** — Updated the `/sdlc-port-opencode` row: skills/`[sdlc-root]` are shared (not "adapted agents/skills"), and noted the local-model-endpoint config.
+
+**Rationale:** The port skill was advisory guesswork; grounding it in OpenCode's actual feature set makes the port both simpler (skills shared, not forked → less duplication, no name collisions, true DRY) and more capable (local model endpoint wired, real tool names, fewer manual "verify" follow-ups). Directly serves running the SDLC through OpenCode on a local LLM.
+
+---
+
 ## 2026-06-26: Playbook scan — require scan evidence, not a bare verdict (close the "match: none" fabrication gap)
 
 **Origin:** CD post-mortem of a planning session. The plan emitted `Playbook match: none` in its pre-dispatch block, then built the agent roster from a prior deliverable's chronicle instead. A directly-matching playbook (`build-extend-streaming-overlay.md`, distilled from that same precedent and validated the same day) was sitting in the catalog. The roster came out close *only because* the playbook shared a source with the precedent — but the prescribed scan (read `playbooks/README.md` → scan table → read overlapping files) was never run. The model later admitted it had written "none" without looking.

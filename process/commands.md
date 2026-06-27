@@ -79,7 +79,7 @@ Installed only when CD opts into the `design` bundle during `/sdlc-initialize`.
 
 | Command | Action |
 |---------|--------|
-| `/sdlc-port-opencode` | Adapt existing cc-sdlc installation for OpenCode — creates `.opencode/` structure, `AGENTS.md`, adapted agents/skills, and `opencode.json` alongside the Claude Code setup |
+| `/sdlc-port-opencode` | Adapt existing cc-sdlc installation for OpenCode — creates `.opencode/agents/`, `AGENTS.md`, and `opencode.json` (incl. local model endpoint) alongside the Claude Code setup; skills and `[sdlc-root]` content are shared, not copied (OpenCode reads `.claude/skills/` directly) |
 
 ## Rendering
 
