@@ -181,6 +181,8 @@ Generate `opencode.json` (or `opencode.jsonc`) in the project root. Agents and s
 
 For **Ollama**, use `"baseURL": "http://localhost:11434/v1"`. If tool-calls fail on a local model, raise the served context window (Ollama: `num_ctx` ~16k–32k) — the SDLC skills are long and tool-call-heavy.
 
+**For a concrete, model-specific serving guide** — recommended models (Qwen3.6 family), GGUF quant selection for ~48 GB, the **llama.cpp** tool-call chat-template fixes (without which tool calls break under long SDLC prompts), `llama-server` launch flags for dual-GPU, and OpenCode wiring — see `references/local-model-serving.md`. The block above is the general pattern; that doc is the battle-tested specifics for the llama.cpp path.
+
 **MCP.** If the project uses Context7 (check CLAUDE.md / `.mcp.json` for `context7` or `mcp__context7`), wire it under `mcp`:
 
 ```jsonc

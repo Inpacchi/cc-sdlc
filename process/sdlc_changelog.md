@@ -34,6 +34,22 @@ Each entry contains:
 
 ---
 
+## 2026-06-27: Add local-model serving reference (Qwen3.6 + llama.cpp) for the OpenCode path
+
+**Origin:** Continuation of the OpenCode port work — CD intends to run the SDLC on a local model (2×3090) via OpenCode + llama.cpp when Claude Code limits are exhausted. Deep research + a focused verification pass produced concrete, primary-sourced serving guidance worth capturing so it isn't re-derived per project.
+
+**What happened:** Research confirmed Qwen3.6 is a real Apr-2026 release (postdates model training cutoff): Qwen3.6-35B-A3B (MoE 35B/~3B active, SWE-bench Verified 73.4) and Qwen3.6-27B (dense, SWE-bench 77.2) — both fit 48 GB at Q8. The decisive operational finding is llama.cpp-specific: the Qwen3.5/3.6 chat templates have **known tool-call bugs** (tool calls emitted inside `<think>` blocks; a 27B cache-invalidation bug) that break agentic use under long prompts unless a fixed template (froggeric / Unsloth) is loaded via `--chat-template-file`. This is exactly the failure mode cc-sdlc's long, tool-heavy skills would hit.
+
+**Changes made:**
+
+1. **`skills/sdlc-port-opencode/references/local-model-serving.md`** (new) — Operational reference for the llama.cpp + OpenCode local path: recommended Qwen3.6 models with confirmed specs/benchmarks, GGUF quant selection for ~48 GB, the llama.cpp tool-call template fixes, `llama-server` launch commands for dual RTX 3090, OpenCode provider wiring, and a reliability checklist for long agentic prompts. Confidence/freshness flagged throughout (live-sourced, post-cutoff); unverified items (BFCL/Aider scores, exact 3.6 sampling params) marked as such.
+2. **`skills/sdlc-port-opencode/SKILL.md`** — Step 6 (local model endpoint) now points to the new reference doc for the battle-tested llama.cpp specifics, while keeping the general provider pattern inline.
+3. **`skeleton/manifest.json`** — Registered the new reference under `source_files.skills`.
+
+**Rationale:** The generic "wire a local provider" guidance is necessary but insufficient — a local model that silently emits malformed tool calls under long SDLC prompts looks like the framework is broken when it's actually a chat-template bug. Capturing the model choice + the template-fix requirement turns a multi-hour debugging trap into a documented setup step, reusable across every project that runs the SDLC through OpenCode locally.
+
+---
+
 ## 2026-06-27: Rebuild sdlc-port-opencode against OpenCode's current docs
 
 **Origin:** CD planning to run cc-sdlc through OpenCode on a local model endpoint (2×3090). Asked to verify the port skill maps to OpenCode's *current* conventions. Research against `opencode.ai/docs` (agents, skills, commands, config, providers, rules, tools, mcp, permissions) + `sst/opencode` source surfaced several wrong or guessed assumptions in the skill.
