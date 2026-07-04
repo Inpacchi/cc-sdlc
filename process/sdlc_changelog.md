@@ -34,6 +34,19 @@ Each entry contains:
 
 ---
 
+## 2026-07-04: Route sdlc-handoff deferred work on effort, not artifact size
+
+**Origin:** Downstream-project feedback. A session filed mechanical metadata backfill (a known, repeatable transform over ~76 production records) as "Deferred work — non-trivial" and got routed to `sdlc-lite-plan` when direct dispatch was correct. Root cause: the word "non-trivial" in the Step 3 routing table invited a *size/volume* reading, while the rest of that table keys on *approach*.
+
+**Changes made:**
+
+1. **`skills/sdlc-handoff/SKILL.md`** (Step 3 table) — Re-keyed the two "Deferred work" rows and the isolated-Issue row on **effort** (coordination cycles) instead of size. Added a criterion sentence above the table pointing at `collaboration_model.md` § Estimation Model: a known repeatable transform over N items is Light effort regardless of item count or production-write surface → direct dispatch. Preserved blast-radius/reversibility as an explicit plan trigger ("costly or hard to reverse") so high-volume irreversible writes still route to a plan. Encoded the escalation default in the Light-effort deferred row (default to direct dispatch; receiver escalates only if a real unknown surfaces).
+2. **`skills/sdlc-handoff/SKILL.md`** (Red Flags) — Added an entry capturing the exact miscalibration: "It touches many records / writes to production, so it's non-trivial → plan it" → volume and write-surface aren't effort.
+
+**Rationale:** Aligns the skill with the framework's existing Estimation Model, which already defines Effort as coordination cycles ("not wall-clock time") and explicitly lists cross-domain handoffs and verification depth — exactly the levers that make high-blast-radius work plan-worthy. Reusing the Effort vocabulary fixes the size-proxy miscalibration without minting a competing "approach clarity" axis, and keeps the fix from over-rotating into "scale never warrants a plan."
+
+---
+
 ## 2026-06-27: Add local-model serving reference (Qwen3.6 + llama.cpp) for the OpenCode path
 
 **Origin:** Continuation of the OpenCode port work — CD intends to run the SDLC on a local model (2×3090) via OpenCode + llama.cpp when Claude Code limits are exhausted. Deep research + a focused verification pass produced concrete, primary-sourced serving guidance worth capturing so it isn't re-derived per project.

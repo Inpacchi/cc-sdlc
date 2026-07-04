@@ -83,15 +83,17 @@ LSP (`hover`, `findReferences`) is allowed only to confirm symbol names and line
 
 Pick the lightest skill that won't skip a needed gate. Note the reasoning in the doc — the receiving session may override.
 
+**Route on effort, not artifact size.** Effort here is coordination cycles — review rounds, cross-domain handoffs, verification depth — *not* item count or wall-clock time (see `[sdlc-root]/process/collaboration_model.md` § Estimation Model). A known, repeatable transform over N items — or an isolated single-file fix — is Light effort no matter how many records it touches or writes to production; route it to direct dispatch. Reach for a plan when the *approach* is unclear, the work spans domains, or getting the first move wrong is costly or hard to reverse.
+
 | Handoff trigger + shape | Default next skill | Rationale |
 |-------------------------|-------------------|-----------|
-| Issue — well-isolated, single-file fix | Direct dispatch (`debug-specialist` or relevant specialist) | Single-agent fix doesn't need a plan |
+| Issue — isolated, Light-effort fix (approach clear) | Direct dispatch (`debug-specialist` or relevant specialist) | Single-agent fix doesn't need a plan |
 | Issue — cross-domain or unclear scope | `sdlc-lite-plan` | Worth a reviewed plan before fixing |
 | Issue — production incident with user impact | `sdlc-debug-incident` | Live triage and postmortem required |
 | Idea — vague or unscoped | `sdlc-idea` | Needs exploration before planning |
 | Idea — clear shape | `sdlc-lite-plan` or `sdlc-plan` | Skip exploration if requirements are evident |
-| Deferred work — small, well-defined | Direct dispatch | Just do it when picked up |
-| Deferred work — non-trivial | `sdlc-lite-plan` | Plan first |
+| Deferred work — Light effort (known transform, reversible, even if high-volume) | Direct dispatch | Approach is settled; just do it when picked up. Default here and let the receiver escalate only if a real unknown surfaces |
+| Deferred work — Moderate/Heavy effort (approach unclear, cross-domain, or costly/irreversible if wrong) | `sdlc-lite-plan` | Plan first — the coordination cycles, not the item count, are what earns the plan |
 | Investigation needed | `sdlc-idea` | Open-ended exploration is the point |
 
 If multiple skills could fit equally, list them in the doc and let the receiving session choose.
@@ -213,6 +215,7 @@ If any check fails, fix the doc before reporting completion.
 | "I'll write a one-paragraph handoff and let the receiver figure it out" | Handoffs without evidence are worse than no handoff — they look like work but force the receiver to redo discovery. Either capture real evidence or don't write the handoff. |
 | "I'll re-investigate to make the handoff thorough" | The handoff captures what's already known. Don't expand the investigation — that's the receiving session's job. Re-investigation is how this skill ends up duplicating `sdlc-idea`. |
 | "I'll handle this in the current session, it's small" | If it would derail the current task, it's a handoff. The cost of context-switching mid-task is real and underestimated. |
+| "It touches many records / writes to production, so it's non-trivial → plan it" | Volume and write-surface aren't effort. A known, repeatable transform over N items is Light effort — direct dispatch — regardless of count. Plans earn their keep when the *approach* is unclear, the work is cross-domain, or a wrong move is costly to reverse; not when the item count is high. |
 | "I'll skip the recommended-next-skill field, the user can choose" | Always recommend. The receiver may override, but the recommendation forces you to think about which gate the work needs. |
 | "I'll auto-clear the session after writing" | The user controls context switches. Surface the next-step command and stop. |
 | "Multiple handoffs from one session can share a doc" | One handoff = one doc. Bundling makes the receiver disentangle them. Write separate docs. |
