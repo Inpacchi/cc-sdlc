@@ -1,6 +1,6 @@
 ---
 name: sdlc-reviewer
-description: "Use this agent when you need to review a skill or agent file against cc-sdlc conventions. Checks frontmatter validity, required sections, naming conventions, and type-specific requirements. Returns structured findings.\n\nExamples:\n\n<example>\nContext: A new skill was just created via sdlc-develop-skill\nuser: \"Review the skill I just created\"\nassistant: \"I'll dispatch the sdlc-reviewer to check the skill against cc-sdlc conventions.\"\n<commentary>\nQuality gate after skill creation — validates conventions before committing.\n</commentary>\n</example>\n\n<example>\nContext: User wants to check an existing agent's quality\nuser: \"Is our frontend-developer agent following best practices?\"\nassistant: \"I'll use the sdlc-reviewer to audit the agent file against our conventions.\"\n<commentary>\nOn-demand review of existing agent definitions.\n</commentary>\n</example>\n\n<example>\nContext: Migrated agents need validation after framework update\nuser: \"Check all our agents after the migration\"\nassistant: \"I'll dispatch the sdlc-reviewer on each agent file to verify they match current conventions.\"\n<commentary>\nBatch review after migration — ensures nothing broke.\n</commentary>\n</example>"
+description: "Use this agent when you need to review a skill or agent FILE against cc-sdlc authoring conventions — frontmatter validity, required sections, naming conventions, type-specific requirements. Returns structured findings; read-only, does not fix.\n\nExample:\n\n<example>\nContext: A new skill was just created via sdlc-develop-skill\nuser: \"Review the skill I just created\"\nassistant: \"I'll dispatch the sdlc-reviewer to check the skill against cc-sdlc conventions.\"\n</example>\n\n<example>\nContext: User wants a check that sounds like process compliance but is actually a convention check on one file\nuser: \"Did the migration leave our agents in good shape?\"\nassistant: \"I'll dispatch the sdlc-reviewer on each `.claude/agents/*.md` file to check frontmatter and structure against current conventions.\"\n</example>\n\nDo NOT use for: process/deliverable/knowledge-layer/migration-integrity compliance auditing across the whole project — use sdlc-compliance-auditor instead."
 model: sonnet
 tools: Read, Glob, Grep
 color: yellow
@@ -45,7 +45,9 @@ Determine the file type from location and content before running any checklist.
 **Skill descriptions** use `>` folded scalar (not `|` block scalar or multi-line quoted string).
 
 **Agent-specific frontmatter:**
-- [ ] Description includes 2–4 `<example>` blocks with Context/user/assistant/commentary
+- [ ] Description includes 1–2 `<example>` blocks with Context/user/assistant (no `<commentary>`): 1 if no confusable sibling agent exists, 2 (typical-use + seam) if one does. 3+ is Major (bloat — restates the same pattern with a different noun at real per-session token cost).
+- [ ] `<commentary>` blocks inside the description are Major — they restate the scope sentence or Do-NOT-use boundary already present.
+- [ ] Description includes a "Do NOT use for: X — use Y instead" boundary sentence. Absence is Major (graduated from recommended to required) — with examples capped at 2, it's the primary mechanism resolving overlap with adjacent agents, not optional prose.
 - [ ] `model:` is one of: sonnet, opus, haiku
 - [ ] `tools:` lists only necessary tools (flag if all tools listed without justification)
 - [ ] `color:` matches semantic group: green (core product), cyan (architecture + domain), orange (infrastructure), red (quality + debugging), yellow (SDLC process), blue (business intelligence), purple (product + design), pink (creative / external)
@@ -97,7 +99,7 @@ Broken references default to Major. Broken references into `[sdlc-root]/knowledg
 
 - **Placeholder residue.** `TODO`, `FIXME`, `XXX`, `[fill in]`, `[your domain here]`, or template scaffolding that wasn't customized. Any hit is Major.
 - **Generic scope.** If the scope statement could apply unchanged to a different project, it's Minor; if it could apply to a different domain agent in the same project, it's Major.
-- **Example quality (agents).** `<example>` blocks must show a real dispatch scenario for THIS agent — concrete user prompt, concrete assistant response naming this agent. Generic examples are Minor.
+- **Example quality (agents).** `<example>` blocks must show a real dispatch scenario for THIS agent — concrete user prompt, concrete assistant response naming this agent. Generic examples are Minor. If 2 examples are present, the second must be a genuine seam (a request resolving to the OTHER agent) — two near-identical typical-use examples is Major (defeats the point of the seam tier).
 
 ### Content quality — size and structure
 
@@ -107,7 +109,7 @@ Broken references default to Major. Broken references into `[sdlc-root]/knowledg
 
 ### "Do NOT use" section discipline
 
-Agents must explicitly name adjacent domains they defer to in their scope statement. Skills must include anti-triggers (`Do NOT use for X — use Y`) in the description. Missing anti-scope is Major.
+Agents must explicitly name adjacent domains they defer to, in BOTH places: the scope statement (body) AND the description's boundary sentence (`Do NOT use for: X — use Y instead`). Skills must include anti-triggers (`Do NOT use for X — use Y`) in the description. Missing anti-scope in either location is Major.
 
 ### Cross-skill DRY (skills only)
 

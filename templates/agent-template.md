@@ -1,6 +1,6 @@
 ---
 name: agent-name
-description: "Use this agent when [triggering conditions — be specific about what files, domains, or user requests should activate this agent].\\n\\nExamples:\\n\\n<example>\\nContext: [Situation description]\\nuser: \"[What the user says]\"\\nassistant: \"[How the assistant responds and uses this agent]\"\\n<commentary>\\n[Why this agent is the right choice]\\n</commentary>\\n</example>\\n\\n<example>\\nContext: [Different situation]\\nuser: \"[Different request]\"\\nassistant: \"[Response using this agent]\"\\n<commentary>\\n[Why this agent triggers here]\\n</commentary>\\n</example>"
+description: "Use this agent when [triggering conditions — be specific about what files, domains, or user requests should activate this agent].\\n\\nExample:\\n\\n<example>\\nContext: [Situation description]\\nuser: \"[What the user says]\"\\nassistant: \"[How the assistant responds and uses this agent]\"\\n</example>\\n\\nDo NOT use for: [adjacent domain] — use [other-agent] instead."
 model: sonnet
 tools: Read, Write, Edit, Bash, Glob, Grep
 color: blue
@@ -18,13 +18,24 @@ FRONTMATTER REFERENCE:
     Bad: helper (too generic), -agent- (starts with hyphen), my_agent (underscores)
 
   description:
-    The most critical field — determines when Claude triggers this agent.
+    The most critical field — determines when Claude triggers this agent. Claude Code injects
+    EVERY agent's full description into EVERY session's system prompt, regardless of whether
+    that agent is ever spawned — it is a permanent per-session tax, unlike the agent body (which
+    only costs tokens once spawned). Keep it lean: example economy, not example abundance.
     Format: single-line YAML double-quoted string using \\n (double-backslash n) for newlines, never a block scalar (|, >)
     WARNING: In YAML double-quoted strings, \n = real newline (breaks parser), \\n = literal \n (correct)
     Must include:
     - Triggering conditions ("Use this agent when...")
-    - 2-4 <example> blocks with Context/user/assistant/commentary
-    - Be specific about when NOT to use (avoid overlap with other agents)
+    - Example count tiered by confusability: 1 <example> block if no other agent's domain could
+      plausibly be confused with this one; 2 <example> blocks (one typical-use, one "seam" example
+      distinguishing this agent from the lookalike) if a confusable sibling exists. Never more than 2 —
+      a 3rd or 4th example restates the pattern of the first with a different noun and pays real
+      per-session token cost for zero added routing signal.
+    - NO <commentary> blocks. They annotate why the routing is right, which just restates the scope
+      sentence or the Do-NOT-use boundary already in the same description. Pure redundancy.
+    - A mandatory "Do NOT use for: X — use Y instead" boundary sentence. Once examples are capped at 2,
+      this sentence — not a 3rd/4th example — is the primary mechanism for resolving overlap with
+      adjacent agents.
     See the frontmatter above for the exact format.
 
   model:

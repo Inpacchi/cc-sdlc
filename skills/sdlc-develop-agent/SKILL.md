@@ -67,14 +67,22 @@ Read the `.claude/agents/` directory to identify existing agents and their domai
 
 The description MUST include:
 - Triggering conditions ("Use this agent when...")
-- 2-4 `<example>` blocks with Context/user/assistant/commentary structure
-- Anti-triggers (when NOT to use this agent)
+- `<example>` blocks tiered by confusability, NO `<commentary>` (see below)
+- A mandatory "Do NOT use for: X — use Y instead" anti-trigger sentence
 
 Generate each field:
 
 **name:** `lowercase-with-hyphens`, 3-50 characters, starts and ends with alphanumeric. Check for conflicts with existing agents.
 
 **description:** Follow the exact format from agent-template.md line 3. Include realistic scenarios in example blocks.
+
+**Example-count tiering (mandatory — this is the primary lever on description size):**
+1. Check whether a confusable sibling exists — an existing agent whose domain a user request could plausibly route to instead of this one (you already scanned `.claude/agents/` for domain overlap in Step 1; reuse that scan). If unsure, ask the user.
+2. **No confusable sibling:** 1 `<example>` block (typical-use).
+3. **Confusable sibling exists:** 2 `<example>` blocks — one typical-use, one "seam" example showing a request that looks similar but correctly routes to the OTHER agent (or this one, if the seam runs the other way). Cross-check: if this agent has a confusable sibling, its description should get the reciprocal seam example the next time it's touched.
+4. **Never 3-4.** A 3rd or 4th example restates the 1st with a different noun — it was the previous default and is exactly what inflated descriptions cost the most.
+5. **Drop `<commentary>` entirely.** It restates the scope sentence or the Do-NOT-use boundary already in the same description — pure redundancy, not routing signal.
+6. **The Do-NOT-use boundary sentence is mandatory, not optional prose.** With examples capped at 2, it is the primary mechanism for resolving overlap with adjacent agents.
 
 **model:**
 - `sonnet` (default) — most agents
@@ -235,7 +243,7 @@ Dispatch the `sdlc-reviewer` subagent on the created agent file. The reviewer ch
 |---------|---------|
 | "The description can use block scalars (> or \|)" | Agent descriptions MUST be double-quoted single-line with `\\n` escapes (double-backslash). A single `\n` in YAML double-quoted strings becomes a real newline and breaks the parser. |
 | "I'll give the agent all tools to be safe" | Fewer tools = less latitude to diverge. Only list what the agent actually needs. |
-| "The example blocks are optional" | Examples are the primary trigger mechanism. Without them, Claude Code won't suggest this agent. 2-4 examples minimum. |
+| "The example blocks are optional" | Examples are the primary trigger mechanism. Without them, Claude Code won't suggest this agent. 1 minimum (2 if a confusable sibling exists) — but never more than 2, and never with `<commentary>`. |
 | "I don't need anti-rationalization entries" | Every agent rationalizes shortcuts. The table is mandatory. |
 | "This agent doesn't need a knowledge context section" | Every agent should consult agent-context-map. Even if no files are mapped yet, the section establishes the pattern. |
 | "I'll skip the self-verification checklist" | The checklist is the agent's last chance to catch mistakes before handoff. Mandatory. |
@@ -247,6 +255,7 @@ Dispatch the `sdlc-reviewer` subagent on the created agent file. The reviewer ch
 | "This source is clearly relevant — extract everything" | Premature satisfaction. Check every dimension against the source. Most content won't apply when viewed through the agent's actual lens. |
 | "I'll skip the dismissal defense — all patterns look good" | The defense exists because you feel thorough when you're not. It's mandatory in ENRICH mode. |
 | "I'll apply enrichments directly without presenting a plan" | Always compile and present the integration plan first. The user decides what gets integrated. |
+| "This source has a great new example scenario — I'll add it to the description" | ENRICH mode enriches the agent BODY, not the description's example count. Re-inflating the description back toward 3-4 examples or reintroducing `<commentary>` undoes the example-economy convention. Leave the description alone unless the enrichment source reveals the scope/boundary itself changed. |
 
 ---
 

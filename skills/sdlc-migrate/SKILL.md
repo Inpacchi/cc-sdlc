@@ -666,6 +666,8 @@ These sections originate from the framework and should be updated across all pro
 | `## Communication Protocol` | agent-template | Update the canonical protocol reference. Preserve domain-specific handoff fields. |
 | Memory section header/guidelines | agent-template | Update generic guidelines and "Surfacing Learnings to the SDLC" section. Preserve domain-specific "what to save" content. |
 
+**NOT template-derived:** the frontmatter `description` field is author/project-owned and is never auto-updated here, even when `agent-template.md`'s description convention changes (e.g., example-count tiering). Overwriting a project's hand-tuned trigger examples with framework defaults would be a regression, not an update. §3.4 offers an advisory-only trim suggestion instead — the project team decides.
+
 ### 3.2 Apply Template Updates
 
 For each agent in `.claude/agents/`:
@@ -716,6 +718,7 @@ New or updated knowledge files and process docs may conflict with or improve the
 | Skill bodies | `.claude/skills/*/SKILL.md` content | AVOID example safety — flag unguarded anti-pattern examples missing the correct-pattern pairing |
 | Skill bodies | `.claude/skills/*/SKILL.md` content | Deterministic-first — flag procedural instructions (file scanning, API calls, pattern matching) that could be scripts |
 | Agent definitions | `.claude/agents/*.md` | New knowledge wiring — do any agents work in domains covered by newly added knowledge files but aren't wired to them? |
+| Agent descriptions | `.claude/agents/*.md` frontmatter | Description-economy convention — flag `<commentary>` blocks, 3+ `<example>` blocks, or a missing "Do NOT use for" boundary sentence; suggest a trim (advisory only, see §3.1) |
 | Discipline parking lots | `[sdlc-root]/disciplines/*.md` | Stale entries — do any `[NEEDS VALIDATION]` entries now have evidence from newly landed knowledge? |
 | Project knowledge | `[sdlc-root]/knowledge/**/*.yaml` | Contradictions — do any project-specific knowledge rules conflict with newly landed upstream rules? |
 
@@ -734,6 +737,7 @@ New or updated knowledge files and process docs may conflict with or improve the
    - Glob `.claude/agents/*.md` (excluding framework agents: `sdlc-reviewer.md`, `sdlc-compliance-auditor.md`)
    - For each agent, read its domain expertise description
    - Cross-reference against newly added knowledge files — if a new knowledge file covers a domain the agent works in but isn't in the agent's `## Knowledge Context` section, flag it
+   - For each agent, check the frontmatter `description` field for `<commentary>` blocks, 3+ `<example>` blocks, or a missing "Do NOT use for" boundary sentence — flag against the description-economy convention
    - **Do not modify agents.** Collect findings.
 
 4. **Scan discipline parking lots:**
@@ -770,6 +774,9 @@ AGENT FINDINGS ([count] agents scanned)
   Missing knowledge wiring:
     [agent-name] — works in [domain] but not wired to new [knowledge-file]
       → Suggest: add to agent-context-map.yaml
+  Description economy:
+    [agent-name] — description has [N] examples with `<commentary>` blocks / missing Do-NOT-use boundary
+      → Suggest: trim to 1-2 examples (tiered by confusability), drop `<commentary>`, add boundary sentence
 
 PARKING LOT FINDINGS
   Evidence available:
@@ -789,6 +796,7 @@ Apply any of these? (list numbers, "all", or "skip")
 - Skill description reframing → edit the skill's frontmatter
 - AVOID example fixes → edit the skill body
 - Agent knowledge wiring → edit `agent-context-map.yaml`
+- Agent description trim → edit the agent's frontmatter `description` field
 - Parking lot triage updates → edit the discipline file
 - Knowledge conflict resolution → edit the project knowledge file
 
