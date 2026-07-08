@@ -300,6 +300,8 @@ The loop repeats until all agents report clean. **Do not claim the loop exited c
 
 **Plan contract briefing (mandatory):** When dispatching review agents in the loop, each agent's prompt must include the plan's specification for the phases they are reviewing — specifically: the expected behavior, acceptance criteria, and implementation approach from the plan. Reviewers check "does the implementation match what was specified?" in addition to "is the code well-written?" A well-structured stub passes code quality review but fails plan compliance review. Without the plan contract, reviewers can only assess code quality — they cannot detect whether the agent delivered what was actually asked for.
 
+7. **External Review Gate (Step E, optional):** If `[sdlc-root]/external-review.sh` exists and is executable, run the cross-vendor gate after the internal loop is clean — findings re-enter triage (step 5), the external model never fixes, and any data egress is stated to CD first. Skip silently if absent. See `[sdlc-root]/process/external-review-gate.md`.
+
 When the loop exits cleanly, output "Review loop complete — all agents clean. Proceeding to Worker Agent Reviews." then go to step 3.
 
 ### 3. Worker Agent Reviews + Result Doc

@@ -75,6 +75,8 @@ This takes 10 seconds and prevents scope drift. It's not a plan — it's a one-t
 
 **Review before committing.** When the user signals they're satisfied (or when you've completed a coherent unit of work), dispatch all relevant agents to review the full set of changes before committing. This is the same review-fix loop used in the execution skills — dispatch ALL relevant agents, collect findings, triage, fix, re-review until clean.
 
+**Optional external review gate.** After the internal review loop is clean, projects that provide an executable `[sdlc-root]/external-review.sh` get an opt-in cross-vendor second opinion (Codex or a local LLM) before commit. Its findings re-enter the same triage; the external model never edits files. Sending code to a hosted model is data egress — state where the code goes and never send secrets; prefer a local model for sensitive code. See `[sdlc-root]/process/external-review-gate.md`.
+
 **Dispatch-first, with an economics exception.** The manager rule applies in direct dispatch exactly as it does in plan-based execution. "There's no plan so I'll just do it myself" is not valid. You may self-apply a change only under the Manager Rule's Delegation Economics Exception — delegation would cost more than the change itself (in tokens or main-context growth), the change is small and mechanical, and it needs no new context — and every self-applied change is still reviewed by the relevant domain agent(s) before commit. See `[sdlc-root]/process/manager-rule.md`.
 
 ### When to Escalate to a Plan

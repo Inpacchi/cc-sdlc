@@ -73,6 +73,7 @@
       "process/discipline_capture.md",
       "process/manager-rule.md",
       "process/review-fix-loop.md",
+      "process/external-review-gate.md",
       "process/finding-classification.md",
       "process/incident_response.md",
       "process/project-section-markers.md",

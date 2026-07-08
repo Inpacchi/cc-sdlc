@@ -164,6 +164,31 @@ teammate is UNRESPONSIVE, recommend that team-lead send an explicit shutdown_req
 to either elicit a response or terminate cleanly.
 ```
 
+## Cross-Vendor External Reviewer (optional)
+
+Every reviewer above is a Claude model, so they share systematic blind spots —
+the same training distribution fails on the same edge cases. Design Principle 1
+(independent review is the value driver) implies the most valuable additional
+reviewer is the *most independent* one: a model from a different vendor (Codex) or
+a different architecture (a local Qwen). The **External Review Gate**
+(`[sdlc-root]/process/external-review-gate.md`) adds exactly this as an optional,
+opt-in final pass after the internal loop converges.
+
+Treat the external model as one more ensemble member, subject to the same
+protocol — with two adjustments:
+
+- **It does not fix and does not decide.** It only emits findings, which the
+  architect/manager classifies like any other. Domain agents fix; the internal
+  loop re-verifies. This keeps it subordinate to cc-sdlc's own review.
+- **Weight it for higher false positives.** It lacks codebase context and the
+  plan's deliberate trade-offs, so its findings lean INVESTIGATE over FIX until
+  corroborated. Apply the Anti-Conformity Safeguard when an internal reviewer
+  flips to agree with it without new evidence — cross-vendor authority is not
+  evidence.
+
+The independence that makes it valuable is the same independence that makes it
+noisier. Both follow from it being an outsider.
+
 ## Research Citations
 
 These citations document why specific design choices were made. They are included for future reference when evaluating whether to modify this protocol.

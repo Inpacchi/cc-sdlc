@@ -367,6 +367,8 @@ The loop repeats until all agents report clean. **Do not claim the loop exited c
 
 This loop is mandatory and repeats until every agent reports clean. When the loop exits cleanly, output "Review loop complete — all agents clean. Proceeding to Worker Agent Reviews." then go to step 3.
 
+7. **External Review Gate (Step E, optional):** If `[sdlc-root]/external-review.sh` exists and is executable, run the cross-vendor gate after the internal loop is clean — its findings re-enter triage (step 5), the external model never fixes, and any data egress is stated to CD first. Skip silently if absent. See `[sdlc-root]/process/external-review-gate.md`.
+
 ### 3. Worker Agent Reviews Output
 
 Every execution MUST end with a Worker Agent Reviews section. This step is only reached when step 2b shows ALL agents reporting no issues. Save as: `docs/current_work/results/dNN_name_result.md`

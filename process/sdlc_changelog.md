@@ -34,6 +34,28 @@ Each entry contains:
 
 ---
 
+## 2026-07-08: Agent-tier structure decisions + External Review Gate
+
+**Origin:** CD design session following the model-tier-strategy ingestion (below). CD asked three questions: (1A) split subagents into reviewer/implementer roles or genericize into stage-based roles (spec/plan/code reviewer)? (1B) how does a dispatching agent override a subagent's hardcoded model — is it even possible? (2) how can cc-sdlc use one LLM as planner/orchestrator and another (Codex or a local LLM) as implementer/reviewer, at minimum for an extra external review phase? Claude Code mechanics were verified via a claude-code-guide subagent against current docs before answering.
+
+**What happened:** CD decided: (1) keep domain + reviewer hybrid — no stage-generic roles; (2) wire tiers explicitly (domain writers=sonnet, review-only agents=opus, recon=effort:low); (3) build an External Review Gate via Bash CLI. Verified mechanics that shaped the design: subagent model resolves in order `CLAUDE_CODE_SUBAGENT_MODEL` env → per-invocation param → frontmatter → inherit, but per-invocation model/effort override is only reliable in Workflow scripts, not interactive Task dispatch; `effort:` frontmatter (low|medium|high|xhigh|max) is stable and overrides session effort; external models integrate via MCP-wrapped tool, Bash CLI, or the existing OpenCode local-serving path.
+
+**Changes made:**
+
+1. **`knowledge/architecture/model-tier-strategy.yaml`** — added MTS7: realize the reviewer/implementer tier gap through the write/review agent split (reviewer-only agents at opus), NOT through stage-generic roles or unreliable interactive dispatch override. Unifies decisions 1A and 1B — the tier gap is achieved structurally because cc-sdlc already separates reviewer agents from writer agents.
+2. **`agents/AGENT_SUGGESTIONS.md`** — added a "Model & effort defaults" note to the intro; added `Suggested model: opus` to code-reviewer, security-auditor, and software-architect (the cross-cutting review-only layer).
+3. **`process/agent-selection.yaml`** — tier1 header comment codifying: review is a mode not a role; review-only agents carry the escalated (opus) tier; recon agents effort:low; do not add stage-generic reviewer roles.
+4. **`process/external-review-gate.md`** (new) — canonical spec for the opt-in cross-vendor review gate: runs after the internal loop converges, activated by an executable `[sdlc-root]/external-review.sh` wrapper (stdin=rubric+context+diff, stdout=`SEVERITY | file:line | finding`), findings re-enter triage, external model never fixes, hard data-egress rules (never send secrets; prefer local models; state egress to CD; confirm before first hosted run), 2-round cap, anti-conformity handling. Includes local (Ollama) and hosted (Codex) example wrappers.
+5. **`process/review-fix-loop.md`** — added Step E (External Review Gate) between the clean internal loop and commit.
+6. **`process/debate-protocol.md`** — added "Cross-Vendor External Reviewer" section framing the external model as the most-independent ensemble member (Design Principle 1), subordinate to internal review, weighted for higher false positives.
+7. **`skills/sdlc-review-code/SKILL.md`, `skills/sdlc-execute/SKILL.md`, `skills/sdlc-lite-execute/SKILL.md`** — added the optional External Review Gate step after each internal review loop.
+8. **`CLAUDE-SDLC.md`** — Direct Dispatch Rules: added the optional external review gate with the egress caveat.
+9. **`skeleton/manifest.json`** — registered `process/external-review-gate.md`.
+
+**Downstream:** Child projects receive MTS7, the new process doc, and the skill/doc wiring on next migration (`process/*.md` glob already covers the new doc in sdlc-migrate §2.1). The gate ships disabled — projects opt in by adding an executable `external-review.sh`; cc-sdlc ships no default wrapper because model choice and egress policy are project decisions. No contract-phrase changes.
+
+**Rationale:** CD's planner/implementer-split goal is served two ways. Within Claude Code: keep domain agents, make the existing reviewer layer the higher tier (MTS7) so reviewer≥implementer holds without depending on dispatch-override that only workflows support. Across vendors: the External Review Gate adds a genuinely independent reviewer (different vendor/architecture = different blind spots), which debate-protocol identifies as the highest-value ensemble addition — while keeping it subordinate to cc-sdlc's own review loop and the Manager Rule (external model reviews; domain agents fix). Stage-generic roles were rejected because they strip knowledge routing, duplicate the skill's own stage orchestration, and shrink ensemble diversity.
+
 ## 2026-07-08: Manager Rule — replace trivial-fix exception with Delegation Economics Exception
 
 **Origin:** CD directive, same session as the model-tier-strategy ingestion below. The initial ingestion deliberately rejected the community "do the work directly when delegation would cost more" boundary; CD reviewed that call and reversed it: "I don't mind the manager doing changes if they're trivial or small or more cost efficient, but they should always be reviewed. The goal is to keep main context small."

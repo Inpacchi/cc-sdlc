@@ -141,6 +141,37 @@ After ALL fixes from Step C are applied, **return to Step A**. Before dispatchin
 
 **This loop repeats until Step B shows ALL agents reporting no issues.** There is no shortcut. Do not claim the loop is closed without a clean round.
 
+## Step E: External Review Gate (optional, opt-in)
+
+After Step B shows all internal agents clean — and before commit — run the
+**External Review Gate** if the project has enabled it. This sends the converged
+diff to a non-Claude model (Codex or a local LLM) for a maximally-independent
+second opinion. The full protocol, wrapper contract, and data-egress rules are in
+`[sdlc-root]/process/external-review-gate.md`.
+
+Mechanics:
+
+1. If `[sdlc-root]/external-review.sh` is absent or not executable, **skip
+   silently** — the gate is optional. Otherwise continue.
+2. State where the code is going (which model/endpoint) so CD sees any egress.
+   For hosted providers not durably authorized, confirm with CD first. Never send
+   secrets or `.env` content.
+3. Run the wrapper with the payload (rubric + spec/plan context + diff). If it
+   exits non-zero, record "external gate errored — skipped" and proceed to
+   commit. **Never block a commit on external availability.**
+4. Feed any returned findings into **Step C** triage exactly like agent findings.
+   The external model does not fix — domain agents fix. External findings
+   uncorroborated by tests or internal reviewers lean INVESTIGATE, not FIX.
+5. If a FIX is applied, **return to Step A** (re-run the internal loop; fixes can
+   introduce new problems), then re-run the gate once the internal loop is clean.
+6. Cap the gate at 2 fix rounds — if it still surfaces new FIX findings after
+   two cycles, surface the remainder to CD via `AskUserQuestion` rather than
+   looping.
+
+The gate does not replace the internal loop and never runs before it. It is one
+more ensemble member (`[sdlc-root]/process/debate-protocol.md` § Cross-Vendor
+External Reviewer), deliberately chosen for independence.
+
 ## 3-Strike Rule
 
 If the same agent reports the same finding category in 3 consecutive review rounds — regardless of what was changed between rounds — stop iterating. Output:

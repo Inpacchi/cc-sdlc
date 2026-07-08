@@ -4,6 +4,8 @@ Domain agent roles that have proven useful across projects. Each entry includes 
 
 **Creating agents:** Always invoke `/sdlc-develop-agent` to create agents. Do NOT write agent files directly — the skill validates frontmatter, formats description `<example>` blocks, and scaffolds the system prompt. See `[sdlc-root]/templates/agent-template.md` for the structural pattern the skill produces.
 
+**Model & effort defaults (per `[sdlc-root]/knowledge/architecture/model-tier-strategy.yaml`):** domain writer agents default to `sonnet`; cross-cutting review-only agents (code-reviewer, software-architect, security-auditor) default to `opus` so reviewer tier ≥ implementer tier (MTS4/MTS7); recon/mechanical agents (search, retrieval, checklist verification) carry `effort: low` in frontmatter. `effort:` is the one tier lever that is stable at frontmatter level in interactive dispatch today. Entries below omit `Suggested model` where the `sonnet` default applies.
+
 ---
 
 ## Engineering Agents
@@ -141,6 +143,7 @@ and overengineering identification.
 ```
 
 **Suggested tools:** Read, Write, Edit, Bash, Glob, Grep, LSP
+**Suggested model:** opus — this is a cross-cutting review-only agent; per MTS7 in `[sdlc-root]/knowledge/architecture/model-tier-strategy.yaml`, the review layer carries the escalated tier so reviewer tier ≥ implementer tier (MTS4) is satisfied structurally.
 
 ---
 
@@ -259,6 +262,7 @@ cloud security configuration, and risk-based severity classification.
 ```
 
 **Suggested tools:** Read, Bash, Glob, Grep, WebFetch, WebSearch
+**Suggested model:** opus — review-only assessment agent; carries the escalated review tier per MTS7 / MTS4 in `[sdlc-root]/knowledge/architecture/model-tier-strategy.yaml`.
 
 ---
 
@@ -280,6 +284,7 @@ technology selection frameworks.
 ```
 
 **Suggested tools:** Read, Write, Edit, Bash, Glob, Grep, LSP
+**Suggested model:** opus — architectural judgment and cross-cutting review; carries the escalated review tier per MTS7 / MTS4 in `[sdlc-root]/knowledge/architecture/model-tier-strategy.yaml`.
 
 ---
 

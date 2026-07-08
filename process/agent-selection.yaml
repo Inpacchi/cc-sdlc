@@ -7,6 +7,15 @@
 
 tiers:
   # Tier 1: Domain Agents — dispatch when work involves their domain
+  #
+  # Model/effort tiers: domain agents write AND review their domain (review is a
+  # mode, not a separate role). The cross-cutting review-only agents below
+  # (code-reviewer, software-architect, security-auditor) carry the escalated
+  # review tier — set them to opus so reviewer tier ≥ implementer tier. Recon
+  # agents carry effort: low. See MTS7 / MTS4 in
+  # [sdlc-root]/knowledge/architecture/model-tier-strategy.yaml. Do NOT add
+  # stage-generic reviewer roles (spec-reviewer, plan-reviewer) — the review
+  # STAGE is chosen by which skill runs, not by a stageless agent.
   tier1:
     code-reviewer:
       dispatch: always

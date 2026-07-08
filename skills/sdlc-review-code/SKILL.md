@@ -246,6 +246,8 @@ The loop repeats until step 3 shows all agents clean. **Do not claim the loop ex
 
 **3-strike rule:** If the same finding recurs across 3 consecutive rounds, stop iterating and escalate to the user via `AskUserQuestion`.
 
+**External Review Gate (optional):** After the internal loop is clean and before commit, if `[sdlc-root]/external-review.sh` exists and is executable, run the External Review Gate — a cross-vendor (Codex / local LLM) independent second opinion. Its findings re-enter Step 5b's triage; the external model never fixes. State any data egress to CD first. Full protocol: `[sdlc-root]/process/external-review-gate.md` (also `[sdlc-root]/process/review-fix-loop.md` Step E). Skip silently if the wrapper is absent.
+
 ### 5c. Summary and Commit
 
 When the loop exits clean, present:

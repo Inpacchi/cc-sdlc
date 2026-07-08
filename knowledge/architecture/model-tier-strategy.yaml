@@ -246,6 +246,60 @@ rules:
       - "Writing vague plans that force the execution session to re-derive intent, silently pulling judgment work down-tier"
     source: "DataCamp spec-driven development tutorial; r/ClaudeAI SDD-coordinator thread (2026-07); [sdlc-root]/knowledge/architecture/token-economics.yaml"
 
+  - rule_id: MTS7
+    name: "Realize the reviewer/implementer tier gap through the write/review agent split, not stage-generic roles or dispatch overrides"
+    description: |
+      A domain agent that both writes and reviews its domain cannot carry
+      two model tiers in one frontmatter `model:` field. The resolution is
+      NOT to genericize agents by artifact stage (a "spec-reviewer",
+      "plan-reviewer", "code-reviewer-of-everything") and it is NOT to rely
+      on per-dispatch model override (the orchestrator CAN pass a per-
+      invocation model — resolution order: CLAUDE_CODE_SUBAGENT_MODEL env
+      var → per-invocation param → frontmatter → inherit — but this is only
+      reliably controllable in Workflow scripts today, not in interactive
+      Task-tool dispatch). Instead, realize the tier gap structurally:
+
+      1. Keep DOMAIN agents. They own depth and are wired to domain
+         knowledge via agent-context-map.yaml. Write vs review is a MODE the
+         same agent operates in, not a separate role, and the review STAGE
+         (spec / plan / code) is already selected by which skill runs and
+         which lenses apply (review-lenses.md) — it does not need its own
+         agent.
+      2. Keep the cross-cutting REVIEW-ONLY layer — code-reviewer,
+         software-architect, security-auditor. These are the escalated-tier
+         reviewers. Set them to `opus` in frontmatter. Domain writers stay
+         `sonnet`. This satisfies MTS4 (reviewer tier ≥ implementer tier)
+         deterministically, with no dependence on dispatch-time override.
+      3. Set `effort: low` on recon/mechanical agents' frontmatter — the
+         one tier lever that IS fully stable at dispatch-independent
+         frontmatter level today (overrides session effort).
+
+      Genericizing by stage would (a) break knowledge routing — a stageless
+      reviewer loads everything or nothing, (b) duplicate the skill's own
+      stage orchestration, (c) shrink the ensemble diversity that
+      debate-protocol.md identifies as the primary value driver, and (d)
+      recreate the generalist-masking anti-pattern from agent-selection.yaml.
+    rationale: |
+      The tier gap the community achieves with per-dispatch model selection
+      (sonnet writes, opus reviews) is achievable in interactive Claude Code
+      without that mechanism, because cc-sdlc already separates the reviewer
+      agents from the writer agents. Assigning the reviewers a higher
+      frontmatter tier is equivalent in effect and deterministic — it does
+      not depend on whether interactive Task dispatch exposes a per-
+      invocation model param (currently uncertain; solid only in Workflows).
+      Domain depth and cross-vendor-style independence are preserved because
+      the reviewers are still domain-aware, not stage-generic.
+    checklist:
+      - "Are code-reviewer, software-architect, and security-auditor set to opus in frontmatter (or the project's top available tier)?"
+      - "Are domain writer agents at sonnet, with recon/mechanical agents carrying effort: low?"
+      - "Has the project resisted adding stage-generic reviewer roles that would strip domain knowledge routing?"
+      - "If per-dispatch write-vs-review tier separation on ONE agent is truly needed, is that work in a Workflow (where agent() sets model+effort per call) rather than relying on interactive Task override?"
+    anti_patterns:
+      - "Adding spec-reviewer / plan-reviewer / code-reviewer generic roles that have no domain and no knowledge-map wiring"
+      - "Leaving reviewers at the same tier as writers and hoping interactive dispatch will override the model (unreliable today)"
+      - "Collapsing domain agents into stage roles to 'simplify' — it discards the ensemble diversity that makes review valuable"
+    source: "CD decision (2026-07); Claude Code sub-agents model-resolution + effort frontmatter (code.claude.com/docs/en/sub-agents); r/ClaudeAI tiered-orchestration threads (2026-07)"
+
 # ─────────────────────────────────────────────
 # Maintenance
 # ─────────────────────────────────────────────
