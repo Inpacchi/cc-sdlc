@@ -34,6 +34,27 @@ Each entry contains:
 
 ---
 
+## 2026-07-08: Manager Rule — replace trivial-fix exception with Delegation Economics Exception
+
+**Origin:** CD directive, same session as the model-tier-strategy ingestion below. The initial ingestion deliberately rejected the community "do the work directly when delegation would cost more" boundary; CD reviewed that call and reversed it: "I don't mind the manager doing changes if they're trivial or small or more cost efficient, but they should always be reviewed. The goal is to keep main context small."
+
+**What happened:** The Manager Rule's trivial-fix exception (mechanical + single-site + self-evident) was the only permitted self-implementation. CD adopted a broader economic boundary: the manager may self-apply when delegation costs more than the change itself — monetarily (dispatch overhead re-loading context the manager already holds) or in main-context growth — with review as the non-negotiable backstop.
+
+**Changes made:**
+
+1. **`process/manager-rule.md`** — "The Rule" reframed from "never edits code files" to "dispatches by default; direct implementation only under the Delegation Economics Exception; never self-approves." Trivial Fix Exception replaced by the Delegation Economics Exception (4 conditions: small and bounded; no design judgment; context-neutral — no paging in code to decide HOW; reviewed). Trivial fixes always qualify. Hard boundaries kept regardless of economics: specs/plans stay agent-written (except WORDING), architectural/product decisions stay with agents/CD, high-risk domains allow only trivial-class fixes with MTS4 risk-escalated review. "No Size Exception" section removed (superseded); new "Mandatory Review of Manager-Applied Changes" section (self-applied ≠ self-approved; batch small changes into one review dispatch). "No Complexity Exception" retained. Failed-dispatch rule softened: re-dispatch with revised prompt first; a remaining gap that itself passes the economics test may be closed directly with review. Scope/completeness bullets updated to the same test (merge reconciliation still always dispatches — it's judgment). Session Scope single-file rule now applies the economics test.
+2. **`skills/sdlc-plan/SKILL.md`, `skills/sdlc-lite-plan/SKILL.md`, `skills/sdlc-execute/SKILL.md`, `skills/sdlc-lite-execute/SKILL.md`** — inlined Manager Rule summaries updated to the economics exception + revised failed-dispatch rule; execute skills' review-loop fix triage now uses the economics test (self-applied fixes re-enter the next review round); lite-execute red flag updated.
+3. **`skills/sdlc-review-code/SKILL.md`** — Step 5a fix triage rewritten around the economics test (trivial fixes always qualify); self-check wording updated; Step 5b review loop unchanged and remains mandatory for self-applied fixes.
+4. **`skills/sdlc-create-reference-doc/SKILL.md`** — fix-loop triage aligned to the economics test.
+4a. **`skills/sdlc-tests-run/SKILL.md`** — Manager Rule section updated: economics-qualifying fixes may be self-applied, verified by re-running tests, and reviewed; diagnosis-requiring fixes still dispatch.
+5. **`CLAUDE-SDLC.md`** — Direct Dispatch Rules: "Never self-implement" → "Dispatch-first, with an economics exception" (review mandatory); "Iterate on CD feedback" allows economics-qualifying self-fixes with review.
+6. **`process/overview.md`** — direct-dispatch description updated.
+7. **`BOOTSTRAP-LITE.md`** — Manager Rule summary updated (complexity exception still absent; economics exception added with mandatory review).
+8. **`knowledge/architecture/model-tier-strategy.yaml`** — "Relationship to the Manager Rule" preamble rewritten (exception adopted; economics never buys skipped review or absorbed design judgment); MTS1 anti-pattern retargeted at skipping review rather than at self-implementation per se.
+9. **`knowledge/provenance_log.md`** — prov-2026-07-08-001 note amended to record the same-session adoption (branch not yet merged; note corrected rather than appended to avoid misleading future readers).
+
+**Rationale:** The original rule optimized for role purity; CD optimizes for context economy. A dispatch that forces an agent to re-load context the manager already holds costs more tokens than the change, and reading the agent's handoff can grow main context more than typing the fix would. The redesigned exception keeps the two failure modes the old rule guarded against — scope creep via "small" changes and unreviewed manager output — behind explicit conditions: acquiring new context to self-implement disqualifies (that cost is the point of the rule), design judgment disqualifies, and review is unconditional. Self-applied is never self-approved.
+
 ## 2026-07-08: Framework Ingestion — Model & Effort Tier Strategy
 
 **Origin:** Bulk ingestion via `ccsdlc-ingest` from community sources: three r/ClaudeAI thread screenshots (per-subagent `effort:` frontmatter; Fable-coordinates/Opus-verifies/Sonnet-executes/Haiku-scouts workflow splits; SDD with a top-tier coordinator), a community "fable-chief-agent" skill, and the DataCamp spec-driven development tutorial. CD specifically asked to explore Fable/Opus as the research/planning tier with Sonnet agents implementing.

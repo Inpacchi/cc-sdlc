@@ -84,8 +84,8 @@ Follow the state machine in `[sdlc-root]/process/deliverable_lifecycle.md`. Upda
 **You are the manager — you orchestrate, you do not implement.** The canonical rule is in `[sdlc-root]/process/manager-rule.md`. The critical constraints:
 
 - **Default: dispatch domain agents** for all code and domain content changes. You never write code yourself.
-- **Trivial fix exception:** you may self-apply a fix when ALL three are true: (1) mechanical — no design judgment; (2) single-site — one file, one location; (3) self-evident — verifiable from the fix alone without reading surrounding code.
-- **Failed dispatch:** if an agent returns without applying its work, re-dispatch — do not self-implement.
+- **Delegation economics exception:** you may self-apply a change when delegation would cost more than the change itself (in tokens or main-context growth) AND the change is small and bounded, requires no design judgment, and needs no new context beyond what you already hold. Every self-applied change still goes through domain agent review — self-applied is never self-approved.
+- **Failed dispatch:** if an agent returns without applying its work, re-dispatch with a revised prompt; only a remaining gap that passes the economics test may be closed directly (with review).
 - **No semantic revert:** fixing a bug by removing the feature is not a fix — preserve the user's requested behavior.
 - **Session scope:** this rule stays active for the entire session. There is no post-commit wind-down mode.
 
@@ -291,7 +291,7 @@ After ALL phases are done, run the **Review-Fix Loop** per `[sdlc-root]/process/
 2. **Experiential verification (Step 0.5):** For user-facing changes, start the dev server and walk the golden path, check adjacent features, verify scroll/resize, and check state transitions. Fix experiential failures before entering agent review.
 3. **Dispatch ALL review agents** as subagents (separate context windows — context separation prevents confirmation bias). Agent source: the plan's agent assignment table.
 4. **Collect findings.** If ALL agents report zero → loop exits clean. Zero means zero.
-5. **Classify** per `[sdlc-root]/process/finding-classification.md` (FIX, PLAN, INVESTIGATE, DECIDE, PRE-EXISTING). Fix classified findings — trivial fixes may be self-applied; non-trivial fixes get dispatched to domain agents.
+5. **Classify** per `[sdlc-root]/process/finding-classification.md` (FIX, PLAN, INVESTIGATE, DECIDE, PRE-EXISTING). Fix classified findings — fixes passing the Manager Rule's delegation-economics test may be self-applied (they re-enter the next review round); the rest get dispatched to domain agents.
 6. **Re-review (mandatory).** After fixes, return to step 3. Dispatch ALL agents again — not just those who found issues.
 
 The loop repeats until all agents report clean. **Do not claim the loop exited clean without a review round that produced zero findings.** 3-strike rule: escalate to user after 3 consecutive rounds with the same finding.
@@ -500,7 +500,7 @@ The Manager Rule remains in effect per `[sdlc-root]/process/manager-rule.md` —
 |---------|---------|
 | "This file wasn't in the plan — I'll revert it" | NEVER revert files you didn't create. The file may contain the user's concurrent work. Log the deviation; ask via `AskUserQuestion` if concerned. `git checkout --` on someone else's work is destructive and irreversible. |
 | "There's no plan, I'll wing it" | Stop. Use `sdlc-lite-plan` first. |
-| "I'll implement this myself" | If a domain agent exists for it, dispatch them. |
+| "I'll implement this myself" | Only if it passes the delegation-economics test (small, mechanical, no new context, cheaper than dispatch) — and it still gets reviewed. Otherwise dispatch the domain agent. |
 | "This phase is small and well-defined, I'll do it directly" | Size is not an exception. Dispatch the agent. |
 | "I'll implement directly to avoid context gaps from dispatching" | Complexity increases the need for agents, not decreases it. Pass the context you have to the agent in the dispatch prompt. |
 | "I pre-read 8 files so now I have complete context and can implement" | Pre-reading is the first step toward self-implementation. Read the plan file; let agents read the implementation files they need. |

@@ -22,14 +22,15 @@ last_updated: 2026-07-08
 # ─────────────────────────────────────────────
 # Relationship to the Manager Rule
 # ─────────────────────────────────────────────
-# This file governs WHICH TIER does delegated work. It does not relax
-# [sdlc-root]/process/manager-rule.md, which governs WHETHER work is
-# delegated at all. Community tiering doctrines often include a
-# delegation-economics escape hatch ("do the work directly when
-# delegation would cost more than the task"). cc-sdlc deliberately
-# rejects that escape hatch: the manager never implements beyond the
-# trivial-fix exception, regardless of tier economics. Adopt the
-# tier-matching here; the Manager Rule stays authoritative on delegation.
+# This file governs WHICH TIER does delegated work. Whether work is
+# delegated at all is governed by [sdlc-root]/process/manager-rule.md,
+# whose Delegation Economics Exception was adopted (by CD decision) from
+# the same community sources: the manager may apply a change directly
+# when delegation would cost more than the change itself — monetarily or
+# in main-context growth — and the change is small, mechanical, and needs
+# no new context. Two things economics never buys: skipping review (every
+# manager-applied change is domain-agent-reviewed before commit) and
+# absorbing design judgment (complexity always delegates).
 
 rules:
 
@@ -72,7 +73,7 @@ rules:
     anti_patterns:
       - "Top-tier orchestrator reading dozens of files itself instead of dispatching exploration to a cheap agent"
       - "Delegating the approach decision or finding arbitration to a worker agent — judgment stays at the top"
-      - "Using tier economics to justify self-implementation — the Manager Rule governs WHETHER to delegate, this rule governs WHERE"
+      - "Using tier economics to skip review of manager-applied changes — the Manager Rule's economics exception changes who types, never who reviews"
     source: "community fable-chief-agent skill; r/ClaudeAI tiered-orchestration threads (2026-07)"
 
   - rule_id: MTS2

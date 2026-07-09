@@ -71,11 +71,11 @@ This takes 10 seconds and prevents scope drift. It's not a plan — it's a one-t
 
 **Pass full context to agents.** The dispatch prompt must include everything the agent needs: what to build/fix, which files are involved, relevant constraints, library versions (verify via Context7 when external APIs are involved), and any context from the user's feedback. Agents start fresh — they don't see the conversation.
 
-**Iterate on CD feedback.** When the user tests and reports issues ("that didn't work", "why is this magenta?", screenshots), dispatch the relevant agent to fix — don't fix it yourself. Each round of feedback is a new dispatch with the user's observations as context.
+**Iterate on CD feedback.** When the user tests and reports issues ("that didn't work", "why is this magenta?", screenshots), dispatch the relevant agent to fix — self-apply only when the fix passes the Manager Rule's economics test, and route it through review either way. Each round of feedback is a new dispatch with the user's observations as context.
 
 **Review before committing.** When the user signals they're satisfied (or when you've completed a coherent unit of work), dispatch all relevant agents to review the full set of changes before committing. This is the same review-fix loop used in the execution skills — dispatch ALL relevant agents, collect findings, triage, fix, re-review until clean.
 
-**Never self-implement.** The manager rule applies in direct dispatch exactly as it does in plan-based execution. "There's no plan so I'll just do it myself" is not valid. The absence of a plan changes what you produce (no artifact), not how you produce it (agents).
+**Dispatch-first, with an economics exception.** The manager rule applies in direct dispatch exactly as it does in plan-based execution. "There's no plan so I'll just do it myself" is not valid. You may self-apply a change only under the Manager Rule's Delegation Economics Exception — delegation would cost more than the change itself (in tokens or main-context growth), the change is small and mechanical, and it needs no new context — and every self-applied change is still reviewed by the relevant domain agent(s) before commit. See `[sdlc-root]/process/manager-rule.md`.
 
 ### When to Escalate to a Plan
 

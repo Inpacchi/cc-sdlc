@@ -39,8 +39,8 @@ Follow the state machine in `[sdlc-root]/process/deliverable_lifecycle.md`. When
 **You are the manager — you orchestrate, you do not implement.** The canonical rule is in `[sdlc-root]/process/manager-rule.md`. The critical constraints:
 
 - **Default: dispatch domain agents** for all code, specs, plans, and domain content. You never write these yourself.
-- **Trivial fix exception:** you may self-apply a fix when ALL three are true: (1) mechanical — no design judgment; (2) single-site — one file, one location; (3) self-evident — verifiable from the fix alone without reading surrounding code.
-- **Failed dispatch:** if an agent returns without applying its work, re-dispatch — do not self-implement.
+- **Delegation economics exception:** you may self-apply a change when delegation would cost more than the change itself (in tokens or main-context growth) AND the change is small and bounded, requires no design judgment, and needs no new context beyond what you already hold. Every self-applied change still goes through domain agent review — self-applied is never self-approved.
+- **Failed dispatch:** if an agent returns without applying its work, re-dispatch with a revised prompt; only a remaining gap that passes the economics test may be closed directly (with review).
 - **No semantic revert:** fixing a bug by removing the feature is not a fix — preserve the user's requested behavior.
 - **Session scope:** this rule stays active for the entire session. There is no post-commit wind-down mode.
 

@@ -43,6 +43,6 @@ Append-only record of where knowledge entered the SDLC knowledge layer. Enables 
 - **files-updated:** templates/agent-template.md, skills/sdlc-develop-agent/SKILL.md, agents/sdlc-reviewer.md, skills/sdlc-plan/SKILL.md, skills/sdlc-lite-plan/SKILL.md, skills/sdlc-execute/SKILL.md, knowledge/agent-context-map.yaml, knowledge/architecture/README.md, CLAUDE-SDLC.md, disciplines/architecture.md
 - **rule-count:** 6
 - **ingested-by:** ccsdlc-ingest
-- **notes:** DataCamp SDD workflow (spec → plan → implement with human gates) validated as already fully implemented by cc-sdlc — no structural change needed. The fable-chief-agent skill's delegation-economics escape hatch ("do work directly when delegation costs more") was deliberately NOT adopted; the Manager Rule remains authoritative. Three unvalidated observations parked in disciplines/architecture.md.
+- **notes:** DataCamp SDD workflow (spec → plan → implement with human gates) validated as already fully implemented by cc-sdlc — no structural change needed. The fable-chief-agent skill's delegation-economics boundary ("do work directly when delegation costs more") was initially deferred, then adopted by CD decision in the same session as the Manager Rule's Delegation Economics Exception (mandatory review retained; see changelog 2026-07-08 entries). Three unvalidated observations parked in disciplines/architecture.md.
 
 ---

@@ -416,7 +416,7 @@ Complexity is the trigger, not file count. A 2-file change that touches DB + API
 
 ## The Manager Rule
 
-When any skill that dispatches agents is active, **you (the assistant) never edit code files**. Dispatch the relevant agent. No size exception. No complexity exception. See `ops/sdlc-lite/process/manager-rule.md` for the canonical definition.
+When any skill that dispatches agents is active, **you (the assistant) dispatch domain agents by default**. You may self-apply a change only when delegation would cost more than the change itself (in tokens or main-context growth) and the change is small, mechanical, and needs no new context — and every self-applied change is still reviewed by the relevant agent before commit. No complexity exception. See `ops/sdlc-lite/process/manager-rule.md` for the canonical definition.
 
 ## The 3 agents
 

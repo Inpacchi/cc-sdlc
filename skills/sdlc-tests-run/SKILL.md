@@ -77,9 +77,7 @@ digraph test_loop {
 
 ### Manager Rule
 
-**The manager (you) never edits code files.** This applies unconditionally. You run tests, read output, classify failures, and dispatch agents. You do not fix test code. You do not fix application code. If you notice a problem, the correct action is to dispatch the relevant agent.
-
-The size of a fix is not a valid reason to self-fix. A one-character typo fix still gets dispatched. There are no small-fix exceptions.
+**The manager (you) dispatches fixes by default.** You run tests, read output, classify failures, and dispatch agents. You may self-apply a fix only under the Delegation Economics Exception in `[sdlc-root]/process/manager-rule.md` — small, mechanical, no new context needed, cheaper than a dispatch — and every self-applied fix is verified by re-running the tests and reviewed by the relevant domain agent. Anything requiring diagnosis of surrounding code gets dispatched.
 
 ### Agent Dispatch Protocol
 

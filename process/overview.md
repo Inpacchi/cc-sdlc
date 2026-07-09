@@ -261,7 +261,7 @@ Not everything needs the full Spec → Planning → Result flow. The SDLC suppor
 | **SDLC-Lite** | Complex enough to benefit from a reviewed plan, doesn't need a spec | Deliverable ID (tier: lite), catalog entry, plan file, result doc |
 | **Direct dispatch** | CD steers in real-time, agents do the work | No artifact — scope stated in conversation |
 
-**Direct dispatch** covers what was previously called "ad hoc work" — bug fixes, UI tweaks, quick iterations, corrections. The key rule is that domain agents still do the implementation and review work, even without a plan file. CC orchestrates, never self-implements.
+**Direct dispatch** covers what was previously called "ad hoc work" — bug fixes, UI tweaks, quick iterations, corrections. The key rule is that domain agents still do the implementation and review work, even without a plan file. CC orchestrates; direct implementation is limited to the Manager Rule's delegation-economics exception, and every self-applied change is agent-reviewed before commit.
 
 **Reconciliation:** Periodically say **"Let's catalog our ad hoc work"** to:
 - Review what was done since the last formal deliverable

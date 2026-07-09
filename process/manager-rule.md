@@ -6,38 +6,44 @@ The single most important behavioral principle in the SDLC framework. Every skil
 
 ## The Rule
 
-**The manager (you) never edits code files.** This applies unconditionally: before dispatching agents, while waiting for agents, after receiving agent results, during the review loop, and at every other point in the skill. There is no phase of any skill in which it is correct for you to open a file and make a change. If you notice a problem, the correct action is to dispatch the relevant worker domain agent.
+**The manager (you) dispatches domain agents by default — for all code, specs, plans, and domain content.** Direct implementation is permitted only under the Delegation Economics Exception below, and every manager-applied change must be reviewed by the relevant domain agent(s) before commit. The manager never self-approves. If a problem falls outside the exception's bounds, the correct action is to dispatch the relevant worker domain agent.
 
-## Trivial Fix Exception
+The rule is economic, not ceremonial: the manager's context window is the scarcest resource in the session, and delegation keeps it small. The exception exists for the cases where delegation is the more expensive path.
 
-The manager may apply a fix directly when ALL three conditions are true:
+## Delegation Economics Exception
 
-1. **Mechanical** — no design judgment, no ambiguity about what to change
-2. **Single-site** — one file, one location
-3. **Self-evident** — a reader can verify correctness from the fix alone, without reading surrounding code
+The manager may apply a change directly when delegation would cost more than the change itself — monetarily (dispatch overhead: the agent re-loading context the manager already holds, plus handoff) or in main-context growth. ALL conditions must hold:
 
-Examples: fixing a typo in a string, adding a missing import, removing an unused variable, correcting an obvious type annotation, adding a missing `key` prop.
+1. **Small and bounded** — a few edit sites; no new abstractions (components, hooks, stores, routes, types, events); no cross-domain coordination
+2. **No design judgment** — mechanical, or follows an established pattern the manager can cite. Competing approaches or tradeoffs disqualify.
+3. **Context-neutral** — the manager can decide HOW from context already in the window. If deciding requires paging in surrounding code, dispatch — acquiring context in order to self-implement is exactly the cost this exception exists to avoid, and "I'll read the files first, then it's cheaper to do it myself" is the loophole that swallows the rule.
+4. **Reviewed** — the change enters the same review loop as agent work before commit (see Mandatory Review below)
 
-**If you need to read surrounding code to decide HOW to fix, it is not trivial — dispatch.**
+Trivial fixes always qualify: a typo in a string, a missing import, an unused variable, an obvious type annotation, a missing `key` prop.
 
-The review loop is mandatory regardless of who applies the fix. The exception governs WHO fixes, not WHETHER the fix gets reviewed.
+**Boundaries that hold regardless of economics:**
+- Specs, plans, and plan revisions stay agent-written (except WORDING-class edits, which were always orchestrator-editable)
+- Architectural and product decisions stay with agents and CD
+- High-risk domains (auth, payments, permissions, migrations, concurrency — per the infrastructure domains in `[sdlc-root]/process/agent-selection.yaml`) allow only trivial-class manager fixes, and their review uses the risk-escalated tier from `[sdlc-root]/knowledge/architecture/model-tier-strategy.yaml` (MTS4)
 
-## No Size Exception (Non-Trivial Work)
+When the conditions are debatable, dispatch — the default is delegation.
 
-**Beyond the trivial-fix exception above, the size of a change is not a valid reason to self-implement.** "This is small, well-defined, and bounded" is not an exception when the fix requires understanding context, making design choices, or touching multiple locations. A targeted refactor to a single file still gets dispatched. A fix that requires reading the surrounding code to determine the right approach still gets dispatched.
+## Mandatory Review of Manager-Applied Changes
+
+**Self-applied is never self-approved.** Every change the manager applies under the exception is reviewed by the relevant domain agent(s) before commit — the same review loop agent work goes through. Batch multiple small manager changes into a single review dispatch to keep the economics favorable. If a reviewer finds that a self-applied change involved design judgment after all, the finding routes to a domain agent for the fix — do not defend the change; re-dispatch it.
 
 ## No Complexity Exception
 
-**Complexity is not a valid reason to self-implement.** "I'll implement this directly to avoid context gaps" or "dispatching agents would lose the patterns I've read" reverses the logic entirely. Complexity increases the need for worker domain agents — it does not reduce it. When you have gathered context from reading files, your role is to pass that context to the worker domain agent in the dispatch prompt, not to implement the work yourself.
+**Complexity is not a valid reason to self-implement.** The economics exception covers small mechanical work only. "I'll implement this directly to avoid context gaps" or "dispatching agents would lose the patterns I've read" reverses the logic entirely. Complexity increases the need for worker domain agents — it does not reduce it. When you have gathered context from reading files, your role is to pass that context to the worker domain agent in the dispatch prompt, not to implement the work yourself.
 
 ## Failed Agent Dispatch
 
-**If an agent returns without applying its work** (change not reflected in files, agent reported an error, or the change is missing): re-dispatch that agent with the same instructions. Do NOT apply the change yourself. The rule is re-dispatch, not self-implement.
+**If an agent returns without applying its work** (change not reflected in files, agent reported an error, or the change is missing): re-dispatch that agent with a revised prompt. Do NOT absorb the work yourself by default. If a re-dispatch also fails and the *remaining gap* passes the Delegation Economics Exception test, the manager may close it directly (with review) — re-dispatching a full agent to add one missed line costs more than the line. If the gap doesn't qualify, re-dispatch again or escalate to CD.
 
 ## No Exceptions for Scope or Completeness
 
-- **Parallel agents produced a file conflict** (one agent's write overwrote another's): re-dispatch the overwritten agent with the current file state and instructions to re-apply its changes. Framing the situation as a "merge task" does not make self-implementation appropriate.
-- **An agent's work is mostly complete but has gaps or loose ends**: re-dispatch that agent to close the gaps. "Mostly done" is not done. Finishing the last 10% yourself is the same violation as doing 100% yourself.
+- **Parallel agents produced a file conflict** (one agent's write overwrote another's): re-dispatch the overwritten agent with the current file state and instructions to re-apply its changes. Reconciling two agents' intents is judgment work — the economics exception does not apply to merges.
+- **An agent's work is mostly complete but has gaps or loose ends**: apply the economics test to the gap itself. A genuinely small, mechanical gap (a missed rename, an unexported symbol) may be closed directly with review. A gap requiring design judgment or new context gets re-dispatched — finishing a meaningful fraction of the agent's work yourself is the same violation as doing all of it yourself.
 
 ## No Revert Without Authorization
 
@@ -95,13 +101,13 @@ The rule applies to **code files and domain content**. The manager may directly 
 - Catalog entries (`docs/_index.md`)
 - WORDING-classified spec revisions (typos, phrasing — not meaning changes)
 
-The boundary is: if it requires domain judgment about code, architecture, or implementation, dispatch. If it's summarizing review outcomes or fixing table formatting, do it yourself.
+The boundary is: if it requires domain judgment about code, architecture, or implementation, dispatch. If it's summarizing review outcomes or fixing table formatting, do it yourself. For code changes, the Delegation Economics Exception above governs — and it always ends in review.
 
 ## Session Scope
 
 The Manager Rule remains in effect for the **entire session** after any skill activates it. If the user requests additional changes after the primary work is committed:
 
-- **Single-file, same domain:** Dispatch the relevant domain agent. Do NOT implement directly — the Manager Rule has no size exception.
+- **Single-file, same domain:** Apply the Delegation Economics Exception test. If the change qualifies (small, no design judgment, no new context needed), self-apply and route it through review; otherwise dispatch the relevant domain agent.
 - **Multi-file or cross-domain:** Offer to invoke the appropriate planning skill for the new scope.
 - **Crossing a domain boundary** (e.g., frontend work + backend services in the same request): Identify the domain split explicitly and dispatch separate agents — one per domain.
 

@@ -154,8 +154,8 @@ CLEAN: [...]
 Follow the review-fix loop pattern from `[sdlc-root]/process/review-fix-loop.md`. The critical mechanics:
 
 1. **Collect** all findings across reviewers.
-2. **Triage:** who owns each fix? Usually the primary author; template/anchor fixes can go to code-reviewer if the finding is mechanical. Trivial fixes (typos, formatting) may be self-applied; non-trivial fixes get dispatched.
-3. **Dispatch** the fixing agent(s) with the specific findings list. If an agent returns without applying its fix, re-dispatch — do not fix it yourself.
+2. **Triage:** who owns each fix? Usually the primary author; template/anchor fixes can go to code-reviewer if the finding is mechanical. Fixes passing the Manager Rule's delegation-economics test (e.g., typos, formatting) may be self-applied and re-reviewed; the rest get dispatched.
+3. **Dispatch** the fixing agent(s) with the specific findings list. If an agent returns without applying its fix, re-dispatch with a revised prompt; only a remaining gap that passes the economics test may be closed directly (with review).
 4. **Re-dispatch ALL reviewers** (not just the one who raised the finding). Re-review is mandatory after every fix round. Repeat until every reviewer reports clean.
 
 Exit condition: every reviewer returns no CRITICAL, HIGH, or MEDIUM findings. LOW findings can be deferred to the doc's next revision if explicitly acknowledged in the commit. **Do not claim the loop exited clean without a review round that produced zero actionable findings.**
