@@ -48,6 +48,8 @@ After a skill writes a deliverable MD file to `docs/current_work/`, CC **asks CD
 
 If CD accepts, CC renders the engineer-audience variant using document-type defaults — no further Q&A, the document type selects components and layout. If CD declines, no HTML is written.
 
+**Render precedes approval — never in sequence with it.** When the deliverable feeds an approval gate (spec approval, the plan-mode execution prompt), the render offer is its own interaction, fully resolved before approval is requested: offer the render, and if CD accepts, generate and deliver the HTML so CD can review it *before* being asked to approve. Never bundle the render offer into the approval question, and never render after approval as a follow-up step — a post-approval render cannot inform the decision it exists to support.
+
 Skills that offer a post-skill render:
 
 | Skill | Deliverable | Document Type |
@@ -105,7 +107,7 @@ An HTML render becomes stale when its source markdown is modified after generati
 
 **Footer timestamps:** Every rendered HTML includes a generation timestamp in the footer. When comparing an HTML file to its source, check this timestamp against the markdown's last-modified date. If the markdown is newer, re-render before using the HTML for review.
 
-**Re-render on plan revision:** When a plan that CD has rendered undergoes review-fix revisions (findings incorporated, DECIDE items resolved), re-render the HTML after the final revision — not after each intermediate revision. The HTML should reflect the approved plan, not a mid-revision snapshot.
+**Re-render on plan revision:** When a plan that CD has rendered undergoes review-fix revisions (findings incorporated, DECIDE items resolved), re-render the HTML after the final revision and **before presenting the plan for approval** — not after each intermediate revision, and never after approval. CD approves what they see rendered: the HTML must reflect the final plan at the moment the approval prompt appears, not a mid-revision snapshot.
 
 ## Audience Variants
 

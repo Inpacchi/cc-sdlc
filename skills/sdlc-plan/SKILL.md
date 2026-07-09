@@ -385,6 +385,8 @@ Save to: `docs/current_work/specs/dNN_name_spec.md`
 
 **Post-write: offer HTML render.** Ask CD whether they want an HTML render of the spec for reading/sharing — don't render unprompted. If CD accepts, render a self-contained HTML file: read the design system from `[sdlc-root]/templates/html-design-system.html`, apply **spec** document-type defaults from `[sdlc-root]/process/html-rendering.md`, and write a `.html` file alongside the markdown (same directory, same base name, `.html` extension) — a richer view for the approval review. If CD declines, they review the markdown for approval.
 
+**Render precedes approval.** Resolve this offer — declined, or accepted with the HTML delivered — before presenting the approval gate in step 3. Never fold the render question into the approval question, and never render after approval as a follow-up: the render exists to inform the approval read.
+
 ### 3. CD Approves the Spec
 
 **Hard gate.** Present the spec to the human and wait for explicit approval. Do NOT proceed to planning without approval. Implicit approval is fine ("looks good", "proceed", "yes").
@@ -623,6 +625,8 @@ Skip if nothing surfaced — do not fabricate entries. Budget: <3 minutes total.
 
 The plan is reviewed and approved. Enter plan mode so the user gets the standard execution prompt with the option to clear context.
 
+**Render precedes approval:** if CD opted into an HTML render of the plan, re-render now so the HTML reflects the final revised plan **before** the execution prompt appears — CD approves what they see rendered. Never render after the approval or in the same step as the approval prompt.
+
 Follow these sub-steps in exact order. Do not combine or skip any.
 
 **6a.** Use the `Read` tool to read the plan file at `docs/current_work/planning/dNN_name_plan.md` (saved by the writing agent in step 4 and augmented with Domain Agent Reviews in step 5). You need the tool output — do not work from memory.
@@ -662,6 +666,8 @@ Not every invocation needs a deliverable ID. For ad hoc work (bug fixes, small t
 | "Only one domain is involved" | Most tasks touch 2+ domains. Check again. |
 | "Skip straight to coding, the plan is obvious" | Planning catches issues that cost 10x more to fix during execution. |
 | "Ready to dispatch" / "Let me dispatch now" | Never narrate readiness — just dispatch. The plan is already approved. |
+| "Spec/plan's approved — now I'll offer the HTML render" | Render precedes approval, never follows it. The render offer resolves (declined, or accepted and delivered) before the approval gate; a post-approval render can't inform the decision it exists to support. |
+| "I'll ask for approval and offer the render in one question" | Never bundle them. The render offer is its own interaction; if CD accepts, deliver the HTML, then ask for approval. |
 | "I'll use opus for everything to be safe" | Model tiers are pre-assigned in agent frontmatter. Trust the assignment. |
 | "The agent will figure out what skills to load" | Iron Law 2: subagents don't inherit skill awareness. Load skills in the prompt. |
 | "Playbook match: none" (without having read the catalog) | A bare "none" is fabrication unless you can list the slugs you scanned. Read `playbooks/README.md`, name every candidate, and give a per-candidate verdict. Deriving the roster from a precedent instead of scanning is how a real, overlapping playbook gets missed. |

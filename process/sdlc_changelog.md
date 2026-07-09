@@ -34,6 +34,23 @@ Each entry contains:
 
 ---
 
+## 2026-07-09: Render precedes approval — never in sequence with the approval gate
+
+**Origin:** CD directive in a cc-sdlc source session: "render should never happen in sequence with approval — it should precursor approval if the user chooses."
+
+**What happened:** The post-skill render offer existed as a post-write step, but nothing constrained its position relative to approval gates. In practice this allowed the render offer to be bundled into the approval question, or the render to happen after approval as a follow-up — defeating the render's purpose as a review aid for the approval read. Worse, `html-rendering.md`'s re-render-on-plan-revision rule said "the HTML should reflect the approved plan," which reads as an instruction to render *after* approval.
+
+**Changes made:**
+
+1. **`process/html-rendering.md`** — Added "Render precedes approval — never in sequence with it" rule to the post-skill render offer section: the render offer is its own interaction, fully resolved (declined, or accepted with HTML delivered) before approval is requested; never bundled into the approval question, never rendered post-approval. Reworded the re-render-on-plan-revision rule: re-render after the final revision and *before* presenting for approval — CD approves what they see rendered.
+2. **`CLAUDE-SDLC.md`** — Appended the sequencing rule to the post-deliverable render-offer paragraph.
+3. **`skills/sdlc-plan/SKILL.md`** — Spec render offer (step 2) now states it must resolve before the step-3 approval gate. Step 6 (Prompt for Execution) gained a "Render precedes approval" pre-step: re-render the final revised plan before entering plan mode. Added two Red Flags rows (post-approval render offer; bundling render offer with approval question).
+4. **`skills/sdlc-lite-plan/SKILL.md`** — Step 5 (Enter Plan Mode) gained the same "Render precedes approval" pre-step. Added a Red Flags row.
+
+**Rationale:** The HTML render exists to give CD a better reading surface for the decision they're about to make. Sequencing it with or after the approval gate makes it decorative — the decision is already made by the time the render arrives. Fixing the sequencing at the process-doc level and at each approval gate ensures CD reviews the rendered artifact (if they opt in) before being asked to approve.
+
+---
+
 ## 2026-07-09: Agent-memory hygiene — MEMORY.md cap enforcement, topic-file protocol, archive path fixups
 
 **Origin:** Upstream handoff from a ChronoCore session that manually pruned `.claude/agent-memory/` (16 dirs, ~50 files) after severe drift — one `MEMORY.md` had reached 2628 lines, others contained content actively contradicting current code, duplicated tuned values with drifted numbers, and an orphaned predecessor-role directory. Web research confirmed Claude Code loads only the first **200 lines / 25KB** of `MEMORY.md` into the agent's system prompt (`MAX_ENTRYPOINT_LINES`), silently truncating the rest — and since entries append at the bottom, the *newest* notes are the ones dropped. The framework already named topic files as the remedy but only as a bare one-line suggestion with no size trigger, naming convention, or index framing, and nothing enforced the cap.

@@ -353,6 +353,8 @@ Where `NN` is the deliverable ID from step 0 and `{slug}` is a short snake_case 
 
 ### 5. Enter Plan Mode
 
+**Render precedes approval:** if CD opted into an HTML render of the plan, re-render now so the HTML reflects the final revised plan **before** the execution prompt appears — CD approves what they see rendered. Never render after the approval or in the same step as the approval prompt.
+
 Follow these sub-steps in exact order. Do not combine or skip any.
 
 **5a.** Use the `Read` tool to read the plan file at `docs/current_work/sdlc-lite/dNN_{slug}_plan.md` (saved by the writing worker agent in step 2 and augmented with Worker Agent Reviews in step 4). You need the tool output — do not work from memory.
@@ -394,6 +396,7 @@ The Manager Rule remains in effect per `[sdlc-root]/process/manager-rule.md` —
 | "The constraint is specified but the value isn't known yet" | That's a DECIDE finding. Mark it `USER DECISION NEEDED` so the reviewer routes it. |
 | "Only one domain is involved" | Most tasks touch 2+ domains. Check again. |
 | "I'll write the plan mode content from memory" | Follow step 5 exactly: Read the file with the Read tool, then paste the full Read output into EnterPlanMode. Working from memory produces summaries. |
+| "Plan's approved — now I'll offer the HTML render" | Render precedes approval, never follows it. The render offer resolves (declined, or accepted and delivered) before the approval gate; a post-approval render can't inform the decision it exists to support. |
 | "The plan is done, let me just quickly fix this other thing" | Manager Rule applies for the full session. Dispatch the domain agent. |
 | "I know how this library works" | Verify external library APIs via Context7. Never assume. VERIFICATION-GATE must show the resolved ID and version. |
 | "The pricing is $X/month for this service" | Check existing infrastructure first. If the project already runs on that platform, incremental cost differs dramatically from greenfield pricing. VERIFICATION-GATE must show what you checked. |
