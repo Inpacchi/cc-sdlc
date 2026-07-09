@@ -89,12 +89,12 @@ Generate each field:
 - `opus` — architectural decisions, complex trade-offs, reviewing high-risk work implemented by cheaper tiers
 - `haiku` — retrieval/search tasks only
 
-Read `[sdlc-root]/knowledge/architecture/model-tier-strategy.yaml` for the tier ladder and risk-escalation rules before assigning a non-default model.
-
 **effort:** (optional)
 - `low` — recon/mechanical roles (discovery, summaries, checklist verification); nearly free quality-wise
 - `high` / `xhigh` / `max` — review agents on high-risk domains (auth, payments, migrations, concurrency)
 - Omit when the session default fits. Overrides the session reasoning effort for this role — requires a Claude Code version that supports per-agent effort frontmatter; verify before relying on it.
+
+**Authoritative procedure for BOTH fields:** Read `[sdlc-root]/knowledge/architecture/model-tier-strategy.yaml` § `assignment_rules` and apply it — the model rules (M1–M4), effort rules (E1–E4), guardrails (G1–G5, including the AI/ML correctness escalation), the `reviewer_invariant` (reviewer ≥ implementer on the model-or-effort axis), the `project_baseline` pattern (raise the whole project's implementer model for systematically-hard domains, then differentiate reviewers by effort), and the `archetype_table`. Match on role ARCHETYPE, not the agent's name. Do not assign a non-default model or set effort without checking this procedure.
 
 **tools:** List ONLY what the agent actually needs. Common sets:
 - Read-only analysis: `Read, Glob, Grep`

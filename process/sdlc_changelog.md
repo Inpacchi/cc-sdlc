@@ -34,6 +34,23 @@ Each entry contains:
 
 ---
 
+## 2026-07-08: Consolidated model/effort assignment rules + field survey of 5 installs
+
+**Origin:** CD asked (1) what rules govern setting `model` and `effort` on agents, including AI/ML agents, and (2) to evaluate the sub-agents actually installed across sleeved, ChronoCore, paire-appetit, endlessgalaxystudios, and neuroloom to see whether real usage warrants additional rules.
+
+**What happened:** The tier rules existed but were scattered across MTS1–MTS7 and the AGENT_SUGGESTIONS note — not a followable procedure. A survey of 113 installed agents validated the ladder and surfaced three additions: a both-axes reviewer invariant, a project-level baseline pattern, and the finding that `effort` is unset on 113/113 agents (a migration backfill, not just a go-forward default).
+
+**Changes made:**
+
+1. **`knowledge/architecture/model-tier-strategy.yaml`** — added an `assignment_rules` block: axes definition; model rules M1–M4; effort rules E1–E4; guardrails G1–G5 (G5 = AI/ML correctness is not evidence-checkable, so the correctness review escalates to opus/high regardless of implementation tier, and a passing run is never verification); `reviewer_invariant` (reviewer ≥ implementer on the model-OR-effort axis); `project_baseline` (raise the whole project's implementer model for systematically-hard domains, then differentiate reviewers by effort); `archetype_table` (keyed by role archetype, not agent name); and `survey_2026_07` recording the field evaluation and its consequences.
+2. **`skills/sdlc-develop-agent/SKILL.md`** — pointed the frontmatter step at `assignment_rules` as the authoritative procedure for both `model` and `effort`, emphasizing archetype-keying.
+
+**Survey findings (recorded in the YAML):** effort unset on all 113 agents; `code-reviewer` sonnet in 3/5 (violates the opus-reviewer default); security-review agents inconsistent (opus vs sonnet); deep-debugging split opus/sonnet; AI/ML implementers sonnet with non-escalated reviewers (confirms the G5 gap); ChronoCore runs implementers at opus wholesale (the project_baseline pattern); role names drift across projects (rules must key on archetype).
+
+**Downstream:** Documentation/rule change — propagates to child projects on next migration. The installed agents in the five surveyed projects were NOT edited (out of scope — the ask was rules, not fixes); backfilling their model/effort per these rules is a separate migration/audit action a future session can trigger. A future sdlc-audit dimension could flag violations automatically.
+
+**Rationale:** Real-world installs showed the rules were needed (broad inconsistency) and surfaced patterns pure theory missed — especially that when a hard-domain project runs everything at opus, effort becomes the ONLY remaining reviewer-differentiation lever, which is the strongest argument for treating effort as first-class rather than optional.
+
 ## 2026-07-08: Record tier-override decision (structural over per-call/Workflow)
 
 **Origin:** CD follow-up in the same session — after verifying that per-dispatch model/effort override is reliable only in Workflow scripts (not interactive Task dispatch), CD asked whether the manual override was worth the effort or whether designating general-tier reviewer agents suffices, and whether Workflows could cover spec/plan reviews as well as implementation review loops.

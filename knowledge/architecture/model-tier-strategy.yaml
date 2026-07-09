@@ -330,6 +330,86 @@ tier_override_decision:
     - "Observed evidence that domain-specific review at sonnet is actually missing defects the opus cross-cutting reviewers do not catch. Only then consider a Workflow-backed variant of the implementation review-fix loop (NOT a full SDLC rewrite), as an optional path."
 
 # ─────────────────────────────────────────────
+# Assignment Rules: the followable procedure for setting model + effort
+# ─────────────────────────────────────────────
+# Consolidates MTS1–MTS7 into a decision procedure an author (or
+# sdlc-develop-agent) applies at agent-creation time. Keyed by ROLE
+# ARCHETYPE, not agent name — projects rename roles (debug-specialist vs
+# debugger, frontend-developer vs frontend-engineer, three names for
+# security review), so match on what the agent DOES, not what it is called.
+
+assignment_rules:
+  axes:
+    model: "capability ceiling — what the agent CAN do. Follows work TYPE (judgment vs execution vs retrieval)."
+    effort: "spend per response — how hard it thinks within the ceiling. Follows work INTENSITY."
+    note: "Orthogonal. A sonnet/low and a sonnet/high agent are different tools; choose each independently."
+
+  model_rules:
+    - "M1 — Default is sonnet. Every domain writer/implementer archetype (frontend, backend, data, realtime, etc.). Normal engineering execution."
+    - "M2 — opus when the core job is judgment that is NOT checkable from evidence: (a) cross-cutting review-only archetypes (code review, architecture review, security review); (b) hard delegated reasoning — deep debugging, architecture/design decisions, security-sensitive reasoning, concurrency/caching/data-consistency analysis."
+    - "M3 — haiku only for pure retrieval/discovery archetypes whose output is facts, not direction (search, data-research). Haiku reports; it does not decide."
+    - "M4 — Guardrail: never opus 'to be safe'. If the output is verifiable from evidence (tests pass, files found, checklist holds), it does not need opus. Over-escalation is pure cost."
+
+  effort_rules:
+    - "E1 — Default is to OMIT effort (inherit session). Set it only when the role STABLY deviates in one direction; effort is a per-role declaration, not a per-task tweak."
+    - "E2 — effort: low on recon/mechanical archetypes regardless of model: discovery, file/log summaries, checklist verification, routine mechanical edits, retrieval."
+    - "E3 — effort: high (→ xhigh/max) on judgment-heavy review of high-risk domains: escalated reviewers over auth, payments, migrations, concurrency, public APIs; deep-debugging agents."
+    - "E4 — Everything else: leave effort unset."
+
+  guardrails:
+    - "G1 — Reviewer tier ≥ implementer tier (MTS4), realized STRUCTURALLY (opus review-only agents, MTS7), because interactive dispatch cannot override per call. Do not design around dispatch override."
+    - "G2 — High-risk domains (auth, payments, permissions, migrations, concurrency, public APIs) constrain assignment: the reviewing agent must be opus + high effort; the manager's own economics-exception fixes are limited to trivial-class there."
+    - "G3 — Stack-difficulty override (MTS5): if a sonnet writer thrashes on a hard stack (e.g., Rust), escalate THAT role's model for the project and record it — do not just re-dispatch."
+    - "G4 — It all lives in frontmatter. effort: there is stable and overrides session effort; per-call override is Workflow-only. Set once per agent."
+    - "G5 — AI/ML correctness is NOT evidence-checkable. For ML/LLM/RAG/agentic archetypes (ml-engineer, ml-architect, prompt/llm-engineer, agent-system builders), a passing run is not verification — data leakage, invalid metrics, contaminated benchmarks, and prompt-injection surfaces pass silently. Implementation may be sonnet, but the CORRECTNESS review escalates to opus + high effort regardless of implementation tier (amplifies G1). Pair LLM-integration review with a security reviewer for the injection/tool-schema surface."
+
+  reviewer_invariant:
+    rule: >
+      Reviewer tier ≥ implementer tier is a per-project invariant on BOTH axes
+      combined: a reviewer must out-rank the implementers it reviews by MODEL,
+      or by EFFORT when model is already maxed. The cross-cutting review-only
+      agents default to opus/high. An all-sonnet project with a sonnet
+      code-reviewer violates the intent — bump the reviewer to opus (or at
+      minimum higher effort than the writers).
+
+  project_baseline:
+    rule: >
+      A project may raise the baseline implementer MODEL when its domain is
+      systematically hard (game engine, realtime/performance-critical, kernel,
+      novel-stack). This is MTS5 applied project-wide rather than per-role.
+      When implementers are already at opus, reviewers can no longer out-model
+      them, so the reviewer_invariant shifts to the EFFORT axis: implementers
+      opus/default, reviewers opus/high. This is the clearest case for why
+      effort is a first-class lever, not optional decoration.
+    example: "ChronoCore (game/realtime) runs game-engine, gameplay, realtime, and web-gameplay implementers at opus; its reviewers should differ by effort, not model."
+
+  archetype_table:
+    - { archetype: "domain writer / implementer", model: sonnet, effort: "unset", examples: "frontend-*, backend-*, data-engineer, realtime-*" }
+    - { archetype: "cross-cutting review-only",   model: opus,   effort: high,    examples: "code-reviewer, software-architect, security review" }
+    - { archetype: "hard-reasoning specialist",    model: opus,   effort: high,    examples: "debug-specialist/debugger, architecture/design deciders" }
+    - { archetype: "recon / retrieval",            model: haiku,  effort: low,     examples: "search-*, data-researcher" }
+    - { archetype: "mechanical / checklist",       model: "sonnet|haiku", effort: low, examples: "catalog-updater, formatter-style" }
+    - { archetype: "AI/ML implementer",            model: sonnet, effort: "unset", examples: "ml-engineer, llm-engineer, ai-engineer — but see G5: review escalates to opus/high" }
+
+  # ── Field evaluation of installed sub-agents (informs the rules above) ──
+  survey_2026_07:
+    scope: "sleeved (28), ChronoCore (16), paire-appetit (22), endlessgalaxystudios (14), neuroloom (33) — 113 agents installed before the tier strategy existed"
+    findings:
+      - "effort unset on 113/113 agents — the lever is defined but applied nowhere. Existing installs need an effort BACKFILL on next migration (recon→low, escalated reviewers/high-risk review→high)."
+      - "code-reviewer is sonnet in 3/5 (sleeved, endlessgalaxystudios, neuroloom) — violates the reviewer_invariant / MTS7 opus default; opus in ChronoCore and paire-appetit."
+      - "security-review agents inconsistent (infosec-engineer/security-auditor/security-infrastructure-engineer: opus in some, sonnet in others) — G2 wants opus/high for high-risk-domain review."
+      - "deep-debugging split: opus in sleeved/ChronoCore, sonnet in paire-appetit and neuroloom's debugger — M2 wants opus for hard-reasoning debug."
+      - "AI/ML implementers (ai-engineer, llm-engineer, ml-engineer) are sonnet with non-escalated reviewers in sleeved/neuroloom — confirmed the G5 gap in the wild."
+      - "ChronoCore runs implementers at opus wholesale (game/realtime) — the project_baseline pattern; motivated making effort the reviewer differentiator when model is maxed."
+      - "role names drift across projects — the rules must key on archetype, not name (already reflected in archetype_table)."
+    consequence: >
+      No new tier LADDER was needed — the survey validated MTS1–MTS7. It added
+      three things: the reviewer_invariant (both-axes framing), the
+      project_baseline pattern, and the finding that effort backfill is a
+      migration action for pre-existing installs. A future sdlc-audit
+      dimension could flag agents whose model/effort violate these rules.
+
+# ─────────────────────────────────────────────
 # Maintenance
 # ─────────────────────────────────────────────
 
