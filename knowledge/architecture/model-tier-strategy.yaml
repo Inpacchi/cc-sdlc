@@ -216,9 +216,13 @@ rules:
       sessions (sdlc-plan, sdlc-lite-plan, sdlc-idea) concentrate exactly
       the judgment work MTS1 assigns to the top tier — discovery
       interviewing, approach decisions, finding arbitration, spec/plan
-      acceptance — so run the planning session's orchestrator on the
-      highest-tier model available (e.g., Fable/Opus). The Manager Rule
-      guarantees the premium model never spends tokens on implementation.
+      acceptance — so run the planning session's orchestrator on a top-tier
+      model: Fable OR Opus, at CD's discretion (both are premium — choose by
+      task, quota, and preference; e.g. Fable 5 as flagship, or Opus 4.8's
+      1M-context variant for very large planning context). The framework does
+      not prescribe one; the load-bearing split is planning-premium vs
+      execution-Sonnet, not which premium. The Manager Rule guarantees the
+      premium model never spends tokens on implementation.
 
       Execution sessions (sdlc-execute, sdlc-lite-execute) act on judgment
       already committed to the plan artifact; their orchestrator can run
@@ -237,7 +241,7 @@ rules:
       Community setups running this split report lower token usage than
       single-premium-model sessions with equal or better output.
     checklist:
-      - "Is the planning session running on the highest-tier model available to the project?"
+      - "Is the planning session running on a top-tier model — Fable or Opus, CD's choice (not prescribed to one)?"
       - "Does the plan carry outcomes/constraints/acceptance criteria concrete enough for a lower-tier execution session to act on?"
       - "At execution time, are per-phase reviewer tiers escalated per MTS4 rather than re-escalating the whole session?"
     anti_patterns:

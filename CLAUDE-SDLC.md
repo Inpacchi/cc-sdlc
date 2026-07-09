@@ -236,6 +236,28 @@ If you have spent 3 or more rounds of read/search/grep investigating a bug witho
 
 ---
 
+## Session Model & Effort (your orchestrator seat)
+
+This is *your* session dial (what you launch / `/model` + `/effort`), separate from the per-agent frontmatter tiers below. Both dials track how judgment-dense the session is (MTS6 in `[sdlc-root]/knowledge/architecture/model-tier-strategy.yaml`):
+
+| Session | Model | Effort | Why |
+|---------|-------|--------|-----|
+| Planning / idea (`sdlc-plan`, `sdlc-lite-plan`, `sdlc-idea`) | Fable **or** Opus (CD's choice) | **high** (→ xhigh/max only for novel, ambiguous, or high-blast-radius work) | Judgment-dense and short — discovery, approach comparison, arbitration, acceptance. The Manager Rule keeps premium tokens off implementation, so a premium orchestrator is cheap here. |
+| Execution (`sdlc-execute`, `sdlc-lite-execute`) | Sonnet | **medium** | Judgment is already in the plan; the seat coordinates + triages. Long sessions, so easing both dials conserves budget. Bump effort ad-hoc for a hard triage or a 3-strike/debug escalation. |
+
+**Planning model is your call — Fable or Opus.** Both are top-tier; the split that matters is *planning-premium vs execution-Sonnet*, not which premium. Pick by task, quota, and preference (e.g. Fable 5 as flagship, or Opus 4.8's 1M-context variant when the planning context is very large). "Highest tier available" is a floor, not a mandate to always max out.
+
+**Lowest-friction switching — launch aliases (set both dials at once):**
+
+```bash
+# ~/.zshrc (or ~/.bashrc)
+alias ccplan="claude --model fable --effort high"       # planning / idea (Fable)
+alias ccplan-opus="claude --model opus --effort high"   # planning / idea (Opus)
+alias ccexec="claude --model sonnet --effort medium"    # execution
+```
+
+Both `--model` and `--effort` are launch flags. Setting effort at launch also avoids a gotcha: switching model mid-session with `/model` can reset effort to that model's default, so re-check `/effort` after any `/model`. `settings.json` persists `effortLevel` but not `model`, so aliases beat it. There are no named profiles and a SessionStart hook can't drive `/model` — aliases are the ceiling today. The `M4` "don't escalate to be safe" guardrail applies to your own session too: reserve `max` for the genuinely hardest planning.
+
 ## Agent Conventions
 
 - **Model and effort tiers are pre-assigned in agent frontmatter** — trust the assignment rather than escalating everything "to be safe." Judgment work (intent, architecture, tradeoffs, arbitration, final acceptance) stays with the orchestrator; evidence-checkable work delegates to cheaper tiers; high-risk work gets a reviewer tier at or above the implementer tier. Planning sessions benefit most from running on the highest-tier model available — the Manager Rule keeps premium tokens off implementation. Read `[sdlc-root]/knowledge/architecture/model-tier-strategy.yaml` for the tier ladder and escalation rules.

@@ -34,6 +34,35 @@ Each entry contains:
 
 ---
 
+## 2026-07-08: Planning orchestrator is Fable OR Opus (CD's choice, not prescribed)
+
+**Origin:** CD directive — "fable or opus should be the planning agent depending on what the user wants." The just-added cheat-sheet leaned toward Fable as the planning default; CD clarified it is a choice between the two top-tier models.
+
+**Changes made:**
+
+1. **`knowledge/architecture/model-tier-strategy.yaml`** — MTS6 reworded: run planning on a top-tier model, Fable OR Opus at CD's discretion (choose by task, quota, preference; e.g. Fable flagship vs Opus 4.8 1M-context), explicitly "the framework does not prescribe one; the load-bearing split is planning-premium vs execution-Sonnet." Checklist item updated to match.
+2. **`CLAUDE-SDLC.md`** — session cheat-sheet: planning Model cell now "Fable **or** Opus (CD's choice)"; added a "Planning model is your call" note; alias block now offers both `ccplan` (Fable) and `ccplan-opus` (Opus).
+
+**Downstream:** Documentation — propagates on next migration.
+
+**Rationale:** Both models are premium and interchangeable for the planning seat; prescribing Fable would over-constrain a preference/quota decision. What actually matters is that planning runs premium and execution runs Sonnet — not which premium.
+
+## 2026-07-08: Session model/effort cheat-sheet + launch-alias recipe in CLAUDE-SDLC
+
+**Origin:** CD found switching the session model and effort by hand every time they change between planning and execution painful, and asked for an easier way. Claude Code session-config mechanics were verified against current docs via a claude-code-guide subagent.
+
+**What happened:** MTS6 said "plan on Fable/high, execute on Sonnet/medium" but nothing told CD *how* to apply that without friction. Added a CD-facing session cheat-sheet with the lowest-friction mechanism (launch aliases that set both dials at once).
+
+**Changes made:**
+
+1. **`CLAUDE-SDLC.md`** — new "Session Model & Effort (your orchestrator seat)" subsection: a plan-vs-execution model/effort table, the `ccplan`/`ccexec` launch-alias recipe (`claude --model fable --effort high` / `--model sonnet --effort medium`), and the verified mechanics — both are launch flags; switching model mid-session can reset effort (re-check `/effort` after `/model`); `settings.json` persists `effortLevel` but not `model`; no named profiles; SessionStart hooks can't drive `/model`. Distinguished the session dial from the per-agent frontmatter tiers.
+
+**Verified mechanics (Claude Code docs):** `--model` and `--effort` are launch flags (effort values low/medium/high/xhigh/max); `settings.json` supports `model` and a persisting `effortLevel` field, but `model` does not hot-reload; `/model` and `/effort` switch mid-session; no named-profile mechanism exists.
+
+**Downstream:** Documentation — propagates on next migration. Closes the loop between the MTS6 rule and its day-to-day application.
+
+**Rationale:** A tier rule nobody can apply frictionlessly gets ignored. The alias recipe makes the plan-wide/execute-narrow split a one-word launch choice, so the guidance actually gets followed.
+
 ## 2026-07-08: AI/ML domain provisioning rule (function coverage, not agent count)
 
 **Origin:** CD asked whether an AI-adjacent domain always warrants a dedicated ai-architect + ai-engineer duo.
