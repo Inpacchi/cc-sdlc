@@ -34,6 +34,20 @@ Each entry contains:
 
 ---
 
+## 2026-07-08: Record tier-override decision (structural over per-call/Workflow)
+
+**Origin:** CD follow-up in the same session — after verifying that per-dispatch model/effort override is reliable only in Workflow scripts (not interactive Task dispatch), CD asked whether the manual override was worth the effort or whether designating general-tier reviewer agents suffices, and whether Workflows could cover spec/plan reviews as well as implementation review loops.
+
+**What happened:** Decided to keep the structural approach (MTS7 — dedicated opus review-only agents) and NOT adopt per-call override or a Workflow orchestration rewrite. Reasoning: the opus cross-cutting reviewers already carry the highest-value lenses; escalating each domain agent's own review adds only modest depth at large architectural cost; Workflows fit only the mechanical implementation review loop (spec/plan review are human-gated and cannot run headless); and interactive per-dispatch override is a tracked Claude Code feature (GitHub #62211/#64033) that could make a Workflow rewrite obsolete if it ships.
+
+**Changes made:**
+
+1. **`knowledge/architecture/model-tier-strategy.yaml`** — added a `tier_override_decision` record after MTS7 capturing the question, decision, rationale, and explicit `revisit_if` triggers (per-dispatch override becoming documented; evidence that sonnet domain review misses defects the opus reviewers don't catch).
+
+**Downstream:** Documentation-only; propagates on next migration. No behavior change — records why the current structure was chosen so a future migration does not re-litigate it.
+
+**Rationale:** The decision hinges on facts that will age (Claude Code's dispatch capabilities, the #62211/#64033 roadmap). Recording the triggers that would flip the decision keeps the choice auditable and cheap to revisit rather than re-deriving it from scratch later.
+
 ## 2026-07-08: Agent-tier structure decisions + External Review Gate
 
 **Origin:** CD design session following the model-tier-strategy ingestion (below). CD asked three questions: (1A) split subagents into reviewer/implementer roles or genericize into stage-based roles (spec/plan/code reviewer)? (1B) how does a dispatching agent override a subagent's hardcoded model — is it even possible? (2) how can cc-sdlc use one LLM as planner/orchestrator and another (Codex or a local LLM) as implementer/reviewer, at minimum for an extra external review phase? Claude Code mechanics were verified via a claude-code-guide subagent against current docs before answering.

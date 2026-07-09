@@ -301,6 +301,35 @@ rules:
     source: "CD decision (2026-07); Claude Code sub-agents model-resolution + effort frontmatter (code.claude.com/docs/en/sub-agents); r/ClaudeAI tiered-orchestration threads (2026-07)"
 
 # ─────────────────────────────────────────────
+# Decision Record: structural tiering over per-call override (2026-07)
+# ─────────────────────────────────────────────
+# Why MTS7 uses the write/review agent split instead of per-dispatch
+# model/effort override or a Workflow-based orchestration rewrite. Recorded
+# so a future migration does not re-litigate it.
+
+tier_override_decision:
+  question: >
+    Should the framework escalate a domain agent's OWN review pass to a higher
+    tier (e.g., sonnet to write, opus to review the same agent) via per-call
+    model/effort override — worth adopting Workflow scripts to get it — or is
+    the structural approach (dedicated review-only agents at opus) sufficient?
+
+  decision: >
+    Keep the structural approach (MTS7). Do NOT rewrite orchestration as
+    Workflow scripts to obtain per-call tiering, and do NOT rely on interactive
+    per-dispatch override. Revisit only if the triggers below fire.
+
+  rationale:
+    - "Coverage: the opus review-only agents (code-reviewer, software-architect, security-auditor) already carry the highest-value lenses — correctness, security, architecture, DRY, overengineering. Escalating each domain agent's own review to opus adds depth only on domain-specific lenses that are already backstopped by those cross-cutting reviewers and are usually sonnet-adequate (the domain agent already has its domain knowledge loaded)."
+    - "Cost: per-call tiering requires either a Workflow rewrite (agent() with per-call model/effort) or interactive per-dispatch override. The rewrite means maintaining a parallel JS orchestration path alongside the markdown skills (DRY/drift risk) and losing the conversational plan/spec gates. Large cost, modest quality increment."
+    - "Scope: Workflows fit only the MECHANICAL implementation review-fix loop. Spec and plan review are human-gated (CD approval, DECIDE escalations via AskUserQuestion) and cannot run headless — so a Workflow could never replace sdlc-plan, only the code review loop inside execution."
+    - "Roadmap: interactive per-dispatch model/effort override is a tracked Claude Code feature request (GitHub issues #62211, #64033). If it ships, same-agent tiering becomes available with zero Workflow rewrite — so investing in a Workflow orchestration layer now risks near-term obsolescence. Not yet documented in sub-agents.md as of 2026-07; do not design around it until it is."
+
+  revisit_if:
+    - "Interactive per-dispatch model/effort override becomes documented/stable in sub-agents.md — then MTS7 can optionally collapse the separate reviewer agents back into domain agents and escalate at review-dispatch. Update MTS7 and this record when it lands."
+    - "Observed evidence that domain-specific review at sonnet is actually missing defects the opus cross-cutting reviewers do not catch. Only then consider a Workflow-backed variant of the implementation review-fix loop (NOT a full SDLC rewrite), as an optional path."
+
+# ─────────────────────────────────────────────
 # Maintenance
 # ─────────────────────────────────────────────
 
