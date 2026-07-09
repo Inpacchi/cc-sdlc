@@ -34,6 +34,20 @@ Each entry contains:
 
 ---
 
+## 2026-07-08: AI/ML domain provisioning rule (function coverage, not agent count)
+
+**Origin:** CD asked whether an AI-adjacent domain always warrants a dedicated ai-architect + ai-engineer duo.
+
+**What happened:** Refined G5. The precise requirement is that two opus-tier FUNCTIONS are covered — AI system design/judgment, and AI-aware correctness review — not that two named agents always exist. Whether to dedicate a pair depends on how central AI is to the product.
+
+**Changes made:**
+
+1. **`knowledge/architecture/model-tier-strategy.yaml`** — added an `ai_ml_provisioning` block under `assignment_rules`: principle (two functions, not two agents; a single opus ai-architect can fill both design + escalated review); a core/feature/incidental decision (dedicate the duo only when AI is the core value prop; for a feature, inject the AI review lenses into the existing opus software-architect + code-reviewer; incidental gets generic agents + a security reviewer); and a "provision by function coverage, not agent count; right-size per AOP5" rule. Added an "AI/ML architect + reviewer" row (opus/high) to `archetype_table` and cross-linked it from G5.
+
+**Downstream:** Documentation/rule change — propagates on next migration.
+
+**Rationale:** "Always a duo" would over-provision feature-level and incidental AI usage (roster bloat, violates AOP5/M4) while under-specifying what actually matters — the two opus functions. Framing it as function coverage lets a project satisfy G5 with existing opus reviewers when AI is peripheral, and dedicate specialists only when AI is central (avoiding generalist-masking). paire-appetit's organic llm-engineer + taste-intelligence-engineer split is the reference for the core case.
+
 ## 2026-07-08: Consolidated model/effort assignment rules + field survey of 5 installs
 
 **Origin:** CD asked (1) what rules govern setting `model` and `effort` on agents, including AI/ML agents, and (2) to evaluate the sub-agents actually installed across sleeved, ChronoCore, paire-appetit, endlessgalaxystudios, and neuroloom to see whether real usage warrants additional rules.

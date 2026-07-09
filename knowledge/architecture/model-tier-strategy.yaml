@@ -361,7 +361,29 @@ assignment_rules:
     - "G2 — High-risk domains (auth, payments, permissions, migrations, concurrency, public APIs) constrain assignment: the reviewing agent must be opus + high effort; the manager's own economics-exception fixes are limited to trivial-class there."
     - "G3 — Stack-difficulty override (MTS5): if a sonnet writer thrashes on a hard stack (e.g., Rust), escalate THAT role's model for the project and record it — do not just re-dispatch."
     - "G4 — It all lives in frontmatter. effort: there is stable and overrides session effort; per-call override is Workflow-only. Set once per agent."
-    - "G5 — AI/ML correctness is NOT evidence-checkable. For ML/LLM/RAG/agentic archetypes (ml-engineer, ml-architect, prompt/llm-engineer, agent-system builders), a passing run is not verification — data leakage, invalid metrics, contaminated benchmarks, and prompt-injection surfaces pass silently. Implementation may be sonnet, but the CORRECTNESS review escalates to opus + high effort regardless of implementation tier (amplifies G1). Pair LLM-integration review with a security reviewer for the injection/tool-schema surface."
+    - "G5 — AI/ML correctness is NOT evidence-checkable. For ML/LLM/RAG/agentic archetypes (ml-engineer, ml-architect, prompt/llm-engineer, agent-system builders), a passing run is not verification — data leakage, invalid metrics, contaminated benchmarks, and prompt-injection surfaces pass silently. Implementation may be sonnet, but the CORRECTNESS review escalates to opus + high effort regardless of implementation tier (amplifies G1). Pair LLM-integration review with a security reviewer for the injection/tool-schema surface. Provisioning of the opus-tier AI functions is governed by ai_ml_provisioning below."
+
+  ai_ml_provisioning:
+    principle: >
+      G5 requires two FUNCTIONS covered at opus for AI-adjacent work — not
+      necessarily two dedicated agents. (1) AI system DESIGN/judgment (eval
+      strategy, model choice, data-pipeline shape, confidence gates, RAG
+      architecture) and (2) AI-aware CORRECTNESS REVIEW (leakage, metric
+      validity, benchmark contamination, injection surface). Implementation
+      itself stays sonnet. This is the ordinary implementer/reviewer split
+      (MTS7) applied to the one domain where reviewer escalation is
+      mandatory, not optional. In the efficient form a single opus
+      ai-architect fills BOTH functions (designs, and provides the escalated
+      review), so the "duo" is implementer + opus-AI-lead, not three agents.
+    decision:
+      - "AI is the CORE value prop (ML pipelines, RAG, agentic features, a recommendation/intelligence engine): dedicate the duo — an ai/ml-architect (opus: design authority AND escalated AI reviewer) + an ai/ml-engineer (sonnet: implements). The design surface is large and the silent-failure hazard high, so specialization earns its keep and avoids generalist-masking. Example: paire-appetit grew this organically as llm-engineer (sonnet) + taste-intelligence-engineer (opus)."
+      - "AI is a FEATURE, not the core (one LLM-backed feature in an otherwise conventional app): do NOT spin up a dedicated architect. Use an llm/ml-engineer implementer (sonnet); cover the escalated review by dispatching the EXISTING software-architect + code-reviewer AT OPUS with the AI knowledge injected (knowledge/testing/ai-generated-code-verification.yaml, knowledge/architecture/ml-system-design.yaml, knowledge/architecture/prompt-engineering-patterns.yaml), plus security-engineer for the injection/tool-schema surface. The two functions are covered without a new agent."
+      - "AI is INCIDENTAL (a single prompt somewhere): generic agents at normal tiers + a security reviewer for the injection surface. No AI specialist."
+    rule: >
+      Provision by FUNCTION coverage, not agent count. Make the dedicated
+      ai-architect + ai-engineer pair only when AI is core to the product;
+      otherwise inject the AI review lenses into the existing opus reviewers.
+      Right-size per AOP5 — do not add an AI specialist "to be safe" (M4).
 
   reviewer_invariant:
     rule: >
@@ -390,6 +412,7 @@ assignment_rules:
     - { archetype: "recon / retrieval",            model: haiku,  effort: low,     examples: "search-*, data-researcher" }
     - { archetype: "mechanical / checklist",       model: "sonnet|haiku", effort: low, examples: "catalog-updater, formatter-style" }
     - { archetype: "AI/ML implementer",            model: sonnet, effort: "unset", examples: "ml-engineer, llm-engineer, ai-engineer — but see G5: review escalates to opus/high" }
+    - { archetype: "AI/ML architect + reviewer",   model: opus,   effort: high,    examples: "ai/ml-architect, taste-intelligence-engineer — design authority AND escalated AI-correctness review; dedicate only when AI is core (see ai_ml_provisioning)" }
 
   # ── Field evaluation of installed sub-agents (informs the rules above) ──
   survey_2026_07:
