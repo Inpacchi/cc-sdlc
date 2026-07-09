@@ -155,6 +155,8 @@ Reprint the plan's phase structure as a single table. This is the reference ever
 
 If any file appears in more than one phase's row, those phases MUST run sequentially regardless of the plan's `Parallel with` column — mark the conflict in the table and explain in one line below. The Phase plan emission IS the file-conflict check; don't repeat it per phase unless a conflict was missed.
 
+After emitting the Phase plan, proceed directly to the first wave's PRE-GATE in the same response. Do not ask the user to confirm execution scope — plan size (many phases, many agents, long estimated arc) is not a confirmation trigger. The plan was approved in `sdlc-plan`; a scope question re-litigates that approval and stalls an autonomous run.
+
 For each phase:
 
 **PRE-GATE** — you cannot dispatch the phase agent until this block appears in your response. Use the compact form by default; fall back to verbose when a trigger fires.
@@ -589,6 +591,7 @@ When the deliverable is complete, the "Let's organize the chronicles" command mo
 |---------|---------|
 | "This file wasn't in the plan — I'll revert it" | NEVER revert files you didn't create. The file may contain the user's concurrent work. Log the deviation; ask via `AskUserQuestion` if concerned. `git checkout --` on someone else's work is destructive and irreversible. |
 | "There's no plan, I'll wing it" | Stop. Use `sdlc-plan` first. |
+| "This plan is very large — I should confirm scope before starting" | Size is not a confirmation trigger. The plan was approved in `sdlc-plan`; a scope question re-litigates that approval. Emit the Phase plan and dispatch wave 1 in the same response. |
 | "I'll implement this part myself" | If a worker domain agent exists for it, dispatch them. See Manager Rule. |
 | "This phase is small and well-defined, I'll do it directly" | Size is not an exception. Dispatch the agent. |
 | "I'll implement directly to avoid context gaps from dispatching" | Complexity increases the need for agents, not decreases it. Pass the context you have to the agent in the dispatch prompt. |

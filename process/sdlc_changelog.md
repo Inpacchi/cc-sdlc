@@ -34,6 +34,18 @@ Each entry contains:
 
 ---
 
+## 2026-07-09: sdlc-execute — plan size is not a confirmation trigger
+
+**Origin:** Observed in a target-project execution session (D105, 7-phase plan). After emitting the Phase plan table, the executor paused and asked an `AskUserQuestion` about "execution scope" (full run vs. backend-only vs. Phase 1 only) — a checkpoint the skill never sanctions. The question's "Full sequential execution" wording also contradicted the parallelism the Phase plan itself declared.
+
+**What happened:** The skill already forbids pausing for confirmation at dispatch time ("the plan is already approved") and treats post-summary stopping as a red flag, but nothing addressed the specific failure shape: plan *size* triggering an invented pre-execution scope checkpoint right after the Phase plan emission.
+
+**Changes made:**
+
+1. **`skills/sdlc-execute/SKILL.md`** — added an explicit rule after the Phase plan emission instructions: proceed directly to the first wave's PRE-GATE in the same response; plan size is not a confirmation trigger; a scope question re-litigates the `sdlc-plan` approval. Added a matching Red Flags row ("This plan is very large — I should confirm scope before starting").
+
+**Rationale:** Approved plans are executed, not re-negotiated. Large plans pattern-match to a generic "confirm before a long autonomous run" instinct; the skill now names and blocks that instinct at the exact point it fired.
+
 ## 2026-07-08: Planning orchestrator is Fable OR Opus (CD's choice, not prescribed)
 
 **Origin:** CD directive — "fable or opus should be the planning agent depending on what the user wants." The just-added cheat-sheet leaned toward Fable as the planning default; CD clarified it is a choice between the two top-tier models.
