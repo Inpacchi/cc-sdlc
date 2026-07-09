@@ -236,6 +236,7 @@ If you have spent 3 or more rounds of read/search/grep investigating a bug witho
 
 ## Agent Conventions
 
+- **Model and effort tiers are pre-assigned in agent frontmatter** — trust the assignment rather than escalating everything "to be safe." Judgment work (intent, architecture, tradeoffs, arbitration, final acceptance) stays with the orchestrator; evidence-checkable work delegates to cheaper tiers; high-risk work gets a reviewer tier at or above the implementer tier. Planning sessions benefit most from running on the highest-tier model available — the Manager Rule keeps premium tokens off implementation. Read `[sdlc-root]/knowledge/architecture/model-tier-strategy.yaml` for the tier ladder and escalation rules.
 - **Agent memories are not git-tracked** — `.claude/agent-memory/` is a private scratchpad for per-agent session continuity. Reusable learnings should flow through `knowledge_feedback` in agent handoffs → discipline capture → knowledge stores. See the "Surfacing Learnings to the SDLC" section in the agent template.
 - **Agent frontmatter: single-line descriptions only** — The `description` field in `.claude/agents/*.md` must be a double-quoted single-line YAML string using `\\n` (double-backslash n) for newlines. A single `\n` in YAML double-quoted strings is interpreted as a real newline character and silently breaks Claude Code's frontmatter parser.
 

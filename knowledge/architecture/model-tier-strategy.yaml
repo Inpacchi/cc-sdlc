@@ -1,0 +1,263 @@
+# Model & Effort Tier Strategy
+# How to match model tier and reasoning effort to the work being dispatched —
+# concentrating premium reasoning where judgment changes the outcome, and
+# delegating evidence-checkable work to cheaper tiers.
+# Sources:
+#   - r/ClaudeAI community threads on tiered orchestration (2026-07, screenshots)
+#   - Community "fable-chief-agent" skill (tiered delegation doctrine)
+#   - DataCamp "Spec-Driven Development with Claude Code" tutorial
+# Last updated: 2026-07-08
+
+id: model-tier-strategy
+name: "Model & Effort Tier Strategy"
+description: "Rules for matching model tier and reasoning effort to dispatched work — judgment concentrates at the top tier, evidence-checkable work delegates down, risk escalates review tier"
+pattern: rules
+category: architecture
+spec_relevant: false
+project_applicability:
+  relevant_when: "Always relevant — governs how the cc-sdlc agent system spends model capability and token budget"
+  action_if_irrelevant: keep
+last_updated: 2026-07-08
+
+# ─────────────────────────────────────────────
+# Relationship to the Manager Rule
+# ─────────────────────────────────────────────
+# This file governs WHICH TIER does delegated work. It does not relax
+# [sdlc-root]/process/manager-rule.md, which governs WHETHER work is
+# delegated at all. Community tiering doctrines often include a
+# delegation-economics escape hatch ("do the work directly when
+# delegation would cost more than the task"). cc-sdlc deliberately
+# rejects that escape hatch: the manager never implements beyond the
+# trivial-fix exception, regardless of tier economics. Adopt the
+# tier-matching here; the Manager Rule stays authoritative on delegation.
+
+rules:
+
+  - rule_id: MTS1
+    name: "Concentrate judgment at the top tier; delegate evidence-checkable work down"
+    description: |
+      The orchestrator's model tier is the most expensive reasoning in the
+      system. Spend it only on work where being the strongest model changes
+      the outcome:
+
+      - understanding real user intent and deciding scope
+      - choosing the architecture or approach
+      - decomposing ambiguous work into clear parts
+      - making tradeoffs between speed, quality, risk, and scope
+      - resolving disagreement between agents' findings
+      - deciding when work is good enough (final acceptance)
+
+      Everything whose result can be verified from evidence delegates to a
+      cheaper tier: finding files, reading large files, summarizing code
+      paths, inspecting logs, running tests, scoped implementation,
+      checklist verification, comparing results against the plan.
+
+      The routing test: if the task is mostly searching, reading, editing,
+      testing, or verifying, it belongs to a worker tier. If it involves
+      intent, design, tradeoffs, risk arbitration, or final approval, it
+      belongs at the orchestrator tier.
+    rationale: |
+      Top-tier judgment is the scarce resource; labor is not. A top-tier
+      model spending its context on file reads and mechanical edits
+      produces the same output a mid-tier model would, at several times
+      the cost — and pollutes the orchestrator context that the judgment
+      work depends on (see token-economics session hygiene). Delegation
+      down-tier is nearly free when the result is evidence-checkable,
+      because the orchestrator verifies the evidence rather than trusting
+      the worker's reasoning.
+    checklist:
+      - "Before dispatching, can you state whether this task is judgment work or evidence work?"
+      - "Is the orchestrator doing any searching/reading/editing that a worker tier could return as a summary?"
+      - "Does delegated work come back with evidence (files changed, tests run, citations) the orchestrator can check?"
+    anti_patterns:
+      - "Top-tier orchestrator reading dozens of files itself instead of dispatching exploration to a cheap agent"
+      - "Delegating the approach decision or finding arbitration to a worker agent — judgment stays at the top"
+      - "Using tier economics to justify self-implementation — the Manager Rule governs WHETHER to delegate, this rule governs WHERE"
+    source: "community fable-chief-agent skill; r/ClaudeAI tiered-orchestration threads (2026-07)"
+
+  - rule_id: MTS2
+    name: "The tier ladder — default model-to-work mapping"
+    description: |
+      Default mapping from model tier to work type, applied via agent
+      frontmatter `model:` at agent-creation time and confirmed at
+      dispatch time:
+
+      | Tier | Work it owns |
+      |------|-------------|
+      | Top-tier session model (orchestrator) | Intent, scope, decomposition, tradeoffs, arbitration between agents, final review and acceptance |
+      | opus | Hardest delegated reasoning: complex implementation, deep debugging, cross-module reasoning, architecture review, security-sensitive reasoning, concurrency/caching/data-consistency concerns, reviewing cheaper agents' work for hidden flaws |
+      | sonnet | Normal engineering execution (the default worker): scoped implementation, adding/updating tests, medium-complexity debugging, local refactors, following existing patterns, connecting already-designed pieces |
+      | haiku | Cheap evidence work: repo discovery, file and log summaries, simple checks, checklist verification, confirming a change matches the plan |
+
+      Workers do not make product calls or change architecture — those
+      route up. Haiku-tier agents report facts, not direction. Opus-tier
+      agents reason deeply but the orchestrator keeps final authority.
+    rationale: |
+      Community practice converged on this split independently across
+      multiple orchestration setups (haiku searching, sonnet executing,
+      opus verifying, top tier coordinating) and reported both lower token
+      usage and equal-or-better output versus running everything on one
+      premium model. It matches the existing cc-sdlc frontmatter guidance
+      (sonnet default, opus for design decisions, haiku for retrieval) and
+      extends it with the delegated-review role for opus.
+    checklist:
+      - "Does each agent's frontmatter model match the tier ladder for its primary work type?"
+      - "Are recon/verification dispatches going to haiku-tier agents rather than implementation-tier ones?"
+      - "Is opus reserved for genuinely hard delegated reasoning, not used as a default 'to be safe'?"
+    anti_patterns:
+      - "Running everything on opus 'to be safe' — model tiers are pre-assigned in agent frontmatter; trust the assignment"
+      - "A haiku-tier recon agent deciding direction instead of reporting facts"
+      - "Sonnet-tier worker making architecture calls that belong to the orchestrator or an opus-tier architect"
+    source: "r/ClaudeAI tiered-orchestration threads (2026-07); community fable-chief-agent skill"
+
+  - rule_id: MTS3
+    name: "Effort is a second, independent lever — set it per agent role"
+    description: |
+      Reasoning effort (low → max) is orthogonal to model choice and can be
+      set per subagent in agent frontmatter (`effort:`), overriding the
+      session effort for that role — where the Claude Code version in use
+      supports it. Combine the levers:
+
+      - Recon and mechanical roles (discovery, summaries, checklist
+        verification, routine edits) run at LOW effort — community-reported
+        as "nearly free quality-wise" on current models.
+      - Default workers (scoped implementation) run at the session default.
+      - Judgment-heavy delegated roles (architecture review, security
+        review, plan review on high-risk work) run at HIGH+ effort.
+
+      When creating an agent, set `effort:` only when the role clearly
+      deviates from the session default in one direction; omit it otherwise.
+    rationale: |
+      Model tier controls capability ceiling; effort controls how much of
+      that ceiling is spent per response. A sonnet worker at low effort is
+      cheaper than a haiku-tier model in some harnesses, and a top-tier
+      model at low effort wastes its advantage. Treating effort as part of
+      the role definition (frontmatter) rather than a per-dispatch decision
+      keeps the lever deterministic and auditable.
+    checklist:
+      - "Do recon/mechanical agents declare low effort in frontmatter (when the harness supports it)?"
+      - "Do review agents for high-risk domains declare high+ effort?"
+      - "Was harness support for per-agent effort verified for the project's Claude Code version before relying on it?"
+    anti_patterns:
+      - "Setting effort per-dispatch in prompts when a stable per-role frontmatter value would do"
+      - "Running discovery agents at max effort — pure spend with no quality return"
+      - "Assuming effort frontmatter works without verifying the installed Claude Code version supports it"
+    source: "r/ClaudeAI per-subagent effort thread (2026-07)"
+
+  - rule_id: MTS4
+    name: "Risk-escalated review — reviewer tier at or above implementer tier"
+    description: |
+      For high-risk domains, the review pass must run at a model tier equal
+      to or above the tier that implemented the work. High-risk domains
+      (aligned with the infrastructure_domains triggers in
+      [sdlc-root]/process/agent-selection.yaml):
+
+      - auth, permissions, access control
+      - billing, payments
+      - migrations, data loss potential
+      - shared state, caching, concurrency
+      - public APIs and user-visible workflows
+      - security-sensitive input handling
+
+      Pattern: the orchestrator makes the decision, a sonnet-tier worker
+      implements, an opus-tier reviewer checks the hard technical parts for
+      hidden flaws, and cheap agents verify concrete evidence (tests pass,
+      checklist items hold). For low-risk work, same-tier review is fine.
+    rationale: |
+      A reviewer weaker than the implementer rubber-stamps subtle flaws —
+      it lacks the capability to catch what the implementer missed.
+      Reviewing cheaper agents' work for hidden flaws is one of the
+      highest-value uses of the opus tier: review is read-dominant, so it
+      costs far less than opus-tier implementation while recovering most
+      of the quality delta.
+    checklist:
+      - "For each high-risk phase, is the assigned reviewer's model tier ≥ the implementer's?"
+      - "Did the infrastructure_domains trigger scan inform which phases count as high-risk?"
+      - "Is evidence verification (tests, checklists) still delegated to cheap agents even when opus reviews?"
+    anti_patterns:
+      - "Haiku-tier agent as the only reviewer of concurrency or auth changes"
+      - "Skipping the escalated review because the implementation 'looked straightforward' — risk is domain-driven, not diff-size-driven"
+      - "Escalating implementation to opus when escalating only the review would recover the quality at a fraction of the cost"
+    source: "community fable-chief-agent skill (risk section); r/ClaudeAI opus-verification thread (2026-07)"
+
+  - rule_id: MTS5
+    name: "Stack-difficulty adjustment — tier defaults assume mainstream stacks"
+    description: |
+      The tier ladder's defaults assume stacks the mid-tier models handle
+      well (mainstream web/TypeScript/Python). Model competence is uneven
+      across stacks: community reports describe mid-tier workers
+      "drowning in tool calls" on Rust codebases while performing well on
+      frontend work. When a worker-tier agent shows thrash signals on a
+      given stack — tool-call loops, repeated failed edits, the same
+      category of compile error across retries — escalate that role's
+      model tier for this project and record the observation in the
+      architecture discipline parking lot.
+    rationale: |
+      Per-stack competence shifts with every model release, so it cannot
+      be hardcoded into the ladder. What generalizes is the adjustment
+      procedure: watch for thrash, escalate the role, record the evidence
+      so the next tier decision in this project starts from observation
+      rather than default.
+    checklist:
+      - "When a worker thrashes, was stack difficulty considered before re-prompting a third time?"
+      - "Was the tier escalation recorded (parking lot or project knowledge) with the observed signals?"
+      - "Are recorded stack observations rechecked when the project's model versions change?"
+    anti_patterns:
+      - "Re-dispatching a thrashing sonnet-tier agent repeatedly instead of escalating the tier — trajectory poisoning plus wasted spend"
+      - "Globally escalating all agents because one stack was hard for one role"
+      - "Treating a stack observation from one model version as permanent truth"
+    source: "r/ClaudeAI thread — Sonnet on Rust codebases (2026-07)"
+
+  - rule_id: MTS6
+    name: "Plan wide on premium, execute narrow on cheap — session-level tiering"
+    description: |
+      The SDLC's phase boundaries are also model-tier boundaries. Planning
+      sessions (sdlc-plan, sdlc-lite-plan, sdlc-idea) concentrate exactly
+      the judgment work MTS1 assigns to the top tier — discovery
+      interviewing, approach decisions, finding arbitration, spec/plan
+      acceptance — so run the planning session's orchestrator on the
+      highest-tier model available (e.g., Fable/Opus). The Manager Rule
+      guarantees the premium model never spends tokens on implementation.
+
+      Execution sessions (sdlc-execute, sdlc-lite-execute) act on judgment
+      already committed to the plan artifact; their orchestrator can run
+      on a mid-tier model, with worker agents at their frontmatter tiers
+      and risk-escalated reviewers per MTS4. The plan file is the handoff
+      contract between the tiers — which is why plans must carry outcomes,
+      constraints, and acceptance criteria explicit enough for a cheaper
+      executor to act on without re-deriving intent.
+    rationale: |
+      This extends token-economics' "plan wide, execute narrow" from
+      context budgeting to model tiering. Spec-driven development works
+      because each artifact gate (spec review, plan review, code review)
+      catches a different class of mistake before it gets expensive;
+      putting the strongest model at the artifact-producing gates and
+      cheaper models behind them buys maximum error-prevention per token.
+      Community setups running this split report lower token usage than
+      single-premium-model sessions with equal or better output.
+    checklist:
+      - "Is the planning session running on the highest-tier model available to the project?"
+      - "Does the plan carry outcomes/constraints/acceptance criteria concrete enough for a lower-tier execution session to act on?"
+      - "At execution time, are per-phase reviewer tiers escalated per MTS4 rather than re-escalating the whole session?"
+    anti_patterns:
+      - "Running long execution sessions on the top-tier model when the judgment was already committed to the plan"
+      - "Planning on a cheap model to save tokens — planning errors are the most expensive class to catch later"
+      - "Writing vague plans that force the execution session to re-derive intent, silently pulling judgment work down-tier"
+    source: "DataCamp spec-driven development tutorial; r/ClaudeAI SDD-coordinator thread (2026-07); [sdlc-root]/knowledge/architecture/token-economics.yaml"
+
+# ─────────────────────────────────────────────
+# Maintenance
+# ─────────────────────────────────────────────
+
+maintenance:
+  add_when: >
+    A new tier-matching pattern proves repeatedly useful or a tier default
+    proves repeatedly wrong (e.g., a model release shifts per-stack
+    competence). Add as MTS-N with rationale and checklist.
+  boundary_rule: >
+    This file owns model/effort tier selection. Group sizing, dispatch
+    prompt structure, and dependency-graph design live in
+    [sdlc-root]/knowledge/architecture/agent-orchestration-patterns.yaml.
+    Context budgeting and session hygiene live in
+    [sdlc-root]/knowledge/architecture/token-economics.yaml. Whether to
+    delegate at all is governed by [sdlc-root]/process/manager-rule.md.

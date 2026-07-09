@@ -34,6 +34,33 @@ Each entry contains:
 
 ---
 
+## 2026-07-08: Framework Ingestion — Model & Effort Tier Strategy
+
+**Origin:** Bulk ingestion via `ccsdlc-ingest` from community sources: three r/ClaudeAI thread screenshots (per-subagent `effort:` frontmatter; Fable-coordinates/Opus-verifies/Sonnet-executes/Haiku-scouts workflow splits; SDD with a top-tier coordinator), a community "fable-chief-agent" skill, and the DataCamp spec-driven development tutorial. CD specifically asked to explore Fable/Opus as the research/planning tier with Sonnet agents implementing.
+
+**What happened:** The framework already assigned models per-agent (sonnet default, opus for design decisions, haiku for retrieval) and already enforced judgment/labor separation via the Manager Rule, but had no codified doctrine for WHY tiers map to work types, no effort-as-a-lever guidance, no risk-escalated-review rule, and no session-level guidance that planning should run on the top tier. The community sources supplied exactly that doctrine.
+
+**Changes made:**
+
+1. **`knowledge/architecture/model-tier-strategy.yaml`** — created with 6 rules (MTS1–MTS6): concentrate judgment at the top tier / delegate evidence-checkable work down; the tier ladder (top-tier orchestrator → opus hard delegated reasoning + high-risk review → sonnet default worker → haiku recon); effort as an independent per-role lever; reviewer tier ≥ implementer tier for high-risk domains; stack-difficulty tier adjustment; plan-wide-on-premium / execute-narrow-on-cheap session tiering. Includes an explicit "Relationship to the Manager Rule" preamble rejecting the community delegation-economics escape hatch.
+2. **`templates/agent-template.md`** — frontmatter reference: added optional `effort:` field (low|medium|high|xhigh|max, with harness-version caveat); model guidance now covers the high-risk-review role for opus and points to the tier strategy file.
+3. **`skills/sdlc-develop-agent/SKILL.md`** — frontmatter generation step: expanded `model:` guidance and added `effort:` field guidance with tier-strategy pointer.
+4. **`agents/sdlc-reviewer.md`** — agent frontmatter checklist: validates optional `effort:` values.
+5. **`skills/sdlc-plan/SKILL.md`** / **`skills/sdlc-lite-plan/SKILL.md`** — Agent Dispatch Protocol: read the tier strategy; planning sessions run on the highest-tier model available (MTS1/MTS6), recon goes cheap, high-risk phases get escalated reviewer tiers (MTS4).
+6. **`skills/sdlc-execute/SKILL.md`** — EXECUTE dispatch protocol: MTS4 (reviewer ≥ implementer tier on high-risk) and MTS5 (escalate a thrashing worker instead of a third re-dispatch).
+7. **`knowledge/agent-context-map.yaml`** — wired the new file to the architect role.
+8. **`knowledge/architecture/README.md`** — structure listing updated.
+9. **`CLAUDE-SDLC.md`** — Agent Conventions: new bullet on pre-assigned model/effort tiers and running planning sessions on the top tier.
+10. **`disciplines/architecture.md`** — inventory table row + 3 `[NEEDS VALIDATION]` parking lot entries (effort-frontmatter support matrix, Sonnet-on-Rust thrash reports, per-phase Model/Effort column in the planning template).
+11. **`knowledge/provenance_log.md`** — first provenance entry (prov-2026-07-08-001) recording sources and ingestion.
+12. **`skeleton/manifest.json`** — added the new knowledge file.
+
+**Skill candidates proposed:** none — the material is doctrine (knowledge + template/skill wiring), not a workflow warranting a new skill. The pasted fable-chief-agent skill was NOT adopted as a skill: its judgment/labor split is now knowledge, and its "do the work directly when delegation costs more" boundary conflicts with the Manager Rule, which stays authoritative.
+
+**Downstream:** Child projects receive the new knowledge file, template fields, and skill guidance on next migration. No renames or contract-phrase changes — all new references use canonical phrasings, so no `[contract-change]` tag and no `skeleton/contract_changes.yaml` entry needed.
+
+**Rationale:** CD's proposed split — Fable/Opus researching and planning, Sonnet implementing — is exactly the architecture the SDLC already enforces structurally (Manager Rule separates judgment from labor; agent frontmatter carries worker tiers). What was missing was the explicit doctrine making that split *deliberate*: run planning where judgment concentrates on the strongest model, keep workers cheap, and escalate only the review tier — not the implementation tier — when risk demands it. The DataCamp SDD material validated the existing spec → plan → execute gate structure without requiring changes.
+
 ## 2026-07-07: Agent-description example economy (drop `<commentary>`, tier example count, mandatory Do-NOT-use)
 
 **Origin:** Upstream handoff from ChronoCore (`upstream-agent-description-economy_handoff.md`). ChronoCore measured that Claude Code injects every agent's full `description` frontmatter into every session's system prompt regardless of whether the agent is ever spawned — a permanent per-session tax, unlike the agent body (loaded only on spawn). ChronoCore's 16 agents, authored to the prior convention (4 `<example>` blocks each, every example with `<commentary>`), totaled ~44.5k characters (~11k tokens) of description payload per session. ChronoCore applied a local trim (~18-20k chars, ~5-6k tokens saved) and handed the convention change upstream since the framework's template/skill/reviewer — not the projects — was the driver.

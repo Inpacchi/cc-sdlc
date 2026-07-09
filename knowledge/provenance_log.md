@@ -31,4 +31,18 @@ Append-only record of where knowledge entered the SDLC knowledge layer. Enables 
 
 ## Log
 
-(No entries yet.)
+## [2026-07-08] Community tiered-orchestration sources — architecture
+
+- **id:** prov-2026-07-08-001
+- **status:** ingested
+- **source-type:** manual
+- **source:** Three r/ClaudeAI thread screenshots (per-subagent effort frontmatter; Fable/Opus/Sonnet/Haiku workflow splits; SDD with top-tier coordinator), community "fable-chief-agent" skill text, DataCamp spec-driven development tutorial
+- **source-url:** https://www.datacamp.com/tutorial/spec-driven-development-with-claude-code
+- **discipline:** architecture
+- **files-created:** knowledge/architecture/model-tier-strategy.yaml
+- **files-updated:** templates/agent-template.md, skills/sdlc-develop-agent/SKILL.md, agents/sdlc-reviewer.md, skills/sdlc-plan/SKILL.md, skills/sdlc-lite-plan/SKILL.md, skills/sdlc-execute/SKILL.md, knowledge/agent-context-map.yaml, knowledge/architecture/README.md, CLAUDE-SDLC.md, disciplines/architecture.md
+- **rule-count:** 6
+- **ingested-by:** ccsdlc-ingest
+- **notes:** DataCamp SDD workflow (spec → plan → implement with human gates) validated as already fully implemented by cc-sdlc — no structural change needed. The fable-chief-agent skill's delegation-economics escape hatch ("do work directly when delegation costs more") was deliberately NOT adopted; the Manager Rule remains authoritative. Three unvalidated observations parked in disciplines/architecture.md.
+
+---

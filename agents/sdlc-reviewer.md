@@ -49,6 +49,7 @@ Determine the file type from location and content before running any checklist.
 - [ ] `<commentary>` blocks inside the description are Major — they restate the scope sentence or Do-NOT-use boundary already present.
 - [ ] Description includes a "Do NOT use for: X — use Y instead" boundary sentence. Absence is Major (graduated from recommended to required) — with examples capped at 2, it's the primary mechanism resolving overlap with adjacent agents, not optional prose.
 - [ ] `model:` is one of: sonnet, opus, haiku
+- [ ] `effort:` (optional) if present is one of: low, medium, high, xhigh, max
 - [ ] `tools:` lists only necessary tools (flag if all tools listed without justification)
 - [ ] `color:` matches semantic group: green (core product), cyan (architecture + domain), orange (infrastructure), red (quality + debugging), yellow (SDLC process), blue (business intelligence), purple (product + design), pink (creative / external)
 - [ ] `memory:` is either `project` or omitted

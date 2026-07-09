@@ -40,8 +40,19 @@ FRONTMATTER REFERENCE:
 
   model:
     Options: sonnet (default, balanced) | opus (most capable, for architectural decisions) | haiku (fast, for retrieval/search tasks)
-    Use opus for agents that make design decisions or evaluate trade-offs.
+    Use opus for agents that make design decisions or evaluate trade-offs — and for
+    agents that review high-risk work implemented by cheaper tiers.
     Use haiku for agents that primarily search and retrieve.
+    Read [sdlc-root]/knowledge/architecture/model-tier-strategy.yaml for the full
+    tier ladder and risk-escalation rules.
+
+  effort:
+    Optional. Overrides the session reasoning effort for this agent's role.
+    Options: low | medium | high | xhigh | max
+    Use low for recon/mechanical roles (discovery, summaries, checklist verification) —
+    nearly free quality-wise. Use high+ for review agents on high-risk domains.
+    Omit when the session default fits. Requires a Claude Code version that supports
+    per-agent effort frontmatter — verify before relying on it.
 
   tools:
     List only what the agent actually needs — fewer tools = less latitude to diverge.

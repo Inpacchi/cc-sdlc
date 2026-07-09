@@ -27,6 +27,7 @@ mappings:
     - "[sdlc-root]/knowledge/architecture/observability-patterns.yaml"
     - "[sdlc-root]/knowledge/architecture/performance-optimization-philosophy.yaml"
     - "[sdlc-root]/knowledge/architecture/agent-orchestration-patterns.yaml"
+    - "[sdlc-root]/knowledge/architecture/model-tier-strategy.yaml"
 
   # ── Data / Database ────────────────────────────────────────────────
   data-architect:

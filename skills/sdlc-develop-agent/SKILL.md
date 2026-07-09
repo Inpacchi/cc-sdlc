@@ -86,8 +86,15 @@ Generate each field:
 
 **model:**
 - `sonnet` (default) — most agents
-- `opus` — architectural decisions, complex trade-offs
+- `opus` — architectural decisions, complex trade-offs, reviewing high-risk work implemented by cheaper tiers
 - `haiku` — retrieval/search tasks only
+
+Read `[sdlc-root]/knowledge/architecture/model-tier-strategy.yaml` for the tier ladder and risk-escalation rules before assigning a non-default model.
+
+**effort:** (optional)
+- `low` — recon/mechanical roles (discovery, summaries, checklist verification); nearly free quality-wise
+- `high` / `xhigh` / `max` — review agents on high-risk domains (auth, payments, migrations, concurrency)
+- Omit when the session default fits. Overrides the session reasoning effort for this role — requires a Claude Code version that supports per-agent effort frontmatter; verify before relying on it.
 
 **tools:** List ONLY what the agent actually needs. Common sets:
 - Read-only analysis: `Read, Glob, Grep`

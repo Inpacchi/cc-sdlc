@@ -159,6 +159,7 @@
       "knowledge/architecture/observability-patterns.yaml",
       "knowledge/architecture/performance-optimization-philosophy.yaml",
       "knowledge/architecture/agent-orchestration-patterns.yaml",
+      "knowledge/architecture/model-tier-strategy.yaml",
       "knowledge/business-analysis/README.md",
       "knowledge/business-analysis/requirements-feedback-loops.yaml",
       "knowledge/business-analysis/data-storytelling-rules.yaml",

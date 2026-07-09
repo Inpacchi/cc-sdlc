@@ -51,6 +51,7 @@ spec → plan → implement
 | `prompt-engineering-patterns.yaml` | LLM prompt design, evaluation patterns | [ml-architect] |
 | `domain-boundary-gotchas.yaml` | Cross-domain work patterns, orchestrator signals | [architect], [code-reviewer] |
 | `token-economics.yaml` | Context window constraints on AI-assisted workflows | [architect] |
+| `model-tier-strategy.yaml` | Model/effort tier matching for agent dispatch | [architect], all orchestrating skills |
 | `database-optimization-methodology.yaml` | Query optimization, index strategy | [data-engineer], [backend-developer] |
 
 ## Parking Lot
@@ -66,3 +67,11 @@ spec → plan → implement
 - **Advisory lock + connection pooling release locks silently.** Promoted → `[sdlc-root]/knowledge/architecture/domain-boundary-gotchas.yaml` (advisory-lock-pool-release entry)
 - **Lazy initialization needs a short-circuit for tests.** Promoted → `[sdlc-root]/knowledge/architecture/domain-boundary-gotchas.yaml` (lazy-init-test-shortcircuit entry)
 - **"Metadata-only" flags don't gate behavior — until they do.** Promoted → `[sdlc-root]/knowledge/architecture/domain-boundary-gotchas.yaml` (metadata-only-flag-drift entry)
+
+### Model & Effort Tiering (2026-07-08, source: r/ClaudeAI community threads + community "fable-chief-agent" skill)
+
+*Bulk import from community tiered-orchestration discussion. Validated, generalizable rules were promoted directly to `[sdlc-root]/knowledge/architecture/model-tier-strategy.yaml` (MTS1–MTS6); the entries below need validation before promotion.*
+
+- **Per-agent `effort:` frontmatter support matrix.** [NEEDS VALIDATION] Community reports per-subagent effort (`low` through `max`) in agent frontmatter overriding session effort, with recon roles at low effort "nearly free quality-wise." Verify which Claude Code versions support the field and confirm the accepted value set (low | medium | high | xhigh | max) before projects rely on it. (Source: r/ClaudeAI effort-frontmatter thread, 2026-07 screenshot)
+- **Sonnet-tier workers thrash on Rust codebases.** [NEEDS VALIDATION] One practitioner reports Sonnet "struggles with Rust codebases then drowns in tool calls" while performing well on frontend work. If reproduced, Rust-heavy projects should default implementer agents to opus-tier or add a stack note at initialization. Recheck per model release. (Source: r/ClaudeAI tiered-workflow thread, 2026-07 screenshot)
+- **Per-phase Model/Effort column in plan templates.** [NEEDS VALIDATION] Plans assign agents per phase; the agent's frontmatter carries the tier. An explicit per-phase Model/Effort override column in `planning_template.md` would let the planning agent encode MTS4 escalations in the artifact instead of relying on dispatch-time judgment — but adds template weight. Trial on a high-risk deliverable first. (Source: this ingestion's gap analysis)

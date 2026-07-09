@@ -125,6 +125,8 @@ Dispatch prompts must pass through all relevant context — outcomes, constraint
 
 Consult `[sdlc-root]/knowledge/architecture/agent-orchestration-patterns.yaml` for dispatch discipline — especially AOP5 (right-size the agent group), AOP6 (match specialization to domain), and AOP9 (dispatch prompts must include acceptance criteria, owned files, constraints, and out-of-scope).
 
+Read `[sdlc-root]/knowledge/architecture/model-tier-strategy.yaml` for model/effort tier matching — planning concentrates judgment work (MTS1, MTS6), so this session should run on the highest-tier model available, while recon dispatches go to cheap tiers and high-risk phases get risk-escalated reviewer tiers (MTS4).
+
 **Cross-domain knowledge injection:** When dispatching a worker agent into a domain outside its primary expertise, consult `[sdlc-root]/knowledge/agent-context-map.yaml` for the relevant domain agent's mapped knowledge files and include them in the dispatch prompt.
 
 **Library verification (MANDATORY when external libraries are involved):** You MUST verify API capabilities via Context7 BEFORE dispatching the plan-writing agent.
