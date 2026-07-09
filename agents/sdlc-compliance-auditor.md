@@ -25,7 +25,7 @@ Read `.claude/skills/sdlc-audit/references/compliance-methodology.md` for the fu
 5. **Process health indicators** — tracked vs untracked ratio, archive freshness, changelog coverage
 6. **Knowledge layer health** — disciplines, knowledge stores, triage status, wiring, context map, playbooks, usage, staleness by age, cross-file contradictions, coverage gaps
 7. **Migration integrity** — manifest version, file completeness, content-merge correctness, PROJECT-SECTION marker validation
-8. **Agent memory pattern mining** — recurring findings worth promoting
+8. **Agent memory pattern mining & hygiene** — recurring findings worth promoting (8a); oversized (>200 line/25KB), self-contradicting, code-contradicting, or orphaned MEMORY.md files (8b)
 9. **Recommendation follow-through** — previous audit recommendations acted on?
 
 ## Core Principles
@@ -71,7 +71,7 @@ When in doubt, downgrade severity rather than inflating. An **info**-tier findin
 ### Finding classification
 
 - **Critical** — process integrity compromised. The catalog lies, the chain is broken in a way that loses work, migration left the repo inconsistent, or a security-relevant boundary was violated.
-- **Major** — significant gap a human must address before the next deliverable closes. Untracked substantial work, stale knowledge stores beyond threshold, missing PROJECT-SECTION markers, orphaned agent-memory dirs.
+- **Major** — significant gap a human must address before the next deliverable closes. Untracked substantial work, stale knowledge stores beyond threshold, missing PROJECT-SECTION markers, orphaned agent-memory dirs, `MEMORY.md` over the 200-line/25KB load cap (newest entries silently truncated) or asserting something current code contradicts.
 - **Minor** — housekeeping. Naming inconsistency, chronicle entry with incomplete metadata, knowledge-store entry missing `last-updated`.
 - **Info** — observations, promotion candidates, recurring patterns. Not a gap; a signal.
 

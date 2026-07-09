@@ -217,6 +217,17 @@ Flag any insight that appears significant and reusable but has no parking lot en
 
 If more than 3 entries require judgment calls, present a brief summary and use AskUserQuestion. Otherwise, apply defaults and report what was done.
 
+#### 9d. Agent Memory Path Fixups (mechanical only)
+
+This archive operation just moved deliverable docs from `docs/current_work/...` to `docs/chronicle/...`. Any agent-memory note that cited the old path is now broken — a mechanical breakage caused by *this* operation, so fix it here rather than leaving it for an audit.
+
+**Scope: only the dNN deliverable(s) in this archive batch, and only path rewrites.** Do NOT prune, dedup, or curate memory content — deeper agent-memory hygiene (oversized `MEMORY.md`, contradictions, orphaned dirs) is `sdlc-audit` Dimension 8b's job, a periodic sweep, not the archive's.
+
+1. If `.claude/agent-memory/` doesn't exist (project doesn't use agent memory), skip this step silently.
+2. For each deliverable being archived, grep `.claude/agent-memory/*/` for the old `docs/current_work/...` paths this operation moved.
+3. Rewrite each hit to the new `docs/chronicle/...` location.
+4. If a note's entire subject deliverable is now archived and the note is a pure task-log with no forward-reusable insight, offer it for deletion **in the Step 9c triage table** (per the "ONE AskUserQuestion" rule — do not open a second gate). If Step 9c was skipped (no table produced), apply the default: keep the note unless it is unambiguously a pure task-log with nothing reusable, in which case delete it and report what was removed.
+
 ### 10. Clean Up Issues
 
 If a deliverable had an associated issue file in `docs/current_work/issues/` and the deliverable is now archived, remove the issue file too.

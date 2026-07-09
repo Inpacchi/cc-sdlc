@@ -138,10 +138,11 @@ Before presenting any implementation:
 You have a persistent memory directory at `{project_root}/.claude/agent-memory/{agent-name}/`. Its contents persist across conversations.
 
 Guidelines:
-- `MEMORY.md` is always loaded into your system prompt — lines after 200 will be truncated, so keep it concise
-- Create separate topic files for detailed notes and link to them from MEMORY.md
-- Update or remove memories that turn out to be wrong or outdated
-- Organize memory semantically by topic, not chronologically
+- **`MEMORY.md` is an index, not a logbook.** Claude Code loads only the first **200 lines or 25KB, whichever comes first** — anything past that is silently truncated and invisible to you in future sessions. Because entries are appended at the bottom, it's your *newest* notes that get dropped. Keep MEMORY.md lean: short summaries and pointers, with detail pushed to topic files.
+- **Split before you hit the cap.** When MEMORY.md approaches ~180 lines (or any single topic outgrows a handful of lines), move that topic's detail into a topic file and leave a one-line pointer behind. Don't wait for truncation to start eating your notes.
+- **Topic files live beside MEMORY.md and are uncapped.** Create them at `.claude/agent-memory/{agent-name}/{topic}.md` (kebab-case, e.g. `flip-timing-rules.md`) and link each from MEMORY.md: `- [Flip timing rules](flip-timing-rules.md) — <one-line summary>`. Topic files are read on demand, so they have no size limit.
+- **Update or remove memories that turn out to be wrong or outdated** — in both MEMORY.md and topic files. A memory that contradicts current code is worse than no memory. When you restate a tuned value, replace the old line; don't leave two copies with drifted numbers.
+- Organize memory semantically by topic, not chronologically.
 
 What to save: [domain-specific examples — e.g., "stable patterns, key decisions, recurring problems"].
 What NOT to save: session-specific context, incomplete info, CLAUDE.md duplicates.
@@ -155,7 +156,3 @@ Agent memory is your private scratchpad — it is **not git-tracked**. If you di
 - **Include a `knowledge_feedback` section in your handoff** when you notice knowledge gaps, find loaded files unhelpful, or wish a pattern had been documented. The orchestrator uses this during discipline capture. Read `[sdlc-root]/knowledge/architecture/agent-communication-protocol.yaml` for the handoff schema.
 - **Reusable patterns, anti-patterns, and domain gotchas** belong in knowledge stores (`[sdlc-root]/knowledge/`), not agent memory. If you discover something general enough to help other agents or future deliverables, flag it in your handoff so the orchestrator can route it to discipline capture or a knowledge store update.
 - **Your memory is for you; knowledge stores are for everyone.** Save codebase-specific shortcuts and session-to-session continuity here. Save transferable domain knowledge through the SDLC pipeline.
-
-## MEMORY.md
-
-Your MEMORY.md contents are loaded into your system prompt automatically. Update it when you notice patterns worth preserving across sessions.

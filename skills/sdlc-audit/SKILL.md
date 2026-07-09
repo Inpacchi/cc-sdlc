@@ -74,7 +74,7 @@ Dispatch the `sdlc-compliance-auditor` subagent to perform the 9-dimension scan.
 5. **Process health indicators** — tracked vs untracked ratio, archive freshness, changelog coverage
 6. **Knowledge layer health** — disciplines, knowledge stores, triage status, wiring, context map, playbooks, usage, staleness by age, cross-file contradictions, coverage gaps, orphaned knowledge pruning
 7. **Migration integrity** — manifest version, file completeness, content-merge correctness
-8. **Agent memory pattern mining** — recurring findings worth promoting
+8. **Agent memory pattern mining & hygiene** — recurring findings worth promoting; oversized (>200 line/25KB), self-contradicting, code-contradicting, or orphaned agent-memory files
 9. **Recommendation follow-through** — previous audit recommendations acted on?
 
 When fed a session or commits (not just current state):
@@ -114,14 +114,17 @@ Action Items
 ### 3. Triage
 
 After presenting the audit report, run an interactive triage session if there are:
-- **Promotion candidates** (from Dimensions 6c, 6l, and 8) — parking lot entries, recurring review patterns, or agent memories worth promoting to knowledge stores
+- **Promotion candidates** (from Dimensions 6c, 6l, and 8a) — parking lot entries, recurring review patterns, or agent memories worth promoting to knowledge stores
 - **Prune candidates** (from Dimension 6k) — orphaned knowledge files not wired to any agent
+- **Memory hygiene candidates** (from Dimension 8b) — oversized (>200 line/25KB), self-contradicting, code-contradicting, or orphaned agent-memory files
 
 See `references/compliance-methodology.md` step 11 for the full workflow.
 
 **Promotion triage:** Present candidates grouped by discipline. CD decides: promote to knowledge store, defer (with reason), or skip. Promotions apply immediately.
 
 **Prune triage:** Present orphaned knowledge files grouped by severity. CD decides: prune (delete), wire (add to agent mappings), or keep (leave unwired). Wiring uses the same flow as sdlc-ingest step 6 — present candidate agents, update `[sdlc-root]/knowledge/agent-context-map.yaml`.
+
+**Memory hygiene triage:** Present the flagged `MEMORY.md` files (oversized, self-contradicting, or contradicting code) and orphaned agent-memory directories. CD decides per item: **fix**, defer, or keep. Fold these into the **same** `AskUserQuestion` batch as the prune candidates — do not open a second gate. The read-only auditor only reports these with file+line evidence; the fixes are applied by this skill's orchestrator (which has Write) in Step 4 — split an oversized `MEMORY.md` into `{topic}.md` files with pointers, remove a contradicting/duplicated line, or delete an orphaned directory. This is why hygiene fixes do not require the domain agent itself (many are read-only): the orchestrator applies them directly.
 
 ### 4. Fix
 

@@ -312,14 +312,26 @@ Promotion candidates from 6l are surfaced in step 11 (interactive triage) alongs
 - **7c. Content-merge:** Verify framework sections current while project customizations preserved (skill gates, discipline entries, agent context map names).
 - **7d. Removed features:** Search skills/agents for references to deprecated/removed framework features.
 
-## Dimension 8: Agent Memory Pattern Mining
+## Dimension 8: Agent Memory Pattern Mining & Hygiene
+
+This dimension has two jobs: mine memories for content worth **promoting** to shared stores, and flag memories that need **hygiene fixes**. Keep the two streams separate — promotion candidates route to the interactive triage (step 11), hygiene findings route to the standard severity-classified findings table (they are fixes, not promotions).
+
+### 8a. Pattern mining (promotion signal)
 
 - Read each agent's `MEMORY.md` in `.claude/agent-memory/*/`
 - Identify recurring themes across multiple agents or cycles
 - Flag patterns that should be in `[sdlc-root]/knowledge/` or `[sdlc-root]/disciplines/` but aren't
-- Check for stale memories contradicting current codebase
 
 Promotion criteria: appears in 2+ agent memories independently, reusable pattern, saves future agents from rediscovery.
+
+### 8b. Hygiene (fix signal)
+
+Check each `MEMORY.md` — **not** its linked topic files, which are uncapped by design — against the following. Report each as a finding in the standard table with file path and line evidence; the read-only auditor never edits, so the sdlc-audit orchestrator (which has Write) applies approved fixes in skill Step 4.
+
+- **Size cap — Major, not cosmetic.** Claude Code loads only the first **200 lines or 25KB, whichever comes first** of `MEMORY.md` into the agent's system prompt; the remainder is silently truncated, so the agent's newest notes are invisible to it. Flag any `MEMORY.md` over 200 lines or 25KB. Fix: split the largest topics into `{topic}.md` files beside MEMORY.md and replace them with one-line pointers (see the agent template's memory protocol).
+- **Contradicts current code.** A memory asserting something the codebase no longer does (e.g. "no version field / no locking" after a later change added them). Verify against source before flagging — this is a correctness risk, not just staleness.
+- **Internal contradiction / duplication.** The same fact or tuned value stated more than once within one `MEMORY.md`, sometimes with drifted numbers. Fix: keep the value matching current code, delete the rest.
+- **Orphaned directory — Major.** An `.claude/agent-memory/{name}/` whose `{name}` no longer matches any agent in `.claude/agents/` (e.g. a predecessor role retired in a rules-version migration). Recommend deletion.
 
 ## Dimension 9: Recommendation Follow-Through
 

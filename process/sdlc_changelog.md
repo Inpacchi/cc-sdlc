@@ -34,6 +34,23 @@ Each entry contains:
 
 ---
 
+## 2026-07-09: Agent-memory hygiene — MEMORY.md cap enforcement, topic-file protocol, archive path fixups
+
+**Origin:** Upstream handoff from a ChronoCore session that manually pruned `.claude/agent-memory/` (16 dirs, ~50 files) after severe drift — one `MEMORY.md` had reached 2628 lines, others contained content actively contradicting current code, duplicated tuned values with drifted numbers, and an orphaned predecessor-role directory. Web research confirmed Claude Code loads only the first **200 lines / 25KB** of `MEMORY.md` into the agent's system prompt (`MAX_ENTRYPOINT_LINES`), silently truncating the rest — and since entries append at the bottom, the *newest* notes are the ones dropped. The framework already named topic files as the remedy but only as a bare one-line suggestion with no size trigger, naming convention, or index framing, and nothing enforced the cap.
+
+**Changes made:**
+
+1. **`templates/agent-template.md`** — rewrote the Persistent Agent Memory guidelines into a real protocol: MEMORY.md-as-index framing, the 200-line/25KB cap with the "newest entries truncated" explanation, a split trigger (~180 lines), a topic-file naming/location convention (`.claude/agent-memory/{agent-name}/{topic}.md`, kebab-case, linked with one-line pointers), and explicit "replace drifted values, don't duplicate" guidance. Removed the redundant trailing `## MEMORY.md` section (its content is now covered above).
+2. **`skills/sdlc-audit/references/compliance-methodology.md`** — split Dimension 8 into **8a Pattern mining** (promotion signal, unchanged) and **8b Hygiene** (new fix signal): size-cap violation (Major, MEMORY.md only — topic files uncapped), contradicts-current-code, internal duplication, orphaned directory. States the read-only auditor reports with file+line and the orchestrator applies fixes.
+3. **`skills/sdlc-audit/SKILL.md`** — added a **Memory hygiene triage** to Step 3 folded into the existing prune `AskUserQuestion` batch (no second gate); routed fixes to Step 4's orchestrator (has Write), resolving the read-only-domain-agent limitation without needing write-capable domain agents. Updated the Dimension 8 summary line.
+4. **`agents/sdlc-compliance-auditor.md`** — updated Dimension 8 summary to name 8a/8b; extended the Major severity class to include over-cap and code-contradicting `MEMORY.md`.
+5. **`skills/sdlc-archive/SKILL.md`** — added **Step 9d Agent Memory Path Fixups (mechanical only)**: scoped strictly to the archived deliverable(s) and to rewriting `docs/current_work/...` → `docs/chronicle/...` paths this operation just broke. Explicitly defers all judgment-based pruning to audit Dimension 8b; folds any task-log deletions into the Step 9c triage table (with a defined fallback when 9c is skipped).
+6. **`CLAUDE-SDLC.md`** — added the MEMORY.md cap + topic-file index pattern to the agent-memory bullet so target projects see the rule in their merged CLAUDE.md.
+
+**Rationale:** Detection of agent-memory drift already existed (Dimension 8 flagged stale/contradicting memories) but there was no *fix loop* and no *prevention* — findings were flagged and nothing acted. The split here is deliberate: the template is the prevention layer (agents split before they hit the cap), archive Step 9d is the incremental mechanical cleanup (fix only what an archive itself breaks), and audit Dimension 8b is the periodic judgment-based sweep. The over-cap flag is a correctness issue, not cosmetic — an agent over 200 lines is silently running on a memory it can't fully see. Adapter phrasing contract checked: `.claude/agent-memory/` is the private scratchpad, distinct from the knowledge layer the neuroloom adapter transforms, so no `[contract-change]` and no paired plugin edit.
+
+---
+
 ## 2026-07-09: sdlc-execute — plan size is not a confirmation trigger
 
 **Origin:** Observed in a target-project execution session (D105, 7-phase plan). After emitting the Phase plan table, the executor paused and asked an `AskUserQuestion` about "execution scope" (full run vs. backend-only vs. Phase 1 only) — a checkpoint the skill never sanctions. The question's "Full sequential execution" wording also contradicted the parallelism the Phase plan itself declared.
