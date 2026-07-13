@@ -34,6 +34,21 @@ Each entry contains:
 
 ---
 
+## 2026-07-13: Task-based model selection for Codex-backed external-review wrappers
+
+**Origin:** CD directive in a cc-sdlc source session: when Codex is configured as an external reviewer, allow the orchestrator to choose model and reasoning effort per task (`codex -m <model> --config model_reasoning_effort="xhigh"`), resolving current model names at runtime from https://developers.openai.com/api/docs/models.
+
+**What happened:** The wrapper contract gave the wrapper sole ownership of model choice, so every external review ran at the wrapper's single hardcoded configuration regardless of stakes — a docs-only diff and a knowledge-promotion verdict got the same model and effort.
+
+**Changes made:**
+
+1. **`process/external-review-gate.md`** — New "Task-Based Model Selection" section: Codex-backed wrappers pass through optional `CODEX_MODEL` / `CODEX_REASONING_EFFORT` env vars set by the invoking skill at the call site; wrapper defaults apply when unset. Model names must be resolved at runtime from OpenAI's model catalog (WebFetch https://developers.openai.com/api/docs/models), never recalled from training data — if the catalog can't be fetched, leave `CODEX_MODEL` unset rather than guess. Effort guidance: top-tier model at `xhigh` for high-stakes single-shot judgments (promotion verdicts, auth/payments/migrations/concurrency diffs), `medium` for routine second opinions. Wrapper-contract bullet updated (wrapper provides the *default* model, honors the passthrough); both Codex example wrappers updated — diff reviewer defaults effort to `medium`, knowledge judge to `xhigh`. Egress disclosure now names the actual model used.
+2. **`CLAUDE-SDLC.md`** — External review paragraph mentions the env-var convention and the runtime model-resolution rule.
+
+**Rationale:** External review quality should scale with task stakes, and the framework shouldn't embed model names that rot — OpenAI's catalog changes faster than this repo. Env-var passthrough keeps the wrapper contract intact (project still owns endpoint, egress policy, and defaults) while letting the orchestrator escalate a high-stakes judgment to a frontier model at maximum effort without editing the wrapper.
+
+---
+
 ## 2026-07-13: Promotion Verification Gate — multi-judge evidence before knowledge promotion
 
 **Origin:** ChronoCore handoff (`promotion-verification-gate_handoff.md`). In a ChronoCore session, 18 `[NEEDS VALIDATION]` parking-lot entries were bulk-promoted on the orchestrator's own judgment, violating the §6c authority matrix ("Proposed with evidence during interactive triage"). A retrofitted 3-judge review (self + Codex + Fable subagent) demoted 10 of the 18 — empirical proof that single-agent self-certification fails at exactly this transition. CD asked for the gate to be formalized upstream. Design was reviewed by two independent judges (Codex via `codex exec`, plus this session's own analysis) before implementation; both agreed with three amendments adopted below.

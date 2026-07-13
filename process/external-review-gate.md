@@ -97,9 +97,13 @@ optional). If present, the skill runs it as the gate.
 - **exit code** — `0` on success (including zero findings). Non-zero means the
   gate could not run; the skill records "external gate errored — skipped" and
   proceeds to commit. **Never block a commit on external availability.**
-- The wrapper owns model choice, endpoint, secret scrubbing, and prompt shaping.
-  cc-sdlc ships no default wrapper — the project author writes it, because the
-  right model and the egress policy are project decisions.
+- The wrapper owns endpoint, secret scrubbing, and prompt shaping, and provides
+  the default model choice. cc-sdlc ships no default wrapper — the project
+  author writes it, because the right model and the egress policy are project
+  decisions. Codex-backed wrappers SHOULD honor the optional `CODEX_MODEL` /
+  `CODEX_REASONING_EFFORT` environment variables (see § Task-Based Model
+  Selection below) so the invoking skill can match model and reasoning effort
+  to the task; the wrapper's own defaults apply when they are unset.
 
 ### Example wrappers
 
@@ -121,7 +125,9 @@ Hosted second opinion via the Codex CLI (egress — hosted):
 # [sdlc-root]/external-review.sh — Codex reviewer (SENDS CODE TO OPENAI)
 set -euo pipefail
 payload="$(cat)"
-codex exec "You are an independent code reviewer. Review the diff below. \
+codex exec ${CODEX_MODEL:+-m "$CODEX_MODEL"} \
+  --config model_reasoning_effort="${CODEX_REASONING_EFFORT:-medium}" \
+  "You are an independent code reviewer. Review the diff below. \
 Return findings as: SEVERITY | file:line | finding. Empty if none.
 
 $payload"
@@ -138,6 +144,43 @@ The invoking skill builds the payload like:
   echo; echo "=== DIFF ==="; git diff --staged 2>/dev/null || git diff
 } | "[sdlc-root]/external-review.sh"
 ```
+
+## Task-Based Model Selection
+
+When the wrapper is Codex-backed, the invoking skill may choose the model and
+reasoning effort per task instead of accepting the wrapper's defaults. The
+Codex CLI accepts both on the command line:
+
+```bash
+codex exec -m <model> --config model_reasoning_effort="<minimal|low|medium|high|xhigh>" "<prompt>"
+```
+
+The convention: wrappers pass these through from environment variables, and
+the invoking skill sets them at the call site —
+
+```bash
+CODEX_MODEL="gpt-5.6-luna" CODEX_REASONING_EFFORT="xhigh" \
+  { ...payload... } | "[sdlc-root]/external-review.sh"
+```
+
+- **Resolve model names at runtime, not from memory.** OpenAI's model catalog
+  changes; a model name recalled from training data may be retired or
+  superseded. Before choosing a model, fetch the current catalog from
+  <https://developers.openai.com/api/docs/models> (WebFetch) and pick from
+  what is actually listed. If the catalog cannot be fetched, leave
+  `CODEX_MODEL` unset and let the wrapper's default stand — never guess a
+  model name.
+- **Match effort to the task.** High-stakes single-shot judgments — knowledge
+  promotion verdicts, high-risk diffs (auth, payments, migrations,
+  concurrency) — warrant a top-tier model at `xhigh`. Routine second opinions
+  on ordinary diffs run fine at `medium`; don't pay frontier-model latency for
+  a docs-only change.
+- **Both variables are optional, independently.** Setting only
+  `CODEX_REASONING_EFFORT` while leaving the wrapper's default model is a
+  normal configuration.
+- Model selection does not change the egress picture — the payload goes to the
+  same provider either way — but the "state where the code is going"
+  disclosure should name the actual model used.
 
 ## Knowledge-Judgment Wrapper
 
@@ -169,10 +212,13 @@ never block a promotion pass on external availability.
 - **exit code** — `0` on success. Non-zero means the judge could not run; the
   gate records "external judge errored — substituted internal subagent" and
   falls back.
-- The wrapper owns model choice, endpoint, and prompt shaping, exactly like the
-  diff-review wrapper. The **data egress rules above apply unchanged** —
-  parking-lot text is project knowledge; state where it is going before running
-  a hosted model.
+- The wrapper owns endpoint and prompt shaping, exactly like the diff-review
+  wrapper, and honors the same `CODEX_MODEL` / `CODEX_REASONING_EFFORT`
+  passthrough (§ Task-Based Model Selection). Promotion judgment is a
+  high-stakes single-shot reasoning task — the invoking skill should prefer a
+  top-tier model at `xhigh` effort here. The **data egress rules above apply
+  unchanged** — parking-lot text is project knowledge; state where it is going
+  before running a hosted model.
 
 Example (hosted, via the Codex CLI — sends content to OpenAI):
 
@@ -181,7 +227,9 @@ Example (hosted, via the Codex CLI — sends content to OpenAI):
 # [sdlc-root]/external-review-knowledge.sh — Codex knowledge judge (EGRESS: OpenAI)
 set -euo pipefail
 payload="$(cat)"
-codex exec "You are an independent judge of engineering-knowledge claims. \
+codex exec ${CODEX_MODEL:+-m "$CODEX_MODEL"} \
+  --config model_reasoning_effort="${CODEX_REASONING_EFFORT:-xhigh}" \
+  "You are an independent judge of engineering-knowledge claims. \
 For each numbered entry below, decide whether the evidence supports promoting \
 it to a shared knowledge store. Corroboration must be the same claim, not an \
 adjacent one. Return one line per entry: \
