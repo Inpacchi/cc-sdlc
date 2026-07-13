@@ -139,6 +139,57 @@ The invoking skill builds the payload like:
 } | "[sdlc-root]/external-review.sh"
 ```
 
+## Knowledge-Judgment Wrapper
+
+The diff-review wrapper above is shaped for code review — its output contract
+(`SEVERITY | file:line | finding`) does not fit judging whether a discipline
+parking-lot entry deserves promotion to a knowledge store. That task gets its
+**own, parallel wrapper convention** rather than a mode flag on the same
+script — different artifact, different contract:
+
+```
+[sdlc-root]/external-review-knowledge.sh
+```
+
+It serves as the external judge in the Promotion Verification Gate
+(`[sdlc-root]/process/discipline_capture.md` § Promotion Verification Gate).
+Same activation rule as the diff wrapper: if the file is absent or not
+executable, the gate substitutes a second internal high-tier subagent judge —
+never block a promotion pass on external availability.
+
+### Knowledge-judgment wrapper contract
+
+- **stdin** — a neutral evidence payload: numbered candidate entries, each with
+  its full parking-lot text and corroboration signals (recurrence count,
+  independent-reviewer citations, same-claim vs. adjacent-claim knowledge-store
+  overlap, external validity). **No verdicts** — the judge reasons from raw
+  evidence.
+- **stdout** — one line per entry: `N | PROMOTE|DEMOTE | one-sentence justification`.
+  Empty stdout means the wrapper failed to produce verdicts; treat as an error.
+- **exit code** — `0` on success. Non-zero means the judge could not run; the
+  gate records "external judge errored — substituted internal subagent" and
+  falls back.
+- The wrapper owns model choice, endpoint, and prompt shaping, exactly like the
+  diff-review wrapper. The **data egress rules above apply unchanged** —
+  parking-lot text is project knowledge; state where it is going before running
+  a hosted model.
+
+Example (hosted, via the Codex CLI — sends content to OpenAI):
+
+```bash
+#!/usr/bin/env bash
+# [sdlc-root]/external-review-knowledge.sh — Codex knowledge judge (EGRESS: OpenAI)
+set -euo pipefail
+payload="$(cat)"
+codex exec "You are an independent judge of engineering-knowledge claims. \
+For each numbered entry below, decide whether the evidence supports promoting \
+it to a shared knowledge store. Corroboration must be the same claim, not an \
+adjacent one. Return one line per entry: \
+N | PROMOTE|DEMOTE | one-sentence justification.
+
+$payload"
+```
+
 ## Anti-conformity for external findings
 
 The external model is an outsider — it lacks the internal reviewers' context,

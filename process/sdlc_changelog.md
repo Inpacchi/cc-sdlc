@@ -34,6 +34,24 @@ Each entry contains:
 
 ---
 
+## 2026-07-13: Promotion Verification Gate — multi-judge evidence before knowledge promotion
+
+**Origin:** ChronoCore handoff (`promotion-verification-gate_handoff.md`). In a ChronoCore session, 18 `[NEEDS VALIDATION]` parking-lot entries were bulk-promoted on the orchestrator's own judgment, violating the §6c authority matrix ("Proposed with evidence during interactive triage"). A retrofitted 3-judge review (self + Codex + Fable subagent) demoted 10 of the 18 — empirical proof that single-agent self-certification fails at exactly this transition. CD asked for the gate to be formalized upstream. Design was reviewed by two independent judges (Codex via `codex exec`, plus this session's own analysis) before implementation; both agreed with three amendments adopted below.
+
+**What happened:** Promotion to a knowledge store had a CD-only authority rule but no defined evidence-production mechanism — step 11a said candidates need "evidence" without saying how it gets produced, so orchestrators substituted their own reasoning. Worse, `sdlc-archive` step 9c instructed applying `[READY TO PROMOTE]` as a silent "reasonable default," directly contradicting the §6c matrix.
+
+**Changes made:**
+
+1. **`process/discipline_capture.md`** — New "Promotion Verification Gate" section before the Promotion Workflow: neutral no-verdict evidence payload; two independent non-orchestrator judges (external `external-review-knowledge.sh` wrapper if configured, high-tier Fable/Opus subagent always, second subagent as fallback); `N | PROMOTE|DEMOTE | justification` verdict format; the orchestrator does not vote or break ties; unanimous-PROMOTE goes to CD as verified, unanimous-DEMOTE is not proposed, splits escalate to CD with each judge's full reasoning. Proportionality rule: full gate required for batches of 3+ entries or any weakly-evidenced entry; a single well-evidenced entry may present its evidence directly (lighter path replaces the judges, never the CD decision). Rules section's audit-triage carve-out now points at the gate as how CD's decision gets evidence.
+2. **`process/external-review-gate.md`** — New "Knowledge-Judgment Wrapper" section: parallel convention `[sdlc-root]/external-review-knowledge.sh` (separate wrapper, not a mode flag — different artifact, different contract), stdin = neutral payload, stdout = `N | PROMOTE|DEMOTE | justification`, non-zero exit falls back to a second internal subagent, same egress rules, with a Codex example wrapper.
+3. **`skills/sdlc-audit/references/compliance-methodology.md`** — §6c gains an "Evidence production" note wiring the matrix's evidence requirement to the gate; step 11a specifies when to run the gate before 11b and how verdicts map to the candidate list (unanimous-DEMOTE drops the candidate with dissent appended to the parking-lot entry).
+4. **`skills/sdlc-archive/SKILL.md`** — Step 9c no longer applies `[READY TO PROMOTE]` as a silent default (that contradicted the §6c CD-only rule): validated entries are flagged as promotion candidates in the triage table for CD, or annotated `(promotion candidate — [date])` if the table is skipped. Added an explicit note that archival identifies candidates but does not adjudicate — the gate runs at promotion time (audit step 11), keeping archival fast by design.
+5. **`CLAUDE-SDLC.md`** — External review gate paragraph mentions the parallel knowledge-judgment wrapper.
+
+**Rationale:** A knowledge store entry is precedent every future agent reads, so a bad promotion compounds — and the ChronoCore data shows self-certification approves bad promotions at a >50% rate. The gate's key design points came from the prototype and the two-judge design review: judges must reason from a shared verdict-free payload (independence), the orchestrator must not tie-break (it is the actor being checked — "self + one subagent" is one independent opinion, not a majority), split votes need full reasoning surfaced (a bare tally hid the "adjacent entry ≠ corroboration" distinction that caught most bad promotions), and the gate is scoped to batches/weak evidence so it stays a followed rule rather than skipped ceremony. Not a `[contract-change]`: no knowledge-layer reference phrasing changed.
+
+---
+
 ## 2026-07-11: sdlc-reflect prunes agent memories session-scoped
 
 **Origin:** CD directives in a cc-sdlc source session: "sdlc-reflect should attempt to prune agent memories," followed by "part of the reflect process should be figuring out if those entries warrant being entered into the parking lots."

@@ -119,6 +119,33 @@ These are the ONLY valid context formats. Do not invent variants like `[session:
 - `[READY TO PROMOTE]` — use only if you're confident the insight is validated, reusable, and stable
 - `[DEFERRED]` — acknowledged but not a priority (include reason)
 
+## Promotion Verification Gate
+
+Promotion to a knowledge store is where a single agent's self-assessment is weakest and where a bad entry does the most compounding damage — once promoted, it becomes precedent every future agent reads. Before proposing either high-risk transition (any → `[READY TO PROMOTE]`, `[READY TO PROMOTE]` → `Promoted →`), the orchestrator must produce independent evidence rather than substitute its own judgment. CD remains the deciding authority for both transitions (see the triage authority matrix in the sdlc-audit compliance methodology §6c); this gate is how CD's decision gets evidence.
+
+### When the full gate is required
+
+Run the multi-judge gate when **either** holds:
+
+- The candidate batch has **3 or more entries**, or
+- Any entry lacks **direct deliverable evidence** — recurrence across deliverables, independent-reviewer citations already in the entry text, or corroboration from an existing knowledge-store entry making the *same* claim (an adjacent claim is not corroboration).
+
+A single well-evidenced entry may skip the panel: present it to CD with its evidence attached, in the interactive-triage candidate format (compliance methodology step 11a). The lighter path replaces the judges, not the CD decision — never promote on the orchestrator's judgment alone.
+
+### The gate
+
+1. **Build one neutral evidence payload** for the candidate batch: each entry's full text plus corroboration signals — recurrence count across deliverables, independent-reviewer citations already in the text, whether an existing knowledge-store entry makes the same (vs. merely adjacent) claim, and external validity as a known engineering principle. **No verdicts in the payload** — every judge reasons from the same raw evidence independently. Write it as a numbered, self-contained file (session scratchpad is fine; it is working material, not an artifact).
+2. **Dispatch two independent non-orchestrator judges:**
+   - **External judge, if configured:** if an executable `[sdlc-root]/external-review-knowledge.sh` exists, pipe the payload to it (wrapper contract in `[sdlc-root]/process/external-review-gate.md` § Knowledge-Judgment Wrapper). This is data egress if the wrapper calls a hosted model — the egress rules in that doc apply; state where the payload is going before running.
+   - **High-tier subagent, always:** dispatch an Agent (`model: "fable"`, or `"opus"` if Fable is unavailable) pointed at the payload file, instructed to read nothing else and told nothing of any other judge's existence or verdict.
+   - **No external wrapper configured (or wrapper errored):** dispatch a **second** independent high-tier subagent, so there are always two independent judges.
+3. **Collect verdicts** in the format `N | PROMOTE|DEMOTE | one-sentence justification`, one line per entry.
+4. **Tally — the orchestrator is not a judge.** It assembled the candidate list, so it does not vote and does not break ties; its own read may be recorded alongside for CD's benefit. The decision rule uses only the independent judges:
+   - **Both PROMOTE** → present to CD as a verified candidate (CD still decides; the authority matrix is unchanged).
+   - **Both DEMOTE** → the entry is not proposed and keeps its current marker. No CD interaction needed unless the orchestrator disagrees strongly — then escalate it as a split.
+   - **Split** → escalate to CD with **each judge's full reasoning**, not just the vote. The reasoning is what surfaces distinctions a bare tally hides (e.g., "an adjacent knowledge entry is not corroboration").
+5. **Record the outcome.** Entries that survive and get CD approval move through the Promotion Workflow below. Entries that don't survive stay at their current marker with the dissenting judge's reasoning appended inline, so the next triage pass sees why the entry was held back instead of re-litigating it from scratch.
+
 ## Promotion Workflow
 
 When an entry is promoted to a knowledge store, it must be **moved** from the `## Parking Lot` section to a `### Promoted` section at the bottom of the discipline file. Do not leave promoted entries mixed in with active entries — they clutter the working set and make triage harder.
@@ -142,4 +169,4 @@ The promoted section is a ledger — it records what was promoted and where, so 
 - **<3 minutes total.** Structured gap detection: ~30s. Freeform scan: ~2 minutes. If a structured comparison would exceed the time budget, skip it and note "deferred to auditor."
 - **One insight per bullet.** Keep entries atomic so they can be triaged independently.
 - **The orchestrator writes these directly.** This is process documentation, not domain content — the Manager Rule does not apply. Do not dispatch an agent to write a parking lot entry.
-- **Audit triage carve-out.** The `sdlc-audit` skill (compliance mode) may apply low-risk triage markers (unmarked → `[NEEDS VALIDATION]`, `[NEEDS VALIDATION]` → `[DEFERRED]`) directly per its triage authority matrix in the compliance methodology §6c. High-risk transitions (any → `[READY TO PROMOTE]`, any → `Promoted →`) remain CD-only.
+- **Audit triage carve-out.** The `sdlc-audit` skill (compliance mode) may apply low-risk triage markers (unmarked → `[NEEDS VALIDATION]`, `[NEEDS VALIDATION]` → `[DEFERRED]`) directly per its triage authority matrix in the compliance methodology §6c. High-risk transitions (any → `[READY TO PROMOTE]`, any → `Promoted →`) remain CD-only, with evidence produced by the Promotion Verification Gate above — CD decides, the gate is how the decision gets evidence.

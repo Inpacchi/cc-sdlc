@@ -116,6 +116,8 @@ Check each discipline:
 
 **Step 11 interactive triage:** Present all promotion candidates (from §6c and Dimension 8) to CD for decision. See step 11 below for the full workflow.
 
+**Evidence production:** For candidate batches of 3+ entries, or any candidate lacking direct deliverable evidence, the evidence column of this matrix is produced by the Promotion Verification Gate — two independent non-orchestrator judges reviewing a neutral payload, splits escalated to CD with full reasoning. See `[sdlc-root]/process/discipline_capture.md` § Promotion Verification Gate. A single well-evidenced candidate may present its evidence directly; the orchestrator's own judgment alone is never sufficient evidence.
+
 ### 6d. Knowledge-to-Skill Wiring
 
 Two ownership tiers:
@@ -377,6 +379,8 @@ After presenting the audit report, run an interactive triage session for all pro
 - Source location (discipline file + line, or agent memory file)
 - Evidence (why it's promotion-worthy: recurrence count, agent feedback, deliverable references)
 - Suggested target (which knowledge store it would go into — existing or new)
+
+**How the evidence gets produced:** if the candidate batch has 3+ entries, or any candidate lacks direct deliverable evidence, run the Promotion Verification Gate (`[sdlc-root]/process/discipline_capture.md` § Promotion Verification Gate) before 11b: two independent non-orchestrator judges review a neutral payload; unanimous-PROMOTE entries are presented to CD as verified candidates, unanimous-DEMOTE entries are dropped from the candidate list (their dissent reasoning appended to the parking-lot entry), and splits are presented with each judge's full reasoning. Do not substitute the orchestrator's own assessment for the Evidence field.
 
 **11b. Present candidates grouped by discipline.** Use `AskUserQuestion` to present candidates in batches (one discipline at a time):
 

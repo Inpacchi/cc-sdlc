@@ -211,11 +211,13 @@ Flag any insight that appears significant and reusable but has no parking lot en
 
 **Skip this entire sub-step if no `[NEEDS VALIDATION]` entries exist AND all idea brief insights have coverage.** Do not use AskUserQuestion — apply reasonable defaults instead:
 
-- Entries clearly validated by the archived work → promote to `[READY TO PROMOTE]`
+- Entries clearly validated by the archived work → **flag as promotion candidates in the triage table** so CD decides. The `[READY TO PROMOTE]` transition is CD-only per the triage authority matrix (compliance methodology §6c) — never apply it as a silent default. If the table is being skipped (nothing else needs judgment), append `(promotion candidate — [date])` after the entry's `[NEEDS VALIDATION]` marker instead, leaving the transition for the next audit's step 11 triage.
 - Entries not yet proven → mark `[DEFERRED]`
 - Missing insight entries → capture with `[NEEDS VALIDATION]`
 
 If more than 3 entries require judgment calls, present a brief summary and use AskUserQuestion. Otherwise, apply defaults and report what was done.
+
+Archival-time triage is deliberately lighter than audit-time promotion: it identifies candidates and flags uncertainty, it does not adjudicate. The multi-judge Promotion Verification Gate (`[sdlc-root]/process/discipline_capture.md` § Promotion Verification Gate) runs when entries are actually promoted — during sdlc-audit step 11 or a dedicated promotion pass — not during archival.
 
 #### 9d. Agent Memory Path Fixups (mechanical only)
 
