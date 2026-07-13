@@ -118,7 +118,7 @@ If you're in direct dispatch and ANY of these become true, stop and ask CD about
 - The user wants to "park this" or "pick this up in a new session"
 - A new session needs a self-contained starting point that doesn't depend on the current conversation
 
-**After a direct-dispatch or ad-hoc session**, consider invoking `sdlc-reflect` to surface learnings into discipline parking lots — especially if the work involved gotchas, cross-domain friction, or patterns worth recording. This is optional; skip it if nothing non-obvious surfaced.
+**After a direct-dispatch or ad-hoc session**, consider invoking `sdlc-reflect` to surface learnings into discipline parking lots — especially if the work involved gotchas, cross-domain friction, or patterns worth recording. It also attempts a session-scoped prune of agent memories the session touched or invalidated. This is optional; skip it if nothing non-obvious surfaced.
 
 **After any skill writes a deliverable MD file to `docs/current_work/`,** ask CD whether they want an HTML render — do not render unprompted. The markdown is the deliverable; HTML is an optional human-reading view. If CD accepts, render with `sdlc-render` using document-type defaults and engineer audience (no further Q&A — the document type selects components and layout), producing a self-contained `.html` file alongside the markdown. If CD declines, skip the render. When the deliverable feeds an approval gate, resolve the render offer first — offer, and if accepted deliver, the HTML *before* asking for approval; never bundle the render offer into the approval question, and never render after approval. See `[sdlc-root]/process/html-rendering.md` for conventions.
 

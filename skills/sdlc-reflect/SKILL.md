@@ -4,7 +4,10 @@ description: >
   Surface learnings from the current work session into SDLC discipline parking lots. Reviews
   recent work (commits, changes, conversation context), identifies reusable insights and
   cross-discipline patterns, categorizes them by discipline, and writes them as triage-ready
-  parking lot entries. This is the standalone version of the discipline capture protocol —
+  parking lot entries. Also attempts a session-scoped prune of agent memories — removing
+  entries this session's changes invalidated, splitting MEMORY.md files nearing the size
+  cap, and routing memory entries that carry generalizable insight into the parking lots
+  before they're pruned. This is the standalone version of the discipline capture protocol —
   use it after any work session where formal SDLC skills without built-in discipline capture
   were invoked, or after sessions where no formal SDLC skills ran at all.
   Several skills suggest running sdlc-reflect at completion: sdlc-debug-incident (after closeout),
@@ -15,13 +18,14 @@ description: >
   Do NOT use for bulk external knowledge import — use sdlc-ingest.
   Do NOT use for exploring ideas — use sdlc-idea.
   Do NOT use for formal post-mortems — use sdlc-debug-incident closeout.
+  Do NOT use for a project-wide agent memory hygiene sweep — sdlc-audit Dimension 8 covers that.
   Do NOT use during or after sdlc-execute, sdlc-lite-execute, sdlc-plan, sdlc-lite-plan,
   sdlc-idea, or sdlc-design-consult — those skills run discipline capture automatically.
 ---
 
 # SDLC Reflect — Session Learning Capture
 
-Surface learnings from a work session into discipline parking lots. The goal is to capture reusable, non-obvious insights that emerged during work — especially sessions where formal SDLC skills were not invoked and discipline capture didn't run automatically.
+Surface learnings from a work session into discipline parking lots. The goal is to capture reusable, non-obvious insights that emerged during work — especially sessions where formal SDLC skills were not invoked and discipline capture didn't run automatically. As a closing pass, the skill also attempts to prune agent memories the session touched or invalidated, so stale memories don't accumulate between audit cycles.
 
 **Argument:** `$ARGUMENTS` (optional — description of what to focus the reflection on, or "all" for a full session scan)
 
@@ -56,6 +60,7 @@ Signs this skill is NOT appropriate:
 
 - At least one substantive work action in the current session (commits, file edits, agent dispatches, research)
 - Discipline parking lots exist at `[sdlc-root]/disciplines/`
+- Agent memory pruning (Step 5) additionally requires `.claude/agent-memory/` to exist — skip that step silently if it doesn't
 
 ## Steps
 
@@ -171,7 +176,51 @@ The canonical GAP format includes `Source: {agent} finding` — omitted here bec
 - Include enough context that the entry is useful without the conversation history
 - Write directly — the Manager Rule does not apply to parking lot entries (per `[sdlc-root]/process/discipline_capture.md`)
 
-### 5. Report
+### 5. Prune Agent Memories
+
+Attempt a session-scoped prune of agent memories. This is a lighter-weight complement to sdlc-audit's project-wide memory hygiene sweep — scoped to memories this session plausibly touched or invalidated, not a full scan of every agent. Skip silently if `.claude/agent-memory/` doesn't exist.
+
+**Scope — check only:**
+- Memories of agents dispatched during this session
+- Any agent's `MEMORY.md` whose claims cover code changed this session (compare memory claims against the session's diff from Step 1)
+
+**What to prune** (hygiene rules per the agent template's memory protocol; canonical check definitions in sdlc-audit's compliance methodology, Dimension 8b):
+
+| Check | Action |
+|-------|--------|
+| Entry contradicts current code — especially claims this session's changes invalidated | Remove or correct the entry. Verify against source before touching it — a memory that merely *looks* stale may still be right. |
+| Same fact or tuned value stated twice with drifted numbers | Keep the value matching current code, delete the rest |
+| `MEMORY.md` at or approaching the load cap (~180 lines or nearing 25KB) | Split the largest topics into `{topic}.md` files beside it, leave one-line pointers |
+| Memory directory for an agent that no longer exists in `.claude/agents/` | Flag for deletion — never delete without explicit confirmation |
+
+Size checks apply only to `MEMORY.md` (topic files are uncapped by design), but correctness pruning applies to topic files too when a MEMORY.md pointer leads to one with invalidated claims.
+
+**Promotion check — do this before deleting anything.** While scanning, evaluate each memory entry you touch against the Step 2 filtering criteria (reusable beyond the task, non-obvious, actionable). An entry can warrant a parking lot entry whether it's being pruned or kept:
+
+- **Pruned entries:** the entry may be stale as stated but carry a generalizable lesson — e.g., a memory invalidated by this session's change often documents *why* the old approach failed, which is exactly a `GOTCHA_DISCOVERED` or `ANTI_PATTERN_HIT` signal. Capture the lesson before deleting the entry.
+- **Kept entries:** a correct memory that's transferable domain knowledge rather than codebase-specific scratchpad belongs to everyone, not one agent (per the agent template: "your memory is for you; knowledge stores are for everyone"). Route a copy to the parking lot; leave the memory in place.
+
+Most memory entries are codebase-specific shortcuts and will not qualify — apply the same exclusion filters as Step 2 and don't promote for the sake of promoting.
+
+Present proposed prunes and promotions together before applying:
+
+```
+MEMORY PRUNES
+─────────────────────────────────────────────
+  [agent-name]: [N] entries stale (invalidated by [change]), [N] duplicates
+  [agent-name]: MEMORY.md at [N] lines — split [topic] to topic file
+
+PROMOTION CANDIDATES (memory → parking lot)
+  [discipline]: [insight, one line] (from [agent-name], pruned|kept)
+
+Apply prunes and write promotions? (y / adjust / skip)
+```
+
+Confirmed promotion candidates are written using the Step 4 entry format with context `[memory: {agent-name}]` instead of `[session: {slug}]`, still marked `[NEEDS VALIDATION]`.
+
+If nothing needs pruning or promoting, say so in one line and move on — don't manufacture entries to have something to show.
+
+### 6. Report
 
 Present what was captured:
 
@@ -193,6 +242,10 @@ SAMPLE ENTRIES
 SKIPPED
   [count] potential insights filtered (obvious: N, task-specific: N, already-captured: N)
 
+MEMORY PRUNES
+  [agent-name]: [what was pruned/split] | none needed | no agent-memory directory
+  Promoted to parking lots: [count] entries ([disciplines]) | none qualified
+
 NEXT STEPS
   - Entries are marked [NEEDS VALIDATION] — they'll be triaged during the next sdlc-audit cycle
   - [If any entry looks ready to promote]: Consider promoting [entry] to [target knowledge file] after further validation
@@ -210,12 +263,17 @@ NEXT STEPS
 | "I'll skip the user confirmation step" | Always present categorized learnings before writing. The user may disagree with categorization or want to adjust. |
 | "I should run this after every session" | Only when substantive work happened AND formal skills didn't already capture. Most direct-dispatch or bug-fix sessions are good candidates. |
 | "I'll create a new discipline for this learning" | Route to the closest existing discipline. New disciplines require the criteria in `[sdlc-root]/disciplines/README.md` § "Creating a New Discipline". |
+| "I'll do a full sweep of every agent's memory while I'm at it" | Session scope only — agents dispatched this session or memories the session's changes invalidated. The project-wide hygiene sweep is sdlc-audit Dimension 8b. |
+| "This memory looks outdated, I'll delete it" | Verify against current source first. Deleting a correct memory costs the agent hard-won context; pruning applies only to entries you've confirmed are wrong, duplicated, or over-cap. |
+| "It's stale, delete it and move on" | Run the promotion check first. A memory invalidated by a change often documents why the old approach failed — capture that lesson in the parking lot before the entry disappears. |
+| "This memory is useful, so it should be promoted" | Useful to *that agent* isn't the bar. Promote only entries that pass the Step 2 filters — reusable beyond the task, non-obvious, actionable. Codebase-specific scratchpad stays in memory. |
+| "Memory pruning failed / no memories exist, so the reflect failed" | Pruning is best-effort. Note it in the report and finish — parking lot capture is the primary deliverable. |
 
 ## Integration
 
 - **Depends on:** Substantive work in the current session; discipline parking lots at `[sdlc-root]/disciplines/`
 - **Feeds into:** Discipline triage cycle (sdlc-audit scans parking lots for threshold breaches and untriaged entries)
-- **Uses:** `git log`, `git diff`, `git status` (session survey); `[sdlc-root]/disciplines/*.md` (write targets); `[sdlc-root]/process/discipline_capture.md` (structured gap detection methodology)
+- **Uses:** `git log`, `git diff`, `git status` (session survey); `[sdlc-root]/disciplines/*.md` (write targets); `[sdlc-root]/process/discipline_capture.md` (structured gap detection methodology); `.claude/agent-memory/*/MEMORY.md` (prune targets, Step 5)
 - **Complements:** Built-in discipline capture in sdlc-execute, sdlc-plan, sdlc-idea (those run automatically; this is for sessions without those skills)
 - **Does NOT replace:** sdlc-ingest (bulk external knowledge import), sdlc-audit improvement mode (systematic process gap analysis), built-in discipline capture steps in execution/planning skills
-- **DRY notes:** Structured detection uses five of seven signals from `[sdlc-root]/process/discipline_capture.md` — standalone mode omits `UNMAPPED_KNOWLEDGE` and `STALE_KNOWLEDGE` (require agent handoff data). GAP entry format omits `Source: {agent} finding` (documented in Step 4). The difference: discipline_capture.md runs embedded within other skills with full triage table and agent handoff data; sdlc-reflect runs standalone and infers from git history and conversation context.
+- **DRY notes:** Structured detection uses five of seven signals from `[sdlc-root]/process/discipline_capture.md` — standalone mode omits `UNMAPPED_KNOWLEDGE` and `STALE_KNOWLEDGE` (require agent handoff data). GAP entry format omits `Source: {agent} finding` (documented in Step 4). The difference: discipline_capture.md runs embedded within other skills with full triage table and agent handoff data; sdlc-reflect runs standalone and infers from git history and conversation context. Memory-prune hygiene checks (Step 5) reuse the definitions in sdlc-audit's compliance methodology Dimension 8b and the agent template's memory protocol — sdlc-reflect applies them session-scoped between audits; sdlc-audit remains the project-wide sweep. The Step 5 promotion check parallels sdlc-audit's Dimension 8a pattern mining but differs in bar and destination: 8a requires recurrence across 2+ agent memories and routes to interactive triage; reflect promotes opportunistically (single entry, Step 2 filters) and routes to parking lots as `[NEEDS VALIDATION]` — the triage cycle still decides what graduates to knowledge stores.

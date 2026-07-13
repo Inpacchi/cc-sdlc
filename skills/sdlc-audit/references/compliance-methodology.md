@@ -333,6 +333,8 @@ Check each `MEMORY.md` — **not** its linked topic files, which are uncapped by
 - **Internal contradiction / duplication.** The same fact or tuned value stated more than once within one `MEMORY.md`, sometimes with drifted numbers. Fix: keep the value matching current code, delete the rest.
 - **Orphaned directory — Major.** An `.claude/agent-memory/{name}/` whose `{name}` no longer matches any agent in `.claude/agents/` (e.g. a predecessor role retired in a rules-version migration). Recommend deletion.
 
+Note: `sdlc-reflect` Step 5 applies these same hygiene checks session-scoped (agents dispatched that session, memories invalidated by that session's changes), and opportunistically routes memory entries with generalizable insight to discipline parking lots as `[NEEDS VALIDATION]` — a lower bar than 8a's 2+-agent recurrence, feeding the same triage cycle. This dimension remains the project-wide sweep — projects that reflect regularly accumulate less between audits, but don't skip the sweep on that assumption.
+
 ## Dimension 9: Recommendation Follow-Through
 
 - Read previous audit artifacts in `docs/current_work/audits/`

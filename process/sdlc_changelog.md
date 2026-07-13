@@ -34,6 +34,22 @@ Each entry contains:
 
 ---
 
+## 2026-07-11: sdlc-reflect prunes agent memories session-scoped
+
+**Origin:** CD directives in a cc-sdlc source session: "sdlc-reflect should attempt to prune agent memories," followed by "part of the reflect process should be figuring out if those entries warrant being entered into the parking lots."
+
+**What happened:** Agent memory hygiene existed only as sdlc-audit Dimension 8b — a project-wide sweep that runs at audit cadence. Between audits, memories invalidated by ongoing work (stale claims, drifted duplicate values, MEMORY.md files creeping toward the 200-line/25KB load cap) accumulated with no lighter-weight cleanup point. sdlc-reflect already closes out ad-hoc sessions and surveys the session's diff, making it the natural place for a session-scoped prune.
+
+**Changes made:**
+
+1. **`skills/sdlc-reflect/SKILL.md`** — Added Step 5 "Prune Agent Memories" (Report renumbered to Step 6): session-scoped prune covering agents dispatched this session and memories whose claims the session's diff invalidated. Reuses the Dimension 8b check definitions (contradicts-code, duplicate/drifted values, size-cap split, orphaned directory), gates prunes behind a confirmation prompt, requires source verification before deleting, and treats pruning as best-effort — parking lot capture remains the primary deliverable. Step 5 also runs a promotion check before any deletion: memory entries passing the Step 2 filters (reusable, non-obvious, actionable) — whether pruned or kept — are routed to discipline parking lots with context `[memory: {agent-name}]`, marked `[NEEDS VALIDATION]`. Frontmatter description, preconditions, report template, Red Flags, and Integration/DRY notes updated; added anti-trigger routing project-wide sweeps to sdlc-audit.
+2. **`skills/sdlc-audit/references/compliance-methodology.md`** — Dimension 8b note: sdlc-reflect applies the same checks session-scoped between audits and opportunistically routes generalizable memory entries to parking lots (lower bar than 8a's 2+-agent recurrence, same triage cycle); the audit remains the project-wide sweep and shouldn't be skipped on the assumption that reflect kept things clean.
+3. **`CLAUDE-SDLC.md`** — Extended the post-session sdlc-reflect suggestion to mention the memory prune.
+
+**Rationale:** Stale agent memories are a correctness risk (an agent trusting an invalidated claim is worse than one with no memory), and the session that invalidated a memory is the cheapest moment to catch it — the diff is already in hand. Pruning without a promotion check would silently discard insight: a memory invalidated by a change often documents why the old approach failed, which is exactly the kind of gotcha/anti-pattern signal the parking lots exist to catch. Scoping reflect's prune to the session keeps it fast and keeps the division of labor clean: reflect handles incremental hygiene and opportunistic capture, audit handles the exhaustive sweep and recurrence-based mining.
+
+---
+
 ## 2026-07-09: Render precedes approval — never in sequence with the approval gate
 
 **Origin:** CD directive in a cc-sdlc source session: "render should never happen in sequence with approval — it should precursor approval if the user chooses."
