@@ -16,6 +16,8 @@ Full methodology for SDLC compliance auditing. Covers all 9 audit dimensions, re
 10. **Report Generation**: Produce structured audit report at `docs/current_work/audits/sdlc_audit_YYYY-MM-DD.md`
 11. **Interactive Triage**: Present promotion candidates to CD for triage decisions and apply approved promotions
 
+Deep Verify (§6m) is NOT part of this sequence — it is an opt-in, orchestrator-run mode that only executes when explicitly invoked by name. Its findings, when it runs, join step 11.
+
 ## Dimension 1: Deliverable Catalog Integrity
 
 - Read `docs/_index.md` for the full deliverable catalog
@@ -111,6 +113,7 @@ Check each discipline:
 | `[NEEDS VALIDATION]` → `[DEFERRED]` | Auto-apply (step 6) | Unvalidated ≥3 cycles AND no agent feedback references it AND discipline dormant |
 | Any → `[READY TO PROMOTE]` | CD decision (step 11) | Proposed with evidence during interactive triage |
 | `[READY TO PROMOTE]` → Promoted | CD decision (step 11) | Actual knowledge file creation during interactive triage |
+| Promoted / `[READY TO PROMOTE]` → `[NEEDS VALIDATION]` (demotion) | CD decision (step 11) | Proposed with multi-judge DEMOTE verdicts from Deep Verify (§6m); batch-level approval per discipline is acceptable — factual-error dissents and splits listed individually |
 
 **Step 6 auto-triage:** Scan entries, apply qualifying low-risk transitions, log actions in report. Collect promotion candidates for step 11.
 
@@ -307,6 +310,14 @@ REVIEW PATTERN RECURRENCE
 
 Promotion candidates from 6l are surfaced in step 11 (interactive triage) alongside promotion candidates from 6c and prune candidates from 6k. The triage workflow is the same: CD decides whether to promote, defer, or dismiss. On promotion, the cluster's `promoted` field is set to `true` and a `knowledge_entry` field is added with the path to the new knowledge file.
 
+### 6m. Deep Verify — Retroactive Content Verification (opt-in, never default)
+
+**Not part of the default dimension sweep.** This dimension runs ONLY when the user requests it by name (`/sdlc-audit deep-verify`, "deep audit", "verify the knowledge store", "full content sweep") — never as part of steps 1–10 of a routine audit, and never by the `sdlc-compliance-auditor` subagent (it is orchestrator-run: it needs `AskUserQuestion` gates, judge dispatches, and egress disclosure). The auditor subagent skips this dimension entirely.
+
+Re-judges already-promoted knowledge-store content using the Promotion Verification Gate mechanics (`[sdlc-root]/process/discipline_capture.md` § Promotion Verification Gate) with `KEEP|DEMOTE` verdicts: pre-flight cost/egress confirmation and scope selection, claims-vs-reference content scoping, batched neutral payloads, screening-tier judges with the mandatory fact-checking lens, frontier tie-breaks and once-over. Full specification: `references/deep-verify.md`.
+
+DEMOTE verdicts feed step 11 as a third candidate source — see step 11a. Deep Verify never applies a demotion itself.
+
 ## Dimension 7: Migration Integrity
 
 - **7a. Manifest version:** Read `.sdlc-manifest.json`, compare `source_version` against current cc-sdlc. If >10 commits or >30 days behind, recommend migration.
@@ -367,10 +378,11 @@ When auditing specific commits:
 
 ## Step 11: Interactive Triage
 
-After presenting the audit report, run an interactive triage session for all promotion candidates identified during the audit. This surfaces candidates from two sources:
+After presenting the audit report, run an interactive triage session for all promotion candidates identified during the audit. This surfaces candidates from three sources:
 
 - **§6c parking lot entries** marked `[NEEDS VALIDATION]` or `[READY TO PROMOTE]` that have supporting evidence
 - **Dimension 8 agent memory patterns** flagged as promotion-worthy (recurring across agents, reusable)
+- **§6m Deep Verify DEMOTE verdicts** (only when a Deep Verify sweep ran this invocation) — demotion candidates carrying the entry text, source location (`file.yaml::key`), each judge's verdict and reasoning, and tie-break reasoning if split
 
 ### Triage Workflow
 
@@ -405,6 +417,7 @@ For each: (P)romote, (D)efer, (S)kip
 - **Promote:** Create or update the target knowledge YAML file with the new entry. Mark the parking lot entry as `Promoted → [target file path] ([date])`. If the source was an agent memory, add the entry to the relevant discipline parking lot as `Promoted → [target file path] ([date])` for traceability.
 - **Defer:** Update the parking lot entry marker to `[DEFERRED]` with CD's reason appended.
 - **Skip:** Leave the entry unchanged — it stays at its current marker for next audit cycle.
+- **Demote** (Deep Verify candidates only): Remove the entry from the knowledge YAML using the comment-preserving removal script (`references/deep-verify.md` § Reusable Scripts — never a `yaml.safe_dump()` round-trip). Restore a parking-lot entry in the relevant discipline file marked `[NEEDS VALIDATION]` with the demoting judges' reasoning appended inline. Grep the entry's key across `[sdlc-root]/disciplines/*.md` and fix any `Promoted →` ledger lines that point at the removed entry. Bump the knowledge file's `last_updated` if present. Log the sweep in `[sdlc-root]/knowledge/provenance_log.md` with `source-type: audit-sweep` (one entry for the whole sweep, not per demotion).
 
 **11d. Report triage results.** Append triage outcomes to the audit artifact:
 

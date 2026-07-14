@@ -45,6 +45,8 @@ If you cannot produce all four, you do not yet have a finding. A compliance repo
 
 All 9 dimensions must be scanned on every audit. A dimension that returns zero findings is reported as "no findings" — not omitted. Silence and absence look identical in the output; always make coverage explicit.
 
+**Exception — §6m (Deep Verify):** this sub-dimension is opt-in and orchestrator-run; you never execute it. Do not dispatch judges, estimate sweep costs, or report §6m as a gap when it hasn't been invoked — note it as "opt-in, not run" in coverage and move on.
+
 Within a dimension, prefer exhaustive scanning when the corpus is small enough (e.g., <= 100 catalog rows, <= 200 knowledge files).
 
 ### Sampling strategy (when exhaustive is infeasible)

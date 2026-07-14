@@ -1,22 +1,26 @@
 ---
 name: sdlc-audit
 description: >
-  Unified SDLC auditing skill with two modes: compliance and improvement. Compliance mode audits
-  project structure, deliverable integrity, knowledge layer health, and migration correctness.
-  Improvement mode analyzes sessions and/or commits to identify process gaps, missing knowledge,
-  and skill modifications that would improve the SDLC itself. Both modes can run against the current
-  session or be fed a previous session or commit range. Triggers on "sdlc audit", "audit the sdlc",
-  "run an sdlc audit", "compliance audit", "audit this session", "audit for improvements",
+  Unified SDLC auditing skill with three modes: compliance, improvement, and deep verify. Compliance
+  mode audits project structure, deliverable integrity, knowledge layer health, and migration
+  correctness. Improvement mode analyzes sessions and/or commits to identify process gaps, missing
+  knowledge, and skill modifications that would improve the SDLC itself. Deep Verify mode is an
+  opt-in multi-judge content sweep of already-promoted knowledge-store entries — expensive, never
+  runs by default. Compliance and improvement can run against the current session or be fed a
+  previous session or commit range. Triggers on "sdlc audit", "audit the sdlc", "run an sdlc audit",
+  "compliance audit", "audit this session", "audit for improvements",
   "what can we improve about the process", "sdlc health check", "check sdlc compliance",
-  "audit these commits", "process improvement audit".
-  Use when you need to verify SDLC compliance, identify process improvements, or evaluate knowledge layer health.
+  "audit these commits", "process improvement audit", "deep audit", "deep verify",
+  "verify the knowledge store", "full content sweep".
+  Use when you need to verify SDLC compliance, identify process improvements, evaluate knowledge
+  layer health, or re-verify promoted knowledge content.
   Do NOT use for generating playbooks from sessions — use sdlc-playbook-generate.
   Do NOT use for bulk knowledge import — use sdlc-ingest.
 ---
 
 # SDLC Audit
 
-Unified auditing for both structural compliance and process improvement. Two modes, flexible inputs.
+Unified auditing for structural compliance, process improvement, and retroactive knowledge verification. Three modes, flexible inputs.
 
 **Argument:** `$ARGUMENTS` (mode + optional source — see Input Resolution below)
 
@@ -26,6 +30,7 @@ Unified auditing for both structural compliance and process improvement. Two mod
 |------|---------|--------|
 | **Compliance** | Verify SDLC structure, deliverables, knowledge layer, migration integrity | Findings table + audit artifact at `docs/current_work/audits/` |
 | **Improve** | Identify process gaps, missing knowledge, skill/workflow modifications | Improvement proposals targeting skills, process docs, knowledge stores, disciplines |
+| **Deep Verify** | Multi-judge re-verification of already-promoted knowledge-store content (opt-in, expensive) | Demotion candidates routed into interactive triage; sweep logged to provenance |
 
 ## Input Resolution
 
@@ -41,6 +46,10 @@ Parse `$ARGUMENTS` to determine mode and source:
 | `/sdlc-audit improve <session>` | Improve | Past session |
 | `/sdlc-audit improve <commit(s)>` | Improve | Specific commits |
 | `/sdlc-audit improve <session> <commit(s)>` | Improve | Session + commits combined |
+| `/sdlc-audit deep-verify` | Deep Verify | Full knowledge store (scope confirmed in pre-flight) |
+| `/sdlc-audit deep-verify <scope>` | Deep Verify | Scoped: a domain name, `stale`, or `incremental` |
+
+**Deep Verify never activates implicitly.** A bare `/sdlc-audit` runs compliance mode only — Deep Verify requires the explicit mode word (or an equivalent by-name request like "deep audit" / "verify the knowledge store").
 
 **Identifying sessions vs commits in arguments:**
 - Session identifiers: UUIDs, quoted names, or search terms (resolved against JSONL files)
@@ -221,11 +230,31 @@ When the user approves proposals, apply changes directly:
 
 Update `[sdlc-root]/process/sdlc_changelog.md` for every process change applied.
 
+## Deep Verify Mode
+
+Opt-in retroactive content verification: re-judge already-promoted knowledge-store entries with the multi-judge mechanics of the Promotion Verification Gate (`[sdlc-root]/process/discipline_capture.md` § Promotion Verification Gate), verdicts read as `KEEP|DEMOTE`. Full specification in `references/deep-verify.md` — this section is the summary.
+
+### Workflow
+
+```
+PRE-FLIGHT → SCOPE → PAYLOAD → JUDGE → TRIAGE (step 11) → APPLY → PROVENANCE
+```
+
+**Orchestrator-run.** Do NOT dispatch the `sdlc-compliance-auditor` for this mode — it requires `AskUserQuestion` gates, judge dispatches, and egress disclosure. The orchestrator drives it directly.
+
+**Non-negotiable gates:**
+
+1. **Pre-flight confirmation before any judging:** one `AskUserQuestion` covering the cost estimate (entry count → judge-call counts), egress disclosure (if the external wrapper is a hosted model, name it), scope selection (full / domain / stale-only / incremental), and any files whose claims-vs-reference classification is ambiguous.
+2. **Findings route into the existing step 11 triage** as demotion candidates — no parallel triage flow. Batch-level approval per discipline; factual-error dissents and splits listed individually.
+3. **Demotions apply only after CD approval**, via the comment-preserving mechanics in `references/deep-verify.md` § 6 and step 11c's Demote path.
+4. **The sweep is logged to `[sdlc-root]/knowledge/provenance_log.md`** with `source-type: audit-sweep` — one entry per sweep, recording scope, judge configuration, and counts.
+
 ## Red Flags
 
 | Thought | Reality |
 |---------|---------|
 | "The process looks fine, no improvements needed" | Every session has friction. Look harder at correction signals and mid-stream discoveries. |
+| "A compliance audit found knowledge issues, I'll deep-verify too" | Deep Verify is opt-in by name. Report the finding; CD decides whether to run the sweep. |
 | "I'll fix everything without asking" | Present proposals first. The user decides what to change. |
 | "This is just a compliance audit with extra steps" | Compliance checks structure. Improvement analyzes behavior. Different inputs, different outputs. |
 | "I'll propose sweeping process changes" | Proportional recommendations. Small friction gets small fixes. |
@@ -233,7 +262,7 @@ Update `[sdlc-root]/process/sdlc_changelog.md` for every process change applied.
 
 ## Integration
 
-- **Dispatches:** `sdlc-compliance-auditor` subagent (compliance mode 9-dimension scan)
+- **Dispatches:** `sdlc-compliance-auditor` subagent (compliance mode 9-dimension scan); judge dispatches per the Promotion Verification Gate (deep verify mode — orchestrator-run, never via the auditor)
 - **Complements:** `sdlc-playbook-generate` (playbooks capture "how to repeat"; this captures "how to improve")
 - **Feeds into:** skill modifications, knowledge store updates, discipline parking lots, process doc changes
 - **Uses:** session JSONL, git history, all SDLC project artifacts, existing knowledge layer
@@ -244,4 +273,5 @@ Update `[sdlc-root]/process/sdlc_changelog.md` for every process change applied.
 
 - **`references/compliance-methodology.md`** — Full 9-dimension compliance audit methodology, report format, severity levels, guiding principles (migrated from sdlc-compliance-auditor agent)
 - **`references/improvement-methodology.md`** — Detailed patterns for extracting process improvements from sessions and commits
+- **`references/deep-verify.md`** — Full Deep Verify mode specification: pre-flight gates, content scoping, judge mechanics, demotion routing, provenance logging, reusable payload/removal scripts
 - **`references/session-reading.md`** — JSONL message type reference and extraction patterns for reading Claude Code session files

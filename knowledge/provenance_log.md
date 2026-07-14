@@ -8,6 +8,7 @@ Append-only record of where knowledge entered the SDLC knowledge layer. Enables 
 - Conditional fields (`files-created`, `files-updated`, `rule-count`, `ingested-by`) only required when `status: ingested`
 - Optional fields (`tier-1-count`, `tier-2-count`) used by `sdlc-research` for research entries
 - Status transitions: `pending-review` -> `approved-for-ingest` -> `ingested` (or `rejected` at any point)
+- `source-type: audit-sweep` marks a Deep Verify re-verification run (sdlc-audit §6m), not a content ingestion — one entry per sweep, recording scope, judge configuration, and kept/demoted counts; the newest such entry is the boundary for the next incremental sweep
 
 ## Entry Format
 
@@ -16,7 +17,7 @@ Append-only record of where knowledge entered the SDLC knowledge layer. Enables 
 
 - **id:** prov-YYYY-MM-DD-NNN
 - **status:** pending-review | approved-for-ingest | ingested | rejected
-- **source-type:** reference-doc | file | directory | url | manual
+- **source-type:** reference-doc | file | directory | url | manual | audit-sweep
 - **source:** {path or description}
 - **source-url:** {URL if applicable}
 - **discipline:** {target discipline}

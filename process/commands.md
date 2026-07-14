@@ -37,6 +37,7 @@ The standard deliverable lifecycle: **ideation → plan → execute**. Most work
 |---------|--------|
 | `/sdlc-audit` | Compliance audit — deliverable integrity, knowledge layer health, migration correctness |
 | `/sdlc-audit improve` | Improvement audit — analyze current session or past session/commits for process gaps |
+| `/sdlc-audit deep-verify [scope]` | Opt-in multi-judge re-verification of promoted knowledge content — expensive, pre-flight cost/egress confirmation required; scope: full (default), a domain, `stale`, or `incremental` |
 
 ## Incidents & Reference Docs
 
