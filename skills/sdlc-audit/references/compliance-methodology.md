@@ -116,7 +116,7 @@ Check each discipline:
 
 **Step 11 interactive triage:** Present all promotion candidates (from §6c and Dimension 8) to CD for decision. See step 11 below for the full workflow.
 
-**Evidence production:** For candidate batches of 3+ entries, or any candidate lacking direct deliverable evidence, the evidence column of this matrix is produced by the Promotion Verification Gate — two independent non-orchestrator judges reviewing a neutral payload, splits escalated to CD with full reasoning. See `[sdlc-root]/process/discipline_capture.md` § Promotion Verification Gate. A single well-evidenced candidate may present its evidence directly; the orchestrator's own judgment alone is never sufficient evidence.
+**Evidence production:** For candidate batches of 3+ entries, or any candidate lacking direct deliverable evidence, the evidence column of this matrix is produced by the Promotion Verification Gate — two independent non-orchestrator judges reviewing a neutral payload at the screening tier, splits resolved by a frontier-tier tie-break judge, a final frontier-tier once-over of the promote-bound slate, and factual-error dissents flagged to CD. See `[sdlc-root]/process/discipline_capture.md` § Promotion Verification Gate. A single well-evidenced candidate may present its evidence directly; the orchestrator's own judgment alone is never sufficient evidence.
 
 ### 6d. Knowledge-to-Skill Wiring
 
@@ -380,7 +380,7 @@ After presenting the audit report, run an interactive triage session for all pro
 - Evidence (why it's promotion-worthy: recurrence count, agent feedback, deliverable references)
 - Suggested target (which knowledge store it would go into — existing or new)
 
-**How the evidence gets produced:** if the candidate batch has 3+ entries, or any candidate lacks direct deliverable evidence, run the Promotion Verification Gate (`[sdlc-root]/process/discipline_capture.md` § Promotion Verification Gate) before 11b: two independent non-orchestrator judges review a neutral payload; unanimous-PROMOTE entries are presented to CD as verified candidates, unanimous-DEMOTE entries are dropped from the candidate list (their dissent reasoning appended to the parking-lot entry), and splits are presented with each judge's full reasoning. Do not substitute the orchestrator's own assessment for the Evidence field.
+**How the evidence gets produced:** if the candidate batch has 3+ entries, or any candidate lacks direct deliverable evidence, run the Promotion Verification Gate (`[sdlc-root]/process/discipline_capture.md` § Promotion Verification Gate) before 11b: two independent non-orchestrator judges review a neutral payload at the screening tier; unanimous-PROMOTE entries are presented to CD as verified candidates, unanimous-DEMOTE entries are dropped from the candidate list (their dissent reasoning appended to the parking-lot entry), and splits are resolved by a frontier-tier tie-break judge — the 2–1 majority applies, with any dissent alleging a specific factual error flagged prominently in the CD presentation. The full promote-bound slate then gets a final frontier-tier once-over (single batch dispatch, blind to earlier verdicts) before 11b; its DEMOTEs are flagged to CD, never silently applied or discarded. Do not substitute the orchestrator's own assessment for the Evidence field.
 
 **11b. Present candidates grouped by discipline.** Use `AskUserQuestion` to present candidates in batches (one discipline at a time):
 

@@ -170,11 +170,13 @@ CODEX_MODEL="gpt-5.6-luna" CODEX_REASONING_EFFORT="xhigh" \
   what is actually listed. If the catalog cannot be fetched, leave
   `CODEX_MODEL` unset and let the wrapper's default stand — never guess a
   model name.
-- **Match effort to the task.** High-stakes single-shot judgments — knowledge
-  promotion verdicts, high-risk diffs (auth, payments, migrations,
-  concurrency) — warrant a top-tier model at `xhigh`. Routine second opinions
-  on ordinary diffs run fine at `medium`; don't pay frontier-model latency for
-  a docs-only change.
+- **Match effort to the task — screen cheap, escalate splits.** High-volume
+  screening passes (initial promotion-gate verdicts over a batch) run on a
+  balanced/mid-tier model at `high`; reserve the frontier tier at `xhigh` for
+  tie-break judgments on split verdicts, the final once-over of promote-bound
+  entries, and high-risk single diffs (auth, payments, migrations,
+  concurrency). Routine second opinions on ordinary diffs run fine at
+  `medium`; don't pay frontier-model latency for a docs-only change.
 - **Both variables are optional, independently.** Setting only
   `CODEX_REASONING_EFFORT` while leaving the wrapper's default model is a
   normal configuration.
@@ -214,11 +216,14 @@ never block a promotion pass on external availability.
   falls back.
 - The wrapper owns endpoint and prompt shaping, exactly like the diff-review
   wrapper, and honors the same `CODEX_MODEL` / `CODEX_REASONING_EFFORT`
-  passthrough (§ Task-Based Model Selection). Promotion judgment is a
-  high-stakes single-shot reasoning task — the invoking skill should prefer a
-  top-tier model at `xhigh` effort here. The **data egress rules above apply
-  unchanged** — parking-lot text is project knowledge; state where it is going
-  before running a hosted model.
+  passthrough (§ Task-Based Model Selection). The gate runs it at two tiers:
+  a balanced/mid-tier model at `high` for the initial screening pass over the
+  batch, and a frontier model at `xhigh` for tie-break judgments on split
+  verdicts and the final once-over of the promote-bound slate (see
+  `[sdlc-root]/process/discipline_capture.md` § Promotion Verification Gate,
+  steps 4–5). The **data egress rules above apply unchanged**
+  — parking-lot text is project knowledge; state where it is going before
+  running a hosted model.
 
 Example (hosted, via the Codex CLI — sends content to OpenAI):
 
@@ -228,11 +233,14 @@ Example (hosted, via the Codex CLI — sends content to OpenAI):
 set -euo pipefail
 payload="$(cat)"
 codex exec ${CODEX_MODEL:+-m "$CODEX_MODEL"} \
-  --config model_reasoning_effort="${CODEX_REASONING_EFFORT:-xhigh}" \
+  --config model_reasoning_effort="${CODEX_REASONING_EFFORT:-high}" \
   "You are an independent judge of engineering-knowledge claims. \
 For each numbered entry below, decide whether the evidence supports promoting \
 it to a shared knowledge store. Corroboration must be the same claim, not an \
-adjacent one. Return one line per entry: \
+adjacent one. Fact-check every specific claim in the entry — numeric \
+thresholds, version-sensitive benchmarks, protocol/API semantics, internal \
+consistency; a recognized general pattern containing a false or unverifiable \
+specific claim is a DEMOTE. Return one line per entry: \
 N | PROMOTE|DEMOTE | one-sentence justification.
 
 $payload"
