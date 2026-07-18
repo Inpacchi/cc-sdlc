@@ -1,0 +1,61 @@
+#!/usr/bin/env bash
+# Knowledge-judgment wrapper — Codex judge for the Promotion Verification
+# Gate (standard template).
+#
+# To enable: copy this file to [sdlc-root]/external-review-knowledge.sh,
+# chmod +x it, and adjust the model/endpoint defaults to your project's
+# egress policy.
+#
+# EGRESS: this sends parking-lot entry text and corroboration evidence to
+# OpenAI via the codex CLI. Never let secrets, .env files, or key material
+# reach stdin of this script.
+#
+# Contract ([sdlc-root]/process/external-review-gate.md § Knowledge-Judgment
+# Wrapper):
+#   stdin  — neutral evidence payload: numbered candidate entries with full
+#            parking-lot text and corroboration signals. No verdicts.
+#   stdout — one line per entry: "N | PROMOTE|DEMOTE | one-sentence justification"
+#   exit 0 — success; non-zero = gate substitutes an internal subagent judge
+#
+# Model selection ([sdlc-root]/process/external-review-gate.md § Task-Based
+# Model Selection): the gate runs this at two tiers — a balanced/mid-tier
+# model at "high" for the initial screening pass, and a frontier model at
+# "xhigh" for tie-breaks and the final once-over — set via CODEX_MODEL /
+# CODEX_REASONING_EFFORT. Both are optional and independently settable.
+# Defaults below apply when unset.
+set -euo pipefail
+
+model="${CODEX_MODEL:-}"
+effort="${CODEX_REASONING_EFFORT:-high}"
+
+echo "external-review-knowledge: sending payload to OpenAI Codex (hosted egress)${model:+, model=$model}, effort=$effort" >&2
+
+out="$(mktemp)"
+trap 'rm -f "$out"' EXIT
+
+# Payload flows through stdin (codex appends it as a <stdin> block), avoiding
+# ARG_MAX limits on large batches. -o captures only the final message so
+# codex's progress/echo noise never reaches stdout; verdicts alone are the
+# contract.
+codex exec \
+  ${model:+-m "$model"} \
+  --config model_reasoning_effort="$effort" \
+  --sandbox read-only \
+  --ephemeral \
+  --color never \
+  --skip-git-repo-check \
+  -o "$out" \
+  "You are an independent judge of engineering-knowledge claims. The candidate entries (numbered, with parking-lot text and corroboration signals) are in the <stdin> block. For each entry, decide whether the evidence supports promoting it to a shared knowledge store.
+
+Corroboration must be the same claim, not an adjacent one — do not credit a candidate for a related-but-distinct entry elsewhere in the knowledge store. Fact-check every specific claim in the entry: numeric thresholds, version-sensitive benchmarks, protocol/API semantics, internal consistency. A recognized general pattern containing a false or unverifiable specific claim is a DEMOTE.
+
+Return one line per entry, no other output:
+N | PROMOTE|DEMOTE | one-sentence justification" \
+  >/dev/null
+
+# Empty output violates this wrapper's contract (unlike external-review.sh,
+# where empty stdout legitimately means "no findings") — treat it as a
+# judge failure so the gate falls back to an internal subagent judge.
+[ -s "$out" ] || exit 1
+
+cat "$out"

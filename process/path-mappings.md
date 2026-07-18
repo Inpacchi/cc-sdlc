@@ -9,7 +9,7 @@ Throughout this migration, apply these transformations when copying or merging c
 | `knowledge/` | `[sdlc-root]/knowledge/` |
 | `disciplines/` | `[sdlc-root]/disciplines/` |
 | `process/` | `[sdlc-root]/process/` |
-| `templates/*.md` | `[sdlc-root]/templates/*.md` |
+| `templates/*` (manifest-listed files) | `[sdlc-root]/templates/` |
 | `playbooks/` | `[sdlc-root]/playbooks/` |
 | `examples/` | `[sdlc-root]/examples/` |
 | `agents/` | `.claude/agents/` (always — Claude Code requires this location) |

@@ -464,10 +464,13 @@ If no precedent:
   Approach A: [2-sentence description] — tradeoff: [key tradeoff]
   Approach B: [2-sentence description] — tradeoff: [key tradeoff]
   [Approach C: optional]
+  External consult: [RECOMMEND line + 1-line reason | wrapper absent — skipped | errored — skipped]
   Selected: [A/B/C] — reason: [why]
 ```
 
 If the approach follows an existing codebase pattern with no structural ambiguity, cite the precedent and skip comparison. Otherwise, compare 2-3 structurally different approaches before selecting one.
+
+**External deliberation consult:** When comparing approaches (no precedent) and `[sdlc-root]/external-review.sh` exists and is executable, send the task summary, constraints, and approach comparison to the external reviewer **before selecting** — a model from a different family disagrees for different reasons, which is exactly the signal wanted at a structural decision point. Build the consult payload per `[sdlc-root]/process/external-review-gate.md` § Planning Integration (frontier tier at `xhigh`; state data egress for hosted models). The consult is advisory: record its RECOMMEND line in the block. If it recommends against the internally preferred approach, present both positions to CD via `AskUserQuestion` — do not silently override either side. If the wrapper is absent or errors, record that in the `External consult:` line and proceed; never block planning on external availability.
 
 ### 4. Domain Agents Write the Plan
 
@@ -563,13 +566,16 @@ Plan review — dispatching:
 - [ ] agent-name-1
 - [ ] agent-name-2
 - [ ] agent-name-3
+- [ ] external-reviewer (cross-vendor, via external-review.sh) — if configured
 ```
 
 **Every checkbox must have a corresponding agent dispatch. Count the checkboxes. Count the dispatches. They must match.** If the count doesn't match, stop and fix.
 
+**External reviewer (first-class when configured):** If `[sdlc-root]/external-review.sh` exists and is executable, the external reviewer is part of the review roster — add its checklist entry and run it in the same review round as the domain agents, not as an afterthought pass. Build the plan-review payload (spec + plan) per `[sdlc-root]/process/external-review-gate.md` § Planning Integration; mid-tier at `high` by default, frontier at `xhigh` for high-risk deliverables; state data egress for hosted models. If the wrapper is absent, omit the checklist entry; if it errors, record "external plan review errored — skipped" and continue with the internal roster.
+
 Dispatch all review agents in parallel. Collect feedback.
 
-If agents have findings, classify per `[sdlc-root]/process/finding-classification.md`. Planning context uses FIX, DECIDE, and PRE-EXISTING only. Output the classification table, then:
+If agents have findings, classify per `[sdlc-root]/process/finding-classification.md`. Planning context uses FIX, DECIDE, and PRE-EXISTING only. External findings enter the same table, attributed `[external:<model>]` — the external model never revises the plan, and uncorroborated architectural objections that contradict a recorded chronicle/ADR decision lean DECIDE, not FIX (it lacks that context by design). Output the classification table, then:
 
 - Only FIX findings go to the writing agent for revision
 - DECIDE findings go to the user via `AskUserQuestion`
@@ -586,7 +592,7 @@ The checkbox-must-match-dispatch rule from Step 5 applies here too. If you find 
 
 **Re-review criteria:** Re-review is mandatory if ANY of the following is true: (1) any FIX finding has Severity = `critical`, (2) the revised plan's file list differs from the pre-revision file list, or (3) a phase was added, removed, or its assigned agent changed. Otherwise — no FIX findings met these criteria — skip re-review. This check is mechanical: scan the Severity column and compare the before/after Files list. Do not reason about whether the revision "changed the approach."
 
-**Re-review dispatch procedure:** When re-review is required, dispatch ALL agents from the step-1 list — not a subset selected based on what changed in the revision. The step-1 agent list determines who reviews. Do not reason about which agents are "relevant to this revision." ALL means the step-1 list.
+**Re-review dispatch procedure:** When re-review is required, dispatch ALL agents from the step-1 list — not a subset selected based on what changed in the revision. The step-1 agent list determines who reviews. Do not reason about which agents are "relevant to this revision." ALL means the step-1 list. If the external reviewer is configured, it re-reviews with the roster — capped at **2 rounds total**; after that, classify any remaining new external findings as DECIDE and surface to CD rather than looping.
 
 **Stopping condition:** All agents report no critical or major findings. Minor findings may be acknowledged without a fix — document the decision.
 
@@ -602,7 +608,7 @@ Key feedback incorporated:
 ```
 
 **Rules:**
-- Bracket the agent's exact name: `[frontend-developer]`, `[software-architect]`, etc.
+- Bracket the agent's exact name: `[frontend-developer]`, `[software-architect]`, etc. External reviewer feedback uses `[external:<model>]`
 - Each bullet is specific and concrete — not generic praise
 - Omit agents that found no issues (don't write "[agent] no issues found")
 
@@ -689,6 +695,8 @@ Not every invocation needs a deliverable ID. For ad hoc work (bug fixes, small t
 | "I know how this library works" | Verify external library APIs via Context7. Never assume. VERIFICATION-GATE must show the resolved ID and version. |
 | "The pricing is $X/month for this service" | Check existing infrastructure first. If the project already runs on that platform, incremental cost differs dramatically from greenfield pricing. VERIFICATION-GATE must show what you checked. |
 | "I'll verify after the spec is written" | Verification happens BEFORE dispatch. Post-hoc verification means the spec was written from unverified claims and the agent's confident tone makes errors invisible. |
+| "The external reviewer is for code review, not planning" | When `external-review.sh` is configured, the external reviewer is a first-class planning participant: approach consult at 3d, review roster member at step 5. Cross-family deliberation is strongest at structural decisions — skipping it at planning time wastes it where it matters most. |
+| "The external model disagrees — I'll defer to it" / "…I'll ignore it" | Neither. Cross-vendor disagreement is signal, not authority. On approach disagreement, present both positions to CD. On plan findings, classify on evidence like any finding — uncorroborated objections that contradict recorded decisions lean DECIDE. |
 
 ### Session Handoff
 
@@ -697,3 +705,4 @@ The Manager Rule remains in effect per `[sdlc-root]/process/manager-rule.md` —
 ## Integration
 
 - **sdlc-execute** — The next skill in the pipeline; executes the approved plan
+- **External Review Gate** — `[sdlc-root]/process/external-review-gate.md` § Planning Integration: when `[sdlc-root]/external-review.sh` is configured, the external reviewer joins the approach decision (step 3d) and the plan review roster (step 5)

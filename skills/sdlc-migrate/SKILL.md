@@ -242,7 +242,7 @@ Group the changed cc-sdlc files by migration strategy:
 | **Provenance log** | `knowledge/provenance_log.md` | Never overwrite — project's append-only ingestion/research records |
 | **Project agents** | Project `.claude/agents/*.md` | Targeted section updates (see Phase 3) |
 | **CLAUDE-SDLC.md** | `CLAUDE-SDLC.md` | Content-merge into project's `CLAUDE.md` (§2.1e). No separate file. |
-| **Templates** | `templates/*.md` | Direct copy (framework-level). Skip `templates/optional/` (source-only). |
+| **Templates** | `templates/*` (all manifest-listed files, incl. `.html` and `.sh.template`) | Direct copy (framework-level). Skip `templates/optional/` (source-only). Never copy a `*.sh.template` to the executable wrapper path — projects enable wrappers themselves. |
 
 ---
 
@@ -336,7 +336,7 @@ For files with no project customizations, copy directly from cc-sdlc to the proj
 - `agents/sdlc-reviewer.md`, `agents/sdlc-compliance-auditor.md` → `.claude/agents/` (framework subagents must be in `.claude/agents/` for Claude Code to dispatch them, not just `[sdlc-root]/agents/`)
 - `playbooks/*.md` (unless the project has written its own playbooks — check git blame)
 - `examples/*.md`
-- `templates/*.md` (to `[sdlc-root]/templates/`)
+- `templates/*` (to `[sdlc-root]/templates/` — all manifest-listed files, including `.html` and `.sh.template`; never overwrite a project's enabled `[sdlc-root]/external-review*.sh` wrappers, which are project-authored)
 
 **Not direct-copied:**
 - `templates/optional/` — Conditional CLAUDE.md appendices. Read from cc-sdlc source during initialization when needed, not installed.

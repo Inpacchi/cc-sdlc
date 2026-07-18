@@ -171,8 +171,12 @@ the same training distribution fails on the same edge cases. Design Principle 1
 (independent review is the value driver) implies the most valuable additional
 reviewer is the *most independent* one: a model from a different vendor (Codex) or
 a different architecture (a local Qwen). The **External Review Gate**
-(`[sdlc-root]/process/external-review-gate.md`) adds exactly this as an optional,
-opt-in final pass after the internal loop converges.
+(`[sdlc-root]/process/external-review-gate.md`) adds exactly this. It is
+configuration-gated but first-class once configured: at execution time it runs
+as a final pass after the internal loop converges; at planning time it reviews
+*alongside* the internal roster (plan review) and consults on approach
+selection — cross-family deliberation is strongest at structural decisions, so
+planning uses it by default rather than as a special-occasion add-on.
 
 Treat the external model as one more ensemble member, subject to the same
 protocol — with two adjustments:

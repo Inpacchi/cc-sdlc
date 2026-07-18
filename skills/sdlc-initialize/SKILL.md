@@ -415,6 +415,8 @@ Required files (commonly missed):
 [ ] ops/sdlc/knowledge/testing/README.md
 [ ] .claude/skills/sdlc-migrate/SKILL.md
 [ ] [sdlc-root]/templates/agent-template.md
+[ ] [sdlc-root]/templates/external-review.sh.template (non-.md — do NOT chmod +x; inert until the project enables the gate)
+[ ] [sdlc-root]/templates/external-review-knowledge.sh.template (non-.md — same rule)
 [ ] .claude/agents/AGENT_SUGGESTIONS.md (ephemeral — deleted in Phase 12)
 [ ] .claude/skills/sdlc-audit/SKILL.md
 [ ] ops/sdlc/plugins/README.md

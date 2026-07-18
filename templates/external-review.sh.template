@@ -1,0 +1,55 @@
+#!/usr/bin/env bash
+# External review gate wrapper — Codex reviewer (standard template).
+#
+# To enable the gate: copy this file to [sdlc-root]/external-review.sh,
+# chmod +x it, and adjust the model/endpoint defaults to your project's
+# egress policy. For sensitive codebases, replace the codex call with a
+# local model (llama.cpp / Ollama / vLLM) so nothing leaves the machine.
+#
+# EGRESS: this sends the review payload to OpenAI via the codex CLI. Never
+# let secrets, .env files, or key material reach stdin of this script.
+#
+# Contract ([sdlc-root]/process/external-review-gate.md):
+#   stdin  — review payload. The rubric header at the top of the payload
+#            defines the artifact, the task, and the output format — the
+#            invoking skill writes it per integration point (diff review,
+#            plan review, approach consult). This wrapper is transport.
+#   stdout — output in the format the rubric requested. Default when the
+#            rubric does not specify: "SEVERITY | location | finding",
+#            one per line, empty if none.
+#   exit 0 — success (including zero findings); non-zero = gate skipped
+#
+# Model selection ([sdlc-root]/process/external-review-gate.md § Task-Based
+# Model Selection): the invoking skill may set CODEX_MODEL and/or
+# CODEX_REASONING_EFFORT to match model and effort to the task; both are
+# optional and independently settable. Defaults below apply when unset.
+set -euo pipefail
+
+model="${CODEX_MODEL:-}"
+effort="${CODEX_REASONING_EFFORT:-medium}"
+
+echo "external-review: sending payload to OpenAI Codex (hosted egress)${model:+, model=$model}, effort=$effort" >&2
+
+out="$(mktemp)"
+trap 'rm -f "$out"' EXIT
+
+# Payload flows through stdin (codex appends it as a <stdin> block), avoiding
+# ARG_MAX limits on large payloads. -o captures only the final message so
+# codex's progress/echo noise never reaches stdout; the requested output
+# alone is the contract.
+codex exec \
+  ${model:+-m "$model"} \
+  --config model_reasoning_effort="$effort" \
+  --sandbox read-only \
+  --ephemeral \
+  --color never \
+  --skip-git-repo-check \
+  -o "$out" \
+  "You are an independent reviewer giving a second opinion. The payload in the <stdin> block begins with a rubric header that defines the artifact under review, the task, and the output format — follow it exactly. Report only real problems; skip style and preference comments.
+
+If the rubric does not specify an output format, return findings one per line as: SEVERITY | location | finding
+where SEVERITY is one of: critical, major, minor.
+If there are no findings, return nothing." \
+  >/dev/null
+
+cat "$out"

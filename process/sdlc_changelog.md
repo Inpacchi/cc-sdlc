@@ -34,6 +34,44 @@ Each entry contains:
 
 ---
 
+## 2026-07-18: Standard external-review wrapper templates; drop "different model family" from model-facing prompts
+
+**Origin:** CD follow-up to the 2026-07-17 planning integration: "we don't need to say 'from a different model family'. also, we can adopt a standard template from ~/Projects/neuroloom."
+
+**What happened:** The gate doc's example wrappers were toy inline sketches, while the Neuroloom installation had a production-hardened wrapper pair (stdin passthrough to dodge ARG_MAX, `-o` final-message capture so codex noise never reaches the findings contract, `--sandbox read-only --ephemeral`, stderr egress disclosure, mktemp/trap cleanup, and empty-output-is-failure handling in the knowledge judge). The planning payload rubrics also told the external model it was "from a different model family" — unnecessary framing in model-facing text (the cross-family rationale belongs in the docs, not the prompt).
+
+**Changes made:**
+
+1. **`templates/external-review.sh.template`** (new) — Codex-backed standard wrapper adopted from the Neuroloom installation, with the embedded prompt generalized to payload-neutral: it defers to the payload's rubric header for artifact, task, and output format, so the one wrapper serves diff review, plan review, and approach consults.
+2. **`templates/external-review-knowledge.sh.template`** (new) — Neuroloom's knowledge-judgment wrapper adopted as-is (paths converted to `[sdlc-root]`), including its contract difference: empty stdout exits non-zero so the Promotion Verification Gate falls back to an internal subagent judge.
+3. **`process/external-review-gate.md`** — "Example wrappers" replaced by "Standard template": documents the shipped template, its operational details, and enable-by-copy instructions; the local-Ollama variant stays as the sensitive-codebase alternative. Wrapper-contract bullet updated from "cc-sdlc ships no default wrapper" to the template + copy/chmod stance. Knowledge-judgment section's inline example replaced with a pointer to its template. Removed "from a different model family" from the Codex example prompt and both planning payload rubrics.
+4. **`skeleton/manifest.json`** — Both templates added to `source_files.templates`; `_templates_note` updated (non-.md template files install too; `*.sh.template` files are inert until a project copies and chmods them — the gate activates on the executable copy, never the template).
+5. **`skills/sdlc-migrate/SKILL.md`** — Template copy rules widened from `templates/*.md` to all manifest-listed template files, with an explicit guard: never copy a `*.sh.template` onto the executable wrapper path, and never overwrite a project's enabled `external-review*.sh` (project-authored).
+6. **`process/path-mappings.md`** — `templates/*.md` row generalized to manifest-listed template files.
+7. **`CLAUDE-SDLC.md`** — Gate paragraph now names the shipped templates and the copy + chmod enable path.
+
+**Rationale:** A production-tested wrapper encodes half a dozen non-obvious operational lessons; shipping it as a template means the next project enables the gate in one copy instead of rediscovering ARG_MAX limits and codex stdout noise. Keeping templates inert (`.sh.template`, non-executable, in `templates/`) preserves the gate's activation semantics — presence of the executable wrapper remains the project's explicit egress opt-in. And prompts sent to the external model should carry task instructions, not meta-commentary about the ensemble's composition.
+
+---
+
+## 2026-07-17: External reviewer becomes a first-class planning participant
+
+**Origin:** CD directive — "integrate our external reviewer into planning as well. It should be more of a first-class resident in the SDLC if it is configured… deliberation between models is much stronger when they're of different families."
+
+**What happened:** The External Review Gate participated only at execution time (post-internal-loop diff review) and knowledge promotion. Planning — where decisions are structural and cross-family disagreement is most valuable — had no external participation. The gate was also framed as "opt-in per run," leaving configured projects under-using a capability they had already paid to set up.
+
+**Changes made:**
+
+1. **`process/external-review-gate.md`** — Reframed intro as a lifecycle-wide participant with a three-point integration table (planning / execution / knowledge promotion). Added a "First-class once configured" presence policy: enabling is opt-in via wrapper presence, but once configured, participation is the default at every integration point, with named skip conditions the only sanctioned skips. Added § Planning Integration defining (1) the approach deliberation consult (payload, `RECOMMEND \| <approach> \| reason` output line, advisory-only, frontier/`xhigh`) and (2) the plan review ensemble member (spec+plan payload, `SEVERITY \| artifact § section \| finding` output, same classification table, `[external:<model>]` attribution, 2-round cap, mid-tier/`high` default). Generalized the wrapper contract so the payload rubric header owns task framing and output format (wrapper is transport; old-contract wrappers keep working via the default format); updated both example wrappers to be payload-neutral. Updated "When to run it" with per-point skip conditions and the planning invocation sites.
+2. **`skills/sdlc-plan/SKILL.md`** — Step 3d: added `External consult:` line to the APPROACH-DECISION block and the external deliberation consult procedure (run before selecting when approaches are compared; on disagreement present both positions to CD via AskUserQuestion). Step 5: external reviewer added to the review dispatch checklist and roster (same round as domain agents), findings attributed `[external:<model>]` in the classification table, re-review participation capped at 2 rounds, Domain Agent Reviews attribution rule extended. Two new Red Flags rows (external reviewer is not code-review-only; disagreement is signal, not authority — neither defer nor ignore). Integration section links the gate doc.
+3. **`skills/sdlc-lite-plan/SKILL.md`** — Step 3: external reviewer joins the review roster when configured (plan-only payload, mid-tier/`high`, `[external:<model>]` attribution, 2-round cap, never blocks on availability). Worker Agent Reviews attribution rule extended; new Red Flags row; Integration section links the gate doc.
+4. **`process/debate-protocol.md`** — § Cross-Vendor External Reviewer updated: first-class once configured; final pass at execution time, but *alongside* the internal roster at planning time (plan review is a single ensemble round, not a fix loop — independence is maximized by parallel review).
+5. **`CLAUDE-SDLC.md`** — "Optional external review gate" paragraph retitled "External review gate — first-class when configured" and extended to name the planning integration points.
+
+**Rationale:** The value of an external reviewer comes from vendor-level independence — a different training distribution fails on different edge cases. That independence pays most where decisions are structural and cheapest to change: planning. Reviewing a plan costs a fraction of reviewing a diff, and a caught phasing or approach error avoids the 10x cost of unwinding it during execution. Making participation default-on when configured (instead of per-run discretionary) converts an occasional second opinion into genuine cross-family deliberation, while the advisory-only + same-triage + 2-round-cap constraints keep the Manager Rule and anti-conformity safeguards intact.
+
+---
+
 ## 2026-07-13: sdlc-audit Deep Verify — opt-in retroactive knowledge content verification (§6m)
 
 **Origin:** ChronoCore handoff (`sdlc-audit-deep-verify-mode_handoff.md`), sibling to the promotion-verification-gate handoff. After two worked runs of the multi-judge pattern (18-entry promotion batch, then a 674-entry full-store retroactive sweep that found 45 real defects — ~1 in 15 entries — in content unreviewed since ingestion), CD asked where the retroactive version should live upstream. Decision: an opt-in `sdlc-audit` mode — not the default run (an order of magnitude costlier than the file-read/grep dimensions), not a standalone skill (audit already owns provenance reading, the §6c authority matrix, and the step 11 triage flow the findings feed).

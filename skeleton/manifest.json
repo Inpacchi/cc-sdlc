@@ -107,9 +107,11 @@
       "templates/reference_doc_template.md",
       "templates/incident-runbook-template.md",
       "templates/agent-template.md",
-      "templates/html-design-system.html"
+      "templates/html-design-system.html",
+      "templates/external-review.sh.template",
+      "templates/external-review-knowledge.sh.template"
     ],
-    "_templates_note": "templates/*.md are installed to child projects. templates/optional/ is source-only (conditional CLAUDE.md appendices read during initialization).",
+    "_templates_note": "templates/* (all listed files, including non-.md) are installed to child projects. templates/optional/ is source-only (conditional CLAUDE.md appendices read during initialization). The external-review *.sh.template files are inert until a project copies one to [sdlc-root]/external-review*.sh and chmods +x — the gate activates on the executable copy, never on the template.",
     "templates_optional_source_only": [
       "templates/optional/data-pipeline-integrity.md"
     ],

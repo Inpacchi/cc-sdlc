@@ -281,9 +281,12 @@ Plan review — dispatching:
 - [ ] agent-name-1
 - [ ] agent-name-2
 - [ ] agent-name-3
+- [ ] external-reviewer (cross-vendor, via external-review.sh) — if configured
 ```
 
 **Every checkbox must have a corresponding agent dispatch. Count the checkboxes. Count the dispatches. They must match.** If the count doesn't match, stop and fix.
+
+**External reviewer (first-class when configured):** If `[sdlc-root]/external-review.sh` exists and is executable, the external reviewer is part of the review roster — add its checklist entry and run it in the same review round as the worker agents. Build the plan-review payload (plan only — lite plans have no spec) per `[sdlc-root]/process/external-review-gate.md` § Planning Integration; mid-tier at `high` is the norm for lite plans; state data egress for hosted models. Its findings enter the classification table attributed `[external:<model>]`; the external model never revises the plan. On re-review it participates with the roster, capped at 2 rounds — after that, remaining new external findings classify as DECIDE. If the wrapper is absent, omit the checklist entry; if it errors, record "external plan review errored — skipped" and continue.
 
 **Writing agent in review:** The worker agent that wrote the plan (step 2) may be included as a reviewer for self-verification, but cross-domain reviewers typically provide higher marginal value. Whether or not the writing agent reviews, the checklist must reflect only the agents actually dispatched — the count-must-match rule applies to the dispatched set, not the step-1 list.
 
@@ -322,7 +325,7 @@ Key feedback incorporated:
 ```
 
 **Rules:**
-- Bracket the worker agent's exact name: `[frontend-developer]`, `[software-architect]`, etc.
+- Bracket the worker agent's exact name: `[frontend-developer]`, `[software-architect]`, etc. External reviewer feedback uses `[external:<model>]`
 - Each bullet is specific and concrete — not generic praise
 - Omit worker agents that found no issues
 
@@ -401,10 +404,11 @@ The Manager Rule remains in effect per `[sdlc-root]/process/manager-rule.md` —
 | "I know how this library works" | Verify external library APIs via Context7. Never assume. VERIFICATION-GATE must show the resolved ID and version. |
 | "The pricing is $X/month for this service" | Check existing infrastructure first. If the project already runs on that platform, incremental cost differs dramatically from greenfield pricing. VERIFICATION-GATE must show what you checked. |
 | "I'll verify after the plan is written" | Verification happens BEFORE dispatch. Post-hoc verification means the plan was written from unverified claims and the agent's confident tone makes errors invisible. |
+| "The external reviewer is for code review, not lite plans" | When `external-review.sh` is configured, the external reviewer joins every plan review round — lite included. Plans are cheap to review; structural mistakes are the expensive kind. |
 
 ## Integration
 
 - **Feeds into:** `sdlc-lite-execute` (executes the reviewed plan from the saved file)
-- **Uses:** worker domain agents (plan writing + review), `[sdlc-root]/process/manager-rule.md`, `[sdlc-root]/process/collaboration_model.md`, `[sdlc-root]/process/deliverable_lifecycle.md`
+- **Uses:** worker domain agents (plan writing + review), `[sdlc-root]/process/manager-rule.md`, `[sdlc-root]/process/collaboration_model.md`, `[sdlc-root]/process/deliverable_lifecycle.md`, `[sdlc-root]/process/external-review-gate.md` § Planning Integration (external reviewer in plan review when configured)
 - **Complements:** `sdlc-plan` (handles full SDLC deliverables that need specs)
 - **Does NOT replace:** `sdlc-plan` (use that for new features, integrations, or architectural changes)
