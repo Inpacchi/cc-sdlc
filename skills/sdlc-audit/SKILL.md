@@ -1,26 +1,29 @@
 ---
 name: sdlc-audit
 description: >
-  Unified SDLC auditing skill with three modes: compliance, improvement, and deep verify. Compliance
-  mode audits project structure, deliverable integrity, knowledge layer health, and migration
-  correctness. Improvement mode analyzes sessions and/or commits to identify process gaps, missing
-  knowledge, and skill modifications that would improve the SDLC itself. Deep Verify mode is an
-  opt-in multi-judge content sweep of already-promoted knowledge-store entries — expensive, never
-  runs by default. Compliance and improvement can run against the current session or be fed a
-  previous session or commit range. Triggers on "sdlc audit", "audit the sdlc", "run an sdlc audit",
+  Unified SDLC auditing skill with four modes: compliance, improvement, deep verify, and codebase
+  health. Compliance mode audits project structure, deliverable integrity, knowledge layer health,
+  and migration correctness. Improvement mode analyzes sessions and/or commits to identify process
+  gaps, missing knowledge, and skill modifications that would improve the SDLC itself. Deep Verify
+  mode is an opt-in multi-judge content sweep of already-promoted knowledge-store entries —
+  expensive, never runs by default. Codebase Health mode audits the product substrate itself —
+  test/CI activation, agentic ergonomics, observability blind spots — via parallel read-only
+  sweeps. Compliance and improvement can run against the current session or be fed a previous
+  session or commit range. Triggers on "sdlc audit", "audit the sdlc", "run an sdlc audit",
   "compliance audit", "audit this session", "audit for improvements",
   "what can we improve about the process", "sdlc health check", "check sdlc compliance",
   "audit these commits", "process improvement audit", "deep audit", "deep verify",
-  "verify the knowledge store", "full content sweep".
+  "verify the knowledge store", "full content sweep", "codebase health check",
+  "audit the codebase health", "health audit", "how healthy is the codebase".
   Use when you need to verify SDLC compliance, identify process improvements, evaluate knowledge
-  layer health, or re-verify promoted knowledge content.
+  layer health, re-verify promoted knowledge content, or assess codebase health.
   Do NOT use for generating playbooks from sessions — use sdlc-playbook-generate.
   Do NOT use for bulk knowledge import — use sdlc-ingest.
 ---
 
 # SDLC Audit
 
-Unified auditing for structural compliance, process improvement, and retroactive knowledge verification. Three modes, flexible inputs.
+Unified auditing for structural compliance, process improvement, retroactive knowledge verification, and codebase health. Four modes, flexible inputs.
 
 **Argument:** `$ARGUMENTS` (mode + optional source — see Input Resolution below)
 
@@ -31,6 +34,7 @@ Unified auditing for structural compliance, process improvement, and retroactive
 | **Compliance** | Verify SDLC structure, deliverables, knowledge layer, migration integrity | Findings table + audit artifact at `docs/current_work/audits/` |
 | **Improve** | Identify process gaps, missing knowledge, skill/workflow modifications | Improvement proposals targeting skills, process docs, knowledge stores, disciplines |
 | **Deep Verify** | Multi-judge re-verification of already-promoted knowledge-store content (opt-in, expensive) | Demotion candidates routed into interactive triage; sweep logged to provenance |
+| **Health** | Audit the product substrate — test/CI activation, agentic ergonomics, observability blind spots | Per-sweep "exists / missing / top-5 gaps" report at `docs/current_work/audits/`; gaps route to handoffs or plans |
 
 ## Input Resolution
 
@@ -48,6 +52,8 @@ Parse `$ARGUMENTS` to determine mode and source:
 | `/sdlc-audit improve <session> <commit(s)>` | Improve | Session + commits combined |
 | `/sdlc-audit deep-verify` | Deep Verify | Full knowledge store (scope confirmed in pre-flight) |
 | `/sdlc-audit deep-verify <scope>` | Deep Verify | Scoped: a domain name, `stale`, or `incremental` |
+| `/sdlc-audit health` | Health | Whole repo, all three sweeps |
+| `/sdlc-audit health <scope>` | Health | Scoped: a package/directory path, or one sweep name (`tests`, `ergonomics`, `observability`) |
 
 **Deep Verify never activates implicitly.** A bare `/sdlc-audit` runs compliance mode only — Deep Verify requires the explicit mode word (or an equivalent by-name request like "deep audit" / "verify the knowledge store").
 
@@ -81,7 +87,7 @@ Dispatch the `sdlc-compliance-auditor` subagent to perform the 9-dimension scan.
 3. **Untracked work detection** — git commits without deliverable tracking
 4. **Knowledge freshness** — CLAUDE.md, agent memories, docs current
 5. **Process health indicators** — tracked vs untracked ratio, archive freshness, changelog coverage
-6. **Knowledge layer health** — disciplines, knowledge stores, triage status, wiring, context map, playbooks, usage, staleness by age, cross-file contradictions, coverage gaps, orphaned knowledge pruning
+6. **Knowledge layer health** — disciplines, knowledge stores, triage status, wiring, context map, playbooks, usage, staleness by age, cross-file contradictions, coverage gaps, orphaned knowledge pruning, review-pattern recurrence, mechanized-guard freshness
 7. **Migration integrity** — manifest version, file completeness, content-merge correctness
 8. **Agent memory pattern mining & hygiene** — recurring findings worth promoting; oversized (>200 line/25KB), self-contradicting, code-contradicting, or orphaned agent-memory files
 9. **Recommendation follow-through** — previous audit recommendations acted on?
@@ -123,13 +129,14 @@ Action Items
 ### 3. Triage
 
 After presenting the audit report, run an interactive triage session if there are:
-- **Promotion candidates** (from Dimensions 6c, 6l, and 8a) — parking lot entries, recurring review patterns, or agent memories worth promoting to knowledge stores
+- **Promotion candidates** (from Dimensions 6c, 6l, and 8a) — parking lot entries, recurring review patterns, or agent memories worth promoting to knowledge stores; 6l candidates may additionally (or instead) be **guard-promotion candidates** — mechanizable patterns that should become a lint rule, drift test, or CI check per `[sdlc-root]/process/guardrail-lifecycle.md`
+- **Guard freshness findings** (from Dimension 6n) — recorded guards that are missing, ineffective (pattern recurred despite guard), or increasingly suppressed; CD decides modify or retire
 - **Prune candidates** (from Dimension 6k) — orphaned knowledge files not wired to any agent
 - **Memory hygiene candidates** (from Dimension 8b) — oversized (>200 line/25KB), self-contradicting, code-contradicting, or orphaned agent-memory files
 
 See `references/compliance-methodology.md` step 11 for the full workflow.
 
-**Promotion triage:** Present candidates grouped by discipline. CD decides: promote to knowledge store, defer (with reason), or skip. Promotions apply immediately.
+**Promotion triage:** Present candidates grouped by discipline. CD decides: promote to knowledge store, defer (with reason), or skip. For 6l candidates flagged mechanizable, the choices extend to: promote to a mechanized guard, or both knowledge + guard. Knowledge promotions apply immediately. Guard promotions record the `mechanized_guard` field and hand the guard's implementation to the project (typically a follow-up via `sdlc-lite-plan` or `sdlc-handoff` — the framework defines the contract, the project writes the rule/test).
 
 **Prune triage:** Present orphaned knowledge files grouped by severity. CD decides: prune (delete), wire (add to agent mappings), or keep (leave unwired). Wiring uses the same flow as sdlc-ingest step 6 — present candidate agents, update `[sdlc-root]/knowledge/agent-context-map.yaml`.
 
@@ -249,6 +256,31 @@ PRE-FLIGHT → SCOPE → PAYLOAD → JUDGE → TRIAGE (step 11) → APPLY → PR
 3. **Demotions apply only after CD approval**, via the comment-preserving mechanics in `references/deep-verify.md` § 6 and step 11c's Demote path.
 4. **The sweep is logged to `[sdlc-root]/knowledge/provenance_log.md`** with `source-type: audit-sweep` — one entry per sweep, recording scope, judge configuration, and counts.
 
+## Codebase Health Mode
+
+The other three modes audit the *process*; this mode audits the *product substrate* — the codebase's readiness to catch bugs before they ship and to be worked on safely by agents. Full methodology in `references/codebase-health.md`.
+
+### Workflow
+
+```
+SCOPE → SWEEP (3 parallel, read-only) → SYNTHESIZE → ROUTE
+```
+
+### Steps
+
+1. **Scope.** Default is the whole repo, all three sweeps. A path argument scopes all sweeps to that package/directory; a sweep name (`tests`, `ergonomics`, `observability`) runs only that sweep repo-wide.
+
+2. **Sweep.** Dispatch three parallel **read-only** subagents, one per dimension (do NOT use the `sdlc-compliance-auditor` — it is process-scoped; use general read-only research agents with the sweep prompts from `references/codebase-health.md`):
+   - **Test & CI activation** — test-file/source ratios per package, suites that exist but never run in CI, lint/typecheck/format gate coverage, runtime-validation coverage at trust boundaries
+   - **Agentic ergonomics** — per-package CLAUDE.md coverage with spot-check accuracy, largest-file hot spots, duplication/fork patterns, dead weight, script discoverability (one-shot verify), type-safety escape-hatch clustering
+   - **Observability blind spots** — error-reporting coverage per surface, swallowed catches, structured-logging presence, scheduled-job failure alerting, silent fallbacks
+
+   Each sweep returns: **what exists / what's missing / top-5 gaps most likely to let bugs ship.**
+
+3. **Synthesize.** Merge the three sweep reports into a single artifact at `docs/current_work/audits/codebase_health_YYYY-MM-DD.md` using the report format from `references/codebase-health.md`. Present with the same table-first format rules as compliance mode. Offer an HTML render (opt-in, same mechanics as compliance Step 2).
+
+4. **Route.** This mode does not fix. Offer to route each accepted gap into the existing machinery: `sdlc-handoff` for cross-session tracks, `sdlc-plan`/`sdlc-lite-plan` for work CD wants started, or discipline parking lots for insights that need validation first. Gaps that match recurring-pattern clusters should reference the cluster slug — a health gap plus a recurring pattern is a guard-promotion signal (`[sdlc-root]/process/guardrail-lifecycle.md`).
+
 ## Red Flags
 
 | Thought | Reality |
@@ -259,12 +291,14 @@ PRE-FLIGHT → SCOPE → PAYLOAD → JUDGE → TRIAGE (step 11) → APPLY → PR
 | "This is just a compliance audit with extra steps" | Compliance checks structure. Improvement analyzes behavior. Different inputs, different outputs. |
 | "I'll propose sweeping process changes" | Proportional recommendations. Small friction gets small fixes. |
 | "The session didn't follow SDLC, that's a compliance failure" | For improvement mode, process bypass is a signal, not a failure. Ask: why was it bypassed? That's the improvement. |
+| "Health mode found gaps, I'll start fixing them" | Health mode reports and routes — fixes go through handoffs/plans that CD approves. |
+| "The guard exists, skip the freshness checks" | 6n exists because guards rot: rules get disabled, tests get skipped, patterns mutate past the regex. Check all four signals. |
 
 ## Integration
 
-- **Dispatches:** `sdlc-compliance-auditor` subagent (compliance mode 9-dimension scan); judge dispatches per the Promotion Verification Gate (deep verify mode — orchestrator-run, never via the auditor)
+- **Dispatches:** `sdlc-compliance-auditor` subagent (compliance mode 9-dimension scan); judge dispatches per the Promotion Verification Gate (deep verify mode — orchestrator-run, never via the auditor); three parallel read-only sweep agents (health mode — never via the auditor)
 - **Complements:** `sdlc-playbook-generate` (playbooks capture "how to repeat"; this captures "how to improve")
-- **Feeds into:** skill modifications, knowledge store updates, discipline parking lots, process doc changes
+- **Feeds into:** skill modifications, knowledge store updates, discipline parking lots, process doc changes; health-mode gaps route to `sdlc-handoff` / `sdlc-plan` / `sdlc-lite-plan`; 6l/6n guard decisions per `[sdlc-root]/process/guardrail-lifecycle.md`
 - **Uses:** session JSONL, git history, all SDLC project artifacts, existing knowledge layer
 
 ## Additional Resources
@@ -274,4 +308,5 @@ PRE-FLIGHT → SCOPE → PAYLOAD → JUDGE → TRIAGE (step 11) → APPLY → PR
 - **`references/compliance-methodology.md`** — Full 9-dimension compliance audit methodology, report format, severity levels, guiding principles (migrated from sdlc-compliance-auditor agent)
 - **`references/improvement-methodology.md`** — Detailed patterns for extracting process improvements from sessions and commits
 - **`references/deep-verify.md`** — Full Deep Verify mode specification: pre-flight gates, content scoping, judge mechanics, demotion routing, provenance logging, reusable payload/removal scripts
+- **`references/codebase-health.md`** — Full Codebase Health mode specification: the three sweep prompts, detection heuristics, report format, routing rules
 - **`references/session-reading.md`** — JSONL message type reference and extraction patterns for reading Claude Code session files

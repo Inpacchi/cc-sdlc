@@ -1,0 +1,23 @@
+# The Verify Command Convention
+
+Every project should expose **one discoverable one-shot command** that runs the full pre-commit verification chain — lint, typecheck, format check, tests — so that neither agents nor humans have to reconstruct the gate from scattered package scripts.
+
+## The Convention
+
+- **One entry point at the repo root**, named `verify`, in the project's native runner: `npm run verify` / `pnpm verify`, `make verify`, `just verify`, `./scripts/verify.sh`, `uv run poe verify` — whatever the stack already uses. Don't introduce a new task runner just for this.
+- **It chains every gate that CI runs** (or a documented subset, with the difference stated where the command is defined). A verify command that passes while CI fails is a broken promise — keep the two in sync, ideally by having CI call the same command.
+- **Monorepos:** the root `verify` fans out to every package. A package without lint/typecheck/test scripts is a gap the root command makes visible rather than papers over.
+- **It is documented in CLAUDE.md** (root instructions) so agents find it without spelunking. The review-fix loop's Verification Gate (`[sdlc-root]/process/review-fix-loop.md` Step 0) and any pre-commit checks should invoke it rather than re-listing individual tools.
+
+## Why It's Framework-Level
+
+Agents run verification constantly — before review loops, after fixes, before commits. When the gate is a single command, it gets run; when it's four commands scattered across packages, steps get skipped and the review loop enters with known-red checks. `sdlc-initialize` checks for this command during setup (Phase 9b) and offers to scaffold it; the codebase-health audit (`sdlc-audit` health mode, Sweep 1) flags its absence as a gap.
+
+## Scaffolding Guidance
+
+When creating a verify command in a project that lacks one:
+
+1. Inventory what exists: which of lint / typecheck / format / test are configured, per package.
+2. Chain what exists — do not invent new tooling as a side effect. Missing gates are reported as gaps, not silently added.
+3. Fail fast and loudly: the command exits non-zero on the first failing gate and names it.
+4. Add the one-line usage to root CLAUDE.md.

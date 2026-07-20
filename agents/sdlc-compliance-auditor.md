@@ -23,7 +23,7 @@ Read `.claude/skills/sdlc-audit/references/compliance-methodology.md` for the fu
 3. **Untracked work detection** — git commits without deliverable tracking
 4. **Knowledge freshness** — CLAUDE.md, agent memories, docs current
 5. **Process health indicators** — tracked vs untracked ratio, archive freshness, changelog coverage
-6. **Knowledge layer health** — disciplines, knowledge stores, triage status, wiring, context map, playbooks, usage, staleness by age, cross-file contradictions, coverage gaps
+6. **Knowledge layer health** — disciplines, knowledge stores, triage status, wiring, context map, playbooks, usage, staleness by age, cross-file contradictions, coverage gaps, review-pattern recurrence (6l), mechanized-guard freshness (6n)
 7. **Migration integrity** — manifest version, file completeness, content-merge correctness, PROJECT-SECTION marker validation
 8. **Agent memory pattern mining & hygiene** — recurring findings worth promoting (8a); oversized (>200 line/25KB), self-contradicting, code-contradicting, or orphaned MEMORY.md files (8b)
 9. **Recommendation follow-through** — previous audit recommendations acted on?

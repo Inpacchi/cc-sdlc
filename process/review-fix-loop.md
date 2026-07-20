@@ -130,6 +130,8 @@ Dispatch the most relevant domain agent to fix each FIX finding — this is ofte
 
 **Fix-intent constraint:** Per the No Semantic Revert rule (`[sdlc-root]/process/manager-rule.md`), fix dispatch prompts must include this constraint: "Fix this issue while preserving the existing behavior. Do not remove, simplify, or replace the feature to avoid the bug — address the root cause. If the behavior is fundamentally incompatible with the fix, report back instead of changing it." A fix agent that returns a "solution" that removes the feature it was asked to fix has not completed the task.
 
+**Guard modification is in-scope:** If a FIX finding matches a cluster in `docs/reviews/recurring-patterns.yaml` that has (or plainly warrants) a mechanized guard, the fix is two-part — fix the instance AND update or create the guard (lint rule, drift test, CI check) so the next instance is caught mechanically, per `[sdlc-root]/process/guardrail-lifecycle.md`. Include the guard requirement in the fix dispatch prompt; guard edits go through the same re-review (Step D) as any other change. Skip silently if the pattern log doesn't exist.
+
 For anything that isn't a FIX, state what you don't know:
 ```
 **Unknown**: [specific thing you haven't verified]

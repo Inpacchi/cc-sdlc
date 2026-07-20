@@ -225,6 +225,8 @@ If the user declines, stop here. If the user accepts, proceed to Step 5a.
 
 **If an agent returns without applying its fix, re-dispatch with a revised prompt.** Only a remaining gap that itself passes the economics test may be closed directly (with review).
 
+**Guard modification is in-scope.** If a finding matches a cluster in `docs/reviews/recurring-patterns.yaml` that has (or plainly warrants) a mechanized guard, the fix is two-part: fix the instance AND update or create the guard (lint rule, drift test, CI check) so the next instance is caught mechanically. See `[sdlc-root]/process/guardrail-lifecycle.md` § "Guard Modification Is In-Scope in Review Loops". Guard edits go through the same review loop as any other fix.
+
 **Self-check before proceeding:** Count findings you self-fixed under the economics test. Count findings dispatched to agents. The two numbers must equal the total finding count. If any finding is neither self-fixed nor dispatched, stop — you missed one.
 
 After all fixes (self-applied and agent-applied), verify the project builds.
@@ -302,6 +304,8 @@ patterns:
     promoted: false
 ```
 
+Two optional fields appear on clusters after audit-triage promotions — do not remove them when appending occurrences: `knowledge_entry` (path to the promoted knowledge file, set with `promoted: true`) and `mechanized_guard` (the lint rule / drift test / CI check that now catches the pattern — schema and lifecycle in `[sdlc-root]/process/guardrail-lifecycle.md`).
+
 **Step 6d. Surface in the report.** After logging, add a section to the report output:
 
 ```markdown
@@ -314,7 +318,7 @@ patterns:
 [If no patterns identified, omit this section.]
 ```
 
-Mark patterns "at threshold" when they reach 3+ occurrences — these are candidates for knowledge-store promotion via `sdlc-audit`.
+Mark patterns "at threshold" when they reach 3+ occurrences — these are candidates for knowledge-store promotion and/or mechanized-guard promotion via `sdlc-audit` (see `[sdlc-root]/process/guardrail-lifecycle.md`). If a new occurrence lands on a cluster that already has a `mechanized_guard`, say so explicitly in the Status column ("recurred despite guard") — that is a guard-effectiveness signal `sdlc-audit` Dimension 6n needs.
 
 **Slug consistency:** The file itself is the slug registry. Reading existing slugs and descriptions before writing is sufficient for agent judgment to reuse the right slug. When uncertain whether a finding matches an existing cluster, prefer creating a new cluster — false splits are easier to merge than false merges are to untangle.
 
@@ -372,6 +376,6 @@ Skip the suggestion if the review was routine with no cross-cutting insights.
 
 ## Integration
 - **Feeds into:** `docs/reviews/recurring-patterns.yaml` (pattern log for `sdlc-audit` Dimension 6 promotion), `sdlc-reflect` (suggests it when cross-discipline insights surface beyond the findings themselves)
-- **Uses:** `[sdlc-root]/process/agent-selection.yaml` (agent dispatch), `[sdlc-root]/process/review-lenses.md` (review lenses), `[sdlc-root]/process/review-fix-loop.md` (fix loop), `[sdlc-root]/knowledge/agent-context-map.yaml` (dispatch-time injection), `[sdlc-root]/knowledge/coding/code-quality-principles.yaml` (code-reviewer primary)
+- **Uses:** `[sdlc-root]/process/agent-selection.yaml` (agent dispatch), `[sdlc-root]/process/review-lenses.md` (review lenses), `[sdlc-root]/process/review-fix-loop.md` (fix loop), `[sdlc-root]/process/guardrail-lifecycle.md` (mechanized-guard schema and in-scope rule), `[sdlc-root]/knowledge/agent-context-map.yaml` (dispatch-time injection), `[sdlc-root]/knowledge/coding/code-quality-principles.yaml` (code-reviewer primary)
 - **Complements:** `sdlc-execute` (development phase before review), `sdlc-audit` (promotes recurring patterns to knowledge store)
 - **Does NOT replace:** Quality gates in `sdlc-develop-skill` / `sdlc-develop-agent` (those are author-facing convention checks, not diff-facing code review)

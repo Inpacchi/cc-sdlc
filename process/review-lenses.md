@@ -47,6 +47,7 @@ Analytical perspectives that agents apply when reviewing code. Each consuming sk
 - State store shape changes — are all selectors and subscribers still reading valid paths?
 - Enum additions or removals — are switch/case handlers and maps exhaustive?
 - Function signature changes in shared utilities — are all call sites passing the right arguments?
+- Manually-synced parallel copies — a "KEEP IN SYNC" / "must match X" / "kept in sync manually" comment is itself a defect, not a mitigation. The duplication must be replaced by a single source of truth (one copy derives from the other, or both derive from shared code/config) or covered by a drift-detection test that fails when the copies diverge. Flag the comment even when the copies currently match — the observed failure mode is copies diverging in the very commit that adds the comment. A grep-based CI check on these comment markers is a legitimate enforcement floor (`[sdlc-root]/process/guardrail-lifecycle.md` § Enforcement Floors).
 
 ## Performance Lens
 

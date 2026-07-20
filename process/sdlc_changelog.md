@@ -34,6 +34,32 @@ Each entry contains:
 
 ---
 
+## 2026-07-20: Guardrail lifecycle, KEEP-IN-SYNC lens, codebase-health audit mode, verify-command convention (Sleeved upstream contributions)
+
+**Origin:** Cross-repo handoff from Sleeved (`docs/current_work/ideas/cc-sdlc-upstream-contributions_handoff.md`, sourced from Sleeved's 2026-07-17 repo-wide quality audit). Four framework-shaped improvements identified downstream that would be clobbered by `sdlc-migrate` if implemented there.
+
+**What happened:** Sleeved's `recurring-patterns.yaml` accumulated ~40 pattern clusters, several recurring for months because nothing converts a recurring pattern into a mechanized guard (lint rule, drift test, CI check) — and nothing re-evaluates guards once created. Separately: the `manually-synced-parallel-copies-drift` pattern hit 5 occurrences (copies diverging in the very commit adding the "keep in sync" comment); the audit's product-substrate sweeps proved a generic recipe worth a first-class audit mode; and the top agent-ergonomics gap was the absence of a discoverable one-shot verify command.
+
+**Changes made:**
+
+1. **`process/guardrail-lifecycle.md`** (new) — The cross-skill guardrail contract: LOG → THRESHOLD → PROMOTE → ENFORCE → RE-EVALUATE → MODIFY/RETIRE. Defines the `mechanized_guard` field on recurring-pattern clusters, mechanizability criteria (textual/structural/behavioral signatures), guard-freshness checks, the guard-modification-in-scope rule, and enforcement floors. Framework defines the loop; projects supply the actual rules/tests.
+2. **`skills/sdlc-audit/references/compliance-methodology.md`** — 6l extended: validates optional `knowledge_entry`/`mechanized_guard` fields, flags guard-promotion candidates (mechanizable patterns at threshold) alongside knowledge-promotion candidates; triage promotion note covers the guard path. New **6n Mechanized Guard Freshness**: guard-exists, recurred-despite-guard, suppression-growth, never-fired checks.
+3. **`skills/sdlc-audit/SKILL.md`** — Four modes (was three): new **Codebase Health mode** auditing the product substrate via three parallel read-only sweeps (test/CI activation, agentic ergonomics, observability blind spots) with SCOPE → SWEEP → SYNTHESIZE → ROUTE workflow; report to `docs/current_work/audits/`, gaps route to handoffs/plans/parking lots, never fixed in-mode. Dimension 6 summary, triage section (guard promotions + 6n findings), Red Flags, Integration, and frontmatter triggers updated.
+4. **`skills/sdlc-audit/references/codebase-health.md`** (new) — Full health-mode methodology: dispatch discipline, the three sweep prompts, report format, merged top-gap ranking (cap 10), routing rules, recurring-pattern cross-referencing.
+5. **`skills/sdlc-review-code/SKILL.md`** — Step 6 documents the post-promotion `knowledge_entry`/`mechanized_guard` fields and flags "recurred despite guard" in the patterns table; Step 5a adds the two-part guard-modification-in-scope rule; Integration references the lifecycle doc.
+6. **`process/review-fix-loop.md`** — Step C: FIX findings matching a guarded (or plainly guardable) recurring-pattern cluster get two-part fixes — instance + guard — consumed by all execution skills.
+7. **`skills/sdlc-reflect/SKILL.md`** — New Step 4b: session-scoped recurring-pattern guard scan (reuses 6l thresholds, no redefinition) proposing guard promotions and flagging recurred-despite-guard; report section, Red Flag ("reflect proposes, triage decides"), Integration updated.
+8. **`process/review-lenses.md`** — Contract Safety Lens: manually-synced parallel copies bullet — a KEEP-IN-SYNC comment is itself a defect; require single source of truth or a drift-detection test; grep-based CI floor sanctioned.
+9. **`process/verify-command.md`** (new) — The one-shot root `verify` command convention: chains the gates CI runs, documented in CLAUDE.md, invoked by the review-fix loop's verification gate.
+10. **`skills/sdlc-initialize/SKILL.md`** — New Phase 9b: check for the verify command, offer scaffolding (chain what exists, report gaps, don't invent tooling); Phase 10 checklist line added.
+11. **`agents/sdlc-compliance-auditor.md`** — Dimension 6 summary mentions 6l recurrence and 6n guard freshness.
+12. **`process/commands.md`** — `/sdlc-audit health [scope]` row.
+13. **`skeleton/manifest.json`** — Added `process/guardrail-lifecycle.md`, `process/verify-command.md`, `skills/sdlc-audit/references/codebase-health.md`.
+
+**Rationale:** Review-pattern logging existed (review-code Step 6) and knowledge promotion existed (audit 6l), but the loop dead-ended at "agents were told" — nothing made the *machine* catch a recurring pattern, and nothing watched guards after creation. This closes the loop end-to-end with explicit ownership: review-code logs, reflect and 6l propose, CD decides at triage, projects implement, 6n re-evaluates, review loops maintain. The KEEP-IN-SYNC lens and verify-command convention are the two cheapest universal wins from Sleeved's evidence; the health mode generalizes an audit recipe already validated against a real repo. No knowledge-layer reference patterns were changed — all new references use canonical phrasing, so no `[contract-change]` tag is needed.
+
+---
+
 ## 2026-07-19: Frontier once-over made unconditional for all promotion candidates
 
 **Origin:** CD directive — promotion candidates should never be validated by shipped-deliverable evidence alone; every candidate must be reviewed by a frontier-tier agent (Codex external wrapper at xhigh, or Fable subagent) before reaching CD.

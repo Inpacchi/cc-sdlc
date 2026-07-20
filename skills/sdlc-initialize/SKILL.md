@@ -797,6 +797,27 @@ Update the Process Maturity Tracker table in `ops/sdlc/disciplines/process-impro
 
 This is a quick assessment (2-3 minutes total), not a gate. Present the tracker to CD as informational.
 
+### Phase 9b: Verify Command Check
+
+Check whether the project exposes a one-shot verification command per the convention in `ops/sdlc/process/verify-command.md` — a single root entry point (`npm run verify`, `make verify`, `./scripts/verify.sh`, or the stack's equivalent) that chains lint, typecheck, format check, and tests.
+
+```bash
+# Examples — adapt to the stack detected in Phase 0
+grep -n '"verify"' package.json 2>/dev/null
+grep -n '^verify:' Makefile justfile 2>/dev/null
+ls scripts/verify.sh 2>/dev/null
+```
+
+**If present:** confirm it actually chains the gates CI runs (read the script/target), and ensure it is documented in the project's CLAUDE.md.
+
+**If absent:** tell CD:
+
+> No one-shot verify command found. Agents run verification before every review loop and commit — a single root command keeps that gate from being skipped. Want me to scaffold one? I'll chain the gates that already exist (found: {list}) and report the packages missing lint/typecheck/test scripts as gaps.
+
+If CD accepts, scaffold per `ops/sdlc/process/verify-command.md` § Scaffolding Guidance: chain only what exists, fail fast, document the command in CLAUDE.md. Report (don't silently fix) packages lacking gate scripts — those are findings for CD, not setup work.
+
+**Retrofit note:** for retrofit installations this check frequently finds partial coverage (some packages have scripts, some don't). Scaffold the root command over what exists and list the gaps — the codebase-health audit (`/sdlc-audit health`) tracks them afterward.
+
 ### Phase 10: Final Verification
 
 **Adapter post-operation:** If the adapter declares a `post-operation` phase, execute the adapter's verification instructions before the standard checklist below. This lets the adapter confirm its backend is consistent (e.g., all knowledge ingested, no untransformed phrasing-contract references remain). If the adapter's handler specifies `warn-continue` on failure, log the warning and proceed. If `halt`, stop and report.
@@ -814,6 +835,7 @@ Skeleton & Infrastructure:
 [ ] .gitignore: `.claude/agent-memory/` entry present
 [ ] CLAUDE.md: exists with all required sections
 [ ] Catalog: docs/_index.md has D1 registered
+[ ] Verify command: root one-shot verify present and documented, or gaps reported to CD (Phase 9b)
 
 Agents:
 [ ] All agents created via /sdlc-develop-agent — confirmed

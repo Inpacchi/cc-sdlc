@@ -176,6 +176,15 @@ The canonical GAP format includes `Source: {agent} finding` — omitted here bec
 - Include enough context that the entry is useful without the conversation history
 - Write directly — the Manager Rule does not apply to parking lot entries (per `[sdlc-root]/process/discipline_capture.md`)
 
+### 4b. Recurring-Pattern Guard Scan
+
+If `docs/reviews/recurring-patterns.yaml` exists, run a session-scoped version of `sdlc-audit` Dimension 6l's threshold scan — same thresholds, same criteria, no redefinition (canonical logic in the compliance methodology; guard contract in `[sdlc-root]/process/guardrail-lifecycle.md`). Skip silently if the file doesn't exist.
+
+1. For each cluster with 3+ occurrences in the 30-day window and no `mechanized_guard`: if the pattern is mechanizable (textual, structural, or behavioral signature), flag it as a **guard-promotion proposal** with the signature named.
+2. For each cluster that gained an occurrence this session *despite* having a `mechanized_guard`: flag it as **guard ineffective**.
+
+Present flags in the Step 6 report. Do NOT write `mechanized_guard` fields or implement guards here — proposals route to the next `sdlc-audit` triage (or CD can invoke it now). This step exists so a threshold crossed mid-cycle surfaces within the session instead of waiting for the next audit.
+
 ### 5. Prune Agent Memories
 
 Attempt a session-scoped prune of agent memories. This is a lighter-weight complement to sdlc-audit's project-wide memory hygiene sweep — scoped to memories this session plausibly touched or invalidated, not a full scan of every agent. Skip silently if `.claude/agent-memory/` doesn't exist.
@@ -246,6 +255,10 @@ MEMORY PRUNES
   [agent-name]: [what was pruned/split] | none needed | no agent-memory directory
   Promoted to parking lots: [count] entries ([disciplines]) | none qualified
 
+GUARD SIGNALS (from recurring-patterns scan)
+  Guard-promotion proposals: [slug — signature — proposed guard type] | none at threshold | no pattern log
+  Guards recurred-despite: [slug — guard location] | none
+
 NEXT STEPS
   - Entries are marked [NEEDS VALIDATION] — they'll be triaged during the next sdlc-audit cycle
   - [If any entry looks ready to promote]: Consider promoting [entry] to [target knowledge file] after further validation
@@ -264,6 +277,7 @@ NEXT STEPS
 | "I should run this after every session" | Only when substantive work happened AND formal skills didn't already capture. Most direct-dispatch or bug-fix sessions are good candidates. |
 | "I'll create a new discipline for this learning" | Route to the closest existing discipline. New disciplines require the criteria in `[sdlc-root]/disciplines/README.md` § "Creating a New Discipline". |
 | "I'll do a full sweep of every agent's memory while I'm at it" | Session scope only — agents dispatched this session or memories the session's changes invalidated. The project-wide hygiene sweep is sdlc-audit Dimension 8b. |
+| "This pattern hit the threshold — I'll write the mechanized_guard field now" | Step 4b proposes; the audit triage (or CD explicitly) decides. Reflect never writes guard fields or implements guards. |
 | "This memory looks outdated, I'll delete it" | Verify against current source first. Deleting a correct memory costs the agent hard-won context; pruning applies only to entries you've confirmed are wrong, duplicated, or over-cap. |
 | "It's stale, delete it and move on" | Run the promotion check first. A memory invalidated by a change often documents why the old approach failed — capture that lesson in the parking lot before the entry disappears. |
 | "This memory is useful, so it should be promoted" | Useful to *that agent* isn't the bar. Promote only entries that pass the Step 2 filters — reusable beyond the task, non-obvious, actionable. Codebase-specific scratchpad stays in memory. |
@@ -273,7 +287,7 @@ NEXT STEPS
 
 - **Depends on:** Substantive work in the current session; discipline parking lots at `[sdlc-root]/disciplines/`
 - **Feeds into:** Discipline triage cycle (sdlc-audit scans parking lots for threshold breaches and untriaged entries)
-- **Uses:** `git log`, `git diff`, `git status` (session survey); `[sdlc-root]/disciplines/*.md` (write targets); `[sdlc-root]/process/discipline_capture.md` (structured gap detection methodology); `.claude/agent-memory/*/MEMORY.md` (prune targets, Step 5)
+- **Uses:** `git log`, `git diff`, `git status` (session survey); `[sdlc-root]/disciplines/*.md` (write targets); `[sdlc-root]/process/discipline_capture.md` (structured gap detection methodology); `docs/reviews/recurring-patterns.yaml` + `[sdlc-root]/process/guardrail-lifecycle.md` (guard scan, Step 4b); `.claude/agent-memory/*/MEMORY.md` (prune targets, Step 5)
 - **Complements:** Built-in discipline capture in sdlc-execute, sdlc-plan, sdlc-idea (those run automatically; this is for sessions without those skills)
 - **Does NOT replace:** sdlc-ingest (bulk external knowledge import), sdlc-audit improvement mode (systematic process gap analysis), built-in discipline capture steps in execution/planning skills
 - **DRY notes:** Structured detection uses five of seven signals from `[sdlc-root]/process/discipline_capture.md` — standalone mode omits `UNMAPPED_KNOWLEDGE` and `STALE_KNOWLEDGE` (require agent handoff data). GAP entry format omits `Source: {agent} finding` (documented in Step 4). The difference: discipline_capture.md runs embedded within other skills with full triage table and agent handoff data; sdlc-reflect runs standalone and infers from git history and conversation context. Memory-prune hygiene checks (Step 5) reuse the definitions in sdlc-audit's compliance methodology Dimension 8b and the agent template's memory protocol — sdlc-reflect applies them session-scoped between audits; sdlc-audit remains the project-wide sweep. The Step 5 promotion check parallels sdlc-audit's Dimension 8a pattern mining but differs in bar and destination: 8a requires recurrence across 2+ agent memories and routes to interactive triage; reflect promotes opportunistically (single entry, Step 2 filters) and routes to parking lots as `[NEEDS VALIDATION]` — the triage cycle still decides what graduates to knowledge stores.

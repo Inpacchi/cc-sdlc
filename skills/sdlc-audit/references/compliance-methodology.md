@@ -272,7 +272,7 @@ Scan `docs/reviews/recurring-patterns.yaml` for pattern clusters that have cross
 
 **Step 6l.1 — Read and validate the log:**
 
-Read `docs/reviews/recurring-patterns.yaml`. Validate basic structure: top-level `patterns` key is a list, each entry has `slug`, `description`, `lens`, `first_seen`, `occurrences` (list), and `promoted` (boolean).
+Read `docs/reviews/recurring-patterns.yaml`. Validate basic structure: top-level `patterns` key is a list, each entry has `slug`, `description`, `lens`, `first_seen`, `occurrences` (list), and `promoted` (boolean). Optional fields set by prior triage promotions: `knowledge_entry` (path, with `promoted: true`) and `mechanized_guard` (guard record per `[sdlc-root]/process/guardrail-lifecycle.md` — validated in Dimension 6n).
 
 **Step 6l.2 — Scan for threshold breaches:**
 
@@ -281,6 +281,8 @@ For each cluster where `promoted: false`:
 1. Count occurrences within the sliding window (default: 30 days from audit date).
 2. If count >= 3: flag as a **promotion candidate**.
 3. If count >= 2: flag as **watch** (approaching threshold — Info severity).
+
+For each promotion candidate (and for already-promoted clusters that keep accumulating occurrences), additionally assess **guard promotion**: is the pattern mechanizable — detectable by a textual, structural, or behavioral signature per `[sdlc-root]/process/guardrail-lifecycle.md` § "What Qualifies for Guard Promotion"? If yes and the cluster has no `mechanized_guard`, flag it as a **guard-promotion candidate** and name the signature and proposed guard type. A cluster recurring *after* knowledge promotion is the strongest guard-promotion signal.
 
 **Step 6l.3 — Cross-reference against existing knowledge:**
 
@@ -301,14 +303,21 @@ REVIEW PATTERN RECURRENCE
       Files affected: [list of unique files across occurrences]
       Suggested knowledge area: [sdlc-root]/knowledge/architecture/ or coding/
 
+  Guard-promotion candidates (mechanizable, no guard recorded):
+    - missing-tenant-filter — structural signature (AST: query builder without tenant clause)
+      Proposed guard type: lint-rule
+    - manually-synced-parallel-copies-drift — textual signature (KEEP IN SYNC comments) + behavioral (drift test)
+      Proposed guard type: ci-check floor now, drift-test as full coverage
+
   Watch list (2 occurrences, approaching threshold):
     - lazy-relationship-outside-async (2 occurrences, first: 2026-04-15, lens: correctness)
 
   Already promoted: {N} clusters marked promoted: true
+  Guarded: {N} clusters with mechanized_guard (freshness in Dimension 6n)
   Total clusters: {N}
 ```
 
-Promotion candidates from 6l are surfaced in step 11 (interactive triage) alongside promotion candidates from 6c and prune candidates from 6k. The triage workflow is the same: CD decides whether to promote, defer, or dismiss. On promotion, the cluster's `promoted` field is set to `true` and a `knowledge_entry` field is added with the path to the new knowledge file.
+Promotion candidates from 6l are surfaced in step 11 (interactive triage) alongside promotion candidates from 6c and prune candidates from 6k. The triage workflow is the same: CD decides per candidate — promote to knowledge store, promote to a mechanized guard, both, defer, or dismiss. On knowledge promotion, the cluster's `promoted` field is set to `true` and a `knowledge_entry` field is added with the path to the new knowledge file. On guard promotion, a `mechanized_guard` field is added per `[sdlc-root]/process/guardrail-lifecycle.md` — the project implements the guard (the framework never ships project-specific rules), and the field records where it lives so 6n can watch it.
 
 ### 6m. Deep Verify — Retroactive Content Verification (opt-in, never default)
 
@@ -317,6 +326,19 @@ Promotion candidates from 6l are surfaced in step 11 (interactive triage) alongs
 Re-judges already-promoted knowledge-store content using the Promotion Verification Gate mechanics (`[sdlc-root]/process/discipline_capture.md` § Promotion Verification Gate) with `KEEP|DEMOTE` verdicts: pre-flight cost/egress confirmation and scope selection, claims-vs-reference content scoping, batched neutral payloads, screening-tier judges with the mandatory fact-checking lens, frontier tie-breaks and once-over. Full specification: `references/deep-verify.md`.
 
 DEMOTE verdicts feed step 11 as a third candidate source — see step 11a. Deep Verify never applies a demotion itself.
+
+### 6n. Mechanized Guard Freshness
+
+For each cluster in `docs/reviews/recurring-patterns.yaml` with a `mechanized_guard` field, verify the guard is alive and effective. Full check definitions in `[sdlc-root]/process/guardrail-lifecycle.md` § "Guard Freshness"; summary:
+
+1. **Guard exists** — resolve `mechanized_guard.location`: the lint rule is present in the named config, the test file exists, the CI job/step is defined. Missing → CRITICAL (guard recorded but not wired — the pattern log claims protection that isn't there).
+2. **Recurred despite guard** — any occurrence dated after `mechanized_guard.created` → WARNING (guard ineffective: blind spot, wrong scope, or suppressed). Propose modify at triage.
+3. **Suppression growth** — count in-code suppressions naming the guard (disable comments, skipped tests); compare against the count recorded at the last audit (note current counts in the audit artifact for next time). Growing → WARNING (the guard is being routed around).
+4. **Never fired** (best-effort, only where history is observable) — zero hits since creation → INFO: either the pattern is extinct (retirement candidate) or the guard is miswired (verify against a known-bad sample).
+
+**If no cluster has a `mechanized_guard` field:** report in one line ("No mechanized guards recorded — 6n has nothing to check") and move on. This is normal for projects that haven't promoted a guard yet, not a finding.
+
+Guard findings route into the standard severity-classified findings table. Modify/retire decisions go through step 11 triage; retirement removes the `mechanized_guard` field, notes it in the cluster description, and keeps the occurrence history.
 
 ## Dimension 7: Migration Integrity
 
