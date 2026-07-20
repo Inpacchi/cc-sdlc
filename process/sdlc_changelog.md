@@ -34,6 +34,21 @@ Each entry contains:
 
 ---
 
+## 2026-07-19: Frontier once-over made unconditional for all promotion candidates
+
+**Origin:** CD directive — promotion candidates should never be validated by shipped-deliverable evidence alone; every candidate must be reviewed by a frontier-tier agent (Codex external wrapper at xhigh, or Fable subagent) before reaching CD.
+
+**What happened:** The Promotion Verification Gate had a skip path: a single well-evidenced entry (direct deliverable evidence, batch < 3) bypassed the judge panel entirely and went straight to CD. That entry never received any independent model review — inconsistent with the gate's own rationale, since deliverable recurrence proves a pattern was used, not that its embedded factual claims are true, and the compounding risk of a wrongly promoted entry applies equally to skip-path entries.
+
+**Changes made:**
+
+1. **`process/discipline_capture.md`** — Skip path narrowed: single well-evidenced entries may skip the screening panel (steps 2–4) but not the frontier once-over (step 5); the neutral payload is built for them and the once-over verdict accompanies the CD presentation. Step 5 restated as unconditional for every promotion candidate, including screening-skip entries.
+2. **`skills/sdlc-audit/references/compliance-methodology.md`** — §6c evidence-production note and step 11a gate description updated to match: the once-over is unconditional; deliverable evidence alone never carries a candidate to CD without an independent frontier-tier fact-check.
+
+**Rationale:** The once-over machinery already exists and runs as a single batch dispatch, so extending it to skip-path entries costs almost nothing while closing the only route by which a promotion candidate could become knowledge-store precedent with zero independent model review. Frontier budget stays concentrated at promotion time, where the risk asymmetry justifies it — parking-lot triage of non-candidates remains cheap.
+
+---
+
 ## 2026-07-18: Standard external-review wrapper templates; drop "different model family" from model-facing prompts
 
 **Origin:** CD follow-up to the 2026-07-17 planning integration: "we don't need to say 'from a different model family'. also, we can adopt a standard template from ~/Projects/neuroloom."
