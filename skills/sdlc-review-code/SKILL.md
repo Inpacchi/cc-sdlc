@@ -320,6 +320,12 @@ Optional fields appear on clusters after audit-triage decisions — do not remov
 
 Mark patterns "at threshold" when they reach 3+ occurrences — these are candidates for knowledge-store promotion and/or mechanized-guard promotion via `sdlc-audit` (see `[sdlc-root]/process/guardrail-lifecycle.md`). If a new occurrence lands on a cluster that already has a `mechanized_guard`, say so explicitly in the Status column ("recurred despite guard") — that is a guard-effectiveness signal `sdlc-audit` Dimension 6n needs.
 
+**Threshold-crossing trigger:** When this review's logging brings a `promoted: false` cluster with no `mechanized_guard` to 3+ occurrences within Dimension 6l's 30-day sliding window (reuse 6l's threshold definition — do not define a second one), emit directly below the patterns table:
+
+> Pattern {slug} crossed the mechanization threshold ({N} occurrences) — run `/sdlc-audit` to triage mechanization.
+
+Skip clusters marked `mechanization_assessed: excluded` — those were assessed and deliberately not mechanized. This trigger closes the gap between per-review logging and audit-cadence triage: the crossing surfaces the moment it happens instead of waiting for the next audit. It is a nudge only — do not start the triage or write promotion fields from within this skill.
+
 **Slug consistency:** The file itself is the slug registry. Reading existing slugs and descriptions before writing is sufficient for agent judgment to reuse the right slug. When uncertain whether a finding matches an existing cluster, prefer creating a new cluster — false splits are easier to merge than false merges are to untangle.
 
 Do NOT ingest into the knowledge store from within this skill. Do NOT create parking-lot entries. The pattern log feeds `sdlc-audit` Dimension 6l, which handles promotion recommendations.

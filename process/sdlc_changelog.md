@@ -34,6 +34,18 @@ Each entry contains:
 
 ---
 
+## 2026-07-20: Review-time mechanization-threshold trigger in sdlc-review-code
+
+**Origin:** Sleeved D121 (CD-approved, via inter-session): per-review pattern logging and audit-cadence triage were only connected by the next audit happening to run — a cluster could cross the mechanization threshold and sit unproposed for weeks.
+
+**Changes made:**
+
+1. **`skills/sdlc-review-code/SKILL.md`** — Step 6d: when logging brings a `promoted: false`, non-guarded cluster to 3+ occurrences within Dimension 6l's 30-day window (6l's threshold definition reused verbatim, not redefined), emit "Pattern {slug} crossed the mechanization threshold ({N} occurrences) — run `/sdlc-audit` to triage mechanization." Skips `mechanization_assessed: excluded` clusters. Nudge only — no triage or field-writing from within the review skill.
+
+**Rationale:** Threshold crossings now surface in the same review that causes them, while the decision itself stays at audit triage where CD gates it.
+
+---
+
 ## 2026-07-20: Guardrail exclusion marker — "assessed, deliberately not mechanized, do not re-propose"
 
 **Origin:** Inter-session report from Sleeved's D121 reconciliation against the just-landed `guardrail-lifecycle.md` — first downstream contact with the contract found a gap: a cluster clearing the 3+ threshold whose manifestations are heterogeneous (would need a semantic allowlist that doesn't exist). CD chose exclusion, but the contract had no way to record it, so 6l and reflect would re-propose every cycle and CD would re-dismiss forever.
