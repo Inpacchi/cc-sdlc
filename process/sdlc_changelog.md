@@ -34,6 +34,23 @@ Each entry contains:
 
 ---
 
+## 2026-07-20: Guardrail exclusion marker — "assessed, deliberately not mechanized, do not re-propose"
+
+**Origin:** Inter-session report from Sleeved's D121 reconciliation against the just-landed `guardrail-lifecycle.md` — first downstream contact with the contract found a gap: a cluster clearing the 3+ threshold whose manifestations are heterogeneous (would need a semantic allowlist that doesn't exist). CD chose exclusion, but the contract had no way to record it, so 6l and reflect would re-propose every cycle and CD would re-dismiss forever.
+
+**What happened:** Sleeved adopted local fields `mechanization_assessed: excluded` + `mechanization_reason`; upstream adopts the same names verbatim so the local data becomes canonical on next migration.
+
+**Changes made:**
+
+1. **`process/guardrail-lifecycle.md`** — New § "Assessed and Excluded — Do Not Re-Propose": field schema, semantics (set only at triage; exclude ≠ defer; guards only — knowledge promotion unaffected; reversible at triage; new occurrences accumulate info-tier but never auto-reopen). Red Flag row for the re-propose nag.
+2. **`skills/sdlc-audit/references/compliance-methodology.md`** — 6l.1 validates the fields; 6l.2 skips excluded clusters from guard-candidate output, lists them info-tier with reasons; output format shows the excluded section; triage note distinguishes decline-with-exclusion from defer.
+3. **`skills/sdlc-reflect/SKILL.md`** — Step 4b skips excluded clusters.
+4. **`skills/sdlc-review-code/SKILL.md`** — Step 6 optional-fields note covers the exclusion fields (don't strip them when appending occurrences).
+
+**Rationale:** A promotion pipeline that cannot record "no, and stop asking" trains CD to ignore its proposals. Exclusion keeps the decision durable, audit-visible (info-tier listing, never hidden), and reversible — without turning every dismissal into a permanent burial. Additive only; no reference-pattern changes, no `[contract-change]`.
+
+---
+
 ## 2026-07-20: Guardrail lifecycle, KEEP-IN-SYNC lens, codebase-health audit mode, verify-command convention (Sleeved upstream contributions)
 
 **Origin:** Cross-repo handoff from Sleeved (`docs/current_work/ideas/cc-sdlc-upstream-contributions_handoff.md`, sourced from Sleeved's 2026-07-17 repo-wide quality audit). Four framework-shaped improvements identified downstream that would be clobbered by `sdlc-migrate` if implemented there.

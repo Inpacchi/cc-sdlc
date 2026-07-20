@@ -304,7 +304,7 @@ patterns:
     promoted: false
 ```
 
-Two optional fields appear on clusters after audit-triage promotions — do not remove them when appending occurrences: `knowledge_entry` (path to the promoted knowledge file, set with `promoted: true`) and `mechanized_guard` (the lint rule / drift test / CI check that now catches the pattern — schema and lifecycle in `[sdlc-root]/process/guardrail-lifecycle.md`).
+Optional fields appear on clusters after audit-triage decisions — do not remove them when appending occurrences: `knowledge_entry` (path to the promoted knowledge file, set with `promoted: true`), `mechanized_guard` (the lint rule / drift test / CI check that now catches the pattern), and `mechanization_assessed: excluded` + `mechanization_reason` (CD assessed guard promotion and declined — do not re-propose). Schema and lifecycle in `[sdlc-root]/process/guardrail-lifecycle.md`.
 
 **Step 6d. Surface in the report.** After logging, add a section to the report output:
 

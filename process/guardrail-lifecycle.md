@@ -35,6 +35,22 @@ When CD approves guard promotion, add this field to the cluster in `docs/reviews
 
 A cluster can carry both `knowledge_entry` (knowledge promotion) and `mechanized_guard` (guard promotion) — the two paths are complementary, not exclusive. `promoted: true` continues to mean knowledge promotion only; a guard-only cluster keeps `promoted: false` with a `mechanized_guard` field.
 
+## Assessed and Excluded — "Do Not Re-Propose"
+
+Some patterns clear the occurrence threshold but should not be mechanized — the manifestations are heterogeneous, the guard would need semantics that don't exist, or the noise cost outweighs the catch rate. Dismissing such a candidate at triage is not enough: without a durable record, 6l and reflect re-propose it every cycle and CD re-dismisses forever. Record the decision on the cluster:
+
+```yaml
+    mechanization_assessed: excluded
+    mechanization_reason: "{why the pattern resists mechanization or isn't worth it — recorded at triage}"
+```
+
+Semantics:
+
+- **Set only by CD decision at triage.** Exclude is distinct from defer: defer means "re-propose next cycle"; exclude means "assessed, deliberately not mechanized, stop proposing."
+- **6l and reflect skip excluded clusters** in guard-candidate output. They still report the excluded count (with reasons available) so the decision stays audit-visible — skipped is not hidden.
+- **Guards only.** Exclusion says nothing about knowledge promotion — an excluded cluster can still be (or become) a knowledge-promotion candidate.
+- **Reversible at triage.** If the pattern's manifestations later converge on a mechanizable signature, CD clears the fields at triage and the cluster re-enters normal candidate flow. New occurrences alone do not reopen the question — they accumulate on the cluster as usual and appear in the info-tier excluded listing, where CD can choose to revisit.
+
 ## What Qualifies for Guard Promotion
 
 A pattern is **mechanizable** when its next occurrence could be detected without human judgment:
@@ -77,3 +93,4 @@ A guard does not need to be airtight to be worth having. A grep-based CI check i
 | "The guard exists, so the pattern is handled" | 6n exists because guards go stale: rules get disabled, tests get skipped, patterns mutate past the regex. |
 | "Fixing the lint config is out of scope for this review" | If the finding matches a guarded cluster, the guard update is part of the fix, not an extra. |
 | "This pattern is judgment-heavy but I'll propose a lint rule anyway" | Name the machine-checkable signature or take the knowledge path. A noisy guard trains people to suppress guards. |
+| "CD dismissed this candidate last cycle, but it's still at threshold — re-propose" | Dismissed ≠ excluded. If CD said "don't re-propose," record `mechanization_assessed: excluded` with the reason; if the fields are already set, skip it. Re-proposing an excluded cluster every cycle is the nag this field exists to end. |

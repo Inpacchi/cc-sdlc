@@ -272,7 +272,7 @@ Scan `docs/reviews/recurring-patterns.yaml` for pattern clusters that have cross
 
 **Step 6l.1 — Read and validate the log:**
 
-Read `docs/reviews/recurring-patterns.yaml`. Validate basic structure: top-level `patterns` key is a list, each entry has `slug`, `description`, `lens`, `first_seen`, `occurrences` (list), and `promoted` (boolean). Optional fields set by prior triage promotions: `knowledge_entry` (path, with `promoted: true`) and `mechanized_guard` (guard record per `[sdlc-root]/process/guardrail-lifecycle.md` — validated in Dimension 6n).
+Read `docs/reviews/recurring-patterns.yaml`. Validate basic structure: top-level `patterns` key is a list, each entry has `slug`, `description`, `lens`, `first_seen`, `occurrences` (list), and `promoted` (boolean). Optional fields set by prior triage decisions: `knowledge_entry` (path, with `promoted: true`), `mechanized_guard` (guard record per `[sdlc-root]/process/guardrail-lifecycle.md` — validated in Dimension 6n), and `mechanization_assessed: excluded` + `mechanization_reason` (deliberately not mechanized — CD decision).
 
 **Step 6l.2 — Scan for threshold breaches:**
 
@@ -283,6 +283,8 @@ For each cluster where `promoted: false`:
 3. If count >= 2: flag as **watch** (approaching threshold — Info severity).
 
 For each promotion candidate (and for already-promoted clusters that keep accumulating occurrences), additionally assess **guard promotion**: is the pattern mechanizable — detectable by a textual, structural, or behavioral signature per `[sdlc-root]/process/guardrail-lifecycle.md` § "What Qualifies for Guard Promotion"? If yes and the cluster has no `mechanized_guard`, flag it as a **guard-promotion candidate** and name the signature and proposed guard type. A cluster recurring *after* knowledge promotion is the strongest guard-promotion signal.
+
+**Skip clusters marked `mechanization_assessed: excluded`** from guard-candidate output — CD already assessed them and chose not to mechanize (`[sdlc-root]/process/guardrail-lifecycle.md` § "Assessed and Excluded"). List them info-tier with occurrence counts and recorded reasons instead; CD may clear the exclusion at triage if the pattern's signature has changed, but the audit never re-proposes on its own. Exclusion does not affect knowledge-promotion candidacy.
 
 **Step 6l.3 — Cross-reference against existing knowledge:**
 
@@ -314,10 +316,12 @@ REVIEW PATTERN RECURRENCE
 
   Already promoted: {N} clusters marked promoted: true
   Guarded: {N} clusters with mechanized_guard (freshness in Dimension 6n)
+  Excluded from mechanization (info — CD-assessed, not re-proposed): {N} clusters
+    - domain-constants-in-shared-code (4 occurrences; reason: heterogeneous manifestations, would need a semantic allowlist that doesn't exist)
   Total clusters: {N}
 ```
 
-Promotion candidates from 6l are surfaced in step 11 (interactive triage) alongside promotion candidates from 6c and prune candidates from 6k. The triage workflow is the same: CD decides per candidate — promote to knowledge store, promote to a mechanized guard, both, defer, or dismiss. On knowledge promotion, the cluster's `promoted` field is set to `true` and a `knowledge_entry` field is added with the path to the new knowledge file. On guard promotion, a `mechanized_guard` field is added per `[sdlc-root]/process/guardrail-lifecycle.md` — the project implements the guard (the framework never ships project-specific rules), and the field records where it lives so 6n can watch it.
+Promotion candidates from 6l are surfaced in step 11 (interactive triage) alongside promotion candidates from 6c and prune candidates from 6k. The triage workflow is the same: CD decides per candidate — promote to knowledge store, promote to a mechanized guard, both, defer, or dismiss. On knowledge promotion, the cluster's `promoted` field is set to `true` and a `knowledge_entry` field is added with the path to the new knowledge file. On guard promotion, a `mechanized_guard` field is added per `[sdlc-root]/process/guardrail-lifecycle.md` — the project implements the guard (the framework never ships project-specific rules), and the field records where it lives so 6n can watch it. When CD declines a guard candidate with "don't re-propose" (as opposed to defer), record `mechanization_assessed: excluded` + `mechanization_reason` on the cluster so future scans skip it.
 
 ### 6m. Deep Verify — Retroactive Content Verification (opt-in, never default)
 
