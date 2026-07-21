@@ -34,6 +34,20 @@ Each entry contains:
 
 ---
 
+## 2026-07-21: 6n guard check verifies effective enforcement, not presence; versioning convention recorded
+
+**Origin:** Sleeved D121 field report (via inter-session, evidence in Sleeved ADR-15 and the D121 result doc): their `zustand-selector-missing-useshallow` guard shipped with the rule set to `off` behind a stale justification comment — both 6n's "guard exists" check and their local wiring script read it as fully wired, because presence-in-config was checked but not effective enforcement. Related sub-gap: conditional-registration wrappers (`plugin.rules["x"] ? {...} : {}`) defeat text-grep wiring checks the same way. Caught only by a completion review. Sleeved correctly declined a local patch (framework owns check design) and fed it upstream.
+
+**Changes made:**
+
+1. **`process/guardrail-lifecycle.md`** — Freshness check 1 renamed "Guard exists and enforces": parse effective severity (`off` = CRITICAL, same as missing; `warn` = WARNING unless `notes` documents advisory intent), evaluate conditional registration for runtime collapse, skipped tests and continue-on-error CI steps count as not enforcing, known-bad-sample fallback when static reading is inconclusive. `location` spec and new Red Flag ("presence ≠ enforcement") updated to match.
+2. **`skills/sdlc-audit/references/compliance-methodology.md`** — 6n check 1 extended identically.
+3. **`CLAUDE.md`** — Versioning convention recorded (CD decision, v1.7.0/v1.7.1): minor for new contract surface (new cross-skill contracts, command surface, downstream data schema); patch for iterations, fixes, and check strengthening within existing contracts.
+
+**Rationale:** The first field deployment of 6n produced a guard that passed the freshness check while enforcing nothing — the exact failure 6n exists to catch. One fix (read effective enforcement from config semantics, not string presence) closes both the severity blind spot and the conditional-wrapper gap.
+
+---
+
 ## 2026-07-20: Review-time mechanization-threshold trigger in sdlc-review-code
 
 **Origin:** Sleeved D121 (CD-approved, via inter-session): per-review pattern logging and audit-cadence triage were only connected by the next audit happening to run — a cluster could cross the mechanization threshold and sit unproposed for weeks.

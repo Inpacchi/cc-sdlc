@@ -80,6 +80,16 @@ Use conventional commits with scopes matching the content area:
 
 The scope tells you *what* changed; the type tells you *how* it changed.
 
+### Versioning (release tags)
+
+Tags are `vMAJOR.MINOR.PATCH`; pushing a `v*` tag triggers the release workflow (notes auto-generated from changelog entries since the previous tag). Bump rules (CD decision, set with v1.7.0/v1.7.1):
+
+- **Minor** — new contract surface: a new cross-skill contract or process convention, new command surface (a new skill or skill mode), or new data schema that downstream projects write into their own files.
+- **Patch** — everything else: fixes, doc iterations, and strengthening of checks/steps within existing contracts — even when the commits are `feat`-typed.
+- **Major** — breaking changes requiring active migration behavior (`skeleton/contract_changes.yaml` entries, renames, phrasing-contract breaks).
+
+Do not cut or push tags without CD's explicit request.
+
 ### Consistency Checks (mandatory after process changes)
 
 **1. Manifest completeness** — Every file on disk must be in `skeleton/manifest.json` and vice versa:

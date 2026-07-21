@@ -31,7 +31,7 @@ When CD approves guard promotion, add this field to the cluster in `docs/reviews
       notes: "{optional — suppression mechanism, known blind spots}"
 ```
 
-`location` must be specific enough for Dimension 6n to verify the guard still exists: an ESLint rule name in a named config file, a test file path, a CI job and step. "We added a lint rule" without a locator fails the freshness check by construction.
+`location` must be specific enough for Dimension 6n to verify the guard still exists *and still enforces*: an ESLint rule name in a named config file, a test file path, a CI job and step. "We added a lint rule" without a locator fails the freshness check by construction.
 
 A cluster can carry both `knowledge_entry` (knowledge promotion) and `mechanized_guard` (guard promotion) — the two paths are complementary, not exclusive. `promoted: true` continues to mean knowledge promotion only; a guard-only cluster keeps `promoted: false` with a `mechanized_guard` field.
 
@@ -69,7 +69,7 @@ For each cluster with a `mechanized_guard` field, `sdlc-audit` checks:
 
 | Check | Signal | Finding |
 |-------|--------|---------|
-| **Guard exists** | `location` resolves — the rule is in the config, the test file exists, the CI step is present | Missing → CRITICAL: guard recorded but not wired; the pattern log claims protection that isn't there |
+| **Guard exists and enforces** | `location` resolves AND enforcement is effective — presence of the rule-name string in config is not enough. Lint rules: parse the *effective* severity (`off` = not wired; `warn` = advisory unless `notes` documents that as intended); conditional registration (e.g., `plugin.rules["x"] ? {...} : {}`) must be evaluated for runtime collapse, not text-grepped. Tests: a skipped test enforces nothing. CI: a disabled or continue-on-error step enforces nothing. When static reading is inconclusive, run the guard against a known-bad sample | Missing or set to `off` → CRITICAL: guard recorded but not enforcing; the pattern log claims protection that isn't there. `warn`/advisory without documented intent → WARNING |
 | **Recurred despite guard** | Cluster has occurrences dated after `mechanized_guard.created` | WARNING: guard ineffective — blind spot, wrong scope, or suppressed; propose modify at triage |
 | **Suppression growth** | Count in-code suppressions of the guard (e.g., disable comments naming the rule, skipped tests) and compare against the count noted at the last audit | WARNING when growing: the guard is being routed around, not obeyed |
 | **Never fired** (best-effort) | For guards with observable history (CI logs, test runs): zero hits since creation | INFO: either the pattern is extinct (candidate for retirement) or the guard is miswired (verify against a known-bad sample) |
@@ -94,3 +94,4 @@ A guard does not need to be airtight to be worth having. A grep-based CI check i
 | "Fixing the lint config is out of scope for this review" | If the finding matches a guarded cluster, the guard update is part of the fix, not an extra. |
 | "This pattern is judgment-heavy but I'll propose a lint rule anyway" | Name the machine-checkable signature or take the knowledge path. A noisy guard trains people to suppress guards. |
 | "CD dismissed this candidate last cycle, but it's still at threshold — re-propose" | Dismissed ≠ excluded. If CD said "don't re-propose," record `mechanization_assessed: excluded` with the reason; if the fields are already set, skip it. Re-proposing an excluded cluster every cycle is the nag this field exists to end. |
+| "The rule name is in the config — the guard is wired" | Presence ≠ enforcement. A rule at `off`/`warn`, a skipped test, a continue-on-error CI step, or a conditional registration that collapses at runtime all read as wired to a text grep. Parse the effective severity, or run the guard against a known-bad sample. |
