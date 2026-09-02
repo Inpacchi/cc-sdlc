@@ -185,6 +185,17 @@ When dispatching domain agents for phases that involve external library integrat
 
 ---
 
+## Unbuilt-Capability Rule: Ask, Don't Silently Cut
+
+**"I couldn't find this exposed in the codebase" is a reason to ask, never a reason to unilaterally cut, soften, or "correct" a stakeholder's request** — especially when the request originates from leadership/CD. A codebase-only investigation proves a capability isn't *currently exposed through an API or UI*; it does not prove the capability is unbuildable, and it never sees a requester's own context (a roadmap commitment, an intended feature, a known-but-underdocumented data source).
+
+**The trap:** treating "not found via grep across the exposed application layer" as equivalent to "the underlying data doesn't support this." Products routinely collect data that already supports a described capability even when no current API or view exposes it — such requests can be real, buildable features, not just copy to soften into vagueness or cut.
+
+**Correct procedure when a stakeholder's description doesn't match a currently-exposed capability:**
+1. Check whether the *underlying data* (not just the application layer) already supports it — models, raw tables, survey/event logs. "Not exposed via any current endpoint" and "the data doesn't exist" are different findings; report which one is actually true.
+2. **Ask the requester** — via `AskUserQuestion` — rather than deciding unilaterally. Lay out what's confirmed to exist and what would need to be built, and let them choose: build it for real, ship the language as explicitly forward-looking/illustrative, or hold it. Do not present "I cut/softened it" as a fait accompli in a summary after the fact.
+3. This applies doubly to requests from leadership. Their language may be intentionally illustrative (an example of the *kind* of capability the product can offer, not a literal existing feature) rather than a factual claim needing "correction" — don't assume factual intent from marketing-style phrasing without asking which it is.
+
 ## Code Verification Rule
 
 **Never assert how specific code behaves without reading it first.**

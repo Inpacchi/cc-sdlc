@@ -13,6 +13,10 @@ Every project should expose **one discoverable one-shot command** that runs the 
 
 Agents run verification constantly — before review loops, after fixes, before commits. When the gate is a single command, it gets run; when it's four commands scattered across packages, steps get skipped and the review loop enters with known-red checks. `sdlc-initialize` checks for this command during setup (Phase 9b) and offers to scaffold it; the codebase-health audit (`sdlc-audit` health mode, Sweep 1) flags its absence as a gap.
 
+## Companion: the Project Launch-Recipe Skill
+
+The verify command answers "do the checks pass"; a separate question — "does the change work in the *running* app" — deserves its own durable home. Mature projects grow a **project-local launch-recipe skill** (conventionally `.claude/skills/verify/`): the concrete build/launch commands per component, ports, how to drive the app end-to-end (including how to get authenticated), and the accumulated environment gotchas that otherwise burn a rediscovery session each time (stale containers, port-forward failures, techniques for capturing racy UI states). It is project-specific by nature — the framework defines the convention, not the content. Seed one the first time a session has to rediscover how to launch the app; grow it every time a new gotcha costs real time. Claude Code's built-in `run` behavior looks for exactly such a skill before falling back to guessing.
+
 ## Scaffolding Guidance
 
 When creating a verify command in a project that lacks one:

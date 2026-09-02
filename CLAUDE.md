@@ -85,9 +85,9 @@ The scope tells you *what* changed; the type tells you *how* it changed.
 
 Tags are `vMAJOR.MINOR.PATCH`; pushing a `v*` tag triggers the release workflow (notes auto-generated from changelog entries since the previous tag). Bump rules (CD decision, set with v1.7.0/v1.7.1):
 
-- **Minor** — new contract surface: a new cross-skill contract or process convention, new command surface (a new skill or skill mode), or new data schema that downstream projects write into their own files.
+- **Minor** — new contract surface: a new cross-skill contract or process convention, new command surface (a new skill or skill mode), or new data schema that downstream projects write into their own files. **Purely additive `contract_changes.yaml` entries — opt-in bundle debuts and manifest field additions with back-fill defaults — are minor, not major** (CD decision, 2026-09-02): they force no behavior change on existing installs that decline them.
 - **Patch** — everything else: fixes, doc iterations, and strengthening of checks/steps within existing contracts — even when the commits are `feat`-typed.
-- **Major** — breaking changes requiring active migration behavior (`skeleton/contract_changes.yaml` entries, renames, phrasing-contract breaks).
+- **Major** — breaking changes that force active migration behavior on existing installs (renames, phrasing-contract breaks, non-optional `contract_changes.yaml` entries).
 
 Do not cut or push tags without CD's explicit request.
 

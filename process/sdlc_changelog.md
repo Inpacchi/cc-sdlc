@@ -50,6 +50,20 @@ Each entry contains:
 
 ---
 
+## 2026-09-02: Unbuilt-Capability Rule, launch-recipe skill convention, additive-contract versioning
+
+**Origin:** Three adoptions from reviewing paire-appetit's recent evolution alongside this session's own decisions. (1) Paire's newest CLAUDE.md rule (their commit of 2026-09-02): a session investigated only the exposed application layer, concluded a leadership-requested capability "does not exist," and cut the language unilaterally — when the underlying data actually supported building it. (2) Paire's project-local `verify` skill — a build/launch recipe with accumulated environment gotchas — is a pattern worth naming upstream even though its content is project-specific. (3) CD decision on versioning for this release.
+
+**Changes made:**
+
+1. **`CLAUDE-SDLC.md`** — New § Unbuilt-Capability Rule: Ask, Don't Silently Cut (generalized from paire's). "Not found in the codebase" is a reason to ask, never to unilaterally cut or soften a stakeholder's request: check the underlying data (not just the application layer), ask via `AskUserQuestion` with what exists vs. what would need building, and never present a cut as a fait accompli — doubly so for leadership requests, whose phrasing may be deliberately illustrative.
+2. **`process/verify-command.md`** — New § Companion: the Project Launch-Recipe Skill: the convention of a project-local `.claude/skills/verify/` skill capturing launch commands, end-to-end drive instructions, and accumulated environment gotchas; seeded on first rediscovery, grown per gotcha. The framework defines the convention; the content stays project-specific.
+3. **`CLAUDE.md`** (source repo) — Versioning refinement (CD decision, 2026-09-02): purely additive `contract_changes.yaml` entries — opt-in bundle debuts, manifest field additions with back-fill defaults — are **minor**, not major; major is reserved for entries that force behavior change on existing installs.
+
+**Rationale:** (1) is a judgment-boundary rule that generalizes cleanly: codebase absence ≠ infeasibility, and the requester owns the call. (2) names a pattern the built-in `run` behavior already looks for, so projects stop rediscovering their own launch procedure. (3) keeps major bumps meaningful — a convention no project is forced to adopt should not signal breakage.
+
+---
+
 ## 2026-09-02: Debut github-provenance bundle (upstreamed from paire-appetit D52)
 
 **Origin:** paire-appetit built a full GitHub provenance convention as their D52 — every tracked deliverable narrated into a GitHub issue via lifecycle checkpoints (CP-1…CP-12 + CP-S1/S2), with Projects v2 board tracking under a forward-only floor rule, a never-block invariant, SHA-pinned artifact links, and a read-only reconciliation audit dimension. It was live-verified against real boards (their Phase 6), which among other things discovered that GitHub accepts a wrong board's option ID silently — making name-then-resolve-per-session the only guard against silent mis-writes. This entry generalizes and upstreams the whole convention as an opt-in bundle. Design cross-checked via the external review gate (Codex, 18 findings triaged): config survives migration via a PROJECT-SECTION-wrapped config block, "configured" is machine-defined (`enabled: true` set last in Enablement), issues-only mode (`board: none`) supported, label provisioning and preflight in Enablement, predecessor detection at the migrate offer.
