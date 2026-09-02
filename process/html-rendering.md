@@ -50,6 +50,8 @@ If CD accepts, CC renders the engineer-audience variant using document-type defa
 
 **Render precedes approval — never in sequence with it.** When the deliverable feeds an approval gate (spec approval, the plan-mode execution prompt), the render offer is its own interaction, fully resolved before approval is requested: offer the render, and if CD accepts, generate and deliver the HTML so CD can review it *before* being asked to approve. Never bundle the render offer into the approval question, and never render after approval as a follow-up step — a post-approval render cannot inform the decision it exists to support.
 
+**The walkthrough is the render's peer at every offer point.** When a skill reaches its render-offer moment, offer both consumption modes: the HTML render (`sdlc-render` — a durable readable view) or a guided interactive walkthrough (`sdlc-walkthru` — paced, part-by-part comprehension with questions answered against real code). CD picks one, both, or neither; whichever is picked must fully resolve before any approval question, under the same render-precedes-approval rule.
+
 Skills that offer a post-skill render:
 
 | Skill | Deliverable | Document Type |

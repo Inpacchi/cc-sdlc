@@ -89,6 +89,7 @@ Installed only when CD opts into the `design` bundle during `/sdlc-initialize`.
 | Command | Action |
 |---------|--------|
 | `/sdlc-render` | Render a markdown deliverable as a self-contained HTML file. Interactive scoping for audience (multi-select), purpose, and emphasis. Offered (opt-in) after skills write deliverables — CD chooses whether to render. |
+| `/sdlc-walkthru` or "walk me through the spec/plan" | Guided part-by-part interactive walkthrough of an SDLC artifact — CD paces with "next", questions answered against real code, feedback classified and dispatched mid-flight. The render's peer at every offer point. |
 
 ## Testing
 

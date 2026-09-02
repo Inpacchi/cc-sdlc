@@ -34,6 +34,22 @@ Each entry contains:
 
 ---
 
+## 2026-09-02: Adopt sdlc-walkthru from paire-appetit — guided artifact walkthroughs as the render's peer
+
+**Origin:** paire-appetit built `sdlc-walkthru` as a comprehension-first alternative to the HTML render: an SDLC artifact delivered as a paced, part-by-part guided tour — CD paces with "next", questions are answered against verified code, and feedback is classified and dispatched to revision agents mid-flight. Its first use surfaced three material spec corrections a static read had missed. Fully generic apart from two project references, so it upstreams as a core skill (not a bundle — no external dependencies).
+
+**Changes made:**
+
+1. **`skills/sdlc-walkthru/SKILL.md`** — New core skill, ported near-verbatim: preflight segmentation by story (4–7 parts, chaptered past ~8), the pacing contract, part-delivery rules (≤350 words, lead with the claim, one part per turn), verify-then-answer for questions, feedback classification via the invoking skill's revision protocol (SPEC-REVISION et al.), wrap-up-before-gate. Generalized: the project-specific principles reference now consults `[sdlc-root]/knowledge/agent-context-map.yaml`; paire's terminology example dropped.
+2. **`process/html-rendering.md`** — § Post-skill render offer: the walkthrough is the render's peer at every offer point — skills offer both consumption modes; whichever CD picks resolves before any approval question. (This closes the follow-up paire's own Integration note recorded as not-yet-done.)
+3. **`CLAUDE-SDLC.md`** — Post-write render-offer paragraph updated to offer the walkthrough alongside the render.
+4. **`skeleton/manifest.json`** — `skills/sdlc-walkthru/SKILL.md` added to `source_files.skills`.
+5. **`process/commands.md`** — `/sdlc-walkthru` row.
+
+**Rationale:** A document's job is durability; a decision-maker's job is judgment. The walkthrough serves the approval gates the render already serves, with a different consumption mode — and it demonstrably surfaces corrections a static read misses. New installs get it via the normal file copy; existing installs receive it on next migration as an ordinary new framework skill.
+
+---
+
 ## 2026-09-02: Debut github-provenance bundle (upstreamed from paire-appetit D52)
 
 **Origin:** paire-appetit built a full GitHub provenance convention as their D52 — every tracked deliverable narrated into a GitHub issue via lifecycle checkpoints (CP-1…CP-12 + CP-S1/S2), with Projects v2 board tracking under a forward-only floor rule, a never-block invariant, SHA-pinned artifact links, and a read-only reconciliation audit dimension. It was live-verified against real boards (their Phase 6), which among other things discovered that GitHub accepts a wrong board's option ID silently — making name-then-resolve-per-session the only guard against silent mis-writes. This entry generalizes and upstreams the whole convention as an opt-in bundle. Design cross-checked via the external review gate (Codex, 18 findings triaged): config survives migration via a PROJECT-SECTION-wrapped config block, "configured" is machine-defined (`enabled: true` set last in Enablement), issues-only mode (`board: none`) supported, label provisioning and preflight in Enablement, predecessor detection at the migrate offer.
