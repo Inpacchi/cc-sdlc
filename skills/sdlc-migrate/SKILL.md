@@ -306,8 +306,8 @@ Before any file copying, compute the **effective install set** for this project 
 
 1. Read `skeleton/manifest.json` from the cc-sdlc source.
 2. Read `.sdlc-manifest.json` from the project. If it has an `installed_bundles` array, treat that as the authoritative list of installed bundles.
-3. **Fallback for pre-bundles installs:** If `installed_bundles` is missing (projects installed before the bundles manifest existed), for each bundle in `manifest.bundles` check whether **any** of its listed skill paths exist as installed skills in the project. If yes, mark the bundle as **installed** and append it to `installed_bundles` — the migrate's §4.5 manifest update will persist this.
-4. Build the effective skills list: `source_files.skills` ∪ (bundle.skills for every installed bundle).
+3. **Fallback for pre-bundles installs:** If `installed_bundles` is missing (projects installed before the bundles manifest existed), for each bundle in `manifest.bundles` check whether **any** of its listed **skill** paths exist as installed skills in the project. If yes, mark the bundle as **installed** and append it to `installed_bundles` — the migrate's §4.5 manifest update will persist this. **Bundle `process` paths are deliberately excluded from this detection:** a project can hand-roll a process doc at the same path before the bundle ever debuts (that is exactly the predecessor case §4.7 exists for), and auto-marking such a project as bundle-installed would blind-overwrite its hand-rolled version and skip the adopt/preserve-config flow.
+4. Build the effective skills list: `source_files.skills` ∪ (bundle.skills for every installed bundle). Likewise the effective process list: `source_files.process` ∪ (bundle.process for every installed bundle that declares any).
 5. Log the detection result to the migration report:
    ```
    BUNDLE DETECTION
@@ -318,8 +318,9 @@ Before any file copying, compute the **effective install set** for this project 
 **Rules:**
 
 - **Never remove** installed bundle skills, even when a bundle is detected as only partially installed. The project chose its subset; migration preserves that choice.
-- Bundle skill paths are **exempt from §2.1a "Remove Deleted and Moved Files"** — they are not considered upstream-deleted even though they live outside `source_files.skills`.
-- Bundle skills are **eligible for §2.1 direct-copy updates**: if the bundle is installed, its skill files propagate upstream changes the same way `source_files` skills do.
+- Bundle skill paths are **exempt from §2.1a "Remove Deleted and Moved Files"** — they are not considered upstream-deleted even though they live outside `source_files.skills`. Bundle `process` paths get the same exemption.
+- Bundle skills are **eligible for §2.1 direct-copy updates**: if the bundle is installed, its skill files propagate upstream changes the same way `source_files` skills do. Bundle `process` files likewise.
+- Bundle `fragments` are **refreshed, not preserved**: §2.1's marker step discards any existing `BUNDLE-SECTION` blocks in a target file and injects the current fragment content from the cc-sdlc source (step 7 of the marker-preservation flow below). Hand-edits inside `BUNDLE-SECTION` markers are lost by design — see `[sdlc-root]/process/project-section-markers.md` § BUNDLE-SECTION Markers.
 - Bundles not installed in the project are **not** copied during §2.1 — they are offered at the end of migration (§4.7).
 
 ### 2.1 Direct Copy Files
@@ -353,6 +354,7 @@ Before overwriting any file:
 4. After copying the upstream file, re-inject each block at its original heading position (unless user chose to update/remove during review)
 5. If the heading no longer exists in the upstream file, append the block at the end of the file with a warning comment: `<!-- MIGRATION WARNING: heading "[heading]" no longer exists in upstream — block preserved at end of file -->`
 6. Log all re-injected blocks and review decisions in the migration report
+7. **Inject bundle fragments (`BUNDLE-SECTION`).** After PROJECT-SECTION re-injection: strip any `BUNDLE-SECTION` blocks remaining in the file, then for each installed bundle whose `fragments` map targets this file (alphabetical bundle order), append the fragment content **read from the cc-sdlc source at `[target_tag]`** wrapped in `BUNDLE-SECTION-START/END: [bundle]/[fragment]` markers. No content review — these blocks are upstream-owned; hand-edits inside them are discarded by design. Injection counts as a file write for the adapter `post-file-write` callout. Log each injected fragment in the migration report.
 
 ### 2.1d PROJECT-SECTION Content Review
 
@@ -595,6 +597,8 @@ Skills have two layers:
 **Key rule:** If a section exists in cc-sdlc but not in the project, add it. If a section was removed from cc-sdlc, remove it from the project. If a section was modified in cc-sdlc, update the framework logic while keeping project-specific values.
 
 **PROJECT-SECTION preservation with review:** If `PROJECT-SECTION` blocks exist within a skill being content-merged, apply the §2.1d content review process. Present findings to user before re-injection. These blocks contain project-specific content (e.g., dispatcher table entries added by `sdlc-develop-agent`, custom modifications from `sdlc-develop-skill`) that survive migration — but may need updating if upstream changed the surrounding framework patterns.
+
+**BUNDLE-SECTION fragment injection (applies to every content-merged framework file, §2.2–§2.4 alike):** after the merge (and any PROJECT-SECTION re-injection) completes for a file, run the same fragment pass as §2.1 step 7 — strip any remaining `BUNDLE-SECTION` blocks, then for each installed bundle whose `fragments` map targets this file, append the current fragment from the cc-sdlc source at `[target_tag]`. Most fragment targets are content-merged skills, so skipping this pass here would leave their bundle hooks stale or stripped while only direct-copied targets refresh.
 
 ### 2.3 Content-Merge: Disciplines
 
@@ -928,12 +932,13 @@ After migration, update `.sdlc-manifest.json`:
 1. **Update `source_version`** to the target release tag (e.g., `v1.4.0`). Also set `source_version_sha` to the tag's commit hash for precise diff resolution.
 2. **Add missing fields** if the manifest predates this migration:
    - `sdlc_root`: set to `[sdlc-root]` detected in pre-flight
-   - `installed_files`: back-fill if absent (hash every file in `skeleton/manifest.json` source_files at its installed path; mark `installed_at: "backfilled-{CURRENT_VERSION}"`)
+   - `installed_files`: back-fill if absent (hash every file in `skeleton/manifest.json` source_files **plus every installed bundle's `skills` and `process` files** at its installed path; mark `installed_at: "backfilled-{CURRENT_VERSION}"`)
    - `installed_bundles`: back-fill from the §2.0a detection result (empty array if no bundles detected)
    - `last_applied_contract_id`: if absent, back-fill to `"0000"` before consuming pending_changes; if already set, leave untouched until step 5 below
    - **Any field added by a `manifest_field_added` contract entry in pending_changes** — apply its `default` value
 3. **Refresh `installed_files` hashes.** For every file the migration just touched — direct copies, content-merges, drift resolutions — recompute SHA-256 of the final on-disk content and update the corresponding entry. For drift cases where CD chose "keep mine", record the current hash so the next migration sees a clean baseline. For files CD chose to overwrite with upstream, the new hash reflects the upstream content. This keeps drift detection accurate for the next migration.
 4. **Update `installed_bundles`** to include any bundles CD accepted in §4.7.
+4a. **Update `bundle_fragments`** to reflect every `BUNDLE-SECTION` fragment injected this run (§2.1 step 7 and §4.7 installs): label `bundle/fragment` → target path. Remove entries for fragments upstream no longer declares (their blocks were stripped by §2.1 step 7's strip pass and not re-added).
 5. **Update `last_applied_contract_id`** to the newest `id` in `contract_changes.yaml`. Do this only after §4.3a, §4.7, and every other pending-change consumer has run successfully — if any of them failed, leave the old id so the next migration retries.
 
 ```bash
@@ -1044,10 +1049,14 @@ For each such bundle:
 > New bundle available since your last migration: **`[bundle.name]`** — [bundle.description]
 >
 > Skills it would add: [list bundle.skills]
+> Process docs it would add: [list bundle.process — omit line if none]
+> Framework files it would hook into: [list distinct bundle.fragments targets — omit line if none]
 >
 > Install it now?
 
-If CD accepts: copy the bundle's skills into the project (same direct-copy flow as §2.1), append the bundle name to `installed_bundles`, and log the install in the migration report.
+**Predecessor detection (before the offer, for bundles carrying `process` files):** check whether any of the bundle's `process` file paths already exist in the project. A hit means the project hand-rolled an equivalent of this bundle before it existed upstream (or received one from another project). Do **not** blind-overwrite. Say what was found and ask CD: **adopt** (preserve the existing file's `PROJECT-SECTION` blocks — including any configuration block — into the bundle's version, replace the body, then flag any project-local `PROJECT-SECTION` blocks in *other* framework files that duplicate what the bundle's fragments now provide, so CD can retire them) or **skip** (leave the hand-rolled version alone; the bundle is not installed and the debut entry is consumed as declined).
+
+If CD accepts: copy the bundle's skills and `process` files into the project (same direct-copy flow as §2.1), inject its `fragments` into their target files per `[sdlc-root]/process/project-section-markers.md` § BUNDLE-SECTION Markers, **then** append the bundle name to `installed_bundles` and its fragments to `bundle_fragments` (§4.5 steps 4/4a), and log the install in the migration report. If the bundle's process doc carries an **Enablement** section, tell CD it exists and offer to run it now — installing without configuring is valid and leaves the bundle inert.
 
 If CD declines: do nothing. The debut entry will be marked consumed when §4.5 advances `last_applied_contract_id`, so this bundle won't be offered again automatically. CD can still opt in later by editing `.sdlc-manifest.json` → `installed_bundles` manually, which §2.0a will honor on the next migration.
 

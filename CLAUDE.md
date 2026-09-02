@@ -19,6 +19,7 @@ Example: "ask before rendering HTML instead of auto-rendering" is not a session 
 | `knowledge/` | Domain knowledge stores (installed to target's `ops/sdlc/knowledge/`) |
 | `disciplines/` | Discipline parking lots (installed to target's `ops/sdlc/disciplines/`) |
 | `plugins/` | Required/optional plugin setup guides (installed to target's `ops/sdlc/plugins/`) |
+| `bundles/` | Opt-in bundle fragments (`bundles/<bundle>/fragments/*.md`) — injected into target framework files inside `BUNDLE-SECTION` markers when the bundle is installed. A bundle's skills and process docs live in the normal `skills/`/`process/` locations, listed under `manifest.bundles` instead of `source_files`. |
 | `skeleton/` | `manifest.json` — canonical directory structure and file list. `contract_changes.yaml` — structured, append-only record of changes requiring active migration behavior (renames, bundle debuts, manifest field additions). Consumed by `sdlc-migrate`; not installed into projects. |
 | `CLAUDE-SDLC.md` | SDLC content merged into target project's CLAUDE.md during initialization (not a separate file) |
 | `BOOTSTRAP.md` | One-file bootstrap — curl this, say "Bootstrap SDLC", framework installs itself |
@@ -97,8 +98,8 @@ Do not cut or push tags without CD's explicit request.
 # Validate JSON
 python3 -c "import json; json.load(open('skeleton/manifest.json'))"
 ```
-- Glob `skills/*/SKILL.md`, `skills/*/references/*.md`, `agents/*.md`, `knowledge/**/*.yaml`, `knowledge/**/*.d2`, `process/*.md`, `templates/*.md`, `disciplines/*.md`, `plugins/*.md`, `playbooks/*.md`
-- Compare against manifest `source_files` entries. Report any file on disk not in manifest, or manifest entry without a file.
+- Glob `skills/*/SKILL.md`, `skills/*/references/*.md`, `agents/*.md`, `knowledge/**/*.yaml`, `knowledge/**/*.d2`, `process/*.md`, `templates/*.md`, `disciplines/*.md`, `plugins/*.md`, `playbooks/*.md`, `bundles/*/fragments/*.md`
+- Compare against manifest `source_files` entries **and `bundles` entries** (bundle skills/process/fragments are listed under `manifest.bundles`, not `source_files`). Report any file on disk not in manifest, or manifest entry without a file.
 
 **2. Stale reference scan** — Grep for old/removed names across the codebase:
 - Any recently renamed/removed skills, agents, plugins, or concepts

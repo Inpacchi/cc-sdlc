@@ -21,7 +21,7 @@
     "ops",
     "ops/sdlc",
     "ops/sdlc/process",
-        "ops/sdlc/examples",
+    "ops/sdlc/examples",
     "ops/sdlc/disciplines",
     "ops/sdlc/knowledge",
     "ops/sdlc/knowledge/architecture",
@@ -269,7 +269,7 @@
     "optional_plugins": []
   },
   "bundles": {
-    "_comment": "Opt-in skill bundles. sdlc-initialize prompts CD during setup; skills are installed only if the bundle is accepted. sdlc-migrate preserves existing installs and offers any missing bundles without removing skills the project already has.",
+    "_comment": "Opt-in bundles. sdlc-initialize prompts CD during setup; a bundle's files are installed only if the bundle is accepted. sdlc-migrate preserves existing installs and offers newly debuted bundles once, without removing files the project already has. Each bundle lists 'skills' (installed to .claude/skills/) and may list 'process' (docs installed to [sdlc-root]/process/) and 'fragments' (map of fragment source file -> target framework file, injected inside upstream-owned BUNDLE-SECTION markers per process/project-section-markers.md and refreshed from source on every migration — never preserved verbatim). Installer ordering: copy files, inject fragments, record in .sdlc-manifest.json installed_bundles/bundle_fragments last.",
     "design": {
       "description": "UI/UX design consultation.",
       "skills": [

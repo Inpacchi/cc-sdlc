@@ -34,6 +34,23 @@ Each entry contains:
 
 ---
 
+## 2026-09-02: Bundle fragment injection (BUNDLE-SECTION) and bundle process files
+
+**Origin:** Upstream adoption of paire-appetit's GitHub provenance convention (their D52). The convention needs ~40–50-line checkpoint sections inside six core lifecycle skills plus an auditor dimension — content that must not ship as dormant dead weight to projects that decline the bundle, and must not freeze at install time the way hand-wrapped `PROJECT-SECTION` blocks do. Design cross-checked via the external review gate (Codex), which drove the idempotency, ordering, offline-validation, and predecessor-detection requirements. This is Phase 1 (mechanism); the `github-provenance` bundle itself is Phase 2.
+
+**Changes made:**
+
+1. **`process/project-section-markers.md`** — New § BUNDLE-SECTION Markers: upstream-owned sibling of `PROJECT-SECTION`. Labels namespaced `bundle/fragment`; declared in `manifest.bundles.<name>.fragments` (fragment source file → target framework file); injection is strip-then-append (idempotent), alphabetical bundle order, no nesting; hand-edits inside markers are lost on migration by design; presence must match `installed_bundles`/`bundle_fragments`; injection counts as a file write for adapter `post-file-write`. Installer ordering rule: copy files → inject fragments → record in manifest last (crash under-claims, re-run repairs). Direct-copy flow and Validation sections updated to match.
+2. **`skeleton/manifest.json`** — `bundles._comment` documents the extended schema: optional `process` and `fragments` fields alongside `skills`. (Also normalized a stray-indent directory entry.)
+3. **`skills/sdlc-initialize/SKILL.md`** — Phase 1b bundle offer lists process docs and fragment targets; effective install set includes bundle `process` files; fragment injection step after all copies; `installed_bundles`/`bundle_fragments` written only after files + fragments land; Enablement-section offer for bundles that need per-project configuration. Manifest schema example and field docs gain `bundle_fragments`.
+4. **`skills/sdlc-migrate/SKILL.md`** — §2.0a: effective process list, file-existence fallback covers bundle process paths, fragments-are-refreshed rule. §2.1 marker preservation: new step 7 injects current fragments from source at `[target_tag]` after PROJECT-SECTION re-injection. §4.5: new step 4a maintains `bundle_fragments` (add injected, drop upstream-removed). §4.7: offer lists process/fragment surface; predecessor detection for bundles whose `process` paths already exist in the project (adopt-preserving-config vs. skip); accept path copies process files, injects fragments, records manifest entries last, offers Enablement.
+5. **`agents/sdlc-compliance-auditor.md`** — Dimension 7 marker validation extended: `BUNDLE-SECTION` pairing, orphaned-bundle-content check against `installed_bundles`, partial-install check against `bundle_fragments`, nesting with `PROJECT-SECTION` is critical.
+6. **`skeleton/contract_changes.yaml`** — Entry 0013 (`manifest_field_added`, `bundle_fragments`, default `{}`) documenting the schema extension and the adapter posture.
+
+**Rationale:** Bundles could previously carry only whole skills, so any bundle needing hooks inside core framework files had two bad options: dormant sections shipped to everyone (recurring context cost in every downstream invocation, forever) or project-local `PROJECT-SECTION` blocks (frozen at install, silently staling as upstream evolves — the exact failure paire's hand-wrapped Dimension 10 block exhibits). Fragment injection gives bundles a third path: core files stay clean upstream, hooks exist only where the bundle is installed, and hooks refresh from source on every migration because migration overwrites with a clean upstream copy and re-appends the current fragment — no merging, ever. The mechanism is general-purpose: any future bundle (testing infrastructure, incident extensions) rides the same rails.
+
+---
+
 ## 2026-07-21: 6n guard check verifies effective enforcement, not presence; versioning convention recorded
 
 **Origin:** Sleeved D121 field report (via inter-session, evidence in Sleeved ADR-15 and the D121 result doc): their `zustand-selector-missing-useshallow` guard shipped with the rule set to `off` behind a stale justification comment — both 6n's "guard exists" check and their local wiring script read it as fully wired, because presence-in-config was checked but not effective enforcement. Related sub-gap: conditional-registration wrappers (`plugin.rules["x"] ? {...} : {}`) defeat text-grep wiring checks the same way. Caught only by a completion review. Sleeved correctly declined a local patch (framework owns check design) and fed it upstream.

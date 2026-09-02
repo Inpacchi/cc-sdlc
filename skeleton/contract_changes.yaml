@@ -43,8 +43,9 @@
 #   renames: list of [from, to] pairs. Agent names (without `.md`).
 #
 # bundle_debut
-#   bundle: { name, description, skills } — matches the shape in
-#     skeleton/manifest.json → bundles.
+#   bundle: { name, description, skills[, process, fragments] } — matches
+#     the shape in skeleton/manifest.json → bundles (process and fragments
+#     since contract 0013).
 #   Informational: the real bundle definition lives in manifest.bundles.
 #   Listed here so migrate can surface "this bundle was introduced since
 #   your last migration — want to adopt it?" in §4.7.
@@ -232,3 +233,27 @@ changes:
       sdlc-create-agent renamed to sdlc-develop-agent to parallel
       sdlc-develop-skill. Migrate removes old directories via §2.1a and
       rewrites all cross-references.
+
+  - id: "0013"
+    date: "2026-09-02"
+    title: "Bundle schema: process files + BUNDLE-SECTION fragments"
+    type: manifest_field_added
+    file: .sdlc-manifest.json
+    field: bundle_fragments
+    default: {}
+    changelog_ref: "2026-09-02: Bundle fragment injection (BUNDLE-SECTION) and bundle process files"
+    notes: >
+      skeleton/manifest.json bundles may now carry `process` (docs installed
+      to [sdlc-root]/process/) and `fragments` (fragment source file ->
+      target framework file, injected inside upstream-owned BUNDLE-SECTION
+      markers; refreshed from source on every migration, never preserved
+      verbatim — see process/project-section-markers.md § BUNDLE-SECTION
+      Markers). .sdlc-manifest.json gains `bundle_fragments` recording
+      injected fragments (label -> target path) so the compliance auditor
+      can verify block presence without reaching the cc-sdlc source. No
+      per-project action beyond the field back-fill until a bundle carrying
+      fragments debuts. Adapter action: fragment injection counts as a file
+      write — post-file-write transformation runs on the target after
+      injection, so adapters see fragment content through the normal
+      per-file callout; no transformation-table change required.
+

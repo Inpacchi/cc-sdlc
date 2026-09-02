@@ -196,7 +196,11 @@ As part of migration integrity (Dimension 7), validate `PROJECT-SECTION` marker 
    - `PROJECT-SECTION-START` without a matching `END` → severity: major (content boundary undefined, migration may corrupt)
    - `PROJECT-SECTION-END` without a matching `START` → severity: major (orphaned end marker)
    - Mismatched labels between `START` and `END` in the same pair → severity: critical (wrong content may be preserved or lost)
-4. **Report findings** in the standard findings table format with exact file paths and line numbers for each marker
+4. **Validate `BUNDLE-SECTION` markers** (same scan, including `.claude/skills/` and `.claude/agents/`; pairing and label-match rules identical to steps 2–3). Additionally, against `.sdlc-manifest.json`:
+   - A `BUNDLE-SECTION` block whose label's `bundle/` prefix is not in `installed_bundles` → severity: major (orphaned bundle content — bundle removed or never recorded)
+   - An entry in `bundle_fragments` whose target file lacks the corresponding block → severity: major (partial install — re-running migration repairs it)
+   - A `BUNDLE-SECTION` nested inside or overlapping a `PROJECT-SECTION` (or vice versa) → severity: critical (injection and preservation will corrupt each other)
+5. **Report findings** in the standard findings table format with exact file paths and line numbers for each marker
 
 ## Anti-Rationalization Table
 

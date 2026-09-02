@@ -2,6 +2,8 @@
 
 A convention for protecting project-specific content in **process and skill files** across migrations. Only applies to framework files that get overwritten during `sdlc-migrate`.
 
+This document defines two marker types with opposite ownership: `PROJECT-SECTION` (project-owned content, preserved verbatim across migrations) and `BUNDLE-SECTION` (upstream-owned bundle fragments, discarded and re-injected fresh on every migration — see § BUNDLE-SECTION Markers below).
+
 ---
 
 ## When Markers Are Needed
@@ -76,6 +78,55 @@ Labels must be descriptive and unique within the file. Use this pattern:
 
 ---
 
+## BUNDLE-SECTION Markers
+
+The inverse of `PROJECT-SECTION`: **upstream-owned** content injected into framework files only when an opt-in bundle is installed. Where `PROJECT-SECTION` protects project content from upstream overwrites, `BUNDLE-SECTION` lets a bundle hook into core framework files without those hooks shipping to projects that declined the bundle — and without the hooks freezing at whatever version was current at install time.
+
+| | `PROJECT-SECTION` | `BUNDLE-SECTION` |
+|---|---|---|
+| Owner | The project | Upstream (the bundle's fragment file) |
+| Present when | The project added it | The owning bundle is in `installed_bundles` |
+| On migration | Extracted before overwrite, re-injected **verbatim** (after content review) | **Discarded and re-injected fresh** from the bundle's current fragment file |
+| Hand-edits inside | Preserved | **Lost on next migration** — by design |
+
+### Markers
+
+```html
+<!-- BUNDLE-SECTION-START: bundle-name/fragment-name -->
+... injected verbatim from the bundle's fragment file ...
+<!-- BUNDLE-SECTION-END: bundle-name/fragment-name -->
+```
+
+The label is `{bundle}/{fragment}` — the bundle's manifest name plus the fragment file's basename without extension (e.g., `github-provenance/sdlc-plan`). The slash-namespaced label is what distinguishes a `BUNDLE-SECTION` label from a `PROJECT-SECTION` label mechanically.
+
+### Source of Truth
+
+A bundle declares fragments in `skeleton/manifest.json` → `bundles.<name>.fragments`, a map of fragment source file → target framework file:
+
+```json
+"fragments": {
+  "bundles/github-provenance/fragments/sdlc-plan.md": "skills/sdlc-plan/SKILL.md"
+}
+```
+
+The fragment file in the cc-sdlc source IS the content; the injected block in the target file is a projection of it. To change what installed projects see, change the fragment file upstream — the next migration propagates it. Installers record every injected fragment in `.sdlc-manifest.json` → `bundle_fragments` (label → target path) so the compliance auditor can verify presence without reaching the cc-sdlc source.
+
+### Rules
+
+1. **One fragment per (bundle, target file).** A bundle that needs two additions to the same file puts them in one fragment.
+2. **Injection is strip-then-append.** Remove any existing block carrying the same label — the markers, the content between them, **and any blank lines immediately preceding the start marker** (the separator blank line the previous injection added; leaving it behind accretes whitespace on every re-run) — then normalize the file to end with a single newline and append one blank line, the start marker, the fragment content, and the end marker. Re-running injection is idempotent — byte-identical output.
+3. **Deterministic order.** When multiple bundles target the same file, blocks are appended in alphabetical bundle-name order.
+4. **No nesting or overlap.** A `BUNDLE-SECTION` may not contain or intersect a `PROJECT-SECTION` or another `BUNDLE-SECTION`. Fragments are self-contained end-of-file sections.
+5. **Never hand-edit inside the markers.** Project customizations to bundle behavior go in a separate `PROJECT-SECTION` block (or upstream, as a fragment change). Anything written inside a `BUNDLE-SECTION` is silently replaced at the next migration.
+6. **Presence must match `installed_bundles`.** A `BUNDLE-SECTION` block in a project without the owning bundle installed — or an installed bundle with declared fragments missing from their targets — is a Dimension 7 finding (partial install; re-running the bundle install or migration repairs it).
+7. **Fragment injection counts as a file write.** When an adapter plugin declares `post-file-write`, the adapter's transformation runs on the target file **after** injection (or re-runs, if the file was already transformed this pass) — fragment content may contain knowledge-layer references that the adapter must transform like any other framework content.
+
+### Installer Ordering
+
+Copy the bundle's files → inject its fragments → record the bundle in `installed_bundles` and its fragments in `bundle_fragments` **last**. A crash mid-install then under-claims rather than over-claims: the manifest never lists a bundle whose hooks are missing, and a re-run (or the next migration) completes the injection idempotently.
+
+---
+
 ## How Migration Uses Markers
 
 ### Direct Copy Files (§2.1)
@@ -88,12 +139,14 @@ Labels must be descriptive and unique within the file. Use this pattern:
 3. Copy the upstream file (overwriting the project's version)
 4. Re-inject each block at its original heading position (unless user chose to update/remove)
 5. If the heading no longer exists upstream, append at end with a warning comment
+6. Inject `BUNDLE-SECTION` fragments for installed bundles targeting this file (strip-then-append from the cc-sdlc source at the target release — no content review; these blocks are upstream-owned)
 
 ### Content-Merge Files (§2.2–2.4)
 
 1. **Review marked blocks against upstream changes (§2.1d)** — same classification and user presentation
 2. Framework sections outside markers are updated to match upstream
 3. Markers are never moved, split, or merged automatically — but user can choose to update content during review
+4. Inject `BUNDLE-SECTION` fragments for installed bundles targeting this file, exactly as in the direct-copy flow — most fragment targets are content-merged skills, so this path must run the injection pass too
 
 ### Deviation Detection (§2.1c)
 
@@ -111,6 +164,8 @@ The `sdlc-compliance-auditor` validates marker integrity as part of Dimension 7 
 - No orphaned `END` without a `START`
 - No mismatched labels between paired markers
 - Correct comment syntax for the file type
+- `BUNDLE-SECTION` blocks only where the owning bundle is in `installed_bundles`, and every fragment recorded in `bundle_fragments` present in its target file (both directions of the presence rule)
+- No nesting between `BUNDLE-SECTION` and `PROJECT-SECTION` blocks
 
 The `sdlc-reviewer` recognizes markers when reviewing skills and agents:
 

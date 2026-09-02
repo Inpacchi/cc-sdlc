@@ -242,13 +242,19 @@ Read `skeleton/manifest.json` from the cc-sdlc source. This manifest defines the
 > Optional bundle available: **`[bundle-name]`** — [bundle.description]
 >
 > Skills it adds: [list bundle.skills]
+> Process docs it adds: [list bundle.process — omit line if none]
+> Framework files it hooks into: [list distinct bundle.fragments targets — omit line if none]
 >
 > Install it?
 >
 > - Yes — include in this installation
 > - No — skip (you can add it later via `/sdlc-migrate`)
 
-Record the accepted bundles. The effective skills install set is `source_files.skills` ∪ (bundle.skills for every accepted bundle). Record accepted bundles in `.sdlc-manifest.json` under an `installed_bundles: []` field so `sdlc-migrate` can tell them apart from legacy installs that pre-date the bundles manifest.
+Record the accepted bundles. The effective install set adds every accepted bundle's `skills` and `process` files to the corresponding `source_files` lists. After all Phase 1 file copies complete, inject each accepted bundle's `fragments` into their target files per `[sdlc-root]/process/project-section-markers.md` § BUNDLE-SECTION Markers: strip any block with the same label, append the fragment content at end of file wrapped in `BUNDLE-SECTION-START/END: [bundle]/[fragment]` markers. Fragment injection counts as a file write — if an adapter declares `post-file-write`, run it on the target after injection.
+
+Record accepted bundles in `.sdlc-manifest.json` under an `installed_bundles: []` field, and every injected fragment under `bundle_fragments` (label → target path), so `sdlc-migrate` can tell them apart from legacy installs that pre-date the bundles manifest. **Ordering:** a bundle's entries are written to `installed_bundles`/`bundle_fragments` only after its files are copied and its fragments injected — a crashed install then under-claims rather than over-claims, and a re-run repairs it idempotently.
+
+If an accepted bundle's process doc carries an **Enablement** section (per-project configuration the bundle needs before it activates), tell CD it exists and offer to run it at the end of initialization. Installing without configuring is valid — the bundle stays inert until its Enablement completes.
 
 **Create directories:**
 ```
@@ -323,7 +329,7 @@ When an adapter is present, this skill delegates specific phases per `[sdlc-root
 
 When no adapter is found, behavior is identical to before this protocol existed.
 
-**Write `.sdlc-manifest.json`** at project root. Includes an `installed_files` map of SHA-256 hashes for every framework file written in Phase 1. This enables `sdlc-migrate` to detect post-install manual edits (drift) before overwriting.
+**Write `.sdlc-manifest.json`** at project root. Includes an `installed_files` map of SHA-256 hashes for every framework file written in Phase 1 — **including accepted bundles' `skills` and `process` files, hashed after fragment injection**. This enables `sdlc-migrate` to detect post-install manual edits (drift) before overwriting.
 
 ```json
 {
@@ -336,6 +342,7 @@ When no adapter is found, behavior is identical to before this protocol existed.
   "file_count": <number of files installed>,
   "sdlc_root": "<SDLC_ROOT value from detection above>",
   "installed_bundles": ["design"],
+  "bundle_fragments": {},
   "last_applied_contract_id": "<newest id in skeleton/contract_changes.yaml at install time>",
   "adapter": null,
   "installed_files": {
@@ -348,6 +355,8 @@ When no adapter is found, behavior is identical to before this protocol existed.
 ```
 
 **`installed_bundles`:** List of opt-in bundle names the project accepted during initialization. Empty array if none accepted. `sdlc-migrate` uses this field as the authoritative signal for which bundles are installed; for projects installed before bundles existed, migrate falls back to file-existence detection.
+
+**`bundle_fragments`:** Map of injected `BUNDLE-SECTION` fragment labels (`bundle/fragment`) to their target file paths, written when a bundle with `fragments` is installed. Empty object if no installed bundle carries fragments. The compliance auditor validates block presence against this map without needing the cc-sdlc source.
 
 **`source_version` and `source_version_sha`:** `source_version` stores the release tag (e.g., `v1.4.0`) — resolve via `git -C [cc-sdlc-path] tag -l 'v[0-9]*.[0-9]*.[0-9]*' --sort=-v:refname | head -1`. `source_version_sha` stores the tag's commit hash for precise diffs. If no tags exist (pre-release source), fall back to `"unknown"` for the tag and store the HEAD SHA. `sdlc-migrate` uses these fields to determine what changed between the installed version and the latest release.
 
