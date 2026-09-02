@@ -37,7 +37,7 @@ PREFLIGHT (read + segment) → OPENING (map + pacing contract)
 
 ## Manager Rule
 
-Read and follow `[sdlc-root]/process/manager-rule.md`. The walkthrough narration is yours; artifact revisions triggered by feedback are dispatched to the artifact's writing agent (background, while the walkthrough continues). Dispatch prompts describe WHAT changed and WHY — implementation of the revision is the agent's domain.
+Read and follow `[sdlc-root]/process/manager-rule.md`. The walkthrough narration is yours; artifact revisions triggered by feedback are dispatched to the artifact's writing agent (a background agent dispatch, per the invoking skill's dispatch protocol, while the walkthrough continues). Dispatch prompts describe WHAT changed and WHY — implementation of the revision is the agent's domain.
 
 ## Steps
 
@@ -74,7 +74,7 @@ Each part is one message, and each message obeys:
 
 ### 4. Questions mid-walkthrough
 
-- **Verify before answering.** Follow the Code Verification Rule: if the question touches how code behaves ("how did that 40 get computed?"), read the actual code first, then step through it with real values. An answer sourced from the artifact's own claims is only acceptable when the artifact itself verified them — say which it is.
+- **Verify before answering.** Follow the Code Verification Rule (in the project's CLAUDE.md): if the question touches how code behaves ("how did that 40 get computed?"), read the actual code first, then step through it with real values. An answer sourced from the artifact's own claims is only acceptable when the artifact itself verified them — say which it is.
 - **Escalate depth on demand.** A "explain step 3 further" gets a deeper, slower pass on that one point — not a repeat of the summary.
 - **Build an interactive exploration artifact when a picture or stepper beats prose** — e.g., a self-contained HTML step-through of an algorithm with sliders and worked numbers, written to `docs/current_work/ideas/` and opened in the browser. Offer it when the reader is circling one mechanism; don't build one for a question a paragraph answers. If asked whether the artifact is faithful, verify every claim in it against source and say what was corrected.
 - **Wrong-premise corrections flow back.** If the reader corrects a fact, the correction is load-bearing: restate it, verify its implications, and treat it as feedback (step 5).
@@ -96,7 +96,7 @@ After the final part:
 - **Recap in one short paragraph** what the reader would be approving/accepting — the whole artifact compressed to its decisions.
 - **List changes made during the walkthrough** (classification, what changed, where recorded) so the reader knows the document they heard is the document that now exists.
 - **Surface any open decisions** that remain unmade.
-- **Hand back to the invoking gate.** If the walkthrough served an approval gate (spec approval, plan approval), the gate question comes *after* the walkthrough fully resolves — via `AskUserQuestion`, in its own turn, never bundled into the final part. The walkthrough is the alternative to the HTML render at that gate: like the render, it must complete *before* the approval question, never after.
+- **Hand back to the invoking gate.** If the walkthrough served an approval gate (spec approval, plan approval), the gate question comes *after* the walkthrough fully resolves — via `AskUserQuestion` per `[sdlc-root]/process/collaboration_model.md` § Tool Rule, in its own turn, never bundled into the final part. The walkthrough is the alternative to the HTML render at that gate: like the render, it must complete *before* the approval question, never after.
 
 ## Output
 

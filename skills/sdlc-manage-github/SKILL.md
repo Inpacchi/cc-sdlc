@@ -96,7 +96,7 @@ it may only exist as a project board item — fall back to step 2 and filter the
 title or `content.number` (draft items exist only on the board).
 
 **When the question is "is this actually done" — not just "what does this issue say" —
-`comments` is not optional.** Per `github-checkpoints.md` § Comment Templates,
+`comments` is not optional.** Per `[sdlc-root]/process/github-checkpoints.md` § Comment Templates,
 completion/outcome is posted as a *comment* (CP-9 through CP-12), while the body is written
 once early and often never updated — a backfilled deliverable's body routinely still
 describes the original, since-superseded ask. Pulling the body alone and treating an
@@ -183,7 +183,7 @@ goes through Steps 1–6 above, with normal confirmation. An SDLC checkpoint cal
 
 **Step 4's confirmation requirement above does not apply when a recipe in this section is
 invoked by an SDLC checkpoint.** Three things make that safe, stated in both this file and
-`github-checkpoints.md` so neither can contradict the other: the target is unambiguous (the
+`[sdlc-root]/process/github-checkpoints.md` so neither can contradict the other: the target is unambiguous (the
 issue is identified by its `Dnn` join key), the transition is determined by the checkpoint
 map rather than chosen in the moment, and CD's completion of the policy doc's § Enablement is
 the standing authorization for the entire checkpoint map. The exemption is scoped to these
@@ -242,7 +242,7 @@ guessing when the repo is genuinely ambiguous.
   append one entry via `log-miss`, let the calling SDLC step continue. Never abort the step
   that called the recipe.
 
-### 1. `create-or-link`
+### Recipe 1: `create-or-link`
 
 Idempotent-by-`Dnn`-prefix issue creation, with the pre-deliverable promotion path and an
 idempotent board add. Labels ride on the create call — there is no separate label recipe
@@ -255,14 +255,14 @@ bodies, and label sets:
 | | `mode: registration` (called by CP-1) | `mode: parked` (called by CP-11b) |
 |---|---|---|
 | Title | `Dnn — <Deliverable Name>` | `Parked: <short description>` — **no `Dnn` prefix** |
-| Body | CP-1 body, `github-checkpoints.md` § Comment Templates | CP-11b body, `github-checkpoints.md` § Comment Templates |
+| Body | CP-1 body, `[sdlc-root]/process/github-checkpoints.md` § Comment Templates | CP-11b body, `[sdlc-root]/process/github-checkpoints.md` § Comment Templates |
 | Labels | universal label [+ conditional labels], classified per the policy doc's § Labels | universal label only — parked work has no scoped file set yet to classify conditionals against |
 | Issue type (when `issue_types` is not `none`) | Classified per the policy doc's § Issue Types | `Task`, always — parked work has no settled shape to classify |
 | Steps 1–2 (`Dnn`-prefix search, promotion) | Run | **Skipped** — see below |
 | Step 5 (`link-sub-issue`) | Run when the deliverable is a sub-deliverable | **Skipped** — parked work has no D-number, so it cannot be a sub-deliverable yet |
 
 1. **[`mode: registration` only] Search for an existing issue carrying the `Dnn` prefix**,
-   open and closed, in the driving repo resolved per `github-checkpoints.md` § Repo
+   open and closed, in the driving repo resolved per `[sdlc-root]/process/github-checkpoints.md` § Repo
    Selection:
    ```bash
    gh issue list --repo <org>/<repo> --state all --search "\"Dnn\" in:title" \
@@ -347,16 +347,16 @@ bodies, and label sets:
    registered is a sub-deliverable (`D41a`, not `D41`): call `link-sub-issue` (recipe 3)
    with the parent's issue and this new issue.
 
-Call budget note: CP-1 carries `github-checkpoints.md`'s documented exemption (≤8 happy
+Call budget note: CP-1 carries `[sdlc-root]/process/github-checkpoints.md`'s documented exemption (≤8 happy
 path / ≤10 worst case) — the only checkpoint permitted to exceed the ordinary ≤4 `gh`-call
 cap, because it fires exactly once per deliverable rather than accumulating across a
 multi-phase deliverable.
 
-### 2. `resolve-and-write-status`
+### Recipe 2: `resolve-and-write-status`
 
 Role→name→option-ID resolution on the **target** board, the floor-rule read-then-write, and
 the CP-S2 exact-match exception. Roles, names, and ranks are read from
-`github-checkpoints.md`'s config block — this recipe carries no copy of its own. **A silent
+`[sdlc-root]/process/github-checkpoints.md`'s config block — this recipe carries no copy of its own. **A silent
 no-op in issues-only mode.** A target role mapped to `null` in the config is likewise a
 no-op (the caller still posts its comment).
 
@@ -407,7 +407,7 @@ this recipe or CP-10 goes to act, treat it as expected rather than a failure to 
    field-list fetch (invalidating the in-memory cache entry for this project number) and
    retry this write once. Any other failure class follows the shared remediation table.
 
-### 3. `link-sub-issue`
+### Recipe 3: `link-sub-issue`
 
 Parent/sub linking via GitHub's **native** parent/sub-issue relationship — not a label, not
 a comment convention. Boards' Parent issue / Sub-issues progress fields populate
@@ -437,7 +437,7 @@ automatically once the relationship exists; there is no separate board-field wri
 Fires only when the deliverable being registered is a sub-deliverable (called from
 `create-or-link` step 5); it is never invoked standalone by a checkpoint.
 
-### 4. *(no separate label recipe)*
+### Recipe 4: *(no separate label recipe)*
 
 Deliberately absent. Labels are applied on `create-or-link`'s own `gh issue create --label`
 call (recipe 1, step 3) — this is what keeps CP-1 near the floor of its call-budget
@@ -445,7 +445,7 @@ exemption, and labels travel with the issue across boards where a board field wo
 fetch/edit pair per board. There is no follow-up label-edit call anywhere in the checkpoint
 recipes.
 
-### 5. `commit-and-push-artifact`
+### Recipe 5: `commit-and-push-artifact`
 
 Pathspec-scoped commit, push, and SHA capture. Never bulk-staged, never force-pushed.
 
@@ -486,7 +486,7 @@ Pathspec-scoped commit, push, and SHA capture. Never bulk-staged, never force-pu
    pre-rebase SHA is not the SHA that was actually pushed, and linking it would point to a
    commit that exists only in a discarded local state.
 
-### 6. `log-miss`
+### Recipe 6: `log-miss`
 
 Atomic single-line JSONL append to `[sdlc-root]/.local/github-checkpoint-misses.jsonl`. This
 path must already be gitignored (§ Enablement step 5) before any recipe writes to it.
@@ -566,6 +566,15 @@ caught by a second layer of validation.
   reviews, repo file operations, commit/branch operations, repo-scoped issue search).
 - **Does NOT replace:** the github MCP tools for PR review workflows or repo file
   operations — this skill exists for the Projects v2 board gap and quick CLI round-trips.
+- **Relationship to the deliverable lifecycle:** the board column roles
+  (`registered`…`staged`) are a deliberately separate, per-project-configurable taxonomy —
+  not a rename of `[sdlc-root]/process/deliverable_lifecycle.md`'s catalog statuses. The
+  catalog remains canonical; the policy doc's config block maps roles to board column names,
+  and the audit dimension's § 10e table maps catalog statuses onto role floors. This skill
+  transitions board cards, never catalog state.
 - **DRY notes:** § SDLC Checkpoint Recipes is the single place the checkpoint `gh`/`git`
-  call sequences exist — `github-checkpoints.md` and the calling skills' fragments all point
-  here rather than carrying their own copies.
+  call sequences exist — `[sdlc-root]/process/github-checkpoints.md` and the calling skills' fragments all point
+  here rather than carrying their own copies. The recipes stay **inline in this file, not in
+  `references/`, deliberately**: checkpoints call them by name under the never-block
+  invariant, and an extra "read the reference file first" hop is exactly the kind of
+  skippable indirection the framework's directive-inlining convention exists to avoid.

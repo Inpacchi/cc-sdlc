@@ -34,6 +34,19 @@ Each entry contains:
 
 ---
 
+## 2026-09-02: sdlc-reviewer quality-gate fixes for the two new skills
+
+**Origin:** `sdlc-reviewer` dispatched on both skills added today (`sdlc-manage-github`, `sdlc-walkthru`) per the new-skill quality gate. Eight findings total; six applied, two declined with rationale.
+
+**Changes made:**
+
+1. **`skills/sdlc-manage-github/SKILL.md`** — 8 bare `github-checkpoints.md` references expanded to `[sdlc-root]/process/github-checkpoints.md` (path-variable rule); recipe headers renamed `### Recipe N:` to disambiguate from the Steps numbering; Integration gains the board-roles-vs-catalog-statuses relationship (roles are a deliberate per-project taxonomy; the catalog stays canonical) and documents why the recipes stay inline rather than in `references/` (an extra read-hop is skippable indirection under the directive-inlining convention — declining the extraction suggestion).
+2. **`skills/sdlc-walkthru/SKILL.md`** — `AskUserQuestion` gate question now cites `[sdlc-root]/process/collaboration_model.md` § Tool Rule; the Code Verification Rule citation names its home (project CLAUDE.md); the Manager Rule section names the dispatch mechanism. Declined: renaming `walkthru` → `walkthrough` — the contraction matches the trigger phrases and the originating project's installed skill name, which keeps migration continuity.
+
+**Rationale:** The quality gate exists precisely for ported content — both declined findings are deliberate design choices now documented in place, so the next reviewer reads a decision instead of re-flagging a gap.
+
+---
+
 ## 2026-09-02: Adopt sdlc-walkthru from paire-appetit — guided artifact walkthroughs as the render's peer
 
 **Origin:** paire-appetit built `sdlc-walkthru` as a comprehension-first alternative to the HTML render: an SDLC artifact delivered as a paced, part-by-part guided tour — CD paces with "next", questions are answered against verified code, and feedback is classified and dispatched to revision agents mid-flight. Its first use surfaced three material spec corrections a static read had missed. Fully generic apart from two project references, so it upstreams as a core skill (not a bundle — no external dependencies).
