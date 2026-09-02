@@ -275,6 +275,25 @@
       "skills": [
         "skills/sdlc-design-consult/SKILL.md"
       ]
+    },
+    "github-provenance": {
+      "description": "GitHub provenance: every tracked deliverable narrated into a GitHub issue via lifecycle checkpoints, with optional Projects v2 board tracking and audit reconciliation. Inert until configured via the policy doc's Enablement section.",
+      "skills": [
+        "skills/sdlc-manage-github/SKILL.md"
+      ],
+      "process": [
+        "process/github-checkpoints.md"
+      ],
+      "fragments": {
+        "bundles/github-provenance/fragments/sdlc-plan.md": "skills/sdlc-plan/SKILL.md",
+        "bundles/github-provenance/fragments/sdlc-lite-plan.md": "skills/sdlc-lite-plan/SKILL.md",
+        "bundles/github-provenance/fragments/sdlc-execute.md": "skills/sdlc-execute/SKILL.md",
+        "bundles/github-provenance/fragments/sdlc-lite-execute.md": "skills/sdlc-lite-execute/SKILL.md",
+        "bundles/github-provenance/fragments/sdlc-handoff.md": "skills/sdlc-handoff/SKILL.md",
+        "bundles/github-provenance/fragments/sdlc-archive.md": "skills/sdlc-archive/SKILL.md",
+        "bundles/github-provenance/fragments/sdlc-audit.md": "skills/sdlc-audit/SKILL.md",
+        "bundles/github-provenance/fragments/sdlc-compliance-auditor.md": "agents/sdlc-compliance-auditor.md"
+      }
     }
   }
 }

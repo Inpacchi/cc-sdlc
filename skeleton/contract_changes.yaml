@@ -257,3 +257,45 @@ changes:
       injection, so adapters see fragment content through the normal
       per-file callout; no transformation-table change required.
 
+  - id: "0014"
+    date: "2026-09-02"
+    title: "Debut github-provenance bundle"
+    type: bundle_debut
+    bundle:
+      name: github-provenance
+      description: >
+        GitHub provenance: every tracked deliverable narrated into a GitHub
+        issue via lifecycle checkpoints, with optional Projects v2 board
+        tracking and audit reconciliation. Inert until configured via the
+        policy doc's Enablement section.
+      skills:
+        - skills/sdlc-manage-github/SKILL.md
+      process:
+        - process/github-checkpoints.md
+      fragments:
+        bundles/github-provenance/fragments/sdlc-plan.md: skills/sdlc-plan/SKILL.md
+        bundles/github-provenance/fragments/sdlc-lite-plan.md: skills/sdlc-lite-plan/SKILL.md
+        bundles/github-provenance/fragments/sdlc-execute.md: skills/sdlc-execute/SKILL.md
+        bundles/github-provenance/fragments/sdlc-lite-execute.md: skills/sdlc-lite-execute/SKILL.md
+        bundles/github-provenance/fragments/sdlc-handoff.md: skills/sdlc-handoff/SKILL.md
+        bundles/github-provenance/fragments/sdlc-archive.md: skills/sdlc-archive/SKILL.md
+        bundles/github-provenance/fragments/sdlc-audit.md: skills/sdlc-audit/SKILL.md
+        bundles/github-provenance/fragments/sdlc-compliance-auditor.md: agents/sdlc-compliance-auditor.md
+    changelog_ref: "2026-09-02: Debut github-provenance bundle (upstreamed from paire-appetit D52)"
+    notes: >
+      First bundle to carry process files and fragments (contract 0013).
+      Predecessor detection applies at the migrate §4.7 offer: a project
+      whose [sdlc-root]/process/github-checkpoints.md already exists
+      hand-rolled the convention before this debut (e.g. paire-appetit's
+      D52, the origin of this bundle) — offer ADOPT (preserve the existing
+      doc's project configuration into the new config block, replace the
+      body, retire hand-wrapped PROJECT-SECTION equivalents of the
+      fragments in other framework files, including any project-local
+      Dimension 10 block in sdlc-compliance-auditor and checkpoint
+      sections in the six lifecycle skills) or SKIP. The bundle is inert
+      after install until the policy doc's Enablement section is completed
+      (config block filled, enabled: true, labels provisioned, miss-log
+      path gitignored, reconciliation cutoff set). Issues-only mode
+      (board: none) is supported. Adapter action: normal post-file-write
+      transformation applies to injected fragments; no transformation-table
+      change required.
