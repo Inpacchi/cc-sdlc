@@ -160,7 +160,7 @@ Validate before saving:
 - Evidence section has at least one concrete reference (file path, line number, or verbatim error). A handoff with no evidence is a TODO, not a handoff.
 - Recommended next skill names a real, installed skill (or `direct-dispatch`).
 
-**Post-write: offer HTML render.** Ask CD whether they want an HTML render of the handoff doc for reading/sharing — don't render unprompted. If CD accepts, render a self-contained HTML file: read the design system from `[sdlc-root]/templates/html-design-system.html`, apply **handoff** document-type defaults from `[sdlc-root]/process/html-rendering.md`, and write a `.html` file alongside the markdown. If CD declines, the markdown stands as the deliverable.
+**Post-write: offer an explainer or a walkthrough.** Ask CD whether they want an HTML explainer (`sdlc-explain`, **handoff** storyboard) or a guided walkthrough (`sdlc-walkthru`) of the handoff doc — never unprompted. Mechanics and the precedes-approval rule: `[sdlc-root]/process/html-rendering.md` § Post-Skill Offer.
 
 ### 6. Surface the Handoff
 

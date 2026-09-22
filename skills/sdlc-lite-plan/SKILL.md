@@ -266,7 +266,7 @@ The most relevant worker domain agent writes the plan **and saves it directly to
 - **Approach comparison:** If the approach follows an existing codebase pattern, cite the precedent. Otherwise, briefly compare 2 approaches with tradeoffs and state which was selected.
 - **The writing agent must produce the complete plan.** Every section shown in the template above — scope, files, agents, phase dependencies table, phases, and post-execution review — must be present in the saved file. After the agent confirms the save, Read the file to verify. If the saved plan is missing any template section, re-dispatch the writing agent to complete it and re-save. Do not fill in missing sections yourself.
 
-**Post-write: offer HTML render.** Ask CD whether they want an HTML render of the plan for reading/sharing — don't render unprompted. If CD accepts, render a self-contained HTML file: read the design system from `[sdlc-root]/templates/html-design-system.html`, apply **plan** document-type defaults from `[sdlc-root]/process/html-rendering.md`, and write a `.html` file alongside the markdown. If CD declines, the markdown stands as the deliverable.
+**Post-write: offer an explainer or a walkthrough.** Ask CD whether they want an HTML explainer (`sdlc-explain`, **plan** storyboard) or a guided walkthrough (`sdlc-walkthru`) of the plan — never unprompted. Mechanics and the precedes-approval rule: `[sdlc-root]/process/html-rendering.md` § Post-Skill Offer.
 
 **FACTS Gate** — after verifying completeness, score each phase using the FACTS rubric in `[sdlc-root]/process/input-quality-gates.md`. This is a soft gate: present the per-phase scores and overall mean, then let the human decide whether to proceed to review or revise low-scoring phases first. Code snippets in lite plans count as Clarity evidence — phases with concrete signatures or diffs score higher on C than prose-only descriptions.
 
@@ -356,7 +356,7 @@ Where `NN` is the deliverable ID from step 0 and `{slug}` is a short snake_case 
 
 ### 5. Enter Plan Mode
 
-**Render precedes approval:** if CD opted into an HTML render of the plan, re-render now so the HTML reflects the final revised plan **before** the execution prompt appears — CD approves what they see rendered. Never render after the approval or in the same step as the approval prompt.
+**Explainer precedes approval:** if CD opted into an HTML explainer of the plan, regenerate it now so it reflects the final revised plan **before** the execution prompt appears — CD approves what they last saw explained. Never generate it after the approval or in the same step as the approval prompt.
 
 Follow these sub-steps in exact order. Do not combine or skip any.
 
@@ -399,7 +399,7 @@ The Manager Rule remains in effect per `[sdlc-root]/process/manager-rule.md` —
 | "The constraint is specified but the value isn't known yet" | That's a DECIDE finding. Mark it `USER DECISION NEEDED` so the reviewer routes it. |
 | "Only one domain is involved" | Most tasks touch 2+ domains. Check again. |
 | "I'll write the plan mode content from memory" | Follow step 5 exactly: Read the file with the Read tool, then paste the full Read output into EnterPlanMode. Working from memory produces summaries. |
-| "Plan's approved — now I'll offer the HTML render" | Render precedes approval, never follows it. The render offer resolves (declined, or accepted and delivered) before the approval gate; a post-approval render can't inform the decision it exists to support. |
+| "Plan's approved — now I'll offer the explainer" | Explainer precedes approval, never follows it. The offer resolves (declined, or accepted and delivered) before the approval gate; a post-approval explainer can't inform the decision it exists to support. |
 | "The plan is done, let me just quickly fix this other thing" | Manager Rule applies for the full session. Dispatch the domain agent. |
 | "I know how this library works" | Verify external library APIs via Context7. Never assume. VERIFICATION-GATE must show the resolved ID and version. |
 | "The pricing is $X/month for this service" | Check existing infrastructure first. If the project already runs on that platform, incremental cost differs dramatically from greenfield pricing. VERIFICATION-GATE must show what you checked. |

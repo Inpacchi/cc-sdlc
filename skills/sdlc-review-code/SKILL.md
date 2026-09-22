@@ -332,9 +332,9 @@ Do NOT ingest into the knowledge store from within this skill. Do NOT create par
 
 ### 7. HTML Review Artifact (opt-in)
 
-After completing the review report, ask CD whether they want an HTML render of it for reading/sharing — don't render unprompted. If CD declines, the markdown report stands as the deliverable and you skip the rest of this step.
+After completing the review report, ask CD whether they want an HTML explainer of it (`sdlc-explain`, **review** storyboard) or a guided walkthrough (`sdlc-walkthru`) — never unprompted. If CD declines both, the markdown report stands as the deliverable and you skip the rest of this step. If CD picks the walkthrough, invoke `sdlc-walkthru` and skip the rest of this step.
 
-If CD accepts, render it as a self-contained HTML file: read the design system from `[sdlc-root]/templates/html-design-system.html` and apply **review** document-type defaults from `[sdlc-root]/process/html-rendering.md`.
+If CD accepts, invoke `sdlc-explain` on the report; mechanics in `[sdlc-root]/process/html-rendering.md` § Post-Skill Offer.
 
 Write to: `docs/reviews/{target_slug}_review.html` (e.g., `docs/reviews/HEAD_review.html`, `docs/reviews/abc1234_review.html`, `docs/reviews/uncommitted_review.html`).
 

@@ -338,7 +338,7 @@ Reference the template at `[sdlc-root]/templates/sdlc_lite_result_template.md`. 
 
 The result doc lives alongside the plan file in `docs/current_work/sdlc-lite/`. When the plan is moved to `completed/`, the result doc moves with it.
 
-**Post-write: offer HTML render.** Ask CD whether they want an HTML render of the result doc for reading/sharing — don't render unprompted. If CD accepts, render a self-contained HTML file: read the design system from `[sdlc-root]/templates/html-design-system.html`, apply **result** document-type defaults from `[sdlc-root]/process/html-rendering.md`, and write a `.html` file alongside the markdown. If CD declines, the markdown stands as the deliverable.
+**Post-write: offer an explainer or a walkthrough.** Ask CD whether they want an HTML explainer (`sdlc-explain`, **result** storyboard) or a guided walkthrough (`sdlc-walkthru`) of the result doc — never unprompted. Mechanics and the precedes-approval rule: `[sdlc-root]/process/html-rendering.md` § Post-Skill Offer.
 
 ### 3c. Architecture Decision Crystallization Check (skip-if-absent)
 

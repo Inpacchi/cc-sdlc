@@ -1,220 +1,104 @@
 # HTML Rendering
 
-Markdown is the source of truth for all SDLC deliverables — agents read it, version control tracks it, templates define its structure. HTML is the human-readable view: richer, more visual, easier to share and easier to actually read.
-
-Every deliverable MD file can be rendered to a self-contained HTML file using `sdlc-render`. Rendering is opt-in: CC offers a render after writing a deliverable and CD chooses whether to generate one. The HTML, when produced, is generated alongside the markdown, not instead of it.
+Markdown is the source of truth for all SDLC deliverables — agents read it, version control tracks it, templates define its structure. HTML is how a human absorbs it: an explainer with big pictures and few words, produced by `sdlc-explain` (the `/eli5` command). It is opt-in, generated alongside the markdown, never instead of it.
 
 ## Philosophy
 
 - **MD for agents and git.** Markdown stays clean, structured, and agent-optimized. No HTML concerns leak into templates or markdown content.
-- **HTML for humans.** HTML uses the design system to present the same information with visual hierarchy, diagrams, interactive navigation, and audience-appropriate framing.
-- **One source, many views.** A single MD file can produce multiple HTML variants for different audiences. The engineer version is always generated; leadership, design, and marketing versions are generated on request.
+- **HTML explains; it does not transcribe.** The comprehensive read of an artifact belongs to `sdlc-walkthru`. The HTML's job is that a reader who knows nothing about the subject can say its one load-bearing idea back after a single pass.
+- **Big pictures, few words.** Humans absorb a picture with a hard limit faster than three paragraphs of prose, and agents drown in prose.
+
+## Visual Doctrine: Big Pictures, Few Words
+
+Every HTML artifact the framework produces — explainers and exploration artifacts — follows one doctrine. It comes from Thariq Shihipar's day-to-day practice with Claude Code artifacts ("use big pictures and few words", the `eli5` plugin) and from a plain observation about agentic work: **one picture plus a hard limit beats three paragraphs of vibe.** Prose is where a human in the loop becomes the bottleneck; pictures are how they stay in the loop. The same instinct as "show me the diff, not the essay."
+
+1. **Picture first.** Anything that has a shape — a mechanism, a flow, a sequence, a structure, a dependency, a comparison, a before/after, a timeline — is drawn before it is described.
+2. **Inline SVG is the picture medium.** Self-contained, themeable through design-system tokens, editable by the next person, readable by agents. Build from the design system's diagram vocabulary (`[sdlc-root]/templates/html-design-system.html` § SVG Diagrams). No `<img>`, no Mermaid, no external assets.
+3. **Few words, with hard limits.** Captions are one sentence. Labels are nouns. Explainers carry an explicit word budget (`sdlc-explain` step 4); walkthrough parts stay under 350 words (`sdlc-walkthru`). When a limit is hit, add a picture or a real value — never words.
+4. **Real names, real values.** `RankingService → score (0–100) → feed` teaches; `Service A → data → Consumer` decorates. Draw from the source's own identifiers.
+5. **Big means one picture per screen.** A picture and its caption fill the viewport; labels are legible without zooming.
+6. **Gloss jargon at the point of use, inside the picture.** A three-to-six-word annotation beside the term. Never a glossary section.
+7. **Lossy, never false.** An explainer leaves most of the document out on purpose. Every claim it does make is verified against the artifact or the code and cited in the footer, and every open decision in the source gets a picture.
+
+What the doctrine does **not** mean: decorative pictures for content with no shape, or diagrams that restate a table. If a section cannot be drawn honestly, it does not get a picture.
 
 ## Two Categories of HTML
 
-**Deliverable renders** — Post-write conversions of finished markdown deliverables (specs, plans, results, reviews, etc.) into styled, readable HTML. These use design system tokens and keep JavaScript minimal (tabs, collapsibles). Produced by `sdlc-render` — invoked directly by CD, or when CD accepts a skill's post-write render offer.
+**Explainers** — Big-pictures-few-words explanations of one subject: a deliverable (spec, plan, result, idea brief, handoff, audit, incident, reference, review), a module, a tradeoff, or an incident. Produced by `sdlc-explain`, static apart from an optional prev/next stepper, inline SVG only, hard word budget. Offered after a skill writes a deliverable; on demand for questions.
 
-**Exploration artifacts** — Interactive HTML files created during `sdlc-idea` exploration and `sdlc-plan` discovery to help CD evaluate options. These are throwaway working tools: side-by-side approach comparisons, interaction prototypes, parameter tuning with sliders, drag-and-drop prioritization, animation sandboxes. They use the design system for visual tokens but allow any JavaScript needed for the interaction. They are demand-driven — create them when text descriptions would be insufficient for CD to make a confident decision.
+**Exploration artifacts** — Interactive HTML files created during `sdlc-idea` exploration and `sdlc-plan` discovery to help CD evaluate options: side-by-side comparisons, interaction prototypes, parameter tuning with sliders, drag-and-drop prioritization. They use the design system for tokens but allow any JavaScript the interaction needs. Demand-driven — built when a text description would not let CD decide confidently.
 
-## Layout Modes
+How the two HTML categories and the walkthrough relate:
 
-Rendered HTML supports two layout modes that can coexist within a single document:
+| | Explainer (`sdlc-explain`) | Walkthrough (`sdlc-walkthru`) | Exploration artifact |
+|---|---|---|---|
+| **Input** | A deliverable, module, tradeoff, or incident | A deliverable | An open decision during idea / plan discovery |
+| **Output** | One static HTML file | A paced conversation (no file) | An interactive HTML tool |
+| **Fidelity** | Lossy by design — never false | Selective — nothing load-bearing omitted | N/A — a tool, not a view |
+| **Feeds** | Understanding before a gate, onboarding, incident review | Comprehension and decisions at the gate | One decision |
+| **Offered** | After a skill writes a deliverable; on demand | Same offer point, the explainer's peer | Built directly when needed |
 
-**Scroll layout** — Content flows vertically in a single scrollable page. This is the default for narrative prose, metadata grids, stat cards, timelines, and any content that benefits from continuous reading.
+## Post-Skill Offer
 
-**Slide layout** — Discrete, enumerable entries are rendered one-at-a-time in a content review deck (`.content-deck` from the design system). Readers navigate with prev/next buttons or arrow keys, filter by category, and mark entries as reviewed via checkboxes that persist to localStorage. Use slide layout when a section contains 3+ entries of similar structure (requirements, findings, phases, review items).
+After a skill writes a deliverable MD file to `docs/current_work/`, CC **asks CD** whether they want an explainer (`sdlc-explain`) or a walkthrough (`sdlc-walkthru`) — never unprompted. The markdown stands on its own; both are optional ways for a human to absorb it. CD picks one, both, or neither. If CD accepts the explainer, it is built with the document type's storyboard defaults (below) and no further Q&A.
 
-Layout mode is determined per-section, not per-document. A plan might render its overview and timeline in scroll mode but its phases as slides. The document-type defaults below specify which sections use which mode.
+**Offer precedes approval — never in sequence with it.** When the deliverable feeds an approval gate (spec approval, the plan-mode execution prompt), the offer is its own interaction, fully resolved before approval is requested: offer, and if accepted, deliver so CD can absorb it *before* being asked to approve. Never bundle the offer into the approval question, and never deliver after approval — a post-approval explainer cannot inform the decision it exists to support.
 
-### Review Checkboxes
+Skills that make the offer, and the storyboard each uses:
 
-All slide-layout sections include review checkboxes on every entry. Checkboxes persist to localStorage using the key `review__{filename}__{slideId}`, enabling incremental review across browser sessions. A review progress counter ("3 / 12 reviewed") appears in the deck navigation bar.
-
-Review checkboxes appear on all document types that use slide layout — they are not restricted to review or audit documents. Any enumerable content benefits from the ability to track reading progress.
-
-### Tab Auto-Generation
-
-When entries within a slide-layout section are grouped under H2 headings (or equivalent structural divisions), tabs are auto-generated from those groupings. Each tab shows a count badge ("Requirements (7)"). Switching tabs filters the visible slides and resets filter chips to "All."
-
-### Filter Chips
-
-Within each tab, filter chips provide quick filtering by a single dimension — typically severity, priority, status, or category. One filter is active at a time; "All" is the default. Each filter chip shows a count for the current tab.
-
-## When HTML Is Generated
-
-### Post-skill render offer (opt-in)
-
-After a skill writes a deliverable MD file to `docs/current_work/`, CC **asks CD whether they want an HTML render** — it does not render unprompted. The markdown deliverable stands on its own; the HTML is an optional human-reading view CD opts into.
-
-If CD accepts, CC renders the engineer-audience variant using document-type defaults — no further Q&A, the document type selects components and layout. If CD declines, no HTML is written.
-
-**Render precedes approval — never in sequence with it.** When the deliverable feeds an approval gate (spec approval, the plan-mode execution prompt), the render offer is its own interaction, fully resolved before approval is requested: offer the render, and if CD accepts, generate and deliver the HTML so CD can review it *before* being asked to approve. Never bundle the render offer into the approval question, and never render after approval as a follow-up step — a post-approval render cannot inform the decision it exists to support.
-
-**The walkthrough is the render's peer at every offer point.** When a skill reaches its render-offer moment, offer both consumption modes: the HTML render (`sdlc-render` — a durable readable view) or a guided interactive walkthrough (`sdlc-walkthru` — paced, part-by-part comprehension with questions answered against real code). CD picks one, both, or neither; whichever is picked must fully resolve before any approval question, under the same render-precedes-approval rule.
-
-Skills that offer a post-skill render:
-
-| Skill | Deliverable | Document Type |
-|-------|-------------|---------------|
+| Skill | Deliverable | Storyboard |
+|-------|-------------|------------|
 | `sdlc-plan` | spec, plan | spec, plan |
 | `sdlc-lite-plan` | plan | plan |
-| `sdlc-execute` | result | result |
-| `sdlc-lite-execute` | result | result |
+| `sdlc-execute`, `sdlc-lite-execute` | result | result |
 | `sdlc-idea` | idea brief | exploration |
 | `sdlc-handoff` | handoff doc | handoff |
 | `sdlc-audit` | audit report | report |
 | `sdlc-debug-incident` | incident doc | incident |
 | `sdlc-create-reference-doc` | reference doc | reference |
+| `sdlc-review-code` | review report | review |
 
-### Manual Render (`/sdlc-render`)
-
-CD invokes `/sdlc-render <path>` to generate a tailored HTML version. This opens with an interactive scoping phase — audience selection, purpose, emphasis, and specific requests — before generating. Use this when:
-
-- Sharing a spec with stakeholders who need a different framing
-- Preparing a result for leadership review
-- Creating a polished version for external communication
-- Re-rendering with different emphasis after the auto-generated version
+**On demand:** `/sdlc-explain <subject>` or `/eli5 <subject>` at any time, for a deliverable or a question.
 
 ## Output Conventions
 
-### File Naming
+**File naming.** A deliverable's explainer is written alongside its markdown with the same base name (`d01_feature_spec.md` → `d01_feature_spec.html`; a named audience appends a suffix such as `_leadership`). A question's explainer goes to `docs/current_work/explainers/{slug}.html`.
 
-HTML files are written alongside their markdown source in the same directory:
+**Version control.** HTML files are generated artifacts. Projects may gitignore them (regenerate on demand) or track them (useful for links to specific commits). Neither is prescribed; the MD file is always the source of truth.
 
-```
-d01_feature_spec.md                  ← source (unchanged)
-d01_feature_spec.html                ← engineer (default, auto-generated)
-d01_feature_spec_leadership.html     ← executive framing
-d01_feature_spec_design.html         ← visual/UX emphasis
-d01_feature_spec_marketing.html      ← user-facing framing
-```
+**Staleness.** An explainer is stale once its source markdown changes after generation — and a stale explainer is dangerous because humans read it and miss what only the markdown says. So:
 
-The engineer variant uses the base name with `.html`. Audience variants append a suffix before the extension.
+- If CD opted into an explainer and a skill later updates that deliverable, the skill offers to regenerate it. If none exists, nothing needs keeping current.
+- If the markdown is edited outside a skill and an explainer exists, the next skill that touches the file offers to regenerate, or CD invokes `/sdlc-explain` directly.
+- When a plan CD has an explainer for undergoes review-fix revisions, regenerate after the final revision and **before the approval prompt** — not after each intermediate revision, never after approval.
+- Every explainer's footer carries its generation timestamp; if the markdown is newer, regenerate before relying on it.
 
-### Version Control
+## Document-Type Storyboards
 
-HTML files are generated artifacts. Projects may choose to:
-- **Gitignore them** — treat as build output, regenerate on demand
-- **Track them** — useful when sharing links to specific commits
+The default beats for each document type, in order. `sdlc-explain` starts here and bends the storyboard to the artifact's actual story; budgets (3–8 pictures, word cap) and the beat → picture table live in the skill.
 
-Neither approach is prescribed. The MD file is always the source of truth.
+| Type | Detected from | Default storyboard |
+|------|---------------|--------------------|
+| **Spec** | `docs/current_work/specs/` | The problem → what we are building, in its surroundings (anatomy) → how it works (flow) → what we will not do (constraints) → what is still open (decision cards) → what done looks like (the before/after the spec promises) |
+| **Plan** | `docs/current_work/planning/`, `sdlc-lite/*_plan` | The shape of the work (phases as a timeline) → one picture per phase of what changes (before/after or flow; chapters if many) → the risks (tradeoff) → what done looks like → open decisions |
+| **Result** | `docs/current_work/results/`, `sdlc-lite/*_result` | Before/after with the deltas named → what shipped (anatomy of the change) → what reviewers found (severity map) → what remains |
+| **Exploration** (idea brief) | `docs/current_work/ideas/*_idea-brief` | The problem → each option as a picture (max 4) → the tradeoff picture → the recommendation accented, if there is one |
+| **Handoff** | `docs/current_work/ideas/*_handoff` | Where we stopped (done / remaining timeline) → the key files (anatomy) → decisions made → the first step for the next session |
+| **Report** (audit) | `docs/current_work/audits/` | The score (one stat picture) → findings by severity (map) → the top findings, one picture each (max 3) → what to fix first |
+| **Incident** | `docs/current_work/incidents/` | The timeline → the root cause (zoom on the failing edge) → the blast radius (anatomy) → the fix (before/after) → what prevents recurrence |
+| **Reference** | `docs/reference/` | The concept map (anatomy) → each key pattern as a picture → gotchas as danger-edge callouts |
+| **Review** (code review) | `docs/reviews/` | The file risk map → each major finding as a picture (max 5) → recurring patterns |
 
-### Staleness
-
-An HTML render becomes stale when its source markdown is modified after generation. Stale HTML is dangerous — humans read the HTML version and miss updates that only exist in the markdown.
-
-**Re-render when an HTML already exists:** If CD previously opted into a render and a skill later updates that deliverable, the skill offers to re-render so the HTML doesn't fall behind the markdown. If no HTML exists, there's nothing to keep current — rendering stays opt-in.
-
-**Manual edits require re-rendering:** If the markdown is updated outside a skill (direct edit, review-fix revisions, CD feedback incorporated manually) and an HTML render exists, that HTML is now stale. The next skill that touches the file should offer to re-render, or CD can invoke `/sdlc-render` manually.
-
-**Footer timestamps:** Every rendered HTML includes a generation timestamp in the footer. When comparing an HTML file to its source, check this timestamp against the markdown's last-modified date. If the markdown is newer, re-render before using the HTML for review.
-
-**Re-render on plan revision:** When a plan that CD has rendered undergoes review-fix revisions (findings incorporated, DECIDE items resolved), re-render the HTML after the final revision and **before presenting the plan for approval** — not after each intermediate revision, and never after approval. CD approves what they see rendered: the HTML must reflect the final plan at the moment the approval prompt appears, not a mid-revision snapshot.
-
-## Audience Variants
-
-The engineer version is always generated (auto or manual). Additional audiences are selected during manual rendering via multi-select.
-
-| Audience | Suffix | Emphasis | Key Components |
-|----------|--------|----------|----------------|
-| **Engineer** | _(none)_ | Technical completeness | Full detail, code snippets, architecture diagrams, acceptance criteria, diff viewers |
-| **Leadership** | `_leadership` | Decisions and impact | Executive summary up top, stat cards, timeline, risk callouts, implementation details collapsed |
-| **Design** | `_design` | Visual and UX | Mockup prominence, component references, interaction flows, spacing/color specs, technical detail collapsed |
-| **Marketing** | `_marketing` | User-facing value | Benefit framing, user impact, positioning language, feature descriptions in user terms, internals omitted |
-
-Each variant reshapes the same source content — it does not fabricate new information. The source MD constrains what can appear in any variant.
-
-## Document-Type Defaults
-
-When rendering with document-type defaults (no Q&A — the engineer variant CD opts into post-skill), the document type determines which components and layout patterns to use.
-
-### Spec
-
-- **Layout:** Header with deliverable ID and status → summary grid (status, priority, owner, target) → table of contents → requirement cards → dependency diagram (SVG) → acceptance criteria checklist → open questions callout
-- **Key components:** Requirement cards, callout boxes (open questions, constraints), comparison grid (for alternatives), diagrams
-- **Interactive:** Collapsible sections for detailed requirements, tabs for functional vs. non-functional requirements
-- **Slide-layout sections:** Requirement cards — each requirement as a slide, tabs from requirement categories (functional / non-functional), filters by priority (must-have / should-have / nice-to-have). Review checkboxes on all slides.
-- **Verbatim content rule:** If the spec includes exact API signatures, schema definitions, or acceptance criteria with specific values, these must appear in the HTML — not summarized. Use collapsible code blocks for lengthy specifications.
-
-### Plan
-
-- **Layout:** Header → summary grid (files, phases, findings, review rounds) → timeline visualization → phased sections with milestone markers → per-phase acceptance criteria → agent dispatch summary table → risk table
-- **Key components:** Timeline, stat cards (scope metrics), code blocks, tables, tabs for phase-by-phase view, copy tables (before/after for text replacement plans), file tags for scope
-- **Interactive:** Tabs for phases, collapsible implementation details
-- **Slide-layout sections:** Phases — each phase as a slide, no tabs needed if phases are sequential, filters by status (complete / in-progress / pending). Review checkboxes on all slides.
-- **Verbatim content rule:** Code blocks, replacement strings, import lines, and other verbatim content from the source plan MUST appear in the HTML — render in collapsible `<details>` sections if they would dominate a section, but do not summarize them into prose or table abbreviations. The executing agent needs exact text, not paraphrases.
-- **Per-phase acceptance criteria:** Render each phase's acceptance criteria at the bottom of that phase's section (as a checklist), not flattened into a single end-of-document list. The consolidated post-execution review checklist remains as a summary, but per-phase criteria give phase-level "what does done look like."
-- **Substitution/fallback tables:** If the plan includes icon substitutions, library fallbacks, or alternative approaches, render them in the phase where they apply — don't drop them.
-
-### Result
-
-- **Layout:** Header with completion status → stat cards (before/after metrics) → what shipped summary → diff summary → review findings table → remaining items
-- **Key components:** Stat cards with deltas, diff viewer, finding rows, banners (status), tables
-- **Interactive:** Collapsible diff views, tabs for shipped vs. remaining
-- **Slide-layout sections:** Review findings — each finding as a slide, tabs by category or file, filters by severity. Review checkboxes on all slides.
-
-### Exploration (idea brief)
-
-- **Layout:** Header → problem framing → comparison grid of options → tradeoff matrices → recommendation callout → next steps
-- **Key components:** Comparison grid, cards for each option, badges for tradeoffs, callout for recommendation
-- **Interactive:** Tabs for side-by-side option comparison
-- **Slide-layout sections:** Options — each option as a slide when 3+ options, filters by feasibility or recommendation status. Only use when options are discrete cards; comparison grids stay in scroll layout. Review checkboxes on all slides.
-
-### Report (audit)
-
-- **Layout:** Header → banner (overall status) → stat cards (score, findings count) → findings table with severity → detailed findings with severity rows → recommendations
-- **Key components:** Banners, stat cards, finding rows, severity badges, tables
-- **Interactive:** Collapsible finding details
-- **Slide-layout sections:** Findings — each finding as a slide, tabs by finding category, filters by severity. Review checkboxes on all slides.
-
-### Incident
-
-- **Layout:** Header with severity banner → timeline (discovery → triage → fix → verification) → impact summary stat cards → root cause diagram (SVG) → remediation checklist → lessons learned callout
-- **Key components:** Timeline, banners (severity), diagrams, stat cards, checklist
-- **Interactive:** Collapsible timeline phases
-- **Slide-layout sections:** None by default — incident docs are narrative/timeline-driven. Individual remediation items could use slide layout if 5+ items.
-
-### Reference
-
-- **Layout:** Header → deep table of contents → anchored sections → code blocks → cross-reference links
-- **Key components:** TOC, code blocks, tables, callout boxes for gotchas, collapsible sections
-- **Interactive:** All detail sections collapsible, deep anchor linking
-- **Slide-layout sections:** Sections as slides when entries are short, self-contained definitions or patterns (e.g., a glossary, a pattern catalog). Long-form reference sections stay in scroll layout. Review checkboxes on all slides.
-
-### Handoff
-
-- **Layout:** Header with status banner → what's done / what's left two-column → key files list → decision log → context for next session
-- **Key components:** Banner (status), two-column layout, checklist, callout boxes
-- **Interactive:** Collapsible context sections
-- **Slide-layout sections:** None by default — handoff docs are columnar (done / remaining).
-
-### Review (code review)
-
-- **Layout:** Header with target description and date → stat cards (finding counts by severity) → file risk map table (per-file changes, severity dots) → annotated diffs with inline margin comments → overengineering summary → CLAUDE.md drift section → agent coverage summary → recurring patterns
-- **Key components:** Diff viewer with inline callout annotations, finding rows with severity badges, stat cards, file risk table with severity dots, banners, code blocks
-- **Interactive:** Collapsible per-file diff sections, tabs for findings-by-severity vs. findings-by-file views
-- **Slide-layout sections:** Findings by file — each file's findings as a slide, tabs by file, filters by severity. Review checkboxes on all slides.
+If the path matches nothing, infer the closest type from the markdown's structure.
 
 ## Sharing
 
-HTML files are designed to be shared. Common workflows:
+- **Open locally:** `open docs/current_work/specs/d01_feature_spec.html`
+- **Attach to PRs:** upload the HTML to the PR description or a comment.
+- **Static hosting or GitHub Pages:** for team-wide access; share the link in Slack, email, or Linear. A link gets read; an attachment doesn't.
 
-- **Open locally:** `open docs/current_work/specs/d01_feature_spec.html` — immediate browser preview
-- **Attach to PRs:** Upload the HTML review artifact to the PR description or as a comment. GitHub renders HTML attachments.
-- **Upload to S3 / hosting:** For team-wide access, upload to an S3 bucket or static hosting. Share the link in Slack, email, or Linear. A link gets read; an attachment doesn't.
-- **GitHub Pages:** For persistent access, push HTML files to a `gh-pages` branch or `docs/` directory with Pages enabled.
-- **Email:** HTML files open directly in browsers — attach and recipients can view without any tooling.
-
-The key insight: the chance of someone actually reading your spec, report, or PR writeup is much higher when it's a styled HTML page they can open in a browser.
+The chance of someone actually absorbing a spec, report, or incident is much higher when it is six pictures they can open in a browser.
 
 ## Design System Reference
 
-All rendered HTML must follow the design system defined in `[sdlc-root]/templates/html-design-system.html`. That file contains:
-
-- CSS custom properties (tokens) for colors, typography, spacing, borders, and radius
-- Component patterns with example HTML for each
-- Layout patterns (grids, columns, responsive breakpoints)
-- SVG diagram conventions (node styles, edge styles, arrow markers)
-- Print styles for graceful degradation
-
-When rendering, read the design system file and apply its tokens and component patterns. Do not invent new visual patterns — use what the design system provides. If a new component is genuinely needed, add it to the design system first.
+All HTML follows the design system in `[sdlc-root]/templates/html-design-system.html`: tokens for colour, typography, spacing, and radius; component patterns; layout patterns; the SVG diagram conventions (node styles, edge styles, semantic colours, arrow markers); and the Slide Deck component that provides the explainer's optional one-picture-per-screen stepper. The SVG section is the shared picture vocabulary for explainers and exploration artifacts alike. Do not invent visual patterns — if a component is genuinely needed, add it to the design system first.

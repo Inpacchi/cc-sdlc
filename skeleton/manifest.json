@@ -253,8 +253,8 @@
       "skills/sdlc-port-opencode/references/local-model-serving.md",
       "skills/sdlc-handoff/SKILL.md",
       "skills/sdlc-reflect/SKILL.md",
-      "skills/sdlc-render/SKILL.md",
-      "skills/sdlc-walkthru/SKILL.md"
+      "skills/sdlc-walkthru/SKILL.md",
+      "skills/sdlc-explain/SKILL.md"
     ],
     "agents": [
       "agents/AGENT_SUGGESTIONS.md",

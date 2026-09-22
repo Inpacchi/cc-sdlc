@@ -213,7 +213,7 @@ related_deliverables: []  # filled in as deliverables get created
 - {question}
 ```
 
-**Post-write: offer HTML render.** Ask CD whether they want an HTML render of the incident doc for reading/sharing — don't render unprompted. If CD accepts, render a self-contained HTML file: read the design system from `[sdlc-root]/templates/html-design-system.html`, apply **incident** document-type defaults from `[sdlc-root]/process/html-rendering.md`, and write a `.html` file alongside the markdown. If CD declines, the markdown stands as the deliverable.
+**Post-write: offer an explainer or a walkthrough.** Ask CD whether they want an HTML explainer (`sdlc-explain`, **incident** storyboard) or a guided walkthrough (`sdlc-walkthru`) of the incident doc — never unprompted. Mechanics and the precedes-approval rule: `[sdlc-root]/process/html-rendering.md` § Post-Skill Offer.
 
 ### T2a. First Response Checklist
 

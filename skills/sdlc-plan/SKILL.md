@@ -314,7 +314,7 @@ See `[sdlc-root]/process/adr-practice.md` for conventions, immutability rules, a
 - **Parameter exploration** — Sliders, knobs, and controls for tuning values that affect the design (rate limits, thresholds, layout density, animation timing). Include a "copy settings" button so CD can paste chosen values back into the conversation.
 - **Architecture diagrams** — Interactive SVG with clickable nodes showing module boundaries, data flows, and dependency paths.
 
-Write exploration artifacts to `docs/current_work/ideas/` or `/tmp/` with descriptive names. Read the design system from `[sdlc-root]/templates/html-design-system.html` for visual tokens but use whatever JavaScript and interactivity the exploration requires — the "tabs and collapsibles only" constraint applies to deliverable renders, not exploration artifacts. Offer to open them in the browser.
+Write exploration artifacts to `docs/current_work/ideas/` or `/tmp/` with descriptive names. Read the design system from `[sdlc-root]/templates/html-design-system.html` for visual tokens but use whatever JavaScript and interactivity the exploration requires — the static, stepper-only rule applies to explainers, not exploration artifacts. Offer to open them in the browser.
 
 These artifacts are optional and demand-driven — create them when the discovery reveals that a text description would be insufficient for CD to make a confident decision. Don't create interactive artifacts for simple decisions.
 
@@ -383,9 +383,7 @@ Reference the template at `[sdlc-root]/templates/spec_template.md`. Required fie
 
 Save to: `docs/current_work/specs/dNN_name_spec.md`
 
-**Post-write: offer HTML render.** Ask CD whether they want an HTML render of the spec for reading/sharing — don't render unprompted. If CD accepts, render a self-contained HTML file: read the design system from `[sdlc-root]/templates/html-design-system.html`, apply **spec** document-type defaults from `[sdlc-root]/process/html-rendering.md`, and write a `.html` file alongside the markdown (same directory, same base name, `.html` extension) — a richer view for the approval review. If CD declines, they review the markdown for approval.
-
-**Render precedes approval.** Resolve this offer — declined, or accepted with the HTML delivered — before presenting the approval gate in step 3. Never fold the render question into the approval question, and never render after approval as a follow-up: the render exists to inform the approval read.
+**Post-write: offer an explainer or a walkthrough.** Ask CD whether they want an HTML explainer (`sdlc-explain`, **spec** storyboard) or a guided walkthrough (`sdlc-walkthru`) of the spec — never unprompted. Mechanics and the precedes-approval rule: `[sdlc-root]/process/html-rendering.md` § Post-Skill Offer.
 
 ### 3. CD Approves the Spec
 
@@ -528,7 +526,7 @@ Every section required by the template — package impact, phase dependencies ta
 
 Writer saves to: `docs/current_work/planning/dNN_name_plan.md`
 
-**Post-write: offer HTML render.** Ask CD whether they want an HTML render of the plan for reading/sharing — don't render unprompted. If CD accepts, render a self-contained HTML file: read the design system from `[sdlc-root]/templates/html-design-system.html`, apply **plan** document-type defaults from `[sdlc-root]/process/html-rendering.md`, and write a `.html` file alongside the markdown. If CD declines, the markdown stands as the deliverable.
+**Post-write: offer an explainer or a walkthrough.** Ask CD whether they want an HTML explainer (`sdlc-explain`, **plan** storyboard) or a guided walkthrough (`sdlc-walkthru`) of the plan — never unprompted. Mechanics and the precedes-approval rule: `[sdlc-root]/process/html-rendering.md` § Post-Skill Offer.
 
 ### 5. Domain Agent Plan Review
 
@@ -631,7 +629,7 @@ Skip if nothing surfaced — do not fabricate entries. Budget: <3 minutes total.
 
 The plan is reviewed and approved. Enter plan mode so the user gets the standard execution prompt with the option to clear context.
 
-**Render precedes approval:** if CD opted into an HTML render of the plan, re-render now so the HTML reflects the final revised plan **before** the execution prompt appears — CD approves what they see rendered. Never render after the approval or in the same step as the approval prompt.
+**Explainer precedes approval:** if CD opted into an HTML explainer of the plan, regenerate it now so it reflects the final revised plan **before** the execution prompt appears — CD approves what they last saw explained. Never generate it after the approval or in the same step as the approval prompt.
 
 Follow these sub-steps in exact order. Do not combine or skip any.
 
@@ -672,8 +670,8 @@ Not every invocation needs a deliverable ID. For ad hoc work (bug fixes, small t
 | "Only one domain is involved" | Most tasks touch 2+ domains. Check again. |
 | "Skip straight to coding, the plan is obvious" | Planning catches issues that cost 10x more to fix during execution. |
 | "Ready to dispatch" / "Let me dispatch now" | Never narrate readiness — just dispatch. The plan is already approved. |
-| "Spec/plan's approved — now I'll offer the HTML render" | Render precedes approval, never follows it. The render offer resolves (declined, or accepted and delivered) before the approval gate; a post-approval render can't inform the decision it exists to support. |
-| "I'll ask for approval and offer the render in one question" | Never bundle them. The render offer is its own interaction; if CD accepts, deliver the HTML, then ask for approval. |
+| "Spec/plan's approved — now I'll offer the explainer" | Explainer precedes approval, never follows it. The offer resolves (declined, or accepted and delivered) before the approval gate; a post-approval explainer can't inform the decision it exists to support. |
+| "I'll ask for approval and offer the explainer in one question" | Never bundle them. The offer is its own interaction; if CD accepts, deliver the HTML, then ask for approval. |
 | "I'll use opus for everything to be safe" | Model tiers are pre-assigned in agent frontmatter. Trust the assignment. |
 | "The agent will figure out what skills to load" | Iron Law 2: subagents don't inherit skill awareness. Load skills in the prompt. |
 | "Playbook match: none" (without having read the catalog) | A bare "none" is fabrication unless you can list the slugs you scanned. Read `playbooks/README.md`, name every candidate, and give a per-candidate verdict. Deriving the roster from a precedent instead of scanning is how a real, overlapping playbook gets missed. |

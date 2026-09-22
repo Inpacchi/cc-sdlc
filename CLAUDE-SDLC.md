@@ -120,7 +120,9 @@ If you're in direct dispatch and ANY of these become true, stop and ask CD about
 
 **After a direct-dispatch or ad-hoc session**, consider invoking `sdlc-reflect` to surface learnings into discipline parking lots — especially if the work involved gotchas, cross-domain friction, or patterns worth recording. It also attempts a session-scoped prune of agent memories the session touched or invalidated. This is optional; skip it if nothing non-obvious surfaced.
 
-**After any skill writes a deliverable MD file to `docs/current_work/`,** ask CD whether they want an HTML render or a guided walkthrough (`sdlc-walkthru` — paced, part-by-part interactive read; the render's peer at every offer point) — do not render unprompted. The markdown is the deliverable; HTML is an optional human-reading view. If CD accepts, render with `sdlc-render` using document-type defaults and engineer audience (no further Q&A — the document type selects components and layout), producing a self-contained `.html` file alongside the markdown. If CD declines, skip the render. When the deliverable feeds an approval gate, resolve the render offer first — offer, and if accepted deliver, the HTML *before* asking for approval; never bundle the render offer into the approval question, and never render after approval. See `[sdlc-root]/process/html-rendering.md` for conventions.
+**After any skill writes a deliverable MD file to `docs/current_work/`,** ask CD whether they want an HTML explainer (`sdlc-explain` — big pictures, few words, verified) or a guided walkthrough (`sdlc-walkthru` — paced, comprehensive, conversational) — never unprompted. The markdown is the deliverable; both are optional ways for a human to absorb it. If CD accepts the explainer, build it with the document type's storyboard defaults and no further Q&A. When the deliverable feeds an approval gate, resolve the offer first — offer, and if accepted deliver, *before* asking for approval; never bundle the offer into the approval question, and never deliver after approval. Conventions: `[sdlc-root]/process/html-rendering.md`.
+
+**All HTML the framework produces follows one visual doctrine — big pictures, few words.** Anything with a shape is drawn as inline SVG before it is described; words are rationed with hard limits; real names and real values, never placeholders. `/eli5 <subject>` (`sdlc-explain`) answers "how does this work", "why did we choose this", and "what caused this" the same way. An explainer informs a gate but is never approved against — the markdown is.
 
 **When starting any session:** Check `docs/current_work/` for in-progress deliverables before accepting new work.
 
@@ -131,8 +133,8 @@ When you make changes to SDLC process files (skills, agents, process docs, CLAUD
 - `[sdlc-root]/process/overview.md` — Full workflow
 - `[sdlc-root]/process/commands.md` — All SDLC commands and skills
 - `[sdlc-root]/templates/` — Document templates (spec, plan, result, concept index)
-- `[sdlc-root]/templates/html-design-system.html` — HTML design system for rendered deliverables
-- `[sdlc-root]/process/html-rendering.md` — HTML rendering conventions and document-type profiles
+- `[sdlc-root]/templates/html-design-system.html` — HTML design system for explainers and exploration artifacts
+- `[sdlc-root]/process/html-rendering.md` — HTML conventions, visual doctrine, and document-type storyboards
 - `docs/_index.md` — Deliverable catalog
 
 > **Note:** `[sdlc-root]` is `ops/sdlc/` by default, or `.claude/sdlc/` for projects using Neuroloom integration. The actual path is recorded in `.sdlc-manifest.json` under `sdlc_root`.

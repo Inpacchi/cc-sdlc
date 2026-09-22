@@ -299,3 +299,24 @@ changes:
       (board: none) is supported. Adapter action: normal post-file-write
       transformation applies to injected fragments; no transformation-table
       change required.
+
+  - id: "0015"
+    date: "2026-09-22"
+    title: "sdlc-render → sdlc-explain (eli5 picture explainer replaces the faithful render)"
+    type: rename_skill
+    renames:
+      - [sdlc-render, sdlc-explain]
+    changelog_ref: "2026-09-22: sdlc-render becomes sdlc-explain — big pictures, few words"
+    notes: >
+      The skill's purpose changed with its name: sdlc-walkthru now owns the
+      comprehensive read of specs and plans, so the HTML artifact no longer
+      transcribes a deliverable faithfully — it explains it, eli5-style, with
+      inline SVG and a hard word budget. Migrate removes the old directory
+      via §2.1a and rewrites references (skill body references include the
+      ten post-write offer paragraphs, now one-line pointers to
+      process/html-rendering.md § Post-skill offer). Existing *.html renders
+      in a project's docs/ are left alone; the next explainer regenerates
+      them at the same path. The design system template drops the Content
+      Review Deck (slide layout, review checkboxes, filter chips) — direct
+      copy replaces it. Adapter action: none beyond the standard
+      rename_skill handling; no phrasing-contract change.

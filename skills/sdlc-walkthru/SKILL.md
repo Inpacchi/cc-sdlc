@@ -2,7 +2,7 @@
 name: sdlc-walkthru
 description: >
   Required procedure for presenting an SDLC artifact (spec, plan, result doc, review-findings doc)
-  as a guided, part-by-part interactive walkthrough in lieu of an HTML render — CD paces with
+  as a guided, part-by-part interactive walkthrough in lieu of an HTML explainer — CD paces with
   "next", asks questions answered against real code, and raises changes that are classified and
   routed to revision agents mid-walkthrough without losing the thread. Built for comprehension
   without reading the whole document: comprehensive in content, small in bites.
@@ -11,7 +11,7 @@ description: >
   Triggers on "walk me through the spec", "walk me through the plan", "walkthrough the doc",
   "walkthru the spec/plan", "guide me through the doc", "explain it part by part",
   "go through the doc with me", "/sdlc-walkthru".
-  Do NOT use for producing a rendered HTML view — use sdlc-render.
+  Do NOT use for producing an HTML picture explainer — use sdlc-explain.
   Do NOT use for agent/technical review of artifact content — use sdlc-review-code or the
   invoking skill's review roster; this skill is for the human decision-maker's read.
   Do NOT use for open-ended exploration of an idea with no artifact yet — use sdlc-idea.
@@ -76,7 +76,7 @@ Each part is one message, and each message obeys:
 
 - **Verify before answering.** Follow the Code Verification Rule (in the project's CLAUDE.md): if the question touches how code behaves ("how did that 40 get computed?"), read the actual code first, then step through it with real values. An answer sourced from the artifact's own claims is only acceptable when the artifact itself verified them — say which it is.
 - **Escalate depth on demand.** A "explain step 3 further" gets a deeper, slower pass on that one point — not a repeat of the summary.
-- **Build an interactive exploration artifact when a picture or stepper beats prose** — e.g., a self-contained HTML step-through of an algorithm with sliders and worked numbers, written to `docs/current_work/ideas/` and opened in the browser. Offer it when the reader is circling one mechanism; don't build one for a question a paragraph answers. If asked whether the artifact is faithful, verify every claim in it against source and say what was corrected.
+- **Reach for a picture when a picture beats prose.** Two tools, by shape of the question: when the reader is circling one mechanism and needs to *see* it, invoke `sdlc-explain` for a big-pictures-few-words explainer of that mechanism (static, inline SVG, verified against code); when they need to *manipulate* it — sliders, worked numbers, a step-through with real values — build an interactive exploration artifact in `docs/current_work/ideas/` and open it in the browser. Don't build either for a question a paragraph answers. If asked whether an artifact is faithful, verify every claim in it against source and say what was corrected. Both follow `[sdlc-root]/process/html-rendering.md` § "Visual Doctrine: Big Pictures, Few Words".
 - **Wrong-premise corrections flow back.** If the reader corrects a fact, the correction is load-bearing: restate it, verify its implications, and treat it as feedback (step 5).
 
 ### 5. Feedback mid-walkthrough — classify, dispatch, keep walking
@@ -96,7 +96,7 @@ After the final part:
 - **Recap in one short paragraph** what the reader would be approving/accepting — the whole artifact compressed to its decisions.
 - **List changes made during the walkthrough** (classification, what changed, where recorded) so the reader knows the document they heard is the document that now exists.
 - **Surface any open decisions** that remain unmade.
-- **Hand back to the invoking gate.** If the walkthrough served an approval gate (spec approval, plan approval), the gate question comes *after* the walkthrough fully resolves — via `AskUserQuestion` per `[sdlc-root]/process/collaboration_model.md` § Tool Rule, in its own turn, never bundled into the final part. The walkthrough is the alternative to the HTML render at that gate: like the render, it must complete *before* the approval question, never after.
+- **Hand back to the invoking gate.** If the walkthrough served an approval gate (spec approval, plan approval), the gate question comes *after* the walkthrough fully resolves — via `AskUserQuestion` per `[sdlc-root]/process/collaboration_model.md` § Tool Rule, in its own turn, never bundled into the final part. The walkthrough is the alternative to the HTML explainer at that gate: like the explainer, it must complete *before* the approval question, never after.
 
 ## Output
 
@@ -114,7 +114,7 @@ Usually none — the walkthrough is an interaction, not an artifact. Two excepti
 | "I remember how that code works — I'll just explain it" | Verify-then-answer. Read the code, step through real values. A confident wrong answer in a walkthrough poisons the approval it feeds. |
 | "The reader's question is a detour; I'll defer it to keep momentum" | Questions are the highest-value moments — they're where corrections surface. Answer fully, then re-offer the thread ("say 'next' to continue"). |
 | "Feedback means the walkthrough failed; restart after the revision" | Feedback means it worked. Classify, dispatch in background, keep walking. First use produced three material corrections mid-flight. |
-| "I'll fold the approval question into the last part" | Never. Wrap-up resolves first (recap + changes made), then the gate question in its own turn. Same rule as render-precedes-approval. |
+| "I'll fold the approval question into the last part" | Never. Wrap-up resolves first (recap + changes made), then the gate question in its own turn. Same rule as explainer-precedes-approval. |
 | "The reader seems impatient — I'll skip parts 4 and 5" | Ask, don't skip silently: offer "want the short version of the remaining parts, or stop here?" Skipped parts hide open decisions. |
 | "A decision was made in conversation; the artifact can catch up later" | Record it now — artifact, decision record, knowledge layer as appropriate. Conversations get cleared; documents survive. |
 | "This 1,000-line plan is too big to walk through" | Size is why the walkthrough exists. Use as many parts as it needs, grouped into chapters with per-chapter depth choices — never cram a big artifact into 7 oversized parts. |
@@ -124,7 +124,7 @@ Usually none — the walkthrough is an interaction, not an artifact. Two excepti
 
 - **Depends on:** an existing artifact to walk through; the invoking skill's revision protocol for classifying feedback (e.g., `sdlc-plan`'s SPEC-REVISION); `[sdlc-root]/process/manager-rule.md` for dispatched revisions.
 - **Feeds into:** the invoking skill's gate (spec approval in `sdlc-plan`, plan approval, result acceptance). Decisions recorded during the walkthrough feed the feasibility/decision record and, for standing principles, the knowledge layer via `[sdlc-root]/process/discipline_capture.md`.
-- **Uses:** the artifact's writing agent (for SCOPE_CHANGE/PIVOT revisions), `AskUserQuestion` (gate questions, after wrap-up), exploration HTML artifacts (optional, per `sdlc-plan`'s interactive-exploration-artifacts provision).
-- **Complements:** `sdlc-render` — same gate, different consumption mode. The render produces a durable readable view; the walkthrough produces comprehension and decisions. When an invoking skill reaches its render-offer point, the walkthrough is offered as an alternative alongside the render (`[sdlc-root]/process/html-rendering.md` § Post-skill render offer); whichever CD picks must fully resolve before the approval question, satisfying the render-precedes-approval rule.
-- **Does NOT replace:** `sdlc-render` (durable HTML view for sharing/re-reading), `sdlc-review-code` and domain-agent plan review (technical correctness review — this skill serves the *human* read), `sdlc-idea` (no artifact yet).
+- **Uses:** the artifact's writing agent (for SCOPE_CHANGE/PIVOT revisions), `AskUserQuestion` (gate questions, after wrap-up), `sdlc-explain` (a picture explainer of one mechanism mid-walkthrough), exploration HTML artifacts (optional, per `sdlc-plan`'s interactive-exploration-artifacts provision).
+- **Complements:** `sdlc-explain` — same offer point, different consumption mode. The explainer is a lossy picture artifact; the walkthrough is comprehensive and conversational and produces decisions. Whichever CD picks must fully resolve before the approval question (`[sdlc-root]/process/html-rendering.md` § Post-Skill Offer).
+- **Does NOT replace:** `sdlc-explain` (a lossy picture explainer — the walkthrough is comprehensive and conversational), `sdlc-review-code` and domain-agent plan review (technical correctness review — this skill serves the *human* read), `sdlc-idea` (no artifact yet).
 - **DRY notes:** revision classification is deliberately NOT defined here — it belongs to the owning skill (`sdlc-plan` SPEC-REVISION et al.) and is referenced. Code verification, terminology, and manager-rule content are referenced from their canonical homes. The only novel content here is the walkthrough method itself (segmentation, pacing, part-delivery rules).

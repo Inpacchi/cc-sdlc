@@ -124,7 +124,7 @@ Action Items
 - No narrative between findings — the table IS the report
 - Offer to fix actionable items at the end
 
-**Post-write: offer HTML render.** Ask CD whether they want an HTML render of the audit report for reading/sharing — don't render unprompted. If CD accepts, render a self-contained HTML file: read the design system from `[sdlc-root]/templates/html-design-system.html`, apply **report** document-type defaults from `[sdlc-root]/process/html-rendering.md`, and write a `.html` file alongside the markdown. If CD declines, the markdown stands as the deliverable.
+**Post-write: offer an explainer or a walkthrough.** Ask CD whether they want an HTML explainer (`sdlc-explain`, **report** storyboard) or a guided walkthrough (`sdlc-walkthru`) of the audit report — never unprompted. Mechanics and the precedes-approval rule: `[sdlc-root]/process/html-rendering.md` § Post-Skill Offer.
 
 ### 3. Triage
 
@@ -277,7 +277,7 @@ SCOPE → SWEEP (3 parallel, read-only) → SYNTHESIZE → ROUTE
 
    Each sweep returns: **what exists / what's missing / top-5 gaps most likely to let bugs ship.**
 
-3. **Synthesize.** Merge the three sweep reports into a single artifact at `docs/current_work/audits/codebase_health_YYYY-MM-DD.md` using the report format from `references/codebase-health.md`. Present with the same table-first format rules as compliance mode. Offer an HTML render (opt-in, same mechanics as compliance Step 2).
+3. **Synthesize.** Merge the three sweep reports into a single artifact at `docs/current_work/audits/codebase_health_YYYY-MM-DD.md` using the report format from `references/codebase-health.md`. Present with the same table-first format rules as compliance mode. Offer an explainer or a walkthrough (opt-in, same mechanics as compliance Step 2).
 
 4. **Route.** This mode does not fix. Offer to route each accepted gap into the existing machinery: `sdlc-handoff` for cross-session tracks, `sdlc-plan`/`sdlc-lite-plan` for work CD wants started, or discipline parking lots for insights that need validation first. Gaps that match recurring-pattern clusters should reference the cluster slug — a health gap plus a recurring pattern is a guard-promotion signal (`[sdlc-root]/process/guardrail-lifecycle.md`).
 
