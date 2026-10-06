@@ -31,9 +31,9 @@ These are **not** sequential steps. They are a branch available at **any** point
 - **CP-S1** fires when the deliverable becomes blocked on a decision owed by a stakeholder role listed in the policy doc's config block — because CD did not resolve it or explicitly deferred it. Status → `stakeholder-blocked`.
 - **CP-S2** fires when that stakeholder answers and work resumes. Status → `executing`. This is the system's only backward write, guarded by an exact-match precondition — `resolve-and-write-status` implements the guard, so pass its `is_cp_s2` flag and let the recipe decide rather than checking the current column yourself.
 
-### CP-7 — review loop clean, work committed
+### CP-7 — review loop exited, work committed
 
-Fires after the review-fix loop exits clean and the work is committed. Comment-only — no Status write. Comment what shipped in plain language, the commit SHAs and any pull-request links, and any deviation from the plan and why. The commits are already pushed, so this checkpoint pays no git cost.
+Fires after the review-fix loop meets its exit bar (no critical or major findings open) and the work is committed. Comment-only — no Status write. Comment what shipped in plain language, the commit SHAs and any pull-request links, and any deviation from the plan and why. The commits are already pushed, so this checkpoint pays no git cost.
 
 ### CP-8 — result doc written, catalog moves to Validated
 

@@ -90,13 +90,15 @@ A FIX-classified finding cannot be reclassified, downgraded, or closed as "accep
 - Deferring a major/critical finding to a follow-up without CD sign-off
 - Reframing a recommended implementation as unnecessary for the current change
 
+**Open minors at loop exit are not demotion.** A review loop exits when no critical or major FIX findings remain (`[sdlc-root]/process/review-fix-loop.md` § Exit Bar). Listing the minor FIX findings still open at that point in an **Open Minor Findings** table, visible to CD (`[sdlc-root]/process/finding-classification.md` § Open Minor Findings), is permitted and is not demotion. Closing an entry — marking it resolved, accepted, or won't-fix — still requires CD. Downgrading a finding's severity so the exit bar is met *is* demotion.
+
 **Escalation procedure:** When the manager believes a finding should be accepted rather than fixed, present it to CD via `AskUserQuestion` with: the finding, the recommended fix, the rationale for acceptance, and the conditions that would change the assessment. Do not close the finding until CD responds.
 
 ## What the Manager CAN Edit Directly
 
 The rule applies to **code files and domain content**. The manager may directly edit:
 
-- Process documentation (Worker Agent Reviews section, dependency table metadata, date stamps, mechanical count updates)
+- Process documentation (Worker Agent Reviews / Domain Agent Reviews sections, the Open Minor Findings table appended after them, dependency table metadata, date stamps, mechanical count updates)
 - Discipline parking lot entries (per `[sdlc-root]/process/discipline_capture.md`)
 - Catalog entries (`docs/_index.md`)
 - WORDING-classified spec revisions (typos, phrasing — not meaning changes)

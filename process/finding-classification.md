@@ -14,7 +14,15 @@ Classify each finding individually in a table before acting — no narrative par
 | 1 | specific finding | agent-name | FIX / PLAN / INVESTIGATE / DECIDE / PRE-EXISTING | critical/major/minor | why |
 ```
 
-Severity applies only to FIX findings. Other classifications leave Severity blank.
+Severity applies only to FIX findings. Other classifications leave Severity blank. Deduplicate (§ Finding Deduplication) and calibrate severity (§ Severity Levels) **before** filling the table.
+
+**Planning context adds a `Scope change` column** (plan review only — see § Scope-Change Marker):
+
+```
+| # | Finding | Agent | Classification | Severity | Scope change | Rationale |
+|---|---------|-------|---------------|----------|--------------|-----------|
+| 1 | specific finding | agent-name | FIX / DECIDE / PRE-EXISTING | critical/major/minor | yes/no | why |
+```
 
 ## The Five Classifications
 
@@ -36,8 +44,9 @@ Not every skill uses all six. The superset is defined here; each skill uses the 
 | Skill Context | Available Classifications | Notes |
 |--------------|-------------------------|-------|
 | Execution (sdlc-execute, sdlc-lite-execute) | FIX, PLAN, INVESTIGATE, DECIDE, PRE-EXISTING, PRE-DELIVERABLE-SPLIT | Full set — execution can surface systemic issues |
-| Post-commit fix (review-fix) | FIX, INVESTIGATE, DECIDE, PRE-EXISTING | No PLAN or PRE-DELIVERABLE-SPLIT — commit fixes are scoped to the current diff |
-| Planning review (sdlc-plan, sdlc-lite-plan) | FIX, DECIDE, PRE-EXISTING | No PLAN, INVESTIGATE, or PRE-DELIVERABLE-SPLIT — planning triage is simpler |
+| Code review fix (sdlc-review-code, direct-dispatch review before committing) | FIX, INVESTIGATE, DECIDE, PRE-EXISTING | No PLAN or PRE-DELIVERABLE-SPLIT — commit fixes are scoped to the current diff |
+| Planning review (sdlc-plan, sdlc-lite-plan) | FIX, DECIDE, PRE-EXISTING | No PLAN, INVESTIGATE, or PRE-DELIVERABLE-SPLIT — planning triage is simpler. Adds the `Scope change` column. |
+| Reference-doc review (sdlc-create-reference-doc) | FIX, INVESTIGATE, DECIDE | No PLAN, PRE-EXISTING, or PRE-DELIVERABLE-SPLIT — the doc under review is the whole scope |
 
 ## Rules
 
@@ -78,8 +87,64 @@ If a FIX fails twice (agent dispatched, finding persists), reclassify as INVESTI
 
 ## Severity Levels (FIX Findings Only)
 
+One severity scale for every review context — code review, plan review, and reference-doc review. Severity is a function of **impact × likelihood**, not reviewer alarm level.
+
 | Severity | Meaning |
 |----------|---------|
-| **critical** | Changes the approach, adds or removes files, or changes a phase/agent assignment |
-| **major** | In-scope quality issue that doesn't change scope |
-| **minor** | Style, polish, or low-impact correction |
+| **critical** | Certain or very likely data loss, security breach, or complete failure |
+| **major** | Significant functionality impact, likely to manifest |
+| **minor** | Partial impact, a workaround exists, or cosmetic |
+
+**How each context reads "impact":**
+
+| Context | Impact is measured on |
+|---------|----------------------|
+| Code review | The running software |
+| Plan review | The implementation, if the plan is executed as written |
+| Reference-doc review | A reader (agent or human) acting on what the doc says |
+
+Reference docs use this bar as-is — there is no separate HIGH/MEDIUM tier.
+
+### Severity Calibration
+
+Calibrate every finding against the table above **before** assigning its label — reviewers' own labels are input, not the verdict. A finding one reviewer escalated to `critical` that calibrates as `major` is downgraded, and the rationale is recorded in the finding: "Calibrated from agent-reported critical to major: impact is significant but not certain data loss under normal conditions." A report where everything is `critical` is a report that gets ignored.
+
+Calibration applies the criteria; it is never a lever for exiting a review loop. Downgrading a finding so that the loop's exit bar is met is a demotion, governed by `[sdlc-root]/process/manager-rule.md` § No Unilateral Finding Demotion.
+
+### Scope-Change Marker (Planning Context Only)
+
+In plan review, every FIX finding also gets a `Scope change` value in the Classification Table: **yes** if the fix changes the approach, adds or removes files, or changes a phase or agent assignment; **no** otherwise. The marker is independent of severity — a `minor` finding whose fix adds a file is `Scope change: yes`. Plan re-review trigger (1) reads this column (see `[sdlc-root]/process/review-fix-loop.md` § Plan Review). Execution and reference-doc contexts do not use the column.
+
+## Finding Deduplication
+
+Applies **before classification** in every review loop. When multiple reviewers flag issues at the same location, apply these merge rules:
+
+| Situation | Action |
+|-----------|--------|
+| Same `file:line`, same underlying issue | Merge into one finding. Credit all agents. Keep the more detailed description. Use the highest severity among them (then calibrate). |
+| Same `file:line`, different issues | Keep as separate findings. Tag both as `co-located` so the author knows they are distinct concerns at the same spot. |
+| Same issue, different locations | Keep separate. Cross-reference: "See also: Finding #N (same pattern at `other/file.py:88`)". |
+| Same location, conflicting fix recommendations | Keep merged but include both recommendations with agent attribution: "agent-A recommends X; agent-B recommends Y." Do not silently choose one. |
+
+For plans and reference docs, "location" is the `artifact § section` the finding cites. Merging by location alone erases real findings — merge only when the underlying issue is the same.
+
+## Open Minor Findings
+
+A review loop exits when no `critical` or `major` FIX findings remain (`[sdlc-root]/process/review-fix-loop.md` § Exit Bar). Minor FIX findings still open at exit are **listed, never silently closed**. The same table also carries any critical or major finding CD directed proceeding with at the round cap, with its real severity and CD's direction:
+
+```
+### Open Minor Findings
+
+| # | Finding | Agent | Location | Why still open |
+|---|---------|-------|----------|----------------|
+| 1 | specific finding | agent-name | file:line or artifact § section | batched pass did not resolve it / round cap reached |
+```
+
+| Context | Where the table lives |
+|---------|----------------------|
+| Execution (sdlc-execute, sdlc-lite-execute) | The result doc |
+| Code review (sdlc-review-code, direct-dispatch review before committing) | The final report (Fix Summary) |
+| Plan review (sdlc-plan, sdlc-lite-plan) | The plan file, alongside the agent-reviews section |
+| Reference-doc review (sdlc-create-reference-doc) | The commit message |
+
+Listing a minor finding as open at loop exit, visible to CD, is permitted and is not demotion. **Only CD closes an Open Minor Findings entry** — the orchestrator never marks one resolved, accepted, or won't-fix.

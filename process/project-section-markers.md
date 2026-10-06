@@ -2,7 +2,7 @@
 
 A convention for protecting project-specific content in **process and skill files** across migrations. Only applies to framework files that get overwritten during `sdlc-migrate`.
 
-This document defines two marker types with opposite ownership: `PROJECT-SECTION` (project-owned content, preserved verbatim across migrations) and `BUNDLE-SECTION` (upstream-owned bundle fragments, discarded and re-injected fresh on every migration — see § BUNDLE-SECTION Markers below).
+This document defines two marker types with opposite ownership: `PROJECT-SECTION` (project-owned content, preserved verbatim across migrations) and `BUNDLE-SECTION` (upstream-owned bundle fragments, discarded and re-injected fresh on every migration — see § BUNDLE-SECTION Markers below). A third, `MIRROR`, is not a migration marker at all — it tags upstream-owned verbatim copies of a process-doc section inside skills so drift can be checked mechanically (§ MIRROR Markers).
 
 ---
 
@@ -127,6 +127,34 @@ Copy the bundle's files → inject its fragments → record the bundle in `insta
 
 ---
 
+## MIRROR Markers
+
+Upstream-owned **verbatim copies** of a process-doc section, carried inline in skills so a critical step is never reduced to a skippable pointer. The first users are the two review-loop critical-steps blocks defined in `[sdlc-root]/process/review-fix-loop.md` § Mirrored Critical-Steps Blocks.
+
+```html
+<!-- In the source process doc -->
+<!-- MIRROR-SOURCE-START: section-id -->
+... the canonical block ...
+<!-- MIRROR-SOURCE-END: section-id -->
+
+<!-- In each skill that carries a copy -->
+<!-- MIRROR-START: source-file.md#section-id -->
+... identical lines ...
+<!-- MIRROR-END: source-file.md#section-id -->
+```
+
+The label names its source: `{process-file}#{section-id}`, where `{process-file}` resolves to `[sdlc-root]/process/{process-file}`.
+
+### Rules
+
+1. **Identical content.** The lines between `MIRROR-START`/`MIRROR-END` must be byte-identical to the lines between the matching `MIRROR-SOURCE-START`/`MIRROR-SOURCE-END`. Any difference is a drift finding — `sdlc-reviewer` (§ Cross-skill DRY) and the framework's cross-skill DRY audit check it.
+2. **Edit the source, then re-copy.** Never edit a copy in place. Context-specific wording goes outside the markers.
+3. **Exempt from DRY extraction.** Mirrored blocks are deliberate duplication; DRY checks do not recommend extracting them — they check that they match.
+4. **Not migration markers.** `sdlc-migrate` matches only the literal `PROJECT-SECTION-*` and `BUNDLE-SECTION-*` names, so `MIRROR` blocks pass through as ordinary upstream content: the upstream skill copy (with its current block) overwrites the old one. A project must not hand-edit a mirrored block; project additions go in a `PROJECT-SECTION` outside it.
+5. **No nesting.** A `MIRROR` block may not contain or intersect a `PROJECT-SECTION` or `BUNDLE-SECTION`.
+
+---
+
 ## How Migration Uses Markers
 
 ### Direct Copy Files (§2.1)
@@ -169,7 +197,8 @@ The `sdlc-compliance-auditor` validates marker integrity as part of Dimension 7 
 
 The `sdlc-reviewer` recognizes markers when reviewing skills and agents:
 
-- Does not flag content inside markers as convention violations
+- Does not flag content inside `PROJECT-SECTION` / `BUNDLE-SECTION` markers as convention violations
+- Checks every `MIRROR` block is identical to its source section (§ MIRROR Markers)
 - Verifies markers are well-formed if present
 - Flags malformed markers as minor findings
 

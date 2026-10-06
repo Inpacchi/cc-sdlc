@@ -83,7 +83,7 @@ Generate the skill body based on type. All types share common requirements; each
 - **Agent Dispatch Protocol** — "Dispatch prompts must describe WHAT/WHY — implementation HOW is the agent's domain."
 - **Agent Selection Criteria** — table or tiered list showing which agents to dispatch and when
 - **Review lenses** — what each reviewing agent checks for
-- **Review-Fix Loop** — reference to `process/review-fix-loop.md` if the skill has iterative review
+- **Review-Fix Loop** — if the skill has iterative review, carry the matching mirrored critical-steps block verbatim (code review or plan review) per `process/review-fix-loop.md` § Mirrored Critical-Steps Blocks, wrapped in its `MIRROR-START`/`MIRROR-END` markers, and add the skill to that section's table. Never reduce loop steps to a bare pointer (changelog 2026-05-19).
 
 #### Utility Skills (additional requirements)
 

@@ -51,6 +51,20 @@ OR
 
 ---
 
+## Open Minor Findings
+
+[Minor FIX findings still open when the review loop exited — per `[sdlc-root]/process/finding-classification.md` § Open Minor Findings. Only CD closes these. If CD directed proceeding at the round cap with critical or major findings still open, list those here too, with their real severity and CD's direction.]
+
+- None
+
+OR
+
+| # | Finding | Agent | Location | Why still open |
+|---|---------|-------|----------|----------------|
+| 1 | [finding] | [agent-name] | [file:line] | [batched pass did not resolve it / round cap reached] |
+
+---
+
 ## Follow-Up Items
 
 - None

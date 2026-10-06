@@ -282,6 +282,19 @@ Detect substantive prose duplicated verbatim or near-verbatim across sibling ski
 2. **Near-verbatim conceptual duplication** — the same load-bearing concept appears with slightly different wording in 2+ skills (e.g., one says "ADRs are immutable", another says "Do not edit prior ADRs"). Detect by grepping for distinctive concept anchors ("immutable", "ensures that", "is to X what", "must not edit") and reporting clusters where the same anchor produces multiple-but-non-identical hits.
 3. **Reinforcement-paragraph drift** — same framing/reinforcement paragraph appears in only one of two sibling skills where both apply (e.g., a tier-pair like `sdlc-plan` and `sdlc-lite-plan`, or any pair sharing the same prefix-family).
 4. **Trigger phrase overlap** — frontmatter trigger phrases overlap between skills without explicit anti-trigger acknowledgement.
+5. **Mirrored-block drift** — skills carry verbatim copies of process-doc sections wrapped in `<!-- MIRROR-START: {doc}.md#{id} -->` / `<!-- MIRROR-END: {doc}.md#{id} -->`; the source lives in `process/{doc}.md` between `<!-- MIRROR-SOURCE-START: {id} -->` / `<!-- MIRROR-SOURCE-END: {id} -->` (convention: `process/project-section-markers.md` § MIRROR Markers; first users: `process/review-fix-loop.md` § Mirrored Critical-Steps Blocks). Any difference between a copy and its source is a finding (severity **major** — a drifted copy silently changes a skill's loop behavior). Run:
+
+   ```bash
+   for f in skills/*/SKILL.md; do
+     grep -o 'MIRROR-START: [a-z0-9-]*\.md#[a-z0-9-]*' "$f" | sed 's/MIRROR-START: //' | sort -u | while IFS='#' read -r doc id; do
+       src=$(sed -n "/MIRROR-SOURCE-START: $id -->/,/MIRROR-SOURCE-END: $id -->/p" "process/$doc" | sed '1d;$d')
+       cpy=$(sed -n "/MIRROR-START: $doc#$id -->/,/MIRROR-END: $doc#$id -->/p" "$f" | sed '1d;$d')
+       { [ -n "$src" ] && [ "$src" = "$cpy" ]; } || echo "DRIFT: $f <- $doc#$id"
+     done
+   done
+   ```
+
+   Empty output = no drift. Also confirm every skill listed in the source doc's mirror table (e.g. `review-fix-loop.md` § Mirrored Critical-Steps Blocks) carries its block — a listed skill with no `MIRROR-START` for its id is a **major** finding (the skill lost its inline loop steps), as is a skill with a copy that the table does not list (minor — update the table).
 
 **Scoping rules (avoid noise):**
 - Ignore matches inside fenced code blocks (` ``` `)
@@ -289,6 +302,7 @@ Detect substantive prose duplicated verbatim or near-verbatim across sibling ski
 - Ignore single-line pointers (`Read [sdlc-root]/process/...`, `Consult [sdlc-root]/...`) — those are the correct extraction pattern
 - Ignore `## Red Flags` table cells (red flags often share boilerplate wording legitimately) unless the entire row is identical
 - Ignore matches in process/changelog/knowledge files cited as quotation
+- **Exempt `MIRROR` blocks from extraction recommendations.** Content between `MIRROR-START`/`MIRROR-END` markers is deliberate, checked duplication (check 5) — never recommend extracting it to a pointer; that is the failure the 2026-05-19 changelog entry records.
 - Skip pairs where one skill is the canonical source and the other is a documented adapter or variant (look for explicit `tier:` or `variant_of:` markers in frontmatter, or comments noting the relationship)
 
 **Recommendation format (for each finding):**

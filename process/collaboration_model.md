@@ -28,7 +28,7 @@ The AI collaborator who:
 - DECIDE findings during review triage
 - Clarification requests about requirements
 - Progress updates that need a decision (e.g., "Option A or B?")
-- Escalations (3-strike rule, unresolvable findings)
+- Escalations (review-loop round cap, 3-strike rule, unresolvable findings)
 - Any moment where you need user input before proceeding
 
 Status updates, completion reports, and informational output that do NOT require a response should be typed as normal text.

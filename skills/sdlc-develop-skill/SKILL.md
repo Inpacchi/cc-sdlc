@@ -127,7 +127,7 @@ Generate the skill body based on type. All types share common requirements; each
 - **Agent Dispatch Protocol** — "Dispatch prompts must describe WHAT/WHY — implementation HOW is the agent's domain."
 - **Agent Selection Criteria** — table or tiered list showing which agents to dispatch and when
 - **Review lenses** — what each reviewing agent checks for
-- **Review-Fix Loop** — reference to `[sdlc-root]/process/review-fix-loop.md` if the skill has iterative review
+- **Review-Fix Loop** — if the skill has iterative review, carry the matching mirrored critical-steps block verbatim (code review or plan review) per `[sdlc-root]/process/review-fix-loop.md` § Mirrored Critical-Steps Blocks, wrapped in its `MIRROR-START`/`MIRROR-END` markers, and add the skill to that section's table. Never reduce loop steps to a bare pointer — the 2026-05-19 changelog entry records the loop being skipped after exactly that.
 - **Phrasing Contract** — If the skill references the knowledge layer (e.g., `agent-context-map.yaml`, `knowledge/architecture/agent-communication-protocol.yaml`), use the exact standard phrasings from `[sdlc-root]/process/knowledge-routing.md` § "Standard Phrases". Do NOT add inline adapter conditionals — adapter plugins handle translation at install time.
 
 #### Utility Skills (additional requirements)

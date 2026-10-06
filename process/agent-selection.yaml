@@ -330,6 +330,11 @@ infrastructure_domains:
 # 5. For planning: check infrastructure_domains triggers and add specialists
 # 6. Prior-contributor check: when related prior deliverables are found,
 #    check which agents contributed — if their domain remains relevant, include them
+# 7. Coverage, not headcount: one agent per touched domain plus the always-on
+#    pair. "When in doubt" resolves toward covering a touched domain, never toward
+#    a second agent for a covered one. Beyond five, each additional agent needs a
+#    one-sentence statement of what it uniquely adds (AOP5). High-risk domains
+#    (MTS4) always get their specialist. Lenses are prompt content, not headcount.
 #
 # Playbooks supplement this process — they don't replace it. A matching playbook
 # provides a useful starting roster, but selection must independently assess

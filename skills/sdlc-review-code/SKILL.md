@@ -67,6 +67,8 @@ Not dispatching:
 - ui-ux-designer — logic-only changes, no visual modifications
 ```
 
+**Roster size — coverage, not headcount.** The roster is `code-reviewer` and `software-architect` (always) plus one reviewer for each domain whose files or concerns the diff touches. "When in doubt" resolves toward covering a touched domain, never toward a second reviewer for a domain already covered. Beyond five reviewers, each additional agent's checklist line must state in one sentence what it uniquely adds (AOP5). High-risk domains (MTS4) always get their specialist, however small the diff. Lenses are prompt content, not headcount — they are never trimmed for small diffs. Read `[sdlc-root]/knowledge/architecture/agent-orchestration-patterns.yaml` for AOP5. Read `[sdlc-root]/knowledge/architecture/model-tier-strategy.yaml` for MTS4. This dispatch is **review round 1** of the three-round cap that Step 5b enforces.
+
 Where `{target description}` is:
 - `uncommitted changes` (no argument)
 - `commit {short-sha}: {commit subject}` (commit ref)
@@ -127,30 +129,10 @@ Dispatch ALL listed agents in parallel. Each agent receives the full diff and is
 
 Collect all findings. Present them in a single structured report.
 
-**Finding Deduplication — Before Building the Report**
+**Deduplicate, then calibrate — before building the report.** Both definitions live in `[sdlc-root]/process/finding-classification.md` (§ Finding Deduplication, § Severity Calibration); the critical behavior is inlined here:
 
-When multiple domain agents flag issues at the same location, apply these merge rules:
-
-| Situation | Action |
-|-----------|--------|
-| Same `file:line`, same underlying issue | Merge into one finding. Credit all agents. Keep the more detailed description. Use the highest severity among them. |
-| Same `file:line`, different issues | Keep as separate findings. Tag both as `co-located` in the Category column so the author knows they are distinct concerns at the same spot. |
-| Same issue, different locations | Keep separate. Cross-reference: "See also: Finding #N (same pattern at `other/file.py:88`)". |
-| Same location, conflicting fix recommendations | Keep merged but include both recommendations with agent attribution: "agent-A recommends X; agent-B recommends Y." Do not silently choose one. |
-
-**Severity Calibration — Before Assigning Labels**
-
-Severity is a function of **impact x likelihood**, not reviewer alarm level. Before finalizing severity on any finding, apply these calibration rules to prevent a single agent inflating the report:
-
-| Severity | Criteria |
-|----------|----------|
-| `critical` | Certain or very likely data loss, security breach, or complete failure |
-| `major` | Significant functionality impact, likely to manifest |
-| `minor` | Partial impact, workaround exists, or cosmetic |
-
-A finding escalated by one agent to `critical` that would calibrate as `major` by the above criteria should be downgraded. Note the rationale in the finding detail: "Calibrated from agent-reported critical to major: impact is significant but not certain data loss under normal conditions."
-
-The calibration step protects the author from alert fatigue: a report where everything is `critical` is a report that gets ignored.
+1. **Deduplicate first.** The same issue at the same `file:line` from several agents becomes one finding: credit every agent, keep the more detailed description, and keep the highest reported severity. Different issues at the same `file:line` stay separate and are tagged `co-located` in the Category column. The same issue at different locations stays separate with a "See also: Finding #N" cross-reference. Conflicting fix recommendations stay merged with both recommendations attributed — never silently pick one.
+2. **Calibrate every severity by impact × likelihood before labelling it** — `critical`: certain or very likely data loss, security breach, or complete failure; `major`: significant functionality impact, likely to manifest; `minor`: partial impact, a workaround exists, or cosmetic. Downgrade a reviewer's inflated label and record why in the finding detail ("Calibrated from agent-reported critical to major: …"). Never downgrade a severity to reach the loop's exit bar — that is demotion. A report where everything is `critical` is a report that gets ignored.
 
 **Report Framing Discipline — Before Writing Finding Details**
 
@@ -213,7 +195,9 @@ After presenting the report, offer to fix:
 >
 > Fix these findings?
 
-If the user declines, stop here. If the user accepts, proceed to Step 5a.
+If the user declines, stop here. If the user accepts, classify first, then proceed to Step 5a.
+
+**Classify before fixing.** Emit the Classification Table per `[sdlc-root]/process/finding-classification.md` — one row per deduplicated finding with columns `# | Finding | Agent | Classification | Severity | Rationale`. Code review uses FIX, INVESTIGATE, DECIDE, and PRE-EXISTING. INVESTIGATE: dispatch the relevant agent to diagnose, then reclassify. DECIDE and PRE-EXISTING: ask CD via `AskUserQuestion` — every question to the user uses that tool, never conversational text (Tool Rule in `[sdlc-root]/process/collaboration_model.md`); PRE-EXISTING options: fix now, hand off, skip. Only FIX rows go to Step 5a. Fixes follow the loop's order: `critical` and `major` findings are fixed first; `minor` findings get one batched fix pass once no critical or major findings remain (Step 5b).
 
 ### 5a. Fix Findings
 
@@ -221,49 +205,58 @@ If the user declines, stop here. If the user accepts, proceed to Step 5a.
 
 **Economics-qualifying fixes — you may self-apply** when ALL are true per the Manager Rule's Delegation Economics Exception: (1) delegation would cost more than the fix itself — in tokens or main-context growth; (2) small and bounded — a few edit sites, no new abstractions; (3) no design judgment — mechanical or following a citable existing pattern; (4) no new context needed — you can decide HOW from what is already in your window. Trivial fixes always qualify: typos, missing imports, unused variables, obvious type annotations, missing `key` props. Every self-applied fix goes through the review loop in Step 5b — self-applied is never self-approved.
 
-**Non-qualifying fixes — dispatch domain agents.** If you need to read surrounding code to decide HOW to fix, it does not qualify. Group non-trivial findings by the most relevant domain agent. Consult `[sdlc-root]/knowledge/architecture/agent-orchestration-patterns.yaml` for dispatch discipline (AOP1, AOP9). When dispatching 2+ fixers in parallel, follow `[sdlc-root]/process/parallel-dispatch-monitoring.md`. Each agent receives: the specific findings assigned to them, the original diff, cross-domain knowledge files from the finding agent (when fixer differs from finder, consult `[sdlc-root]/knowledge/agent-context-map.yaml`), and instruction to make the minimal change that addresses each finding.
+**Non-qualifying fixes — dispatch domain agents.** If you need to read surrounding code to decide HOW to fix, it does not qualify. Group non-trivial findings by the most relevant domain agent. Consult `[sdlc-root]/knowledge/architecture/agent-orchestration-patterns.yaml` for dispatch discipline (AOP1, AOP9). When dispatching 2+ fixers in parallel, follow `[sdlc-root]/process/parallel-dispatch-monitoring.md`. Each agent receives: the specific findings assigned to them, the original diff, cross-domain knowledge files from the finding agent, and instruction to make the minimal change that addresses each finding. When the fixer differs from the finder, consult `[sdlc-root]/knowledge/agent-context-map.yaml` for the finder's entry and include the cross-domain knowledge files in the fix dispatch prompt.
 
 **If an agent returns without applying its fix, re-dispatch with a revised prompt.** Only a remaining gap that itself passes the economics test may be closed directly (with review).
 
 **Guard modification is in-scope.** If a finding matches a cluster in `docs/reviews/recurring-patterns.yaml` that has (or plainly warrants) a mechanized guard, the fix is two-part: fix the instance AND update or create the guard (lint rule, drift test, CI check) so the next instance is caught mechanically. See `[sdlc-root]/process/guardrail-lifecycle.md` § "Guard Modification Is In-Scope in Review Loops". Guard edits go through the same review loop as any other fix.
 
-**Self-check before proceeding:** Count findings you self-fixed under the economics test. Count findings dispatched to agents. The two numbers must equal the total finding count. If any finding is neither self-fixed nor dispatched, stop — you missed one.
+**Self-check before proceeding:** Count findings you self-fixed under the economics test. Count findings dispatched to agents. The two numbers must equal the number of findings being fixed this round (every critical and major, or the whole minor batch). If any such finding is neither self-fixed nor dispatched, stop — you missed one.
 
-After all fixes (self-applied and agent-applied), verify the project builds.
+Before dispatching any fix, record the pre-fix snapshot Step 5b needs (the temporary-index tree hash from `[sdlc-root]/process/review-fix-loop.md` Step C — it never touches the working tree or the real index). After all fixes (self-applied and agent-applied), run the verification gate: tests, type checks, lint, and configured static analysis.
 
 ### 5b. Review-Fix Loop
 
-**This loop is mandatory — whether fixes were self-applied or agent-applied.** No shortcuts, no skipping, no claiming it ran without a clean review round.
+**This loop is mandatory — whether fixes were self-applied or agent-applied.** No shortcuts, no skipping, no claiming it ran when it did not. Step 3's dispatch was **round 1** and reviewed the diff as submitted, so this loop has at most two re-review rounds left under the cap. Mirror item 1's pre-round-1 verification gate does not apply to Step 3 — an on-demand review may target a historical commit — so the gate runs after every fix round (Step 5a). Every re-review round emits the `review-fix-loop.md` Step A checklist (`Review round N of 3 — dispatching (full roster | narrow: raisers + standing reviewers):`) before dispatch. Re-review rosters are picked mechanically (item 5 below): the full Step 3 roster, or the raisers plus `code-reviewer` and `software-architect`. Each re-review's findings go through Step 4's deduplicate → calibrate and the Classification Table before triage.
 
-The full protocol is in `[sdlc-root]/process/review-fix-loop.md`. The critical mechanics are inlined here:
+<!-- MIRROR-START: review-fix-loop.md#code-review-mechanics -->
+**Review-fix loop — critical mechanics.** Canonical protocol: `[sdlc-root]/process/review-fix-loop.md`. Shared definitions (severity, deduplication, Open Minor Findings): `[sdlc-root]/process/finding-classification.md`. These steps are inlined so that skipping the read does not skip the behavior.
 
-1. **Verification gate** — tests, type checks, and lint must pass before dispatching reviewers. Fix failures first.
-2. **Dispatch ALL review agents** from the original review (Step 3) as **subagents** — separate context windows, not inline. Context separation prevents confirmation bias: a reviewer in the same context that wrote the fix is biased toward approving it.
-3. **Collect findings.** If ALL agents report zero findings → loop exits clean. Zero means zero — not "only minor," not "only pre-existing."
-4. **Classify each finding** per `[sdlc-root]/process/finding-classification.md`: FIX, INVESTIGATE, DECIDE, PRE-EXISTING.
-5. **Fix classified findings** — dispatch agents for non-trivial, self-fix trivial (same rules as Step 5a).
-6. **Return to step 2 — mandatory.** Dispatch ALL agents again, not just the ones who found issues. Fixes can introduce new problems in other domains.
+1. **Verification gate before every round.** Run tests, type checks, lint, and configured static analysis before the first review round and again after every fix round. Fix failures before dispatching reviewers. (Reference docs have no build gate; they skip this step.)
+2. **Fresh reviewer subagents, every round.** Dispatch each reviewer as a new subagent in its own context window — never inline, never a resumed reviewer from an earlier round. Re-review prompts include the previous round's findings table and the fix diff, require reading the current artifact rather than recalling it, ask for regressions beyond the prior findings, and state that a clean report is an expected, acceptable outcome. Reviewers report findings only; they never fix.
+3. **Deduplicate, calibrate, then classify.** Merge duplicates first: the same issue at the same location becomes one finding that keeps the highest reported severity. Then calibrate every severity by impact × likelihood before labelling it. Then classify each finding in the Classification Table. Never downgrade a severity to reach the exit bar.
+4. **Fix critical and major findings each round.** Resolve every INVESTIGATE and DECIDE finding. Minor FIX findings wait: once no critical or major findings remain, they get one batched fix pass. Before dispatching any fix, record the pre-fix snapshot — the tree hash printed by `t=$(mktemp); cp "$(git rev-parse --git-dir)/index" "$t"; GIT_INDEX_FILE="$t" git add -A; GIT_INDEX_FILE="$t" git write-tree; rm -f "$t"` (it includes untracked files and never touches the working tree or the real index) — and run the same command after the fixes for the post-fix snapshot.
+5. **Re-review roster is mechanical.** After every fix round, including the minor batch pass: if any applied fix was `critical` or `major`, or the touched files (`git diff --name-only` between the pre-fix and post-fix snapshots) go beyond the files named in the fixed findings, dispatch the **full roster**. Otherwise dispatch **only the reviewers who raised the fixed findings, plus the standing reviewers** (code-reviewer and software-architect; for reference docs, the skill's standing reviewer, code-reviewer), scoped to the fix diff. A fix that touches a new domain adds that domain's reviewer. Read the Severity column and compare file sets; do not reason about relevance.
+6. **Exit bar.** The loop exits when no `critical` or `major` FIX finding remains open, no INVESTIGATE or DECIDE finding is unresolved, and the accumulated minors have had their one batched fix pass (or the cap leaves no round to re-review it). Minor FIX findings still open go in an **Open Minor Findings** table. They are never silently closed; only CD closes them.
+7. **Three-round cap.** At most 3 review rounds per loop: the first round plus up to 2 re-reviews. Every round counts, including the re-review after the minor batch pass and rounds re-opened by External Review Gate findings. At the cap with any `critical` or `major` finding open: stop, escalate to CD via `AskUserQuestion` with the open-findings table, and never claim the loop is clean. At the cap with only minors open: exit with the Open Minor Findings table.
+<!-- MIRROR-END: review-fix-loop.md#code-review-mechanics -->
 
-The loop repeats until step 3 shows all agents clean. **Do not claim the loop exited clean without a review round that produced zero findings.**
+**Fixes inside the loop** follow Step 5a's rules: self-apply only what passes the economics test, dispatch the rest, and run the self-check.
 
-**3-strike rule:** If the same finding recurs across 3 consecutive rounds, stop iterating and escalate to the user via `AskUserQuestion`.
-
-**External Review Gate (optional):** After the internal loop is clean and before commit, if `[sdlc-root]/external-review.sh` exists and is executable, run the External Review Gate — a cross-vendor (Codex / local LLM) independent second opinion. Its findings re-enter Step 5b's triage; the external model never fixes. State any data egress to CD first. Full protocol: `[sdlc-root]/process/external-review-gate.md` (also `[sdlc-root]/process/review-fix-loop.md` Step E). Skip silently if the wrapper is absent.
+**External Review Gate (optional):** After the internal loop meets its exit bar and before commit, if `[sdlc-root]/external-review.sh` exists and is executable, run the External Review Gate — a cross-vendor (Codex / local LLM) independent second opinion. Its findings re-enter this loop's triage, deduplicated and calibrated alongside internal findings; every internal round they re-open counts toward the three-round cap. The external model never fixes. State any data egress to CD first. Full protocol: `[sdlc-root]/process/external-review-gate.md` (also `[sdlc-root]/process/review-fix-loop.md` Step E). Skip silently if the wrapper is absent.
 
 ### 5c. Summary and Commit
 
-When the loop exits clean, present:
+When the loop exits under its exit bar, present:
 
 ```markdown
 ## Fix Summary
 
-{N} original findings fixed | {M} review rounds | Build: passing
+{N} original findings fixed | {M} of 3 review rounds | Verification gate: passing
 
 Key feedback incorporated:
 - [agent-name] specific feedback that was incorporated
+
+### Open Minor Findings
+
+| # | Finding | Agent | Location | Why still open |
+|---|---------|-------|----------|----------------|
+| 1 | specific finding | agent-name | file:line | batched pass did not resolve it / round cap reached |
 ```
 
-> All fixes applied, review loop clean, build passes. Want me to commit?
+Omit the Open Minor Findings table only when none are open. Only CD closes its entries.
+
+> Critical and major findings fixed, build passes{, N minor findings listed as open}. Want me to commit?
 
 Do NOT commit automatically — wait for user confirmation.
 
@@ -364,12 +357,15 @@ Skip the suggestion if the review was routine with no cross-cutting insights.
 
 | Thought | Reality |
 |---------|---------|
-| "The diff is small, skip some lenses" | Small diffs produce the subtlest bugs |
+| "The diff is small, skip some lenses" | Small diffs produce the subtlest bugs. Lenses are prompt content and are never trimmed for diff size; only roster headcount follows touched domains (Step 3). |
 | "Just do a quick glance, we're about to commit" | Quick glances miss type safety and contract issues. Run the full workflow. |
 | "Agent fixed the issue during review" | Report only during review — fixes go through the fix gate (Step 5) |
 | "I'll start fixing without asking" | Always present the fix gate. The user decides whether to fix. |
 | "This is just a refactor, no review needed" | Refactors need architecture and DRY lens review |
-| "Skip Tier 2, it's a small commit" | Read the diff content. Small commits introduce new patterns more often than expected. |
+| "Skip Tier 2, it's a small commit" | Read the diff content. Small commits introduce new patterns more often than expected. A Tier 2 agent whose domain the diff touches stays on the roster. |
+| "Add one more reviewer, just in case" | Breadth is per touched domain, not headcount. Beyond five reviewers, each extra agent needs a one-sentence statement of what it uniquely adds. |
+| "Re-review only the agents who found issues — the fixes were small" | The re-review roster is mechanical: full roster if any fix was critical or major or touched files beyond the findings; otherwise the raisers plus code-reviewer and software-architect. Never judgment, never skipped. |
+| "Round 3 still has a major, but it's close — call it clean" | At the cap with critical or major findings open, stop and escalate via `AskUserQuestion` with the open-findings table. Never claim the loop is clean. |
 | "software-architect will catch what code-reviewer catches" | They have non-overlapping scopes. code-reviewer handles micro (DRY, correctness, naming). software-architect handles macro (boundaries, dependency direction, pattern drift). Neither substitutes for the other. |
 | "This agent overlaps with another, skip it" | Agents review different concerns. `performance-engineer` and `frontend-developer` both review component code but catch different issues. |
 | "No security concerns in this diff" | Check the boundaries lens anyway. User input flows through surprising paths. |
@@ -382,6 +378,6 @@ Skip the suggestion if the review was routine with no cross-cutting insights.
 
 ## Integration
 - **Feeds into:** `docs/reviews/recurring-patterns.yaml` (pattern log for `sdlc-audit` Dimension 6 promotion), `sdlc-reflect` (suggests it when cross-discipline insights surface beyond the findings themselves)
-- **Uses:** `[sdlc-root]/process/agent-selection.yaml` (agent dispatch), `[sdlc-root]/process/review-lenses.md` (review lenses), `[sdlc-root]/process/review-fix-loop.md` (fix loop), `[sdlc-root]/process/guardrail-lifecycle.md` (mechanized-guard schema and in-scope rule), `[sdlc-root]/knowledge/agent-context-map.yaml` (dispatch-time injection), `[sdlc-root]/knowledge/coding/code-quality-principles.yaml` (code-reviewer primary)
+- **Uses:** `[sdlc-root]/process/agent-selection.yaml` (agent dispatch), `[sdlc-root]/process/review-lenses.md` (review lenses), `[sdlc-root]/process/review-fix-loop.md` (fix loop), `[sdlc-root]/process/finding-classification.md` (severity, deduplication, classification, Open Minor Findings), `[sdlc-root]/process/manager-rule.md` (fix delegation), `[sdlc-root]/process/collaboration_model.md` (AskUserQuestion Tool Rule), `[sdlc-root]/process/guardrail-lifecycle.md` (mechanized-guard schema and in-scope rule), `[sdlc-root]/knowledge/agent-context-map.yaml` (dispatch-time injection), `[sdlc-root]/knowledge/coding/code-quality-principles.yaml` (code-reviewer primary)
 - **Complements:** `sdlc-execute` (development phase before review), `sdlc-audit` (promotes recurring patterns to knowledge store)
 - **Does NOT replace:** Quality gates in `sdlc-develop-skill` / `sdlc-develop-agent` (those are author-facing convention checks, not diff-facing code review)

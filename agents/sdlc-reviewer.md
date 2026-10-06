@@ -120,8 +120,9 @@ For each substantive prose block in the skill (≥2 sentences or ≥100 chars, e
 - [ ] **Near-verbatim duplication** — same concept worded slightly differently across 2+ skills. Unify wording or document why they differ.
 - [ ] **Trigger overlap** — trigger phrases conflict with another skill's triggers. Tighten anti-triggers.
 - [ ] **Reinforcement-paragraph drift** — same framing sentence appears in only one of two sibling skills where both apply.
+- [ ] **Mirrored-block drift** — for each `<!-- MIRROR-START: {doc}.md#{id} -->` … `<!-- MIRROR-END: {doc}.md#{id} -->` block in the skill, Read `[sdlc-root]/process/{doc}.md` and the lines between `<!-- MIRROR-SOURCE-START: {id} -->` and `<!-- MIRROR-SOURCE-END: {id} -->`. The copy must match the source **exactly**, line for line — any difference (a reworded, added, or dropped sentence) is a **major** finding. Also major: a skill listed in the source doc's mirror table (e.g. `[sdlc-root]/process/review-fix-loop.md` § Mirrored Critical-Steps Blocks) that has no copy of its block, and a copy whose source file or `MIRROR-SOURCE` markers cannot be resolved. Minor: a skill carrying a copy the mirror table does not list — update the table. Convention: `[sdlc-root]/process/project-section-markers.md` § MIRROR Markers.
 
-**Scoping rules:** Ignore matches inside fenced code blocks, frontmatter description blocks, canonical phrasing-contract lines, and one-line pointers (`Read [sdlc-root]/...`). A single shared sentence is not a finding unless load-bearing.
+**Scoping rules:** Ignore matches inside fenced code blocks, frontmatter description blocks, canonical phrasing-contract lines, and one-line pointers (`Read [sdlc-root]/...`). **`MIRROR` blocks are exempt from the duplication checks above** — they are deliberate, verified copies; never recommend extracting one to a pointer (a pointer-only loop step is the failure these blocks exist to prevent). Check them with the mirrored-block drift item instead. A single shared sentence is not a finding unless load-bearing.
 
 Severity: **major** for verbatim ≥3 sentences; **minor** for near-verbatim or single-paragraph overlap. Include the recommended extraction target.
 
@@ -202,7 +203,7 @@ Before emitting findings:
 - [ ] Every `[sdlc-root]/...` and `.claude/...` reference resolved against filesystem
 - [ ] Every finding has shape `file:section — LABEL — convention — suggested fix`
 - [ ] Severity labels driven by impact — Critical reserved for malfunction
-- [ ] Cross-skill DRY pass completed (for skills)
+- [ ] Cross-skill DRY pass completed (for skills), including mirrored-block drift for every `MIRROR-START` block
 - [ ] Phrasing contract pass completed (for skills referencing knowledge layer)
 - [ ] PROJECT-SECTION markers checked; content inside markers NOT flagged
 - [ ] No changes made to any file. Read-only contract honored

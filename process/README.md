@@ -18,8 +18,8 @@ Workflow rules, behavioral protocols, and process definitions. Skills reference 
 | File | Referenced By | Purpose |
 |------|-------------|---------|
 | `manager-rule.md` | 5+ skills | The orchestrator never writes code — dispatch agents. No size or complexity exceptions. |
-| `review-fix-loop.md` | 3 skills | Dispatch all agents → collect findings → classify → fix → re-review until clean |
-| `finding-classification.md` | 6 skills | FIX / PLAN / INVESTIGATE / DECIDE / PRE-EXISTING taxonomy with per-skill subsets |
+| `review-fix-loop.md` | 7 skills | The loop for every review context (code, plan, reference doc): roster rule → verify → dedup/calibrate/classify → fix critical+major → mechanical re-review → exit when no critical/major remain, 3-round cap. Owns the two mirrored critical-steps blocks |
+| `finding-classification.md` | 7 skills | FIX / PLAN / INVESTIGATE / DECIDE / PRE-EXISTING taxonomy with per-skill subsets; owns the one severity scale (impact × likelihood) and calibration, the deduplication table, the planning scope-change marker, and Open Minor Findings |
 | `discipline_capture.md` | 6 skills | Lightweight protocol for capturing cross-discipline insights during active work |
 
 ### Meta

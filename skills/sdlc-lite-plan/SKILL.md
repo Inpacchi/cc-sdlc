@@ -61,29 +61,36 @@ digraph sdlc_lite_planning {
 
     "1. Identify relevant worker domain agents" [shape=box];
     "2. Worker domain agent WRITES and SAVES the plan file" [shape=box];
-    "3. Review plan with ALL relevant\nworker domain agents" [shape=box];
+    "3. Review plan with the round-1 roster\n(fresh reviewers, round N of 3)" [shape=box];
+    "FIX findings to incorporate\nor DECIDE open?" [shape=diamond];
     "Re-dispatch writer to revise\nAND overwrite the plan file" [shape=box];
-    "All worker agents clean?" [shape=diamond];
-    "4. Verify plan file exists\n+ append Worker Agent Reviews" [shape=box];
+    "Re-review trigger fired?\n(Scope change = yes, Files list changed,\nor phase/agent changed)" [shape=diamond];
+    "Round 3 done?" [shape=diamond];
+    "ESCALATE to CD\n(AskUserQuestion +\nopen-findings table)" [shape=box, color=red];
+    "4. Verify plan file exists\n+ append Worker Agent Reviews\n(+ Open Minor Findings)" [shape=box];
     "5. Enter plan mode\n(triggers execution prompt)" [shape=doublecircle];
 
     "1. Identify relevant worker domain agents" -> "2. Worker domain agent WRITES and SAVES the plan file";
-    "2. Worker domain agent WRITES and SAVES the plan file" -> "3. Review plan with ALL relevant\nworker domain agents";
-    "3. Review plan with ALL relevant\nworker domain agents" -> "All worker agents clean?";
-    "All worker agents clean?" -> "Re-dispatch writer to revise\nAND overwrite the plan file" [label="no"];
-    "Re-dispatch writer to revise\nAND overwrite the plan file" -> "3. Review plan with ALL relevant\nworker domain agents";
-    "All worker agents clean?" -> "4. Verify plan file exists\n+ append Worker Agent Reviews" [label="yes"];
-    "4. Verify plan file exists\n+ append Worker Agent Reviews" -> "5. Enter plan mode\n(triggers execution prompt)";
+    "2. Worker domain agent WRITES and SAVES the plan file" -> "3. Review plan with the round-1 roster\n(fresh reviewers, round N of 3)";
+    "3. Review plan with the round-1 roster\n(fresh reviewers, round N of 3)" -> "FIX findings to incorporate\nor DECIDE open?";
+    "FIX findings to incorporate\nor DECIDE open?" -> "Re-dispatch writer to revise\nAND overwrite the plan file" [label="yes (DECIDE → CD first)"];
+    "Re-dispatch writer to revise\nAND overwrite the plan file" -> "Re-review trigger fired?\n(Scope change = yes, Files list changed,\nor phase/agent changed)";
+    "Re-review trigger fired?\n(Scope change = yes, Files list changed,\nor phase/agent changed)" -> "4. Verify plan file exists\n+ append Worker Agent Reviews\n(+ Open Minor Findings)" [label="no — exit bar met"];
+    "Re-review trigger fired?\n(Scope change = yes, Files list changed,\nor phase/agent changed)" -> "Round 3 done?" [label="yes"];
+    "Round 3 done?" -> "3. Review plan with the round-1 roster\n(fresh reviewers, round N of 3)" [label="no"];
+    "Round 3 done?" -> "ESCALATE to CD\n(AskUserQuestion +\nopen-findings table)" [label="yes"];
+    "FIX findings to incorporate\nor DECIDE open?" -> "4. Verify plan file exists\n+ append Worker Agent Reviews\n(+ Open Minor Findings)" [label="no — exit bar met"];
+    "4. Verify plan file exists\n+ append Worker Agent Reviews\n(+ Open Minor Findings)" -> "5. Enter plan mode\n(triggers execution prompt)";
 }
 ```
 
 ## Agent Selection
 
-Select from project-level worker agents (`.claude/agents/`). If a worker agent's domain touches any aspect of the task, include them. When in doubt, include — a quick review that finds nothing costs less than a shipped bug.
+Select from project-level worker agents (`.claude/agents/`). Cover every domain the task touches: if a worker agent's domain touches any aspect of the task — its files or its concerns — that domain's agent is included. Breadth is per domain, not headcount: "when in doubt" resolves toward covering a touched domain, never toward adding a second agent for a domain already covered. The review roster is `code-reviewer` and `software-architect` (always) plus one reviewer per touched domain. **Right-sizing is a rule here, not a suggestion (AOP5):** beyond five reviewers, each additional agent needs a one-sentence statement of what it uniquely adds, written next to it in the agent list. High-risk domains (MTS4) always get their specialist regardless of size. Lite plans get the same review loop as full plans — no lighter tier — and are lighter only because they touch fewer domains.
 
 **Playbooks supplement — they don't determine.** A matching playbook provides a useful starting roster, but agent selection must independently assess domain relevance for the specific task. An agent whose domain is touched by the task's content belongs in the list whether or not any playbook mentions them. Playbooks capture *typical* coverage for a task *type*; the actual task may have domain-specific needs the playbook never anticipated.
 
-Refer to the full agent table in the `sdlc-plan` skill if you need the complete list. The same worker agents are available here.
+The canonical agent-to-domain mapping is `[sdlc-root]/process/agent-selection.yaml` (Tier 1). The same worker agents are available here as in `sdlc-plan`.
 
 ## Collaboration Model
 
@@ -123,7 +130,7 @@ This ID will be used in the plan filename (`dNN_{slug}_plan.md`).
 
 Dispatch prompts must pass through all relevant context — outcomes, constraints, and any implementation guidance that would help the agent succeed. Never narrate readiness ("Ready to dispatch") and wait for user confirmation. Dispatch immediately when context is ready.
 
-Consult `[sdlc-root]/knowledge/architecture/agent-orchestration-patterns.yaml` for dispatch discipline — especially AOP5 (right-size the agent group), AOP6 (match specialization to domain), and AOP9 (dispatch prompts must include acceptance criteria, owned files, constraints, and out-of-scope).
+Consult `[sdlc-root]/knowledge/architecture/agent-orchestration-patterns.yaml` for dispatch discipline — especially AOP5 (right-size the agent group), AOP6 (match specialization to domain), and AOP9 (dispatch prompts must include acceptance criteria, owned files, constraints, and out-of-scope). AOP5 is applied as a rule for the review roster (§ Agent Selection): beyond five reviewers, each extra agent states what it uniquely adds.
 
 Read `[sdlc-root]/knowledge/architecture/model-tier-strategy.yaml` for model/effort tier matching — planning concentrates judgment work (MTS1, MTS6), so this session should run on the highest-tier model available, while recon dispatches go to cheap tiers and high-risk phases get risk-escalated reviewer tiers (MTS4).
 
@@ -209,7 +216,8 @@ Emit agent coverage and chronicle context as two tables. **Use this form on the 
 |-----------------------------------|----------------------------------|-----|
 | <domain>                          | <agent-name> ← writer            | <one-line rationale> |
 | <domain>                          | <agent-name>                     | <one-line rationale> |
-| implementation review             | code-reviewer                    | included by default |
+| implementation review             | code-reviewer                    | always in the review roster |
+| structural review                 | software-architect               | always in the review roster |
 
 **Prior context** — <N> entries
 
@@ -272,12 +280,12 @@ The most relevant worker domain agent writes the plan **and saves it directly to
 
 ### 3. Worker Domain Agent Plan Review
 
-Before executing, dispatch ALL relevant worker domain agents to review the full plan. Each reviews through their domain lens.
+Before executing, dispatch the review roster — `code-reviewer`, `software-architect`, and one worker agent per touched domain (§ Agent Selection) — to review the full plan. Each reviews through their domain lens.
 
 Before dispatching, output a checklist:
 
 ```
-Plan review — dispatching:
+Plan review round N of 3 — dispatching:
 - [ ] agent-name-1
 - [ ] agent-name-2
 - [ ] agent-name-3
@@ -286,13 +294,25 @@ Plan review — dispatching:
 
 **Every checkbox must have a corresponding agent dispatch. Count the checkboxes. Count the dispatches. They must match.** If the count doesn't match, stop and fix.
 
-**External reviewer (first-class when configured):** If `[sdlc-root]/external-review.sh` exists and is executable, the external reviewer is part of the review roster — add its checklist entry and run it in the same review round as the worker agents. Build the plan-review payload (plan only — lite plans have no spec) per `[sdlc-root]/process/external-review-gate.md` § Planning Integration; mid-tier at `high` is the norm for lite plans; state data egress for hosted models. Its findings enter the classification table attributed `[external:<model>]`; the external model never revises the plan. On re-review it participates with the roster, capped at 2 rounds — after that, remaining new external findings classify as DECIDE. If the wrapper is absent, omit the checklist entry; if it errors, record "external plan review errored — skipped" and continue.
+**External reviewer (first-class when configured):** If `[sdlc-root]/external-review.sh` exists and is executable, the external reviewer is part of the review roster — add its checklist entry and run it in the same review round as the worker agents. Build the plan-review payload (plan only — lite plans have no spec) per `[sdlc-root]/process/external-review-gate.md` § Planning Integration; mid-tier at `high` is the norm for lite plans; state data egress for hosted models. Its findings enter the classification table attributed `[external:<model>]`; the external model never revises the plan. On re-review it participates with the roster, capped at 2 rounds of its own inside the loop's three-round cap — after that, remaining new external findings classify as DECIDE. If the wrapper is absent, omit the checklist entry; if it errors, record "external plan review errored — skipped" and continue.
 
 **Writing agent in review:** The worker agent that wrote the plan (step 2) may be included as a reviewer for self-verification, but cross-domain reviewers typically provide higher marginal value. Whether or not the writing agent reviews, the checklist must reflect only the agents actually dispatched — the count-must-match rule applies to the dispatched set, not the step-1 list.
 
 Dispatch all review worker agents in parallel. Collect feedback.
 
-If agents have findings, classify per `[sdlc-root]/process/finding-classification.md`. Planning context uses FIX, DECIDE, and PRE-EXISTING only. Output the classification table, then:
+<!-- MIRROR-START: review-fix-loop.md#plan-review-mechanics -->
+**Plan review loop — critical mechanics.** Canonical protocol: `[sdlc-root]/process/review-fix-loop.md` § Plan Review. Shared definitions (severity, deduplication, scope-change marker, Open Minor Findings): `[sdlc-root]/process/finding-classification.md`. These steps are inlined so that skipping the read does not skip the behavior.
+
+1. **Fresh reviewer subagents, every round.** Dispatch each reviewer as a new subagent in its own context window — never a resumed reviewer from an earlier round. Re-review prompts include the previous round's findings table and what the revision changed, require reading the current plan file rather than recalling it, ask for regressions beyond the prior findings, and state that a clean report is an expected, acceptable outcome.
+2. **Deduplicate, calibrate, then classify.** Merge duplicates first, then calibrate every severity by impact × likelihood (the impact on the implementation if the plan is executed as written), then classify each finding in the Classification Table. Fill the `Scope change` column for every FIX finding: `yes` if the fix changes the approach, adds or removes files, or changes a phase or agent assignment. Never downgrade a severity to reach the exit bar.
+3. **One revision dispatch per round.** All FIX findings go to the writing agent in a single revision dispatch. DECIDE findings go to CD via `AskUserQuestion`. PRE-EXISTING findings appear in the table and need no action.
+4. **Re-review trigger is mechanical.** Before the revision dispatch, record the plan's Files list and phase/agent assignments from your last Read of the plan file; after the writer returns, Read it again and compare. Re-review is mandatory if ANY of these is true: (1) any FIX finding has `Scope change` = yes, (2) the revised plan's Files list differs from the pre-revision Files list, or (3) a phase was added, removed, or its assigned agent changed. Otherwise there is no re-review. Read the `Scope change` column and compare the before/after Files list; do not reason about whether the revision "changed the approach."
+5. **Re-review dispatches the full roster.** The roster is the round-1 dispatch checklist (plus the external reviewer, inside its own 2-round cap). When re-review fires, dispatch every reviewer on it — not a subset chosen by what the revision changed. Plans have no narrow re-review.
+6. **Exit bar.** Review ends when no `critical` or `major` FIX finding remains unaddressed and no DECIDE finding is unresolved. Minor FIX findings the revision did not incorporate go in an **Open Minor Findings** table in the plan file. They are never silently closed; only CD closes them.
+7. **Three-round cap.** At most 3 review rounds: the first round plus up to 2 re-reviews, and every round counts. If any `critical` or `major` finding is open at the cap, or round 3's revision fires a re-review trigger: stop, escalate to CD via `AskUserQuestion` with the open-findings table, and never claim the review is clean. At the cap with only minors open: exit with the Open Minor Findings table.
+<!-- MIRROR-END: review-fix-loop.md#plan-review-mechanics -->
+
+If agents have findings, deduplicate and calibrate them, then classify per `[sdlc-root]/process/finding-classification.md`. Planning context uses FIX, DECIDE, and PRE-EXISTING only, and the Classification Table carries the `Scope change` column. Output the classification table, then:
 
 - Only FIX findings go to the writing worker agent for revision
 - DECIDE findings go to the user via `AskUserQuestion`
@@ -302,16 +322,14 @@ If there are FIX findings, re-dispatch the worker domain agent who wrote the pla
 
 ```
 Plan revision — dispatching:
-- [ ] [writing-agent-name]: incorporate N findings (K critical, M major), overwrite plan file
+- [ ] [writing-agent-name]: incorporate N findings (K critical, M major, P minor; S scope-change), overwrite plan file
 ```
 
 The checkbox-must-match-dispatch rule from Step 3 applies here too. If you find yourself editing the plan directly — or saving the agent's returned body yourself — stop. Both violate the Manager Rule.
 
-- **Re-review is mandatory if ANY of the following is true:** (1) any FIX finding in the classification table has Severity = `critical`, (2) the revised plan's Files list differs from the pre-revision Files list, or (3) a phase was added, removed, or its assigned agent changed. Otherwise — no FIX findings met these criteria — skip re-review. This check is mechanical: scan the Severity column and compare the before/after Files list. Do not reason about whether the revision "changed the approach."
+**Re-review:** the trigger and the roster are mechanical (steps 4–5 of the block above). The roster is the round-1 dispatch checklist — copy it, re-emitting it each round with N updated (`Plan review round N of 3 — dispatching:`) and dropping the `external-reviewer` entry once its 2-round cap is spent; do not reason about which worker agents are "relevant to this revision."
 
-- **Re-review dispatch procedure:** When re-review is required, go back to the worker agent list you produced in step 1. Copy that list. Dispatch ALL worker agents from that list — not a subset selected based on what changed in the revision. The trigger for re-review determines whether to re-review at all; the step-1 worker agent list determines who reviews. Do not reason about which worker agents are "relevant to this revision." ALL means the step-1 list.
-
-**Stopping condition:** All worker agents report no critical or major findings. Minor findings may be acknowledged without a fix.
+**Stopping condition:** the exit bar (step 6 of the block above) — no critical or major FIX finding unaddressed, no DECIDE unresolved. Minor FIX findings the revision did not incorporate are listed in an **Open Minor Findings** table (`[sdlc-root]/process/finding-classification.md` § Open Minor Findings), appended after the Worker Agent Reviews section in step 4 — not dropped.
 
 Once the stopping condition is met, collect the feedback that will become the Worker Agent Reviews section. You append this section to the plan file in step 4 — not here. The format specification and rules for that section are below.
 
@@ -349,7 +367,7 @@ Skip if nothing surfaced — do not fabricate entries. Budget: <3 minutes total.
 The plan file was saved by the writing worker agent in step 2 (and overwritten by the same agent during any revision in step 3). Your job here is to verify the file on disk, then append the Worker Agent Reviews section.
 
 1. **Verify the file exists** at `docs/current_work/sdlc-lite/dNN_{slug}_plan.md`. If it does not exist, the writing agent failed to save — re-dispatch per step 2. Do not create the file yourself.
-2. **Append the Worker Agent Reviews section** using the `Edit` tool, following the format and rules in step 3. This section is mechanical metadata (summary of review outcomes) and falls under the manager's allowed direct edits per `[sdlc-root]/process/manager-rule.md`. Do not modify any other part of the file — only append the new section at the end.
+2. **Append the Worker Agent Reviews section** using the `Edit` tool, following the format and rules in step 3 — followed by the **Open Minor Findings** table when any minors remain open. This section is mechanical metadata (summary of review outcomes) and falls under the manager's allowed direct edits per `[sdlc-root]/process/manager-rule.md`. Do not modify any other part of the file — only append the new section at the end.
 3. **Format check:** After appending, verify that every bullet begins with `[agent-name]` in square brackets. If any bullet is missing the bracket prefix, correct only the bracket prefix — do not rephrase the finding.
 
 Where `NN` is the deliverable ID from step 0 and `{slug}` is a short snake_case name derived from the plan title (e.g., `d8_card_overlay_controls_plan.md`). The `docs/current_work/sdlc-lite/` directory is created by the writing agent on first save, not by the manager.
@@ -394,6 +412,11 @@ The Manager Rule remains in effect per `[sdlc-root]/process/manager-rule.md` —
 | "I'll just save the agent's output myself with Write" | The writing worker agent saves. The manager only reads the file (step 5a) and appends the Worker Agent Reviews section (step 4). Saving the returned body yourself risks transcription drift and breaks the Manager Rule. If the agent returned the body instead of saving, re-dispatch it with explicit instructions to use the `Write` tool. |
 | "I'll just add the structural elements myself — the worker agent wrote the content" | There is no structural/content distinction. Missing sections (phase dependencies, file list, agents, worker agent reviews) go back to the writing worker agent. Re-dispatch. |
 | "Skip plan review, it's simple" | Simple plans still have cross-domain blind spots. |
+| "This finding is critical now, so re-review must fire" / "It's only major, so no re-review" | Plan re-review reads the `Scope change` column and the before/after Files and phase/agent lists — never the Severity column. |
+| "The plan needed a third revision — one more round and it'll converge" | Plan review is capped at three rounds. At the cap with critical or major findings open, escalate to CD via `AskUserQuestion` with the open-findings table. |
+| "I'll resume last round's reviewers — they already know the plan" | Every round uses fresh subagents. Pass the prior findings table and what the revision changed; require reading the current plan file. |
+| "Only the reviewers who found issues need to re-check the revision" | Plans have no narrow re-review. A fired trigger re-dispatches the full round-1 roster; no trigger means no re-review. |
+| "Add one more reviewer, just in case" | Breadth is per touched domain, not headcount. Beyond five reviewers, each extra agent needs a one-sentence statement of what it uniquely adds. |
 | "This needs 5+ phases" | That's a full SDLC deliverable. Check with the user. |
 | "I'll include exact code so execution is easier" | Lite plans are typically executed same-session, so code snippets (function signatures, before/after diffs, structural patterns) are acceptable and improve execution reliability. Frame them as intent indicators — the executing agent should verify against actual code before implementing. Avoid exact line numbers, which shift even within a session. |
 | "The constraint is specified but the value isn't known yet" | That's a DECIDE finding. Mark it `USER DECISION NEEDED` so the reviewer routes it. |

@@ -8,7 +8,7 @@ points in the lifecycle:
 | SDLC point | Artifact reviewed | Where defined |
 |------------|-------------------|---------------|
 | **Planning** | Approach comparison (deliberation consult); spec + plan (review ensemble member) | § Planning Integration below |
-| **Execution** | The converged diff, after the internal review-fix loop exits clean, before commit | § Where it sits in the loop |
+| **Execution** | The converged diff, after the internal review-fix loop meets its exit bar, before commit | § Where it sits in the loop |
 | **Knowledge promotion** | Parking-lot promotion candidates | § Knowledge-Judgment Wrapper |
 
 In every case its findings re-enter the normal triage; they never auto-apply.
@@ -42,7 +42,7 @@ more ensemble member, deliberately chosen to maximize independence.
 
 It is **not** a replacement for internal review. At execution time the internal
 loop still runs to completion first — the external model reviews an
-already-clean change, so its signal is "what did an entire vendor's-worth of
+already-converged change, so its signal is "what did an entire vendor's-worth of
 independent judgment still catch?" At planning time it instead reviews
 *alongside* the internal roster (§ Planning Integration) — plan review is a
 single ensemble round, not a fix loop, so there is no converged state to wait
@@ -51,12 +51,12 @@ for and independence is maximized by reviewing in parallel.
 ## Where it sits in the loop
 
 ```
-internal review-fix loop → CLEAN
+internal review-fix loop → EXIT BAR MET (no critical/major open)
    ↓
 External Review Gate (if enabled)
    ├─ no findings → proceed to commit
-   └─ findings → triage (Step C of review-fix-loop.md)
-                   ├─ FIX → dispatch domain agent → re-run INTERNAL loop → re-run gate
+   └─ findings → dedup + calibrate with internal findings → triage (Step C of review-fix-loop.md)
+                   ├─ FIX → dispatch domain agent → re-run INTERNAL loop (counts toward the 3-round cap) → re-run gate
                    ├─ INVESTIGATE / DECIDE → surface to CD
                    └─ PRE-EXISTING → record, no action
 ```
@@ -70,11 +70,15 @@ to cc-sdlc's own review.
 
 A FIX from the external gate re-opens the internal loop: after the fix, dispatch
 the internal reviewers again (fixes can introduce new problems), and only once
-the internal loop is clean again does the gate re-run. Cap the gate at 2 rounds —
-if the external model still surfaces new FIX findings after two fix cycles,
-surface the remainder to CD via `AskUserQuestion` rather than looping
-indefinitely (external models can generate an unbounded stream of low-value
-style opinions).
+the internal loop meets its exit bar again does the gate re-run. External
+findings are **deduplicated against and calibrated alongside** the internal
+findings, on the one severity scale in
+`[sdlc-root]/process/finding-classification.md`. **Every internal round a gate
+finding re-opens counts toward the review loop's three-round cap**
+(`[sdlc-root]/process/review-fix-loop.md` § Round Cap). The gate also keeps its
+own cap of 2 fix rounds. Both limits apply — whichever is reached first stops
+the loop, and the remainder goes to CD via `AskUserQuestion` rather than looping
+(external models can generate an unbounded stream of low-value style opinions).
 
 ## Data egress — read before enabling
 
@@ -120,7 +124,8 @@ optional). If present, the skill runs it as the gate.
 - **stdout** — findings in the format the rubric header requested. The default
   review format, used when the rubric does not specify otherwise: one finding
   per line or as a markdown list, each in the form
-  `SEVERITY | location | finding` where SEVERITY ∈ {critical, major, minor} and
+  `SEVERITY | location | finding` where SEVERITY ∈ {critical, major, minor} —
+  defined in `[sdlc-root]/process/finding-classification.md` § Severity Levels — and
   location is `file:line` for diffs or `artifact § section` for planning
   artifacts. Empty stdout means "no findings."
 - **exit code** — `0` on success (including zero findings). Non-zero means the
@@ -291,6 +296,7 @@ Payload (the spec section is omitted for lite plans, which have none):
   echo "unstated risks, untestable acceptance criteria, missing failure"
   echo "handling. Skip style and formatting."
   echo "Format: SEVERITY | artifact § section | finding   (SEVERITY: critical|major|minor)"
+  echo "Severity = impact x likelihood if the plan is executed as written: critical = certain or very likely data loss, breach, or complete failure; major = significant impact, likely to manifest; minor = partial, workaround exists, or cosmetic."
   echo
   echo "=== SPEC ==="; cat "$spec_file" 2>/dev/null || echo "(no spec — lite plan)"
   echo; echo "=== PLAN ==="; cat "$plan_file"
@@ -308,8 +314,12 @@ Handling findings:
   uses FIX / DECIDE / PRE-EXISTING). Attribute them as `[external:<model>]`.
 - The external model never revises the plan — the writing agent incorporates
   FIX findings, exactly as with internal findings.
+- External findings are deduplicated and calibrated alongside the domain agents'
+  findings before classification (`[sdlc-root]/process/finding-classification.md`).
 - When re-review is triggered, the external reviewer re-reviews with the rest
-  of the roster. Cap its participation at **2 rounds** — after that, classify
+  of the roster. Cap its participation at **2 rounds**, inside the plan review
+  loop's three-round cap (`[sdlc-root]/process/review-fix-loop.md` § Plan
+  Review) — after that, classify
   any remaining new external findings as DECIDE and surface to CD rather than
   looping (same unbounded-style-opinion risk as the execution gate).
 - Apply § Anti-conformity below unchanged: the external reviewer lacks

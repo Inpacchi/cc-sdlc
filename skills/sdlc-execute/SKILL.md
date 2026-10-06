@@ -4,7 +4,7 @@ description: >
   Execute an approved implementation plan. The plan must already exist at
   docs/current_work/planning/dNN_name_plan.md — written and reviewed by worker domain agents via
   sdlc-plan. Loads the plan, executes phases using worker domain agents, reviews all completed work
-  with worker domain agents, fixes all findings, and commits.
+  with worker domain agents, fixes critical and major findings (minors listed for CD), and commits.
   Use when an approved plan exists and the user confirms execution.
   Triggers on "execute the plan", "implement the plan", or references to an existing plan file.
   Do NOT use without a plan — if no plan exists, use sdlc-plan first.
@@ -39,7 +39,7 @@ When auditing already-implemented work (not executing new work):
    - Correctness: does the implementation match the plan's intent?
    - Deviation: are there changes NOT in the plan? Are they justified?
 4. Present structured findings to CD
-5. If fixes needed: dispatch agents to fix, re-audit
+5. If fixes needed: dispatch agents to fix, then re-audit under the Review-Fix Loop rules (`[sdlc-root]/process/review-fix-loop.md` — fresh subagents, mechanical re-review roster, same exit bar, at most 3 rounds; the initial audit is round 1)
 
 **CHECKER mode ends after step 5. APPLIER mode below governs all execution work.**
 
@@ -80,11 +80,14 @@ digraph execution {
     }
 
     "All phases complete?" [shape=diamond];
-    "2a. Output checklist of ALL agents\nDispatch ALL of them" [shape=box];
-    "2b. Collect findings table\nfrom ALL agents" [shape=box];
-    "Any findings?" [shape=diamond];
-    "2c. Triage + Fix all findings\n(finding agent fixes it)" [shape=box];
-    "2d. Return to 2a\n(re-review ALL agents)" [shape=box, style=bold];
+    "2a. Dispatch fresh reviewers\n(round N of 3; roster from plan,\nthen mechanical re-review roster)" [shape=box];
+    "2b. Collect findings\ndedup → calibrate → classify" [shape=box];
+    "Anything left to fix?\n(critical/major, unresolved INVESTIGATE/DECIDE,\nor minors awaiting their one batch pass)" [shape=diamond];
+    "Round 3 done?" [shape=diamond];
+    "Critical or major\nstill open?" [shape=diamond];
+    "ESCALATE to CD\n(AskUserQuestion +\nopen-findings table)" [shape=box, color=red];
+    "2c. Fix critical + major\n(or the minor batch pass)" [shape=box];
+    "2d. Re-run verification gate\nPick roster mechanically\n(full or raisers + standing)" [shape=box, style=bold];
     "3. Write Worker Agent Reviews\n-> results doc" [shape=box];
     "4. Verify + commit" [shape=box];
     "Task complete" [shape=doublecircle];
@@ -98,13 +101,17 @@ digraph execution {
     "All phases complete?" -> "1a. PRE-GATE\n- Pattern Reuse Gate\n- Phase triage: BUILD / SKIP / REVISE_PLAN\n- Verify dependencies complete" [label="no — next phase/wave"];
     "All phases complete?" -> "REVIEW-GATE\n(mandatory — no pause)" [label="yes"];
     "REVIEW-GATE\n(mandatory — no pause)" [shape=box, style=bold, color=red];
-    "REVIEW-GATE\n(mandatory — no pause)" -> "2a. Output checklist of ALL agents\nDispatch ALL of them";
-    "2a. Output checklist of ALL agents\nDispatch ALL of them" -> "2b. Collect findings table\nfrom ALL agents";
-    "2b. Collect findings table\nfrom ALL agents" -> "Any findings?";
-    "Any findings?" -> "2c. Triage + Fix all findings\n(finding agent fixes it)" [label="yes"];
-    "2c. Triage + Fix all findings\n(finding agent fixes it)" -> "2d. Return to 2a\n(re-review ALL agents)";
-    "2d. Return to 2a\n(re-review ALL agents)" -> "2a. Output checklist of ALL agents\nDispatch ALL of them";
-    "Any findings?" -> "3. Write Worker Agent Reviews\n-> results doc" [label="no — ALL agents clean"];
+    "REVIEW-GATE\n(mandatory — no pause)" -> "2a. Dispatch fresh reviewers\n(round N of 3; roster from plan,\nthen mechanical re-review roster)";
+    "2a. Dispatch fresh reviewers\n(round N of 3; roster from plan,\nthen mechanical re-review roster)" -> "2b. Collect findings\ndedup → calibrate → classify";
+    "2b. Collect findings\ndedup → calibrate → classify" -> "Anything left to fix?\n(critical/major, unresolved INVESTIGATE/DECIDE,\nor minors awaiting their one batch pass)";
+    "Anything left to fix?\n(critical/major, unresolved INVESTIGATE/DECIDE,\nor minors awaiting their one batch pass)" -> "Round 3 done?" [label="yes"];
+    "Round 3 done?" -> "2c. Fix critical + major\n(or the minor batch pass)" [label="no"];
+    "2c. Fix critical + major\n(or the minor batch pass)" -> "2d. Re-run verification gate\nPick roster mechanically\n(full or raisers + standing)";
+    "2d. Re-run verification gate\nPick roster mechanically\n(full or raisers + standing)" -> "2a. Dispatch fresh reviewers\n(round N of 3; roster from plan,\nthen mechanical re-review roster)";
+    "Round 3 done?" -> "Critical or major\nstill open?" [label="yes — cap"];
+    "Critical or major\nstill open?" -> "ESCALATE to CD\n(AskUserQuestion +\nopen-findings table)" [label="yes"];
+    "Critical or major\nstill open?" -> "3. Write Worker Agent Reviews\n-> results doc" [label="no — list Open Minor Findings"];
+    "Anything left to fix?\n(critical/major, unresolved INVESTIGATE/DECIDE,\nor minors awaiting their one batch pass)" -> "3. Write Worker Agent Reviews\n-> results doc" [label="no — exit bar met"];
     "3. Write Worker Agent Reviews\n-> results doc" -> "4. Verify + commit";
     "4. Verify + commit" -> "Task complete";
 }
@@ -132,7 +139,7 @@ Follow the state machine in `[sdlc-root]/process/deliverable_lifecycle.md`. Upda
 - **No semantic revert:** fixing a bug by removing the feature is not a fix — preserve the user's requested behavior.
 - **Session scope:** this rule stays active for the entire session. There is no post-commit wind-down mode.
 
-**No pre-dispatch narration.** Status comes from the gates (PRE-GATE, POST-GATE, REVIEW-GATE) — not from sentences around them. Do not type filler describing what you are about to do: "Plan loaded.", "Let me check the catalog.", "Proceeding to Phase N.", "Now updating the catalog and committing.", "Staged set looks correct. Committing." The gates ARE the protocol; commentary around them is noise the user has to scroll past. The two acceptable exceptions are: (1) a one-line note conveying genuinely new information — a deviation observed, a phase-bleeding decision, a serialization choice forced by mid-stream discovery, a triage rationale; (2) the explicit announcements other rules require ("Review loop complete — all agents clean.", REVIEW-GATE block, etc.). When in doubt, prefer the gate over a sentence.
+**No pre-dispatch narration.** Status comes from the gates (PRE-GATE, POST-GATE, REVIEW-GATE) — not from sentences around them. Do not type filler describing what you are about to do: "Plan loaded.", "Let me check the catalog.", "Proceeding to Phase N.", "Now updating the catalog and committing.", "Staged set looks correct. Committing." The gates ARE the protocol; commentary around them is noise the user has to scroll past. The two acceptable exceptions are: (1) a one-line note conveying genuinely new information — a deviation observed, a phase-bleeding decision, a serialization choice forced by mid-stream discovery, a triage rationale; (2) the explicit announcements other rules require ("Review loop complete — …", REVIEW-GATE block, etc.). When in doubt, prefer the gate over a sentence.
 
 ## Phase Details
 
@@ -223,7 +230,7 @@ Design Decisions — Phase [M]:
 - ...
 ```
 
-**File-Conflict Gate (parallel phases only):** Before dispatching two or more phases simultaneously, verify file overlap (same rule as the phase-plan table at L143 above, applied at dispatch time). If any file appears in more than one phase, sequence those phases. Do not rely on the plan's dependency table alone; verify file overlap yourself.
+**File-Conflict Gate (parallel phases only):** Before dispatching two or more phases simultaneously, verify file overlap (same rule as the Phase plan table above, applied at dispatch time). If any file appears in more than one phase, sequence those phases. Do not rely on the plan's dependency table alone; verify file overlap yourself.
 
 **Parallel Phase Ownership Decomposition.** When the plan specifies two or more phases that can run in parallel, the File-Conflict Gate above is necessary but not sufficient — also verify each phase has a coherent ownership cluster. Use this decomposition lens before dispatching parallel phases:
 
@@ -348,32 +355,39 @@ You must emit this block before dispatching review agents:
 ```
 REVIEW-GATE — entering completion review
 Phases completed: [list phase numbers]
-Review agents (from plan): [list all agent names]
+Review agents (from plan + code-reviewer + software-architect): [list all agent names]
 Dispatching: [count] agents
 ```
 
-After ALL phases are done, run the **Review-Fix Loop** per `[sdlc-root]/process/review-fix-loop.md`. The critical loop mechanics are:
+After ALL phases are done, run the **Review-Fix Loop** per `[sdlc-root]/process/review-fix-loop.md`. Agent source for round 1: the plan's agent assignment table, plus `code-reviewer` and `software-architect` if the plan omits them, plus any domain surfaced during implementation. Every round — not just round 1 — emits the `review-fix-loop.md` Step A checklist (`Review round N of 3 — dispatching (full roster | narrow: raisers + standing reviewers):`) before dispatch. For user-facing changes, also run experiential verification (`review-fix-loop.md` Step 0.5) before the first round: start the dev server and walk the golden path, check adjacent features, verify scroll/resize, and check state transitions. Fix experiential failures before entering agent review.
 
-1. **Verification gate (Step 0):** Run tests, type checks, linting, and any configured SAST tooling BEFORE dispatching review agents. Fix verification failures first — do not ask reviewers to evaluate broken code.
-2. **Experiential verification (Step 0.5):** For user-facing changes, start the dev server and walk the golden path, check adjacent features, verify scroll/resize, and check state transitions. Fix experiential failures before entering agent review.
-3. **Dispatch ALL review agents** as subagents (separate context windows — context separation prevents confirmation bias). Agent source: the plan's agent assignment table.
-4. **Collect findings.** If ALL agents report zero → loop exits clean. Zero means zero.
-5. **Classify** per `[sdlc-root]/process/finding-classification.md` (FIX, PLAN, INVESTIGATE, DECIDE, PRE-EXISTING). Fix classified findings — fixes passing the Manager Rule's delegation-economics test may be self-applied (they re-enter the next review round); the rest get dispatched to domain agents.
-6. **Re-review (mandatory).** After fixes, return to step 3. Dispatch ALL agents again — not just those who found issues.
+<!-- MIRROR-START: review-fix-loop.md#code-review-mechanics -->
+**Review-fix loop — critical mechanics.** Canonical protocol: `[sdlc-root]/process/review-fix-loop.md`. Shared definitions (severity, deduplication, Open Minor Findings): `[sdlc-root]/process/finding-classification.md`. These steps are inlined so that skipping the read does not skip the behavior.
 
-The loop repeats until all agents report clean. **Do not claim the loop exited clean without a review round that produced zero findings.** 3-strike rule: escalate to user after 3 consecutive rounds with the same finding.
+1. **Verification gate before every round.** Run tests, type checks, lint, and configured static analysis before the first review round and again after every fix round. Fix failures before dispatching reviewers. (Reference docs have no build gate; they skip this step.)
+2. **Fresh reviewer subagents, every round.** Dispatch each reviewer as a new subagent in its own context window — never inline, never a resumed reviewer from an earlier round. Re-review prompts include the previous round's findings table and the fix diff, require reading the current artifact rather than recalling it, ask for regressions beyond the prior findings, and state that a clean report is an expected, acceptable outcome. Reviewers report findings only; they never fix.
+3. **Deduplicate, calibrate, then classify.** Merge duplicates first: the same issue at the same location becomes one finding that keeps the highest reported severity. Then calibrate every severity by impact × likelihood before labelling it. Then classify each finding in the Classification Table. Never downgrade a severity to reach the exit bar.
+4. **Fix critical and major findings each round.** Resolve every INVESTIGATE and DECIDE finding. Minor FIX findings wait: once no critical or major findings remain, they get one batched fix pass. Before dispatching any fix, record the pre-fix snapshot — the tree hash printed by `t=$(mktemp); cp "$(git rev-parse --git-dir)/index" "$t"; GIT_INDEX_FILE="$t" git add -A; GIT_INDEX_FILE="$t" git write-tree; rm -f "$t"` (it includes untracked files and never touches the working tree or the real index) — and run the same command after the fixes for the post-fix snapshot.
+5. **Re-review roster is mechanical.** After every fix round, including the minor batch pass: if any applied fix was `critical` or `major`, or the touched files (`git diff --name-only` between the pre-fix and post-fix snapshots) go beyond the files named in the fixed findings, dispatch the **full roster**. Otherwise dispatch **only the reviewers who raised the fixed findings, plus the standing reviewers** (code-reviewer and software-architect; for reference docs, the skill's standing reviewer, code-reviewer), scoped to the fix diff. A fix that touches a new domain adds that domain's reviewer. Read the Severity column and compare file sets; do not reason about relevance.
+6. **Exit bar.** The loop exits when no `critical` or `major` FIX finding remains open, no INVESTIGATE or DECIDE finding is unresolved, and the accumulated minors have had their one batched fix pass (or the cap leaves no round to re-review it). Minor FIX findings still open go in an **Open Minor Findings** table. They are never silently closed; only CD closes them.
+7. **Three-round cap.** At most 3 review rounds per loop: the first round plus up to 2 re-reviews. Every round counts, including the re-review after the minor batch pass and rounds re-opened by External Review Gate findings. At the cap with any `critical` or `major` finding open: stop, escalate to CD via `AskUserQuestion` with the open-findings table, and never claim the loop is clean. At the cap with only minors open: exit with the Open Minor Findings table.
+<!-- MIRROR-END: review-fix-loop.md#code-review-mechanics -->
 
-**Triage output format (mandatory).** When you collect findings and classify them, emit the canonical Classification Table from `[sdlc-root]/process/finding-classification.md` — one row per finding with columns `# | Finding | Agent | Classification | Severity | Rationale`. Do NOT emit two free-form bullet lists ("Will fix:" / "Out of scope:") with agent names in brackets. The canonical table puts every finding on the same scannable axis; the bullet-list shape forces the reader to re-parse classification from prose ("logged in result doc", "pre-existing systemic", "accepted trade-off"). After the table, dispatch FIX rows in a single batch — no narration between table and dispatch.
+**Self-applied fixes:** fixes passing the Manager Rule's delegation-economics test may be self-applied — they re-enter the next review round like any other fix; the rest are dispatched to domain agents.
+
+**Triage output format (mandatory).** When you collect findings and classify them, emit the canonical Classification Table from `[sdlc-root]/process/finding-classification.md` — one row per finding with columns `# | Finding | Agent | Classification | Severity | Rationale`. Do NOT emit two free-form bullet lists ("Will fix:" / "Out of scope:") with agent names in brackets. The canonical table puts every finding on the same scannable axis; the bullet-list shape forces the reader to re-parse classification from prose ("logged in result doc", "pre-existing systemic", "accepted trade-off"). After the table, dispatch the FIX rows being fixed this round (critical and major, or the minor batch pass) in a single batch — no narration between table and dispatch.
 
 **Plan contract briefing (mandatory):** When dispatching review agents in the loop, each agent's prompt must include the plan's specification for the phases they are reviewing — specifically: the expected behavior, acceptance criteria, and implementation approach from the plan. Reviewers check "does the implementation match what was specified?" in addition to "is the code well-written?" A well-structured stub passes code quality review but fails plan compliance review. Without the plan contract, reviewers can only assess code quality — they cannot detect whether the agent delivered what was actually asked for.
 
-This loop is mandatory and repeats until every agent reports clean. When the loop exits cleanly, output "Review loop complete — all agents clean. Proceeding to Worker Agent Reviews." then go to step 3.
+**External Review Gate (Step E, optional):** If `[sdlc-root]/external-review.sh` exists and is executable, run the cross-vendor gate after the internal loop meets its exit bar — its findings re-enter triage, deduplicated and calibrated alongside internal findings, the external model never fixes, and any data egress is stated to CD first. Every internal round its findings re-open counts toward the three-round cap; the gate also keeps its own limit of 2 fix rounds, whichever is reached first, with leftovers going to CD via `AskUserQuestion`. A wrapper error is recorded as "external gate errored — skipped" and never blocks the commit. Skip silently if absent. See `[sdlc-root]/process/external-review-gate.md`.
 
-7. **External Review Gate (Step E, optional):** If `[sdlc-root]/external-review.sh` exists and is executable, run the cross-vendor gate after the internal loop is clean — its findings re-enter triage (step 5), the external model never fixes, and any data egress is stated to CD first. Skip silently if absent. See `[sdlc-root]/process/external-review-gate.md`.
+**Round-cap escalation outcome:** if the loop stops at the cap with critical or major findings open, CD's answer to the escalation decides what happens next. Do not proceed to step 3 until the exit bar is met or CD explicitly directs you to. If CD directs you to proceed with critical or major findings still open, do not output the "Review loop complete" announcement below — list the still-open findings, with their severity and CD's direction, in the result doc's Open Minor Findings section (`[sdlc-root]/process/review-fix-loop.md` § Round Cap), then go to step 3.
+
+When the loop finally exits — including Step E when enabled — output "Review loop complete — no critical or major findings open (N open minor findings listed). Proceeding to Worker Agent Reviews." then go to step 3. Carry any open minors into the result doc's Open Minor Findings section.
 
 ### 3. Worker Agent Reviews Output
 
-Every execution MUST end with a Worker Agent Reviews section. This step is only reached when step 2b shows ALL agents reporting no issues. Save as: `docs/current_work/results/dNN_name_result.md`
+Every execution MUST end with a Worker Agent Reviews section. This step is only reached when the review loop has exited under its exit bar — no critical or major findings open, no INVESTIGATE or DECIDE unresolved — or when CD has directed you to proceed at the round cap (see Round-cap escalation outcome). Save as: `docs/current_work/results/dNN_name_result.md`
 
 ```markdown
 ## Worker Agent Reviews
@@ -389,6 +403,7 @@ Key feedback incorporated:
 - Bracket the agent's exact name: `[frontend-developer]`, `[software-architect]`, etc.
 - Each bullet is specific and concrete — not generic praise
 - Include feedback from the completion review (step 2)
+- Open minor findings go in the result doc's **Open Minor Findings** section (`[sdlc-root]/templates/result_template.md`), not in this list
 - Omit agents that found no issues (don't write "[agent] no issues found")
 - This section is **mandatory** — the task cannot be marked complete without it
 
@@ -403,7 +418,7 @@ If the directory exists, scan the completed work for crystallization signals (se
 1. Dispatch the architect agent to draft an ADR using `[sdlc-root]/templates/decision_record_template.md`
 2. The ADR is saved to `docs/architecture/decisions/adr-NN_{slug}.md` with the next sequential number
 3. Update `docs/architecture/decisions/_index.md` with the new entry
-4. The ADR is committed with the code that crystallized it — same commit (step 3b or step 4)
+4. The ADR is committed with the code that crystallized it — same commit (step 3c or step 4)
 
 If no crystallization signal fired, emit `Architecture decisions: none — conforms to existing ADRs` in the result doc and proceed.
 
@@ -592,21 +607,25 @@ When the deliverable is complete, the "Let's organize the chronicles" command mo
 | "This file wasn't in the plan — I'll revert it" | NEVER revert files you didn't create. The file may contain the user's concurrent work. Log the deviation; ask via `AskUserQuestion` if concerned. `git checkout --` on someone else's work is destructive and irreversible. |
 | "There's no plan, I'll wing it" | Stop. Use `sdlc-plan` first. |
 | "This plan is very large — I should confirm scope before starting" | Size is not a confirmation trigger. The plan was approved in `sdlc-plan`; a scope question re-litigates that approval. Emit the Phase plan and dispatch wave 1 in the same response. |
-| "I'll implement this part myself" | If a worker domain agent exists for it, dispatch them. See Manager Rule. |
+| "I'll implement this part myself" | Only if it passes the delegation-economics test (small, mechanical, no new context, cheaper than dispatch) — and it still gets reviewed. Otherwise dispatch the worker domain agent. See Manager Rule. |
 | "This phase is small and well-defined, I'll do it directly" | Size is not an exception. Dispatch the agent. |
 | "I'll implement directly to avoid context gaps from dispatching" | Complexity increases the need for agents, not decreases it. Pass the context you have to the agent in the dispatch prompt. |
 | "I pre-read 8 files so now I have complete context and can implement" | Pre-reading is the first step toward self-implementation. Read the plan file; let agents read the implementation files they need. |
 | "I'll just merge the conflict / fix the loose ends myself" | Parallel conflict or partial completion is still an agent task. Re-dispatch the affected agent. |
-| "Findings are minor, ship it" | Minor findings compound. Worker domain agents fix them. |
-| "I dispatched most of the agents" / "Re-review is overkill" | ALL means ALL. Count the checklist. Count the dispatches. Re-review after every fix round. |
+| "Findings are minor, ship it" | Minors get one batched fix pass once no critical or major findings remain. Any still open go in the result doc's Open Minor Findings table — never silently dropped, and only CD closes them. |
+| "I dispatched most of the agents" / "Re-review is overkill" | Re-review is mandatory; its roster comes from the mechanical trigger, never judgment. Small, file-local minor fixes get the narrow roster (raisers + standing reviewers) — they never get no roster. Count the checklist. Count the dispatches. They must match. |
 | "I'll skip the PRE-GATE / POST-GATE" | The mandatory output blocks exist because these were skipped in 100% of early executions. Emit the block. |
-| "One more iteration and I'll get it" | Three failed attempts means the hypothesis is wrong. Escalate with documented attempts. |
+| "One more iteration and I'll get it" | The loop is capped at three review rounds. At the cap with critical or major findings open, escalate to CD with the open-findings table and documented attempts. |
 | "This only touches the frontend" | Check. Features rarely affect one layer. If it changes data shape or API contract, backend must review too. |
 | "I know a better way to do this" | Search first. If a pattern exists, follow it. Consistency beats cleverness. |
-| "I'll fix it without triaging first" | Classify the problem (2c) before attempting a fix. Wrong classification wastes iterations. |
+| "I'll fix it without triaging first" | Classify the problem in the Classification Table (2b) before attempting a fix. Wrong classification wastes iterations. |
 | "This finding is about code I didn't modify in that file" | If the file is in the plan's Files list, the finding is in scope. File presence is the test, not function-level diff. |
 | "The review loop finished cleanly" | Output the exit announcement before proceeding. Silent state transitions cause drift. |
-| "Build passes, fixes are done — moving on" | Build-pass is step 4, not the review loop exit. After ANY fix round, return to 2a and dispatch ALL agents. Only exit when 2b shows all agents clean. Two audits caught this same skip. |
+| "Build passes, fixes are done — moving on" | Build-pass is not the review loop exit. After ANY fix round, re-run the verification gate and re-review with the roster the mechanical trigger picks. Only exit at the exit bar. Two audits caught this same skip. |
+| "This is really a minor — I'll label it minor so the loop can exit" | Calibration applies impact × likelihood; it is never a lever for exiting. Downgrading severity to meet the exit bar is unilateral demotion. |
+| "We're at the cap — close enough, call it clean" | At the cap with critical or major findings open, stop and escalate via `AskUserQuestion` with the open-findings table. Never claim the loop is clean. |
+| "I'll resume last round's reviewer — it already has the context" | Every round uses fresh subagents. A resumed reviewer judges from memory of its own findings, and its growing context makes each round cost more. Pass the prior findings table and fix diff instead. |
+| "The fix was tiny — skip the verification re-run" | The verification gate re-runs after every fix round, before any reviewer is dispatched. Reviewers are not a substitute for tests, types, and lint. |
 | "All phases complete — here's a summary" *(then waits for user input)* | Summaries are fine — stopping is not. Emit the summary, then REVIEW-GATE and dispatch review agents in the same response. The plan defines the review agents; no user input is needed to proceed. |
 | "I noted the file deviation but didn't log it" | Deviations don't require approval, but they MUST be logged in the POST-GATE output and included in the result doc's Deviations section. Silent absorption defeats traceability. |
 | "This is a fix dispatch, not a phase dispatch" | Fix dispatches follow the same protocol as phase dispatches. |
@@ -616,7 +635,7 @@ When the deliverable is complete, the "Let's organize the chronicles" command mo
 | "The plan is committed, this is just a small follow-up" | Manager Rule applies for the full session. Dispatch the domain agent. |
 | "The user asked about the server code — I'll just fix it while I'm here" | Domain crossing. Dispatch the relevant domain agent for that scope. Read domain boundaries in agent definitions. |
 | "I'll commit the code now and the docs separately" | Documentation artifacts (result docs, catalog updates, discipline entries, archive moves) ship in the same commit as the work they describe. Separate doc commits fragment the history and break bisectability. |
-| "CLAUDE.md is fine, no need to refresh" *(without scanning)* | Step 3c is a scan, not a judgement call. Walk the trigger table against the diff before deciding. If no triggers fired, emit `CLAUDE.md refresh: no changes needed` — the explicit no-op is the protocol. |
+| "CLAUDE.md is fine, no need to refresh" *(without scanning)* | Step 3d is a scan, not a judgement call. Walk the trigger table against the diff before deciding. If no triggers fired, emit `CLAUDE.md refresh: no changes needed` — the explicit no-op is the protocol. |
 | "Pasting the deliverable summary into CLAUDE.md" | CLAUDE.md describes how the codebase works, not deliverable history. Result docs and the chronicle hold "what shipped"; CLAUDE.md holds "what future agents need to know to navigate the code." |
 | "I know how this library works" | Verify external library APIs via Context7 before writing integration code. |
 | "These parallel phases don't overlap on files, dispatch them both" | File non-overlap is necessary, not sufficient. Also check: barrel/index files, contract artifacts (schemas, generated types), shared agent ownership, implicit side-effect ordering. See Parallel Phase Ownership Decomposition. |
@@ -631,6 +650,6 @@ When the deliverable is complete, the "Let's organize the chronicles" command mo
 ## Integration
 
 - **Feeds into:** `sdlc-tests-run` (post-commit test verification), `sdlc-archive` (when deliverable is complete)
-- **Uses:** worker domain agents (implementation + review), `sdlc-plan` output (the plan file), `[sdlc-root]/process/manager-rule.md`, `[sdlc-root]/process/collaboration_model.md`
+- **Uses:** worker domain agents (implementation + review), `sdlc-plan` output (the plan file), `[sdlc-root]/process/manager-rule.md`, `[sdlc-root]/process/collaboration_model.md`, `[sdlc-root]/process/review-fix-loop.md`, `[sdlc-root]/process/finding-classification.md`
 - **Complements:** `sdlc-lite-execute` (handles lite deliverables), `sdlc-audit` (can audit execution quality post-hoc)
 - **Does NOT replace:** `sdlc-plan` (plan must exist before execution), `sdlc-tests-run` (separate test verification step)

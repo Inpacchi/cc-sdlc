@@ -66,7 +66,7 @@ When auditing an existing spec or plan (not creating new work):
 |---------|-------|----------|----------------|
 | ... | ... | ... | ... |
 
-6. If CD approves revisions: dispatch agents to fix, then re-audit
+6. If CD approves revisions: dispatch agents to fix, then re-audit under `[sdlc-root]/process/review-fix-loop.md` § Plan Review. For a **plan** audit, first deduplicate, calibrate, then classify each finding in the planning Classification Table (`[sdlc-root]/process/finding-classification.md`, with the `Scope change` column) — the step 5 severities are calibrated before CD sees them — and record the Files list and phase/agent assignments; re-audit only if a plan re-review trigger fires. For a **spec** audit, re-audit only if the fix changed the spec's scope. Re-audits dispatch the full round-1 roster as fresh subagents. The initial audit is round 1, with at most 3 rounds: at the cap with a critical or major finding open, or with a trigger fired, escalate to CD via `AskUserQuestion` with the open-findings table.
 
 **CHECKER mode ends after step 6. APPLIER mode below governs all new planning work.**
 
@@ -138,8 +138,11 @@ digraph planning {
     "3c. AGENT-RECONFIRM\n(if SCOPE_CHANGE or PIVOT)" [shape=box, style=bold, color=blue];
     "3d. APPROACH-DECISION\n- Precedent or compare 2-3 approaches" [shape=box, style=bold, color=blue];
     "4. Domain agent WRITES and SAVES the PLAN\n-> docs/current_work/planning/dNN_name_plan.md" [shape=box];
-    "5. AGENT-RECONFIRM\n+ Review plan with ALL agents" [shape=box, style=bold, color=blue];
+    "5. AGENT-RECONFIRM (round 1 only)\n+ Review plan with the round-1 roster\n(re-review: frozen roster, no reconfirm;\nmax 3 rounds)" [shape=box, style=bold, color=blue];
+    "FIX findings to incorporate\nor DECIDE open?" [shape=diamond];
     "Incorporate feedback, revise plan" [shape=box];
+    "Re-review trigger fired?\n(Scope change = yes, Files list changed,\nor phase/agent changed)" [shape=diamond];
+    "ESCALATE to CD\n(AskUserQuestion +\nopen-findings table)" [shape=box, color=red];
     "6. Prompt user to begin execution" [shape=doublecircle];
 
     "0. Register deliverable\n-> docs/_index.md" -> "1. Identify relevant domain agents";
@@ -152,9 +155,14 @@ digraph planning {
     "3c. AGENT-RECONFIRM\n(if SCOPE_CHANGE or PIVOT)" -> "2. Domain agents WRITE the SPEC\n-> docs/current_work/specs/dNN_name_spec.md";
     "3. CD (human) approves the spec" -> "3d. APPROACH-DECISION\n- Precedent or compare 2-3 approaches" [label="approved"];
     "3d. APPROACH-DECISION\n- Precedent or compare 2-3 approaches" -> "4. Domain agent WRITES and SAVES the PLAN\n-> docs/current_work/planning/dNN_name_plan.md";
-    "4. Domain agent WRITES and SAVES the PLAN\n-> docs/current_work/planning/dNN_name_plan.md" -> "5. AGENT-RECONFIRM\n+ Review plan with ALL agents";
-    "5. AGENT-RECONFIRM\n+ Review plan with ALL agents" -> "Incorporate feedback, revise plan";
-    "Incorporate feedback, revise plan" -> "6. Prompt user to begin execution";
+    "4. Domain agent WRITES and SAVES the PLAN\n-> docs/current_work/planning/dNN_name_plan.md" -> "5. AGENT-RECONFIRM (round 1 only)\n+ Review plan with the round-1 roster\n(re-review: frozen roster, no reconfirm;\nmax 3 rounds)";
+    "5. AGENT-RECONFIRM (round 1 only)\n+ Review plan with the round-1 roster\n(re-review: frozen roster, no reconfirm;\nmax 3 rounds)" -> "FIX findings to incorporate\nor DECIDE open?";
+    "FIX findings to incorporate\nor DECIDE open?" -> "Incorporate feedback, revise plan" [label="yes (DECIDE → CD first)"];
+    "FIX findings to incorporate\nor DECIDE open?" -> "6. Prompt user to begin execution" [label="no — exit bar met"];
+    "Incorporate feedback, revise plan" -> "Re-review trigger fired?\n(Scope change = yes, Files list changed,\nor phase/agent changed)";
+    "Re-review trigger fired?\n(Scope change = yes, Files list changed,\nor phase/agent changed)" -> "6. Prompt user to begin execution" [label="no — exit bar met"];
+    "Re-review trigger fired?\n(Scope change = yes, Files list changed,\nor phase/agent changed)" -> "5. AGENT-RECONFIRM (round 1 only)\n+ Review plan with the round-1 roster\n(re-review: frozen roster, no reconfirm;\nmax 3 rounds)" [label="yes — round < 3\n(full roster)"];
+    "Re-review trigger fired?\n(Scope change = yes, Files list changed,\nor phase/agent changed)" -> "ESCALATE to CD\n(AskUserQuestion +\nopen-findings table)" [label="yes — round 3 done"];
 }
 ```
 
@@ -169,7 +177,7 @@ Use `[sdlc-root]/process/agent-selection.yaml` as the canonical agent-to-domain 
 
 ### Selection Rule
 
-If an agent's domain touches **any aspect** of the task, include them. When in doubt, include. A 2-minute review that finds nothing costs less than a missed issue that ships.
+Cover every domain the task touches: if an agent's domain touches **any aspect** of the task — its files or its concerns — that domain's agent is included. Breadth is per domain, not headcount: "when in doubt" resolves toward covering a touched domain, never toward adding a second agent for a domain already covered. The review roster is `code-reviewer` and `software-architect` (always) plus one reviewer per touched domain. **Right-sizing is a rule here, not a suggestion (AOP5):** beyond five reviewers, each additional agent needs a one-sentence statement of what it uniquely adds, written next to it in the agent list. High-risk domains (MTS4) always get their specialist regardless of size.
 
 **Playbooks supplement — they don't determine.** A matching playbook provides a useful starting roster, but agent selection must independently assess domain relevance for the specific task. An agent whose domain is touched by the task's content belongs in the list whether or not any playbook mentions them. Playbooks capture *typical* coverage for a task *type*; the actual task may have domain-specific needs the playbook never anticipated.
 
@@ -177,7 +185,7 @@ If an agent's domain touches **any aspect** of the task, include them. When in d
 
 ### Agent Dispatch Protocol
 
-Consult `[sdlc-root]/knowledge/architecture/agent-orchestration-patterns.yaml` for dispatch discipline — especially AOP5 (right-size the agent group), AOP6 (match specialization to domain), and AOP9 (dispatch prompts must include acceptance criteria, owned files, constraints, and out-of-scope).
+Consult `[sdlc-root]/knowledge/architecture/agent-orchestration-patterns.yaml` for dispatch discipline — especially AOP5 (right-size the agent group), AOP6 (match specialization to domain), and AOP9 (dispatch prompts must include acceptance criteria, owned files, constraints, and out-of-scope). AOP5 is applied as a rule for the review roster (§ Selection Rule): beyond five reviewers, each extra agent states what it uniquely adds.
 
 Read `[sdlc-root]/knowledge/architecture/model-tier-strategy.yaml` for model/effort tier matching — planning concentrates judgment work (MTS1, MTS6), so this session should run on the highest-tier model available, while recon dispatches go to cheap tiers and the plan must assign risk-escalated reviewer tiers to high-risk phases (MTS4).
 
@@ -210,7 +218,7 @@ Relevant domain agents for this task:
 - frontend-developer: touches UI components and state management
 - ui-ux-designer: new UI component needs design review
 - software-architect: new pattern being introduced
-- code-reviewer: included by default for implementation tasks
+- code-reviewer and software-architect: always included in the review roster
 ```
 
 **Playbook scan** — after your independent assessment, check for a matching playbook. You must actually read the catalog before emitting a verdict — "no match" is a conclusion you earn by listing what you scanned, not a default you assert.
@@ -530,7 +538,7 @@ Writer saves to: `docs/current_work/planning/dNN_name_plan.md`
 
 ### 5. Domain Agent Plan Review
 
-**AGENT-RECONFIRM** — emit before dispatching review agents. Use the compact / verbose form convention from §3c: emit either the compact table OR the verbose form, never both. Default to the compact table; use the verbose form when a coverage gap, delta from step 1, generalist-masking risk, or scope ambiguity is detected.
+**AGENT-RECONFIRM** — emit before dispatching the round-1 review agents. It runs in round 1 only: re-review rounds re-dispatch the frozen round-1 roster and do not re-run AGENT-RECONFIRM. Use the compact / verbose form convention from §3c: emit either the compact table OR the verbose form, never both. Default to the compact table; use the verbose form when a coverage gap, delta from step 1, generalist-masking risk, or scope ambiguity is detected.
 
 Compact form (default):
 
@@ -560,7 +568,7 @@ Updated agent list: [final list]
 Then output the dispatch checklist:
 
 ```
-Plan review — dispatching:
+Plan review round N of 3 — dispatching:
 - [ ] agent-name-1
 - [ ] agent-name-2
 - [ ] agent-name-3
@@ -573,7 +581,19 @@ Plan review — dispatching:
 
 Dispatch all review agents in parallel. Collect feedback.
 
-If agents have findings, classify per `[sdlc-root]/process/finding-classification.md`. Planning context uses FIX, DECIDE, and PRE-EXISTING only. External findings enter the same table, attributed `[external:<model>]` — the external model never revises the plan, and uncorroborated architectural objections that contradict a recorded chronicle/ADR decision lean DECIDE, not FIX (it lacks that context by design). Output the classification table, then:
+<!-- MIRROR-START: review-fix-loop.md#plan-review-mechanics -->
+**Plan review loop — critical mechanics.** Canonical protocol: `[sdlc-root]/process/review-fix-loop.md` § Plan Review. Shared definitions (severity, deduplication, scope-change marker, Open Minor Findings): `[sdlc-root]/process/finding-classification.md`. These steps are inlined so that skipping the read does not skip the behavior.
+
+1. **Fresh reviewer subagents, every round.** Dispatch each reviewer as a new subagent in its own context window — never a resumed reviewer from an earlier round. Re-review prompts include the previous round's findings table and what the revision changed, require reading the current plan file rather than recalling it, ask for regressions beyond the prior findings, and state that a clean report is an expected, acceptable outcome.
+2. **Deduplicate, calibrate, then classify.** Merge duplicates first, then calibrate every severity by impact × likelihood (the impact on the implementation if the plan is executed as written), then classify each finding in the Classification Table. Fill the `Scope change` column for every FIX finding: `yes` if the fix changes the approach, adds or removes files, or changes a phase or agent assignment. Never downgrade a severity to reach the exit bar.
+3. **One revision dispatch per round.** All FIX findings go to the writing agent in a single revision dispatch. DECIDE findings go to CD via `AskUserQuestion`. PRE-EXISTING findings appear in the table and need no action.
+4. **Re-review trigger is mechanical.** Before the revision dispatch, record the plan's Files list and phase/agent assignments from your last Read of the plan file; after the writer returns, Read it again and compare. Re-review is mandatory if ANY of these is true: (1) any FIX finding has `Scope change` = yes, (2) the revised plan's Files list differs from the pre-revision Files list, or (3) a phase was added, removed, or its assigned agent changed. Otherwise there is no re-review. Read the `Scope change` column and compare the before/after Files list; do not reason about whether the revision "changed the approach."
+5. **Re-review dispatches the full roster.** The roster is the round-1 dispatch checklist (plus the external reviewer, inside its own 2-round cap). When re-review fires, dispatch every reviewer on it — not a subset chosen by what the revision changed. Plans have no narrow re-review.
+6. **Exit bar.** Review ends when no `critical` or `major` FIX finding remains unaddressed and no DECIDE finding is unresolved. Minor FIX findings the revision did not incorporate go in an **Open Minor Findings** table in the plan file. They are never silently closed; only CD closes them.
+7. **Three-round cap.** At most 3 review rounds: the first round plus up to 2 re-reviews, and every round counts. If any `critical` or `major` finding is open at the cap, or round 3's revision fires a re-review trigger: stop, escalate to CD via `AskUserQuestion` with the open-findings table, and never claim the review is clean. At the cap with only minors open: exit with the Open Minor Findings table.
+<!-- MIRROR-END: review-fix-loop.md#plan-review-mechanics -->
+
+If agents have findings, deduplicate and calibrate them, then classify per `[sdlc-root]/process/finding-classification.md`. Planning context uses FIX, DECIDE, and PRE-EXISTING only, and the Classification Table carries the `Scope change` column. External findings enter the same table, attributed `[external:<model>]` — the external model never revises the plan, and uncorroborated architectural objections that contradict a recorded chronicle/ADR decision lean DECIDE, not FIX (it lacks that context by design). Output the classification table, then:
 
 - Only FIX findings go to the writing agent for revision
 - DECIDE findings go to the user via `AskUserQuestion`
@@ -583,18 +603,16 @@ If agents have findings, classify per `[sdlc-root]/process/finding-classificatio
 
 ```
 Plan revision — dispatching:
-- [ ] [writing-agent-name]: incorporate N findings (K critical, M major), overwrite plan file
+- [ ] [writing-agent-name]: incorporate N findings (K critical, M major, P minor; S scope-change), overwrite plan file
 ```
 
 The checkbox-must-match-dispatch rule from Step 5 applies here too. If you find yourself editing the plan directly — or saving the agent's returned body yourself — stop. Both violate the Manager Rule.
 
-**Re-review criteria:** Re-review is mandatory if ANY of the following is true: (1) any FIX finding has Severity = `critical`, (2) the revised plan's file list differs from the pre-revision file list, or (3) a phase was added, removed, or its assigned agent changed. Otherwise — no FIX findings met these criteria — skip re-review. This check is mechanical: scan the Severity column and compare the before/after Files list. Do not reason about whether the revision "changed the approach."
+**Re-review:** the trigger and the roster are mechanical (steps 4–5 of the block above). The roster is the round-1 dispatch checklist (the step-1 list as reconfirmed by AGENT-RECONFIRM) — re-emit that same checklist each round with N updated (`Plan review round N of 3 — dispatching:`), dropping the `external-reviewer` entry once its 2-round cap is spent, and do not reason about which agents are "relevant to this revision." If the external reviewer is configured, it re-reviews with the roster, capped at **2 rounds** of its own inside the loop's three-round cap; after that, classify any remaining new external findings as DECIDE and surface to CD rather than looping.
 
-**Re-review dispatch procedure:** When re-review is required, dispatch ALL agents from the step-1 list — not a subset selected based on what changed in the revision. The step-1 agent list determines who reviews. Do not reason about which agents are "relevant to this revision." ALL means the step-1 list. If the external reviewer is configured, it re-reviews with the roster — capped at **2 rounds total**; after that, classify any remaining new external findings as DECIDE and surface to CD rather than looping.
+**Stopping condition:** the exit bar (step 6 of the block above) — no critical or major FIX finding unaddressed, no DECIDE unresolved. Minor FIX findings the revision did not incorporate are listed, not dropped.
 
-**Stopping condition:** All agents report no critical or major findings. Minor findings may be acknowledged without a fix — document the decision.
-
-Once the stopping condition is met, append a **Domain Agent Reviews** section to the plan file using the `Edit` tool. This section is mechanical metadata (summary of review outcomes) and falls under the manager's allowed direct edits per `[sdlc-root]/process/manager-rule.md`. Do not modify any other part of the file — only append the new section at the end. **This section is mandatory — the plan is not complete without it, even when no agents found issues.**
+Once the stopping condition is met, append a **Domain Agent Reviews** section to the plan file using the `Edit` tool — followed by an **Open Minor Findings** table (`[sdlc-root]/process/finding-classification.md` § Open Minor Findings) when any minors remain open. Both are mechanical metadata (summary of review outcomes) and fall under the manager's allowed direct edits per `[sdlc-root]/process/manager-rule.md`. Do not modify any other part of the file — only append the new sections at the end. **The Domain Agent Reviews section is mandatory — the plan is not complete without it, even when no agents found issues.**
 
 ```markdown
 ## Domain Agent Reviews
@@ -667,6 +685,11 @@ Not every invocation needs a deliverable ID. For ad hoc work (bug fixes, small t
 | "I'll write the plan myself" | Domain agents write. You orchestrate. See Manager Rule. |
 | "Skip the spec, it's straightforward" | The spec is the contract between CD and CC. No spec, no plan. |
 | "I don't need plan review" | Domain agents catch non-obvious issues in obvious plans. |
+| "This finding is critical now, so re-review must fire" / "It's only major, so no re-review" | Plan re-review reads the `Scope change` column and the before/after Files and phase/agent lists — never the Severity column. |
+| "The plan needed a third revision — one more round and it'll converge" | Plan review is capped at three rounds. At the cap with critical or major findings open, escalate to CD via `AskUserQuestion` with the open-findings table. |
+| "I'll resume last round's reviewers — they already know the plan" | Every round uses fresh subagents. Pass the prior findings table and what the revision changed; require reading the current plan file. |
+| "Only the reviewers who found issues need to re-check the revision" | Plans have no narrow re-review. A fired trigger re-dispatches the full round-1 roster; no trigger means no re-review. |
+| "Add one more reviewer, just in case" | Breadth is per touched domain, not headcount. Beyond five reviewers, each extra agent needs a one-sentence statement of what it uniquely adds. |
 | "Only one domain is involved" | Most tasks touch 2+ domains. Check again. |
 | "Skip straight to coding, the plan is obvious" | Planning catches issues that cost 10x more to fix during execution. |
 | "Ready to dispatch" / "Let me dispatch now" | Never narrate readiness — just dispatch. The plan is already approved. |
@@ -674,7 +697,7 @@ Not every invocation needs a deliverable ID. For ad hoc work (bug fixes, small t
 | "I'll ask for approval and offer the explainer in one question" | Never bundle them. The offer is its own interaction; if CD accepts, deliver the HTML, then ask for approval. |
 | "I'll use opus for everything to be safe" | Model tiers are pre-assigned in agent frontmatter. Trust the assignment. |
 | "The agent will figure out what skills to load" | Iron Law 2: subagents don't inherit skill awareness. Load skills in the prompt. |
-| "Playbook match: none" (without having read the catalog) | A bare "none" is fabrication unless you can list the slugs you scanned. Read `playbooks/README.md`, name every candidate, and give a per-candidate verdict. Deriving the roster from a precedent instead of scanning is how a real, overlapping playbook gets missed. |
+| "Playbook match: none" (without having read the catalog) | A bare "none" is fabrication unless you can list the slugs you scanned. Read `[sdlc-root]/playbooks/README.md`, name every candidate, and give a per-candidate verdict. Deriving the roster from a precedent instead of scanning is how a real, overlapping playbook gets missed. |
 | "I'll ask all my questions at once to save time" | Batched questions get shallow answers. One question at a time surfaces real constraints. |
 | "The approach is obvious, no prototype needed" | Have we built this integration before? If no, define the question a prototype or feasibility audit would answer. If yes, cite the precedent. |
 | "P0 will prove the primitives, then we'll phase the rest" | If the answer changes the plan's structure (one deliverable vs. split, phase count, scope), it's a planning-time question — run the Feasibility Gate now, don't defer it to an execution spike and phase on a guess. |

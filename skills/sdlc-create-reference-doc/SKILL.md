@@ -36,9 +36,11 @@ digraph sdlc_create_reference_doc {
     "2. Agent Selection\n(primary author + review quorum)" [shape=box];
     "3. Author Dispatch\n(single domain agent)" [shape=box];
     "4. Review Quorum\n(parallel dispatch — 2-3 domain\nagents + code-reviewer)" [shape=box];
-    "Any findings?" [shape=diamond];
-    "5. Fix Loop\n(finding agent fixes;\nre-dispatch ALL reviewers)" [shape=box];
+    "Anything left to fix?\n(critical/major, open INVESTIGATE/DECIDE,\nminors awaiting batch pass)" [shape=diamond];
+    "5. Fix Loop\n(fix critical+major, then one minor batch;\nmechanical re-review roster; max 3 rounds)" [shape=box];
     "6. Register\n(docs/reference/{category}/{slug}.md\n+ docs/reference/_index.md)" [shape=box];
+    "Round 3 done?" [shape=diamond];
+    "Escalate to CD\n(AskUserQuestion,\nopen-findings table)" [shape=box, color=red];
     "7. Commit\n(docs[D-numbers](reference): ...)" [shape=doublecircle];
 
     "1. Intake\n(scope, category, audience,\nrelated deliverables, anchors)" -> "Scope clear?";
@@ -47,10 +49,13 @@ digraph sdlc_create_reference_doc {
     "Scope clear?" -> "2. Agent Selection\n(primary author + review quorum)" [label="yes"];
     "2. Agent Selection\n(primary author + review quorum)" -> "3. Author Dispatch\n(single domain agent)";
     "3. Author Dispatch\n(single domain agent)" -> "4. Review Quorum\n(parallel dispatch — 2-3 domain\nagents + code-reviewer)";
-    "4. Review Quorum\n(parallel dispatch — 2-3 domain\nagents + code-reviewer)" -> "Any findings?";
-    "Any findings?" -> "5. Fix Loop\n(finding agent fixes;\nre-dispatch ALL reviewers)" [label="yes"];
-    "5. Fix Loop\n(finding agent fixes;\nre-dispatch ALL reviewers)" -> "4. Review Quorum\n(parallel dispatch — 2-3 domain\nagents + code-reviewer)";
-    "Any findings?" -> "6. Register\n(docs/reference/{category}/{slug}.md\n+ docs/reference/_index.md)" [label="no — all clean"];
+    "4. Review Quorum\n(parallel dispatch — 2-3 domain\nagents + code-reviewer)" -> "Anything left to fix?\n(critical/major, open INVESTIGATE/DECIDE,\nminors awaiting batch pass)";
+    "Anything left to fix?\n(critical/major, open INVESTIGATE/DECIDE,\nminors awaiting batch pass)" -> "Round 3 done?" [label="yes"];
+    "Round 3 done?" -> "5. Fix Loop\n(fix critical+major, then one minor batch;\nmechanical re-review roster; max 3 rounds)" [label="no"];
+    "Round 3 done?" -> "Escalate to CD\n(AskUserQuestion,\nopen-findings table)" [label="yes — critical/major open"];
+    "Round 3 done?" -> "6. Register\n(docs/reference/{category}/{slug}.md\n+ docs/reference/_index.md)" [label="yes — only minors open"];
+    "5. Fix Loop\n(fix critical+major, then one minor batch;\nmechanical re-review roster; max 3 rounds)" -> "4. Review Quorum\n(parallel dispatch — 2-3 domain\nagents + code-reviewer)";
+    "Anything left to fix?\n(critical/major, open INVESTIGATE/DECIDE,\nminors awaiting batch pass)" -> "6. Register\n(docs/reference/{category}/{slug}.md\n+ docs/reference/_index.md)" [label="no — exit bar met\n(open minors → commit message)"];
     "6. Register\n(docs/reference/{category}/{slug}.md\n+ docs/reference/_index.md)" -> "7. Commit\n(docs[D-numbers](reference): ...)";
 }
 ```
@@ -139,30 +144,40 @@ Dispatch every agent in the quorum **in parallel** (single message, multiple Age
 - **Primary-domain reviewers** (not the author) — technical accuracy, completeness of coverage, correctness of examples, currency of gotchas.
 - **code-reviewer** — template compliance (frontmatter schema, section presence, section order), `path:line` anchor accuracy (the line ranges must actually contain what the doc claims), broken internal links, markdown validity.
 
-Each reviewer reports findings in the shared format:
+Each reviewer reports findings on the shared severity scale (`[sdlc-root]/process/finding-classification.md` § Severity Levels — impact is measured on a reader acting on what the doc says):
 
 ```
-CRITICAL: [...]
-HIGH: [...]
-MEDIUM: [...]
-LOW: [...]
+critical | doc § section | finding   — a reader acting on the doc would very likely break something (wrong anchor to a destructive path, wrong contract)
+major    | doc § section | finding   — significant inaccuracy or missing mandatory content a reader is likely to hit
+minor    | doc § section | finding   — partial gap, a workaround exists, or cosmetic
 CLEAN: [...]
 ```
 
 ### 5. Fix Loop
 
-Follow the review-fix loop pattern from `[sdlc-root]/process/review-fix-loop.md`. The critical mechanics:
+Run the review-fix loop from `[sdlc-root]/process/review-fix-loop.md`. The step 4 dispatch is **review round 1**. The roster is the step 4 quorum; this skill's **standing reviewer** is `code-reviewer` (on every quorum), so a narrow re-review is the reviewers who raised the fixed findings plus `code-reviewer`. Reference docs use the shared severity bar as-is — there is no separate HIGH/MEDIUM tier. Findings that calibrate as `minor` do not block the loop: they get one batched fix pass once no critical or major findings remain, and those still open after it go to the Open Minor Findings list (commit message). Classify each finding per `[sdlc-root]/process/finding-classification.md` — reference docs use FIX, INVESTIGATE, and DECIDE. The External Review Gate does not apply to reference docs. Every re-review round emits the `review-fix-loop.md` Step A checklist (`Review round N of 3 — dispatching (full roster | narrow: raisers + standing reviewers):`) before dispatch.
 
-1. **Collect** all findings across reviewers.
-2. **Triage:** who owns each fix? Usually the primary author; template/anchor fixes can go to code-reviewer if the finding is mechanical. Fixes passing the Manager Rule's delegation-economics test (e.g., typos, formatting) may be self-applied and re-reviewed; the rest get dispatched.
-3. **Dispatch** the fixing agent(s) with the specific findings list. If an agent returns without applying its fix, re-dispatch with a revised prompt; only a remaining gap that passes the economics test may be closed directly (with review).
-4. **Re-dispatch ALL reviewers** (not just the one who raised the finding). Re-review is mandatory after every fix round. Repeat until every reviewer reports clean.
+**Snapshot for a new doc.** The doc is usually a new, untracked file. Take the pre- and post-fix snapshots with the temporary-index command in `[sdlc-root]/process/review-fix-loop.md` Step C — it includes untracked files, so `git diff <pre-fix> <post-fix>` shows the doc's fix diff (`git stash create` would miss it).
 
-Exit condition: every reviewer returns no CRITICAL, HIGH, or MEDIUM findings. LOW findings can be deferred to the doc's next revision if explicitly acknowledged in the commit. **Do not claim the loop exited clean without a review round that produced zero actionable findings.**
+<!-- MIRROR-START: review-fix-loop.md#code-review-mechanics -->
+**Review-fix loop — critical mechanics.** Canonical protocol: `[sdlc-root]/process/review-fix-loop.md`. Shared definitions (severity, deduplication, Open Minor Findings): `[sdlc-root]/process/finding-classification.md`. These steps are inlined so that skipping the read does not skip the behavior.
+
+1. **Verification gate before every round.** Run tests, type checks, lint, and configured static analysis before the first review round and again after every fix round. Fix failures before dispatching reviewers. (Reference docs have no build gate; they skip this step.)
+2. **Fresh reviewer subagents, every round.** Dispatch each reviewer as a new subagent in its own context window — never inline, never a resumed reviewer from an earlier round. Re-review prompts include the previous round's findings table and the fix diff, require reading the current artifact rather than recalling it, ask for regressions beyond the prior findings, and state that a clean report is an expected, acceptable outcome. Reviewers report findings only; they never fix.
+3. **Deduplicate, calibrate, then classify.** Merge duplicates first: the same issue at the same location becomes one finding that keeps the highest reported severity. Then calibrate every severity by impact × likelihood before labelling it. Then classify each finding in the Classification Table. Never downgrade a severity to reach the exit bar.
+4. **Fix critical and major findings each round.** Resolve every INVESTIGATE and DECIDE finding. Minor FIX findings wait: once no critical or major findings remain, they get one batched fix pass. Before dispatching any fix, record the pre-fix snapshot — the tree hash printed by `t=$(mktemp); cp "$(git rev-parse --git-dir)/index" "$t"; GIT_INDEX_FILE="$t" git add -A; GIT_INDEX_FILE="$t" git write-tree; rm -f "$t"` (it includes untracked files and never touches the working tree or the real index) — and run the same command after the fixes for the post-fix snapshot.
+5. **Re-review roster is mechanical.** After every fix round, including the minor batch pass: if any applied fix was `critical` or `major`, or the touched files (`git diff --name-only` between the pre-fix and post-fix snapshots) go beyond the files named in the fixed findings, dispatch the **full roster**. Otherwise dispatch **only the reviewers who raised the fixed findings, plus the standing reviewers** (code-reviewer and software-architect; for reference docs, the skill's standing reviewer, code-reviewer), scoped to the fix diff. A fix that touches a new domain adds that domain's reviewer. Read the Severity column and compare file sets; do not reason about relevance.
+6. **Exit bar.** The loop exits when no `critical` or `major` FIX finding remains open, no INVESTIGATE or DECIDE finding is unresolved, and the accumulated minors have had their one batched fix pass (or the cap leaves no round to re-review it). Minor FIX findings still open go in an **Open Minor Findings** table. They are never silently closed; only CD closes them.
+7. **Three-round cap.** At most 3 review rounds per loop: the first round plus up to 2 re-reviews. Every round counts, including the re-review after the minor batch pass and rounds re-opened by External Review Gate findings. At the cap with any `critical` or `major` finding open: stop, escalate to CD via `AskUserQuestion` with the open-findings table, and never claim the loop is clean. At the cap with only minors open: exit with the Open Minor Findings table.
+<!-- MIRROR-END: review-fix-loop.md#code-review-mechanics -->
+
+**Fix ownership:** usually the primary author; template/anchor fixes can go to code-reviewer if the finding is mechanical. Fixes passing the Manager Rule's delegation-economics test (e.g., typos, formatting) may be self-applied and are re-reviewed like any other fix; the rest get dispatched with the specific findings list. If an agent returns without applying its fix, re-dispatch with a revised prompt; only a remaining gap that passes the economics test may be closed directly (with review).
+
+**Open minors go in the commit message.** Minor findings still open at loop exit are listed in the commit body (step 7) under `Open minor findings:` — one line each with reviewer, `§ section`, and finding. They are not silently deferred; only CD closes them.
 
 ### 6. Register
 
-Once review is clean:
+Once the fix loop exits under its exit bar:
 
 1. Confirm the file is at `docs/reference/{category}/{slug}.md`.
 2. Update `docs/reference/_index.md` — add a row to the index table. If the index file does not exist, create it with a header + initial table schema (columns: `Title`, `Category`, `Owner`, `Audience`, `Last Verified`, `Link`).
@@ -179,10 +194,13 @@ docs[{D-numbers}](reference): add {slug} reference doc
 
 {1-2 sentences — what system is now documented and why}
 
+Open minor findings:
+- [reviewer] § section — finding
+
 Co-Authored-By: {model-name-and-version} <noreply@anthropic.com>
 ```
 
-(The `{model-name-and-version}` placeholder follows the repo's current commit convention at author time — do not hardcode a specific model version in this skill; model strings drift.)
+Omit the `Open minor findings:` block when none are open. (The `{model-name-and-version}` placeholder follows the repo's current commit convention at author time — do not hardcode a specific model version in this skill; model strings drift.)
 
 If the doc was produced as a follow-up to a specific deliverable, include the D-number in the commit scope so the traceability survives git log.
 
@@ -229,6 +247,8 @@ Write for an agent that has never seen this code before. If a human reads it too
 | "I'll write this doc myself — it's just a reference" | Manager Rule. Dispatch the domain author. |
 | "One domain agent can author AND review" | The author cannot be in the review quorum. Review catches blind spots the author has. |
 | "Skip the review loop — the doc looks clean" | The loop is where `path:line` anchors get verified against current code and cross-domain accuracy surfaces. Run it. |
+| "Only the reviewer who raised it needs to re-check the fix" | The re-review roster is mechanical: the full quorum if any fix was critical or major or touched files beyond the findings; otherwise the raisers plus `code-reviewer`. |
+| "Round 3 still has a major — the doc is close enough, commit it" | At the cap with critical or major findings open, stop and escalate via `AskUserQuestion` with the open-findings table. Never claim the loop is clean. |
 | "Freeform sections are fine for this doc" | No. The template is the contract — section order is how agents find information. Deviations break agent parseability. |
 | "File names without line numbers are good enough" | They aren't. DO NOT write `service.py — contains search logic`. Instead write `service.py:1334-1728 — search() instrumented body`. Line numbers are the whole point of the anchor. |
 | "The author can draft from memory — they know this domain" | No. The dispatch prompt must require reading the current files. Memory-sourced docs drift within days. |
@@ -247,6 +267,7 @@ Write for an agent that has never seen this code before. If a human reads it too
 - `[sdlc-root]/process/agent-selection.yaml` — domain-to-agent mapping used during agent selection. Single source of truth shared with planning and review skills.
 - `[sdlc-root]/process/manager-rule.md` — agent-dispatch discipline.
 - `[sdlc-root]/process/review-fix-loop.md` — review iteration cadence.
+- `[sdlc-root]/process/finding-classification.md` — severity scale, deduplication, classification, Open Minor Findings.
 - `[sdlc-root]/process/review-lenses.md` — per-agent review lens definitions.
 
 ---
@@ -255,7 +276,7 @@ Write for an agent that has never seen this code before. If a human reads it too
 
 - **Depends on:** at least one code artifact to reference (the skill documents existing systems, not proposed ones — proposed systems use `sdlc-plan` / `sdlc-lite-plan`).
 - **Feeds into:** `docs/reference/_index.md` catalog; future coding-agent investigations into the documented system; `sdlc-reflect` (suggests it when documentation surfaces cross-discipline insights beyond the reference doc itself).
-- **Uses:** domain agents (as author and reviewers), `code-reviewer` (template + anchor verification), `[sdlc-root]/templates/reference_doc_template.md`, `[sdlc-root]/process/agent-selection.yaml`.
+- **Uses:** domain agents (as author and reviewers), `code-reviewer` (template + anchor verification), `[sdlc-root]/templates/reference_doc_template.md`, `[sdlc-root]/process/agent-selection.yaml`, `[sdlc-root]/process/review-fix-loop.md`, `[sdlc-root]/process/finding-classification.md`.
 - **Knowledge routing:** `[sdlc-root]/knowledge/agent-context-map.yaml` (dispatch-time injection for author and reviewers), `[sdlc-root]/knowledge/dx/developer-documentation-patterns.yaml` (author dispatch).
 - **Complements:** `sdlc-develop-agent` (agent definitions), `sdlc-develop-skill` (skill definitions), `sdlc-lite-plan` / `sdlc-plan` (produces result docs that reference docs often cite).
 - **Does NOT replace:** SDLC result docs (deliverable-bound, archived with the deliverable), customer-facing product docs (project-specific docs site), runbooks (alert-triggered procedural).

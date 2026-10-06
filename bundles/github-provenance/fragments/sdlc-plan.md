@@ -34,7 +34,7 @@ Fires the moment CD approves the spec. Commit and push the spec via `commit-and-
 
 ### CP-3 — plan approved after agent review
 
-Fires once the plan review loop is clean, before execution is handed off. Commit and push the plan, then comment the approach, the phase list, what review surfaced, and whether the external-review gate participated. Link the plan SHA-pinned (and the plan-review findings doc when one exists).
+Fires once the plan review loop meets its exit bar, before execution is handed off. Commit and push the plan, then comment the approach, the phase list, what review surfaced, and whether the external-review gate participated. Link the plan SHA-pinned (and the plan-review findings doc when one exists).
 
 > **Editor's note — CP-3 is comment-only and writes NO Status. Do not "fix" this.** CP-3 sits between CP-2 (which writes `spec-approved`) and CP-4 (which writes `executing`), and the fact that both neighbours write is exactly why someone will eventually assume this one does too. Call no Status recipe here.
 

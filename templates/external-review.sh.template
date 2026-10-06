@@ -48,7 +48,7 @@ codex exec \
   "You are an independent reviewer giving a second opinion. The payload in the <stdin> block begins with a rubric header that defines the artifact under review, the task, and the output format — follow it exactly. Report only real problems; skip style and preference comments.
 
 If the rubric does not specify an output format, return findings one per line as: SEVERITY | location | finding
-where SEVERITY is one of: critical, major, minor.
+where SEVERITY is one of: critical, major, minor (impact x likelihood: critical = certain or very likely data loss, breach, or complete failure; major = significant impact, likely to manifest; minor = partial, workaround exists, or cosmetic).
 If there are no findings, return nothing." \
   >/dev/null
 

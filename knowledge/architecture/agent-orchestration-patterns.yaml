@@ -180,6 +180,14 @@ rules:
       Beyond 5 agents in one round, the consolidation overhead almost
       always exceeds the parallelism benefit — split into sequential
       rounds with intermediate consolidation.
+
+      Review rosters apply this through the roster rule in
+      review-fix-loop.md Step A: code-reviewer and software-architect
+      plus one reviewer per touched domain ("when in doubt" covers
+      domains, not headcount). Because every touched domain must be
+      reviewed in the same round, a review roster is not split —
+      instead each reviewer beyond five must pass the one-sentence
+      "what does this agent uniquely contribute?" test below.
     rationale: |
       Each agent dispatch consumes context tokens (dispatch prompt) and
       produces output tokens (findings) that the orchestrator must read

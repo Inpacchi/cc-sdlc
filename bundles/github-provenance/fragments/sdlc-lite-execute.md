@@ -27,9 +27,9 @@ These are **not** sequential steps. They are a branch available at **any** point
 
 The `stakeholder-blocked` column means **awaiting stakeholder feedback**, and nothing else. The internal review loop never writes it — the card stays at `executing` throughout. (That distinction is CP-6's job in the full-SDLC flow; lite deliverables have no CP-6, so the rule shows up here instead: the review loop moves no column.)
 
-### CP-7 — review loop clean, work committed
+### CP-7 — review loop exited, work committed
 
-Fires after the review loop exits clean and the work is committed. Comment-only — no Status write. Comment what shipped in plain language, the commit SHAs and any pull-request links, and any deviation from the plan and why. The commits are already pushed, so this checkpoint pays no git cost.
+Fires after the review loop meets its exit bar (no critical or major findings open) and the work is committed. Comment-only — no Status write. Comment what shipped in plain language, the commit SHAs and any pull-request links, and any deviation from the plan and why. The commits are already pushed, so this checkpoint pays no git cost.
 
 ### CP-8 — result doc written, catalog moves to Validated
 
