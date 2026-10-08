@@ -1,6 +1,6 @@
 ## GitHub Checkpoints
 
-**Activation gate:** skip this entire section unless `[sdlc-root]/process/github-checkpoints.md` exists and its config block says `enabled: true`.
+**Activation gate:** skip this entire section unless `[sdlc-root]/process/github-checkpoints.md` exists and its config block says `enabled: true`. In a headless run, unless the caller's prompt hands checkpoints to the run, each checkpoint below does only its local half (issue links when the issue is known, the local artifact commit) and puts its GitHub half under the result's `outbound` as a rendered entry for the caller. A headless run whose prompt names the deliverable's issue also writes any missing issue links (`github_issue:` frontmatter, the catalog link) before its own work, even when it skips registration (`[sdlc-root]/process/github-checkpoints.md` § Headless Runs).
 
 This skill owns **CP-10** and **CP-12**, the **parked-issue closure path**, the **archive-time checklist executor**, and a read-only **drift-detection hook** (which points at the audit skill's GitHub Provenance Reconciliation dimension rather than carrying its own copy of the join).
 
@@ -31,6 +31,8 @@ Some deliverables reach **Validated** carrying lifecycle checkpoints that could 
 **Execution.** Run the rows in the order the doc states. Do not reorder, do not skip, do not batch. For the standard shape that order is: **CP-8 → simulated CP-9 → CP-10 part 1 → post-move link verification → CP-10 part 2.**
 
 - **CP-9 is simulated** for deliverables that never see a staging deploy. Invoke `resolve-and-write-status` **directly** against the `staged` column, accompanied by a comment that **says plainly it is a verification simulation of the checkpoint's Status write, not a real staging event.** Never let a simulated transition read as a genuine deploy narrative — a reader who cannot tell the difference has been misled by the provenance log, which is worse than a gap in it.
+
+**Headless run:** the checklist's GitHub rows become `outbound` entries for the same issue, in this order. The run sets CP-10's `close` when the local rows pass, and the caller's skip-on-failure does the per-row check (`[sdlc-root]/process/github-checkpoints.md` § Headless Runs).
 
 **Verify each row before proceeding to the next.** A row that fails stops the *checklist*, not the archive: report the failure, leave the issue **open** (CP-10 part 2 does not run), finish the file move and the catalog update, and leave the deliverable at Validated rather than marking it Complete. The never-block invariant governs the checkpoint; it does not license closing a thread whose verification did not pass.
 

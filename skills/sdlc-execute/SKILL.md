@@ -58,7 +58,9 @@ If the plan file doesn't exist or can't be found, **stop immediately** and tell 
 
 > No approved plan found. Run `sdlc-plan` first to create and review the plan.
 
-Do NOT write a plan yourself. Do NOT proceed without one.
+Do NOT write a plan yourself. Do NOT proceed without one. **Headless run:** end with status `failed`, reason: no approved plan at the expected path; run `sdlc-plan` first.
+
+**Headless restart.** When the prompt restarts this deliverable at a named stage (an answer to a phase triage, a DECIDE finding, or an escalated review), read the plan, the partial result doc and the earlier result's `notes`. Skip phases already complete, and continue from the stopped phase, or from the review loop at the recorded round with the frozen round-1 roster. Never redo a completed phase or restart the round count. Each headless stop's `notes` carry what a restart needs: completed phases and their commits, the current phase, and during review the round number, frozen roster and open-findings table (`[sdlc-root]/process/headless-mode.md` § Resuming).
 
 ## The Process
 
@@ -123,6 +125,10 @@ The full model is in `[sdlc-root]/process/collaboration_model.md` (role definiti
 
 **AskUserQuestion mandate:** every question directed at the user MUST use the `AskUserQuestion` tool — do not type questions as conversational text. Status updates and completion reports that need no response use normal text.
 
+<!-- MIRROR-START: headless-mode.md#headless-stop-rule -->
+**Headless runs (no person present).** This run is headless if the caller's prompt or appended system prompt has a line starting `SDLC headless mode:`, or if no ask-the-user tool (`AskUserQuestion`, or the harness's equivalent such as OpenCode's `question`) can be used — none is available or loadable, or a call to it is denied without an answer. A dispatched subagent is never headless itself; in a headless run the orchestrator tells each subagent so, and the limits below bind it too. In a headless run, every point in this skill that asks CD something the next step depends on, waits for CD's approval, or escalates to CD **stops the run there**: save the work so far, return the questions, the document or action plan awaiting approval, or the open-findings table as the run's result (in the caller's output schema if it passed one), and end the turn normally — a stop is a result, not an error. A missing precondition the caller must fix ends the run with status `failed` and the reason. Never guess an answer, take a default for a decision CD owns, approve your own work, or skip the gate. List questions the next step does not depend on in the result instead of stopping. Take the no path on optional offers. Cause no side effect outside the working tree — no push, post, comment, label, publish, external send, or live-system change — unless the caller's prompt names it; list those actions in the result. Reads are fine. A question the prompt or thread already answers is not a gate. Full rule and result format: `[sdlc-root]/process/headless-mode.md`.
+<!-- MIRROR-END: headless-mode.md#headless-stop-rule -->
+
 **Anti-patterns to avoid:** (1) code assertion without verification — never answer "how does X work" from memory; grep/read the code first; (2) trajectory poisoning — if the agent is off track after 2-3 corrections, clear context and start fresh rather than continuing to correct in a poisoned trajectory.
 
 ## Deliverable Lifecycle
@@ -182,7 +188,7 @@ Triage: BUILD
 ```
 
 Verbose form (use when any of these triggers fires):
-- **Triage ≠ BUILD** — SKIP or REVISE_PLAN (stop and wait for CD confirmation; document SKIPs in the result doc under 'Skipped Phases'; do not self-modify the approved plan)
+- **Triage ≠ BUILD** — SKIP or REVISE_PLAN (stop and wait for CD confirmation; document SKIPs in the result doc under 'Skipped Phases'; do not self-modify the approved plan). **Headless run:** stop with status `needs-input`, giving the phase, SKIP or REVISE_PLAN, and the reason; completed phases stay, and the phase is neither skipped nor rewritten until CD answers (`[sdlc-root]/process/headless-mode.md`).
 - **Pattern found** — LSP `goToImplementation`/`findReferences` or Grep surfaced a precedent that's actively shaping the implementation (cite the path)
 - **External data** — the phase reads from any source other than the codebase (URL, repo, API, document)
 - **Dependency re-check** — the Phase plan table needs amending (mid-execution re-sequencing, late-discovered conflict)
@@ -524,12 +530,12 @@ Files changed:
 - {file path}
 ```
 
-8. If on a feature branch, push and create a PR
+8. If on a feature branch, push and create a PR. **Headless run:** do neither; list both under the result's `outbound`.
 9. Emit the **Completion Report** (step 5)
 
 ### 5. Completion Report
 
-Every execution MUST end with a Completion Report presented to the user. This is the final output — the definitive summary of what happened. Emit this block after all commits are made:
+Every execution MUST end with a Completion Report presented to the user. This is the final output — the definitive summary of what happened. Emit this block after all commits are made. (**Headless run:** the Headless Result follows the report as the very last output — `[sdlc-root]/process/headless-mode.md`.)
 
 ```
 # [deliverable ID] — Completion Report

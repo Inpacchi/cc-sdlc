@@ -28,6 +28,10 @@ The full model is in `[sdlc-root]/process/collaboration_model.md` (role definiti
 
 **AskUserQuestion mandate:** every question directed at the user MUST use the `AskUserQuestion` tool — do not type questions as conversational text. Status updates and completion reports that need no response use normal text. Planning is where this matters most — CC proposes approaches, CD approves.
 
+<!-- MIRROR-START: headless-mode.md#headless-stop-rule -->
+**Headless runs (no person present).** This run is headless if the caller's prompt or appended system prompt has a line starting `SDLC headless mode:`, or if no ask-the-user tool (`AskUserQuestion`, or the harness's equivalent such as OpenCode's `question`) can be used — none is available or loadable, or a call to it is denied without an answer. A dispatched subagent is never headless itself; in a headless run the orchestrator tells each subagent so, and the limits below bind it too. In a headless run, every point in this skill that asks CD something the next step depends on, waits for CD's approval, or escalates to CD **stops the run there**: save the work so far, return the questions, the document or action plan awaiting approval, or the open-findings table as the run's result (in the caller's output schema if it passed one), and end the turn normally — a stop is a result, not an error. A missing precondition the caller must fix ends the run with status `failed` and the reason. Never guess an answer, take a default for a decision CD owns, approve your own work, or skip the gate. List questions the next step does not depend on in the result instead of stopping. Take the no path on optional offers. Cause no side effect outside the working tree — no push, post, comment, label, publish, external send, or live-system change — unless the caller's prompt names it; list those actions in the result. Reads are fine. A question the prompt or thread already answers is not a gate. Full rule and result format: `[sdlc-root]/process/headless-mode.md`.
+<!-- MIRROR-END: headless-mode.md#headless-stop-rule -->
+
 **Anti-patterns to avoid:** (1) code assertion without verification — never answer "how does X work" from memory; grep/read the code first; (2) trajectory poisoning — if the agent is off track after 2-3 corrections, clear context and start fresh rather than continuing to correct in a poisoned trajectory.
 
 ## Deliverable Lifecycle
@@ -80,7 +84,7 @@ This skill produces three artifacts:
 | Spec | `docs/current_work/specs/dNN_name_spec.md` | 2 |
 | Plan | `docs/current_work/planning/dNN_name_plan.md` | 5 |
 
-When complete, prompt the user to begin execution:
+When complete in an interactive run, prompt the user to begin execution (a headless run ends with status `awaiting-approval` and the plan path instead):
 
 > Planning complete. The approved plan is at `docs/current_work/planning/dNN_name_plan.md`.
 >
@@ -207,6 +211,15 @@ Dispatch prompts must pass through all relevant context — outcomes, constraint
 
 **If a deliverable ID already exists** (user says "plan D7" or references an existing catalog entry), skip registration — read the catalog to confirm the ID exists and proceed to step 1.
 
+**Headless restart.** When the prompt restarts an existing deliverable at a named stage, skip registration and every step before that stage, and never mint a second D-number. Read the saved spec or plan and the earlier result's `notes` instead. Then:
+- **CD approved the spec:** if the saved spec still matches the version that was awaiting approval, set its `**Status:**` to Ready and start at step 3d. If it has changed since, stop again with `awaiting-approval`.
+- **CD gave feedback on the spec:** start at the SPEC-REVISION block in step 3.
+- **CD answered a discovery question or a FAR fail:** continue at the DISCOVERY-GATE in step 1, then the FAR gate. Findings CD accepted or discarded in the thread do not stop the run again.
+- **CD answered a FACTS fail:** resume at the FACTS gate in step 4. Step 5's round 1 then runs AGENT-RECONFIRM as usual.
+- **CD answered DECIDE findings or an escalated review:** resume step 5 at the recorded review round with the frozen round-1 roster. Do not re-run AGENT-RECONFIRM.
+
+Never re-run finished discovery or rewrite an approved spec. Each headless stop's `notes` carry what a restart needs: the D-number, complexity, the worktree path or branch, the step-1 agent list, the plan's writing agent, the content hash (`git hash-object`) of a spec awaiting approval, the Prior context table and ADR constraints, the playbook match, and, during plan review, the round number, the frozen round-1 roster and the open-findings table (`[sdlc-root]/process/headless-mode.md` § Resuming).
+
 ### 1. Identify Relevant Domain Agents
 
 **Independent domain assessment** — start from the task, not from a template. Read the task description and assess which agent domains it touches. Consider both technical domains (frontend, backend, data pipeline) and analytical/specialist domains (meta-analysis, design, accessibility, domain-specific expertise). An agent belongs in the list if their expertise would catch issues or improve quality that other agents would miss. Build this initial list before consulting any playbook.
@@ -253,7 +266,9 @@ Gate: PASS | FAIL (need [N] more questions)
 
 Ask clarifying questions **one at a time** — batched questions get vague answers. Search the codebase BEFORE asking — don't ask what you can look up. Use LSP (`goToDefinition`, `findReferences`, `hover`) to verify function signatures, trace dependencies, and understand interface contracts — do not read files and infer types. Fall back to Grep for string literals and non-TypeScript content. If the gate shows FAIL, ask more questions before proceeding.
 
-**FAR Gate (MEDIUM/COMPLEX only)** — after DISCOVERY-GATE passes, score each discovery finding using the FAR rubric in `[sdlc-root]/process/input-quality-gates.md`. This is a soft gate: present the scores and let the human decide whether to proceed, re-research, or discard low-scoring findings. Skip for SIMPLE complexity.
+**Headless run:** questions the prompt, the thread or CD's earlier answers already settle count toward the minimum; cite where each was answered. If the gate still shows FAIL, stop with status `needs-input` carrying the single most blocking question. Never mark PASS without the count, lower the minimum, or batch several questions into one stop.
+
+**FAR Gate (MEDIUM/COMPLEX only)** — after DISCOVERY-GATE passes, score each discovery finding using the FAR rubric in `[sdlc-root]/process/input-quality-gates.md`. This is a soft gate: present the scores and let the human decide whether to proceed, re-research, or discard low-scoring findings. Skip for SIMPLE complexity. **Headless run:** if every finding passes, record the scores in the result's `notes` and proceed; otherwise stop with status `needs-input` and the scores.
 
 **Deep interview technique:** Don't ask obvious questions — dig into the hard parts the user hasn't considered:
 - **Edge cases** — "What happens when [unusual but plausible scenario]?"
@@ -395,7 +410,7 @@ Save to: `docs/current_work/specs/dNN_name_spec.md`
 
 ### 3. CD Approves the Spec
 
-**Hard gate.** Present the spec to the human and wait for explicit approval. Do NOT proceed to planning without approval. Implicit approval is fine ("looks good", "proceed", "yes").
+**Hard gate.** Present the spec to the human and wait for explicit approval. Do NOT proceed to planning without approval. Implicit approval is fine ("looks good", "proceed", "yes"). **Headless run:** save the spec, record its content hash (`git hash-object`) in the result's `notes`, and stop with status `awaiting-approval`; planning starts in a new run once CD has approved it (`[sdlc-root]/process/headless-mode.md`).
 
 If CD requests changes, classify before acting using the **SPEC-REVISION** block:
 
@@ -530,7 +545,7 @@ Every section required by the template — package impact, phase dependencies ta
 
 **After the writing agent confirms the save, Read the file to verify completeness before proceeding to review.** Check that every phase has: (1) a clear outcome statement, (2) acceptance criteria, and (3) file scope. Implementation guidance beyond these is at the planning agent's discretion and should not be stripped. If a phase is missing outcome or acceptance criteria, re-dispatch the writing agent to add them and re-save.
 
-**FACTS Gate** — after verifying completeness, score each phase using the FACTS rubric in `[sdlc-root]/process/input-quality-gates.md`. This is a soft gate: present the per-phase scores and overall mean, then let the human decide whether to proceed to review or revise low-scoring phases first. Phases with Clarity < 3 or Testability < 3 are worth flagging — reviewers will struggle to evaluate ambiguous or unverifiable phases.
+**FACTS Gate** — after verifying completeness, score each phase using the FACTS rubric in `[sdlc-root]/process/input-quality-gates.md`. This is a soft gate: present the per-phase scores and overall mean, then let the human decide whether to proceed to review or revise low-scoring phases first. Phases with Clarity < 3 or Testability < 3 are worth flagging — reviewers will struggle to evaluate ambiguous or unverifiable phases. **Headless run:** on a pass (every phase: mean ≥ 3.0, C ≥ 3, T ≥ 3), record the scores in the result's `notes` and proceed to review; on a fail, stop with status `needs-input` and the per-phase scores.
 
 Writer saves to: `docs/current_work/planning/dNN_name_plan.md`
 
@@ -645,11 +660,13 @@ Skip if nothing surfaced — do not fabricate entries. Budget: <3 minutes total.
 
 ### 6. Prompt for Execution
 
-The plan is reviewed and approved. Enter plan mode so the user gets the standard execution prompt with the option to clear context.
+The plan is reviewed. In an interactive run, enter plan mode so the user gets the standard execution prompt with the option to clear context.
 
 **Explainer precedes approval:** if CD opted into an HTML explainer of the plan, regenerate it now so it reflects the final revised plan **before** the execution prompt appears — CD approves what they last saw explained. Never generate it after the approval or in the same step as the approval prompt.
 
-Follow these sub-steps in exact order. Do not combine or skip any.
+**Headless run:** skip 6a–6c. Do not call `EnterPlanMode` or `ExitPlanMode`; the reviewed plan is saved, so stop with status `awaiting-approval` and the plan path (`[sdlc-root]/process/headless-mode.md`).
+
+**Interactive run:** follow these sub-steps in exact order. Do not combine or skip any.
 
 **6a.** Use the `Read` tool to read the plan file at `docs/current_work/planning/dNN_name_plan.md` (saved by the writing agent in step 4 and augmented with Domain Agent Reviews in step 5). You need the tool output — do not work from memory.
 
@@ -693,6 +710,7 @@ Not every invocation needs a deliverable ID. For ad hoc work (bug fixes, small t
 | "Only one domain is involved" | Most tasks touch 2+ domains. Check again. |
 | "Skip straight to coding, the plan is obvious" | Planning catches issues that cost 10x more to fix during execution. |
 | "Ready to dispatch" / "Let me dispatch now" | Never narrate readiness — just dispatch. The plan is already approved. |
+| "Headless run, spec or plan saved — I'll treat it as approved and keep going" | Approval happens outside a headless run. Stop with `awaiting-approval`; never call `EnterPlanMode` or `ExitPlanMode`, and never start the next stage in the same run. |
 | "Spec/plan's approved — now I'll offer the explainer" | Explainer precedes approval, never follows it. The offer resolves (declined, or accepted and delivered) before the approval gate; a post-approval explainer can't inform the decision it exists to support. |
 | "I'll ask for approval and offer the explainer in one question" | Never bundle them. The offer is its own interaction; if CD accepts, deliver the HTML, then ask for approval. |
 | "I'll use opus for everything to be safe" | Model tiers are pre-assigned in agent frontmatter. Trust the assignment. |

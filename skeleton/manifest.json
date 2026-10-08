@@ -91,6 +91,7 @@
       "process/path-mappings.md",
       "process/adapter-lifecycle-protocol.md",
       "process/html-rendering.md",
+      "process/headless-mode.md",
       "process/skill-agent-review.md",
       "process/adr-practice.md"
     ],

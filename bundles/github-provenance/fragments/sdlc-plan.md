@@ -1,6 +1,6 @@
 ## GitHub Checkpoints
 
-**Activation gate:** skip this entire section unless `[sdlc-root]/process/github-checkpoints.md` exists and its config block says `enabled: true`.
+**Activation gate:** skip this entire section unless `[sdlc-root]/process/github-checkpoints.md` exists and its config block says `enabled: true`. In a headless run, unless the caller's prompt hands checkpoints to the run, each checkpoint below does only its local half (issue links when the issue is known, the local artifact commit) and puts its GitHub half under the result's `outbound` as a rendered entry for the caller. A headless run whose prompt names the deliverable's issue also writes any missing issue links (`github_issue:` frontmatter, the catalog link) before its own work, even when it skips registration (`[sdlc-root]/process/github-checkpoints.md` § Headless Runs).
 
 This skill owns **CP-1**, **CP-2**, **CP-3**, and the conditional **CP-S1/CP-S2** pair.
 

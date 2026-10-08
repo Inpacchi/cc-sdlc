@@ -20,6 +20,7 @@ Workflow rules, behavioral protocols, and process definitions. Skills reference 
 | `manager-rule.md` | 5+ skills | The orchestrator never writes code — dispatch agents. No size or complexity exceptions. |
 | `review-fix-loop.md` | 7 skills | The loop for every review context (code, plan, reference doc): roster rule → verify → dedup/calibrate/classify → fix critical+major → mechanical re-review → exit when no critical/major remain, 3-round cap. Owns the two mirrored critical-steps blocks |
 | `finding-classification.md` | 7 skills | FIX / PLAN / INVESTIGATE / DECIDE / PRE-EXISTING taxonomy with per-skill subsets; owns the one severity scale (impact × likelihood) and calibration, the deduplication table, the planning scope-change marker, and Open Minor Findings |
+| `headless-mode.md` | Every skill, `CLAUDE-SDLC.md` | Running a skill with no person present (CI, an agent factory, `claude -p`): how a run knows it is headless, why every question, approval or escalation stops the run instead of being guessed past, outward actions handed to the caller, the result format, and restart-not-resume. Owns the mirrored stop-rule block every skill carries |
 | `discipline_capture.md` | 6 skills | Lightweight protocol for capturing cross-discipline insights during active work |
 
 ### Meta

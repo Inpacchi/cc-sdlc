@@ -25,6 +25,10 @@ Create or modify SDLC skills following cc-sdlc conventions. Scaffold new skills 
 
 **Argument:** `$ARGUMENTS` (what the skill should do, or which existing skill to modify)
 
+<!-- MIRROR-START: headless-mode.md#headless-stop-rule -->
+**Headless runs (no person present).** This run is headless if the caller's prompt or appended system prompt has a line starting `SDLC headless mode:`, or if no ask-the-user tool (`AskUserQuestion`, or the harness's equivalent such as OpenCode's `question`) can be used — none is available or loadable, or a call to it is denied without an answer. A dispatched subagent is never headless itself; in a headless run the orchestrator tells each subagent so, and the limits below bind it too. In a headless run, every point in this skill that asks CD something the next step depends on, waits for CD's approval, or escalates to CD **stops the run there**: save the work so far, return the questions, the document or action plan awaiting approval, or the open-findings table as the run's result (in the caller's output schema if it passed one), and end the turn normally — a stop is a result, not an error. A missing precondition the caller must fix ends the run with status `failed` and the reason. Never guess an answer, take a default for a decision CD owns, approve your own work, or skip the gate. List questions the next step does not depend on in the result instead of stopping. Take the no path on optional offers. Cause no side effect outside the working tree — no push, post, comment, label, publish, external send, or live-system change — unless the caller's prompt names it; list those actions in the result. Reads are fine. A question the prompt or thread already answers is not a gate. Full rule and result format: `[sdlc-root]/process/headless-mode.md`.
+<!-- MIRROR-END: headless-mode.md#headless-stop-rule -->
+
 ## Mode Selection
 
 | User Intent | Mode | Entry Point |
@@ -69,7 +73,7 @@ Before scaffolding, scan for content overlap with sibling skills. Skipping this 
 | Detailed methodology used by 2+ skills in same family | New shared doc under `[sdlc-root]/process/` (NOT `references/` — those are per-skill) | One-line pointer |
 | Single-skill detail that bloats SKILL.md | The skill's own `references/` | `## Additional Resources` link |
 
-4. **Default to extraction** when content would appear verbatim (or near-verbatim) in 2+ skills. Inline duplication is acceptable only when (a) the content is short (≤2 sentences), (b) the framings genuinely differ between tiers, AND (c) you can articulate why divergence is desirable. Document the "why" in the Integration section's `DRY notes`.
+4. **Default to extraction** when content would appear verbatim (or near-verbatim) in 2+ skills. Inline duplication is acceptable only when (a) the content is short (≤2 sentences), (b) the framings genuinely differ between tiers, AND (c) you can articulate why divergence is desirable. Document the "why" in the Integration section's `DRY notes`. **`MIRROR` blocks are exempt:** they are deliberate, drift-checked copies (`[sdlc-root]/process/project-section-markers.md` § MIRROR Markers), so overlap scans skip them and never recommend extracting one to a pointer.
 
 5. **If extraction is needed but out of scope** for this invocation, surface it: "This skill duplicates {content} from {sibling skills}. Recommend extracting to {target} in a follow-up." Do not silently re-duplicate.
 
@@ -119,6 +123,7 @@ Generate the skill body based on type. All types share common requirements; each
 - **Steps** — numbered steps with `### N. Step Name` headers
 - **Red Flags** — `## Red Flags` table (see step 6)
 - **Integration** — `## Integration` section (see step 7)
+- **Headless stop rule** — the `headless-stop-rule` block from `[sdlc-root]/process/headless-mode.md` § Mirrored Stop Rule, copied verbatim inside `MIRROR-START`/`MIRROR-END` comment markers whose label joins the source file and block id as `{process-file}#{section-id}` (per `[sdlc-root]/process/project-section-markers.md` § MIRROR Markers) — never the source doc's `MIRROR-SOURCE` markers. Place it directly after the skill's `**AskUserQuestion mandate:**` paragraph if it has one, otherwise directly before its first `##` section. Every `sdlc-*` skill carries it, including skills that never ask anything, so the rule needs no per-skill judgment; add it to project skills too. The mirror table already covers both, so no table row is needed. A gate whose stop needs stating at the gate itself — the status it stops with, what the stop carries, a step it skips, or an outward action it would otherwise take — gets its own **Headless run:** line at the gate, outside the markers. A skill whose restart from step 1 would repeat a side effect or lose counted state (a D-number, completed phases, a review round) also gets a **Headless restart** paragraph in its entry step. In cc-sdlc source, add such gates to the doc's § Integration list; in a target project that list is upstream-owned, so keep the line in the skill and propose the list entry upstream.
 
 #### Orchestration Skills (additional requirements)
 
@@ -218,7 +223,8 @@ Before applying any edit, run the same overlap scan as CREATE step 1.5 — but i
    - Detect when the same content is being added/changed in multiple targets. Default action: write it once to a shared location (`[sdlc-root]/process/{topic}.md` or knowledge store) and have each skill reference it.
    - Detect when one skill is being brought into alignment with a sibling that already has the content. Default action: extract from the source skill first, then point both at the extracted location — do not copy-paste forward.
    - When you must edit the same section across N skills, propose the extraction *first* and only inline if the user explicitly declines.
-3. **Surface unjustified drift** — if grep reveals the same concept worded differently across skills (e.g., one says "ADRs are immutable", another says "Do not edit prior ADRs"), report it. The user may want to unify wording even if it's outside the requested change.
+3. **Skip `MIRROR` blocks.** The headless stop rule (in every skill) and the review-loop blocks are deliberate copies; never propose extracting them. A change inside one is a change to its source doc (M2).
+4. **Surface unjustified drift** — if grep reveals the same concept worded differently across skills (e.g., one says "ADRs are immutable", another says "Do not edit prior ADRs"), report it. The user may want to unify wording even if it's outside the requested change.
 
 ### M2. Classify the Change
 
@@ -229,6 +235,7 @@ Determine whether the user's requested change targets:
 | Framework section (gates, workflow, dispatch protocol) | **Framework change** | Warn: "This section is framework-owned and will be overwritten on next migration. Consider proposing this upstream instead." |
 | Project-specific addition (new phase, custom agent wiring, domain-specific step) | **Project addition** | Auto-wrap in `PROJECT-SECTION` markers |
 | Existing `PROJECT-SECTION` block | **Project update** | Edit within existing markers |
+| Inside a `MIRROR` block | **Source-doc change** | Do not edit the copy. A change to the block itself is an upstream change to its process doc: propose it to cc-sdlc, where the block is edited once and re-copied into every skill. Project-specific wording goes in a `PROJECT-SECTION` outside the block. |
 
 ### M3. Apply with Protection
 
@@ -263,6 +270,7 @@ Dispatch the `sdlc-reviewer` subagent on the modified skill file. The reviewer c
 |---------|---------|
 | "The description can span multiple YAML lines with quotes" | Use `>` folded scalar. Other multi-line formats can break Claude Code's frontmatter parser. |
 | "This skill doesn't need anti-triggers" | Every skill needs anti-triggers to prevent overlap with siblings. |
+| "This skill never asks the user anything, so the headless block is noise" | Every skill carries it verbatim, so the rule needs no per-skill judgment. Reword nothing inside the markers; gate-specific wording goes outside them. |
 | "Red flags are optional for utility skills" | Every skill type needs a Red Flags table. No exceptions. |
 | "I'll skip the Integration section — this skill is standalone" | No skill is standalone. Every skill feeds into or complements others. |
 | "The name should describe the noun first" | Verb-first naming: `sdlc-review-code`, not `code-review`. |

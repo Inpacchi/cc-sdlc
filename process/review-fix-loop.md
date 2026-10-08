@@ -154,7 +154,7 @@ Dispatch the most relevant domain agent to fix each finding being fixed this rou
 
 **Guard modification is in-scope:** If a FIX finding matches a cluster in `docs/reviews/recurring-patterns.yaml` that has (or plainly warrants) a mechanized guard, the fix is two-part — fix the instance AND update or create the guard (lint rule, drift test, CI check) so the next instance is caught mechanically, per `[sdlc-root]/process/guardrail-lifecycle.md`. Include the guard requirement in the fix dispatch prompt; guard edits go through the same re-review (Step D) as any other change. Skip silently if the pattern log doesn't exist.
 
-**FIX failure escalation:** If a FIX fails twice (agent dispatched, finding persists), reclassify it as INVESTIGATE or PLAN per `[sdlc-root]/process/finding-classification.md` § FIX Failure Escalation.
+**FIX failure escalation:** If a FIX fails twice (agent dispatched, finding persists), reclassify it as INVESTIGATE or PLAN per `[sdlc-root]/process/finding-classification.md` § FIX Failure Escalation. A headless run stops with `escalated` instead (§ Round Cap).
 
 For anything that isn't a FIX, state what you don't know:
 ```
@@ -231,8 +231,9 @@ When the loop exits, announce it with the count of open minors: "Review loop com
 - **At the cap with any `critical` or `major` finding open:** stop. Output the open-findings table (finding, agent, severity, what each fix attempt returned, your hypothesis for why it persists), then escalate to CD via `AskUserQuestion` — do not type the escalation as conversational text. Save progress in a partial result doc if applicable. **Never claim the loop is clean.**
 - **If CD directs you to proceed anyway:** do not announce "Review loop complete" — the exit bar was not met. List the still-open critical and major findings, with their severity and CD's direction, in the context's Open Minor Findings table (`[sdlc-root]/process/finding-classification.md` § Open Minor Findings), then continue.
 - **At the cap with only minors open:** exit under § Exit Bar with the Open Minor Findings table. The batched minor pass is skipped if the cap has no round left to re-review it.
+- **In a headless run** (no person present), the escalation is a stop: save the partial result doc, then end the run with status `escalated` and the open-findings table as its result. The run never claims the loop is clean and never continues past the cap on its own. DECIDE findings and unresolved INVESTIGATE findings mid-loop stop the run the same way, with status `needs-input`. A FIX that fails twice is not reclassified; it stops the run with `escalated`. PRE-EXISTING findings and minor PLAN findings do not stop it: they are listed under the result's `deferred`. A critical or major PLAN finding stops it with `needs-input`, because deferring it needs CD. Rule and result format: `[sdlc-root]/process/headless-mode.md`.
 
-The cap replaces the former 3-strike rule. FIX failure escalation (a FIX that fails twice is reclassified) still applies within the cap.
+The cap replaces the former 3-strike rule. FIX failure escalation (a FIX that fails twice is reclassified) still applies within the cap in interactive runs; a headless run stops with `escalated` instead (the bullet above).
 
 ## Plan Review
 

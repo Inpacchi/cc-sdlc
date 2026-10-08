@@ -15,6 +15,7 @@ Convention review checklist for SDLC skills and agents. Referenced by creation a
 - Steps with numbered `### N. Step Name` headers
 - `## Red Flags` table (5+ entries, `| Thought | Reality |` format)
 - `## Integration` section (Feeds into, Uses, Complements, Does NOT replace)
+- Mirrored blocks, verbatim inside their `MIRROR` markers: the headless stop rule in every skill (`[sdlc-root]/process/headless-mode.md` § Mirrored Stop Rule), and the matching review-loop block in every skill that runs a review loop (`[sdlc-root]/process/review-fix-loop.md` § Mirrored Critical-Steps Blocks)
 
 ### Skill Type-Specific
 - **Orchestration** skills reference `[sdlc-root]/process/manager-rule.md` and include agent selection criteria

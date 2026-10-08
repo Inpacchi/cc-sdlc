@@ -24,8 +24,9 @@ point below. Deliberation between models is strongest when the models come from
 different families — cross-vendor disagreement is signal, not noise — so when
 the capability is configured, the SDLC uses it as much as possible rather than
 reserving it for special occasions. The per-point skip conditions (trivial
-diffs, docs-only changes, precedent-following approach decisions) are the only
-sanctioned reasons to skip a configured reviewer.
+diffs, docs-only changes, precedent-following approach decisions) and a headless
+run without durable egress authorization (§ Data egress) are the only sanctioned
+reasons to skip a configured reviewer.
 
 ---
 
@@ -98,6 +99,10 @@ or logged by the provider. This is an outward-facing action:
   model / endpoint) so CD sees the egress. If the project has not durably
   authorized egress to a hosted provider, confirm with CD before the first
   hosted-model run of a session.
+- **In a headless run** (no person present) nobody can confirm. Without durable
+  authorization, skip hosted-model runs and list the gate under the result's
+  `skipped` (`[sdlc-root]/process/headless-mode.md`). A local model, or a hosted
+  provider the project has durably authorized, runs as usual.
 
 If the codebase's sensitivity is unknown, default to local-only or skip the gate.
 

@@ -75,6 +75,7 @@ Generate the skill body based on type. All types share common requirements; each
 - **Steps** — numbered steps with `### N. Step Name` headers
 - **Red Flags** — `## Red Flags` table (see step 6)
 - **Integration** — `## Integration` section (see step 7)
+- **Headless stop rule** — the `headless-stop-rule` block from `process/headless-mode.md` § Mirrored Stop Rule, copied verbatim inside `MIRROR-START`/`MIRROR-END` comment markers whose label joins the source file and block id as `{process-file}#{section-id}`. Place it directly after the skill's `**AskUserQuestion mandate:**` paragraph if it has one, otherwise directly before its first `##` section. Every `sdlc-*` skill carries it; the mirror table already lists them all, so no table row is needed. A gate whose stop needs stating at the gate itself — the status it stops with, what the stop carries, a step it skips, or an outward action it would otherwise take — gets its own **Headless run:** line at the gate, outside the markers, and is added to that doc's § Integration list. A skill whose restart from step 1 would repeat a side effect or lose counted state (a D-number, completed phases, a review round) also gets a **Headless restart** paragraph in its entry step.
 
 #### Orchestration Skills (additional requirements)
 

@@ -994,6 +994,105 @@ it, and **repo selection rule 4** asks rather than guessing.
 
 ---
 
+## Headless Runs
+
+A run with no person present (`[sdlc-root]/process/headless-mode.md`) **never writes to
+GitHub itself.** Whatever runs skills unattended owns GitHub, often through a token the run
+does not hold. Each checkpoint splits in two: the **local half**, which the run still does,
+and the **GitHub half**, which it hands to the caller as a rendered entry the caller can
+apply without this document or `sdlc-manage-github`'s recipes.
+
+### The local half
+
+When a checkpoint fires in a headless run, the run still does every part that does not write
+to GitHub:
+
+- **Issue links, when the issue is known.** The issue is known when the caller's prompt
+  names it, when an earlier artifact's `github_issue:` frontmatter or the catalog's linked
+  ID cell already records it, or when the originating handoff doc's `github_issue:` names a
+  `Parked:` issue (the promotion path: the entry retitles that issue rather than creating
+  one). CP-1 then writes the two local parts of its persistence set:
+  `github_issue: <repo>#N` (and `github_board:` when it differs from the default) into the
+  first artifact's frontmatter, and the catalog ID cell as a link. When no issue is known,
+  repo selection rules 1–3 pick the repo for the new issue as usual. If they leave it
+  ambiguous (rule 4), the entry's `issue` is `new` with no repo, its `note` lists the
+  candidate repos, and the caller applies it only after CD names the repo. When no issue
+  exists yet, the links wait: the caller creates the issue and passes its number to the
+  next run. **Any later headless run whose prompt names the deliverable's issue writes
+  missing links before its own work**, including a restarted run that skips registration
+  and the first execute run of a lite deliverable.
+- **Artifact commits.** The ⎘ checkpoints commit their artifact locally under § Commit
+  Conventions: explicit-path staging, the `[D<N>]` tag, and idempotence. They do not push.
+  The commit's SHA is what the rendered comment links.
+- **Everything else is computed, not applied.** The run renders the comment, picks the
+  Status target and works out the labels, then puts them in the entry.
+
+### The GitHub half: rendered entries in `outbound`
+
+Each checkpoint that fires adds one entry to the result's `outbound`, in firing order. So
+does `sdlc-archive`'s closure of a never-crystallized `Parked:` issue, which has no CP id.
+
+| Field | Content |
+|---|---|
+| `checkpoint` | The CP id, or `parked-closure` |
+| `deliverable` | The D-number; omitted for `parked-closure` |
+| `issue` | `<owner>/<repo>#N`, or `new <owner>/<repo>` when the caller must create it (CP-1 with no issue known; CP-12), or `new` alone when repo selection reached rule 4 |
+| `title` | `Dnn — <Deliverable Name>`, for a new issue or CP-1's retitle of an existing one; otherwise omitted |
+| `labels` | For a new issue only: the config block's labels that apply (the universal label plus every conditional whose condition holds), spelled exactly |
+| `type` | The issue type per § Issue Types, for a new issue or CP-1's retitle; omitted when `issue_types` is `none` |
+| `parent` | For a sub-deliverable (`D41a`), the parent deliverable's issue, linked as a native sub-issue after creation; otherwise omitted |
+| `board` | The board's owner and project number, on every entry that adds the issue to a board or writes Status: the deliverable's `github_board:`, or the configured default. Omitted in issues-only mode |
+| `board_add` | `yes` when the issue must be added to the board first (CP-1, CP-12) |
+| `comment` | The whole comment, rendered from § Comment Templates with the real specifics; for a new issue, its body. Artifact links are SHA-pinned to the run's local commits, except CP-10's main-branch links |
+| `status` | The target column's configured name and rank, or `—` for comment-only |
+| `write_if` | The condition the caller checks at write time: `current rank < N` (§ The Floor Rule), or for CP-S2 `current column is exactly <name>` |
+| `close` | `completed` (CP-10 part 2; CP-12 when the work is complete) or `not planned` (`parked-closure`); otherwise omitted. Set only when the skill's own conditions for closing hold. For CP-10, the archive-time checklist's local rows passed; its GitHub rows are earlier entries for the same issue, so the caller's skip-on-failure (step 6) covers them |
+| `needs_push` | The commits the comment's links need on GitHub, and where: any branch for SHA-pinned links. For CP-10's main-branch links, what matters is the moved files reaching the default branch, by whatever merge |
+| `note` | Anything the caller must know that has no field, such as "repo ambiguous under rule 4; candidates: app, api" |
+
+Once per result, `outbound` also carries a `ranks` item: the config block's columns with
+their ranks, plus every `never_write` column ranked above all of them. It travels inside
+`outbound` so it is never separated from the entries that need it. An empty Status
+(a card in no column) is rank 0. A column missing from the map means **skip the write**:
+the caller never guesses a rank, so it can never move a card backward.
+
+**The caller applies each entry in this order:**
+
+1. **Push** the `needs_push` commits unchanged, never force-pushing. A `git bundle` keeps
+   their SHAs; a re-applied patch does not, and its links would 404. If SHA-pinned commits
+   cannot go up unchanged, still post the comment: a narrative with a degraded link beats
+   none. CP-10 is different: hold the entry until its main-branch links resolve, meaning the
+   moved files are on the default branch (for example, once the pull request merges, by any
+   merge method), then apply it.
+2. **Find or create the issue.** For `new`, first search the repo's open and closed issues
+   for a title starting with `Dnn` followed by a space, em dash or colon. If one matches,
+   link it instead of creating a second thread. Otherwise create it with its title, labels,
+   type and `comment` as the body, in one call. Then link `parent` as a sub-issue. For a
+   retitle, set the title and type together.
+3. **Add it to the board** when `board_add` says so.
+4. **Post the comment**, unless step 2 just created the issue with it as the body.
+5. **Write Status:** read the current column, look up its rank in `ranks`, and write the
+   target only if `write_if` holds.
+6. **Close** last, with the reason in `close`. Skip the close if the issue is already
+   closed, or if any earlier entry for the same issue failed. For CP-10, close only after
+   the comment's main-branch links resolve.
+
+Comment before Status, as everywhere in this document. Rendering an entry never stops the run.
+
+### Other rules
+
+- A checkpoint handed to the caller is **not a failure**. It writes no miss-log entry and no
+  session notice; the `outbound` entry is its record. Reconciliation still sees the gap (the
+  issue or Status lags the catalog) if the caller drops it.
+- CP-11b never fires: its offer takes the no path.
+- The caller's prompt may hand checkpoint writes to the run by name ("you may fire
+  checkpoints"). The run then fires them under this document as usual, except at the two
+  interactive points: CP-11b's offer takes the no path, and when repo selection reaches
+  rule 4 the run skips that checkpoint, lists it under `outbound`, and continues. It never
+  guesses a repo, and never stops the SDLC step (§ The Never-Block Invariant).
+
+---
+
 ## Recipes `sdlc-manage-github` Must Provide
 
 The mechanics live in `sdlc-manage-github` as named recipes. These names are the interface

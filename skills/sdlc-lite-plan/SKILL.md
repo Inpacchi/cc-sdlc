@@ -13,7 +13,7 @@ description: >
 
 # SDLC-Lite Planning
 
-Domain worker agents write the plan and review it. You are the manager and never do work yourself. This skill produces a plan saved to `docs/current_work/sdlc-lite/`, then enters plan mode so the user gets the standard execution prompt with the option to clear context.
+Domain worker agents write the plan and review it. You are the manager and never do work yourself. This skill produces a plan saved to `docs/current_work/sdlc-lite/`, then enters plan mode so the user gets the standard execution prompt with the option to clear context. A headless run stops at `awaiting-approval` instead.
 
 **This skill produces the plan. It does NOT execute it.** Execution happens via `sdlc-lite-execute`.
 
@@ -49,7 +49,7 @@ If the work introduces entirely new subsystems or architectural patterns — tha
 This skill produces:
 
 1. **Plan file** at `docs/current_work/sdlc-lite/dNN_{slug}_plan.md` — persists across context clears, uses a deliverable ID from the catalog
-2. **Plan mode prompt** via `EnterPlanMode` — gives the user the standard execution options (clear context, bypass permissions, etc.)
+2. **Plan mode prompt** via `EnterPlanMode` — gives the user the standard execution options (clear context, bypass permissions, etc.). Interactive runs only: a headless run ends with status `awaiting-approval` and the plan path.
 
 The execution skill (`sdlc-lite-execute`) will additionally produce a **result doc** at `docs/current_work/sdlc-lite/dNN_{slug}_result.md` — capturing what was built, deviations, and acceptance criteria verification.
 
@@ -98,6 +98,10 @@ The full model is in `[sdlc-root]/process/collaboration_model.md` (role definiti
 
 **AskUserQuestion mandate:** every question directed at the user MUST use the `AskUserQuestion` tool — do not type questions as conversational text. Status updates and completion reports that need no response use normal text. Planning is where this matters most — CC proposes approaches, CD approves.
 
+<!-- MIRROR-START: headless-mode.md#headless-stop-rule -->
+**Headless runs (no person present).** This run is headless if the caller's prompt or appended system prompt has a line starting `SDLC headless mode:`, or if no ask-the-user tool (`AskUserQuestion`, or the harness's equivalent such as OpenCode's `question`) can be used — none is available or loadable, or a call to it is denied without an answer. A dispatched subagent is never headless itself; in a headless run the orchestrator tells each subagent so, and the limits below bind it too. In a headless run, every point in this skill that asks CD something the next step depends on, waits for CD's approval, or escalates to CD **stops the run there**: save the work so far, return the questions, the document or action plan awaiting approval, or the open-findings table as the run's result (in the caller's output schema if it passed one), and end the turn normally — a stop is a result, not an error. A missing precondition the caller must fix ends the run with status `failed` and the reason. Never guess an answer, take a default for a decision CD owns, approve your own work, or skip the gate. List questions the next step does not depend on in the result instead of stopping. Take the no path on optional offers. Cause no side effect outside the working tree — no push, post, comment, label, publish, external send, or live-system change — unless the caller's prompt names it; list those actions in the result. Reads are fine. A question the prompt or thread already answers is not a gate. Full rule and result format: `[sdlc-root]/process/headless-mode.md`.
+<!-- MIRROR-END: headless-mode.md#headless-stop-rule -->
+
 **Anti-patterns to avoid:** (1) code assertion without verification — never answer "how does X work" from memory; grep/read the code first; (2) trajectory poisoning — if the agent is off track after 2-3 corrections, clear context and start fresh rather than continuing to correct in a poisoned trajectory.
 
 ## Deliverable Lifecycle
@@ -125,6 +129,8 @@ These steps exist because LLMs reliably fail the Definition of Done without scaf
 3. Add the deliverable to the catalog table with status `In Progress` and tier `lite`.
 
 This ID will be used in the plan filename (`dNN_{slug}_plan.md`).
+
+**Headless restart.** When the prompt restarts an existing deliverable at a named stage, skip registration and every step before that stage: never claim a second ID or write a second plan file. Read the saved plan and the earlier result's `notes`. If the prompt carries CD's answers to DECIDE findings, a FACTS fail, or an escalated review, resume at that point (the FACTS gate in step 2, or step 3 at the recorded review round with the frozen round-1 roster). Each headless stop's `notes` carry what a restart needs: the D-number, slug, plan path, writing agent, agent list, and during review the round number, frozen roster and open-findings table (`[sdlc-root]/process/headless-mode.md` § Resuming).
 
 ### Agent Dispatch Protocol
 
@@ -276,7 +282,7 @@ The most relevant worker domain agent writes the plan **and saves it directly to
 
 **Post-write: offer an explainer or a walkthrough.** Ask CD whether they want an HTML explainer (`sdlc-explain`, **plan** storyboard) or a guided walkthrough (`sdlc-walkthru`) of the plan — never unprompted. Mechanics and the precedes-approval rule: `[sdlc-root]/process/html-rendering.md` § Post-Skill Offer.
 
-**FACTS Gate** — after verifying completeness, score each phase using the FACTS rubric in `[sdlc-root]/process/input-quality-gates.md`. This is a soft gate: present the per-phase scores and overall mean, then let the human decide whether to proceed to review or revise low-scoring phases first. Code snippets in lite plans count as Clarity evidence — phases with concrete signatures or diffs score higher on C than prose-only descriptions.
+**FACTS Gate** — after verifying completeness, score each phase using the FACTS rubric in `[sdlc-root]/process/input-quality-gates.md`. This is a soft gate: present the per-phase scores and overall mean, then let the human decide whether to proceed to review or revise low-scoring phases first. Code snippets in lite plans count as Clarity evidence — phases with concrete signatures or diffs score higher on C than prose-only descriptions. **Headless run:** on a pass (every phase: mean ≥ 3.0, C ≥ 3, T ≥ 3), record the scores in the result's `notes` and proceed to review; on a fail, stop with status `needs-input` and the per-phase scores.
 
 ### 3. Worker Domain Agent Plan Review
 
@@ -376,7 +382,9 @@ Where `NN` is the deliverable ID from step 0 and `{slug}` is a short snake_case 
 
 **Explainer precedes approval:** if CD opted into an HTML explainer of the plan, regenerate it now so it reflects the final revised plan **before** the execution prompt appears — CD approves what they last saw explained. Never generate it after the approval or in the same step as the approval prompt.
 
-Follow these sub-steps in exact order. Do not combine or skip any.
+**Headless run:** skip 5a–5c. Do not call `EnterPlanMode` or `ExitPlanMode`; the reviewed plan is saved, so stop with status `awaiting-approval` and the plan path (`[sdlc-root]/process/headless-mode.md`).
+
+**Interactive run:** follow these sub-steps in exact order. Do not combine or skip any.
 
 **5a.** Use the `Read` tool to read the plan file at `docs/current_work/sdlc-lite/dNN_{slug}_plan.md` (saved by the writing worker agent in step 2 and augmented with Worker Agent Reviews in step 4). You need the tool output — do not work from memory.
 
@@ -421,7 +429,8 @@ The Manager Rule remains in effect per `[sdlc-root]/process/manager-rule.md` —
 | "I'll include exact code so execution is easier" | Lite plans are typically executed same-session, so code snippets (function signatures, before/after diffs, structural patterns) are acceptable and improve execution reliability. Frame them as intent indicators — the executing agent should verify against actual code before implementing. Avoid exact line numbers, which shift even within a session. |
 | "The constraint is specified but the value isn't known yet" | That's a DECIDE finding. Mark it `USER DECISION NEEDED` so the reviewer routes it. |
 | "Only one domain is involved" | Most tasks touch 2+ domains. Check again. |
-| "I'll write the plan mode content from memory" | Follow step 5 exactly: Read the file with the Read tool, then paste the full Read output into EnterPlanMode. Working from memory produces summaries. |
+| "Headless run, plan saved — I'll call `EnterPlanMode` so the execution prompt appears" | Plan mode is CD's approval surface. A headless run skips 5a–5c and stops with `awaiting-approval`. |
+| "I'll write the plan mode content from memory" | Interactive run: follow step 5 exactly: Read the file with the Read tool, then paste the full Read output into EnterPlanMode. Working from memory produces summaries. |
 | "Plan's approved — now I'll offer the explainer" | Explainer precedes approval, never follows it. The offer resolves (declined, or accepted and delivered) before the approval gate; a post-approval explainer can't inform the decision it exists to support. |
 | "The plan is done, let me just quickly fix this other thing" | Manager Rule applies for the full session. Dispatch the domain agent. |
 | "I know how this library works" | Verify external library APIs via Context7. Never assume. VERIFICATION-GATE must show the resolved ID and version. |

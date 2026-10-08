@@ -129,7 +129,7 @@ Copy the bundle's files → inject its fragments → record the bundle in `insta
 
 ## MIRROR Markers
 
-Upstream-owned **verbatim copies** of a process-doc section, carried inline in skills so a critical step is never reduced to a skippable pointer. The first users are the two review-loop critical-steps blocks defined in `[sdlc-root]/process/review-fix-loop.md` § Mirrored Critical-Steps Blocks.
+Upstream-owned **verbatim copies** of a process-doc section, carried inline in skills so a critical step is never reduced to a skippable pointer. The users are the two review-loop critical-steps blocks defined in `[sdlc-root]/process/review-fix-loop.md` § Mirrored Critical-Steps Blocks, and the headless stop rule in `[sdlc-root]/process/headless-mode.md` § Mirrored Stop Rule, which every skill carries.
 
 ```html
 <!-- In the source process doc -->
@@ -152,6 +152,7 @@ The label names its source: `{process-file}#{section-id}`, where `{process-file}
 3. **Exempt from DRY extraction.** Mirrored blocks are deliberate duplication; DRY checks do not recommend extracting them — they check that they match.
 4. **Not migration markers.** `sdlc-migrate` matches only the literal `PROJECT-SECTION-*` and `BUNDLE-SECTION-*` names, so `MIRROR` blocks pass through as ordinary upstream content: the upstream skill copy (with its current block) overwrites the old one. A project must not hand-edit a mirrored block; project additions go in a `PROJECT-SECTION` outside it.
 5. **No nesting.** A `MIRROR` block may not contain or intersect a `PROJECT-SECTION` or `BUNDLE-SECTION`.
+6. **Prose never spells a live marker.** The drift check finds blocks by matching marker text, so marker-shaped prose is read as a marker. In a source doc, describe its markers with `{id}` (`MIRROR-SOURCE-START: {id}`), never the literal id: a prose line carrying the literal marker starts the range early and reports false drift. In a skill, do not write the copy-marker form with a file name at all (`MIRROR-START:` followed by `file.md#`); name the markers and give the file and id separately.
 
 ---
 

@@ -44,6 +44,8 @@ After a skill writes a deliverable MD file to `docs/current_work/`, CC **asks CD
 
 **Offer precedes approval — never in sequence with it.** When the deliverable feeds an approval gate (spec approval, the plan-mode execution prompt), the offer is its own interaction, fully resolved before approval is requested: offer, and if accepted, deliver so CD can absorb it *before* being asked to approve. Never bundle the offer into the approval question, and never deliver after approval — a post-approval explainer cannot inform the decision it exists to support.
 
+**Headless runs** (no person present) take the no path: no offer, no explainer, no walkthrough. The run's result lists the offer under `skipped` (`[sdlc-root]/process/headless-mode.md`).
+
 Skills that make the offer, and the storyboard each uses:
 
 | Skill | Deliverable | Storyboard |

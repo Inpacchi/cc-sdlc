@@ -83,7 +83,7 @@ Architect/team-lead responsibilities for PRE-DELIVERABLE-SPLIT:
 If a finding is in scope but has no actionable correction (e.g., purely informational, already consistent with the plan), classify it as FIX with a rationale of "acknowledged, no revision needed." It still gets a row in the table. Do not create a new classification for it.
 
 ### FIX Failure Escalation
-If a FIX fails twice (agent dispatched, finding persists), reclassify as INVESTIGATE or PLAN. Do not keep dispatching the same fix.
+If a FIX fails twice (agent dispatched, finding persists), reclassify as INVESTIGATE or PLAN. Do not keep dispatching the same fix. A headless run (no person present) does not reclassify: it stops with status `escalated` (`[sdlc-root]/process/headless-mode.md`).
 
 ## Severity Levels (FIX Findings Only)
 

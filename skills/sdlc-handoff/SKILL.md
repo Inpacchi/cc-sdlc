@@ -23,6 +23,10 @@ Capture context from the current session into a self-contained handoff document 
 
 **Argument:** `$ARGUMENTS` (optional — a 1-2 sentence description of what's being handed off; if omitted, the skill will ask)
 
+<!-- MIRROR-START: headless-mode.md#headless-stop-rule -->
+**Headless runs (no person present).** This run is headless if the caller's prompt or appended system prompt has a line starting `SDLC headless mode:`, or if no ask-the-user tool (`AskUserQuestion`, or the harness's equivalent such as OpenCode's `question`) can be used — none is available or loadable, or a call to it is denied without an answer. A dispatched subagent is never headless itself; in a headless run the orchestrator tells each subagent so, and the limits below bind it too. In a headless run, every point in this skill that asks CD something the next step depends on, waits for CD's approval, or escalates to CD **stops the run there**: save the work so far, return the questions, the document or action plan awaiting approval, or the open-findings table as the run's result (in the caller's output schema if it passed one), and end the turn normally — a stop is a result, not an error. A missing precondition the caller must fix ends the run with status `failed` and the reason. Never guess an answer, take a default for a decision CD owns, approve your own work, or skip the gate. List questions the next step does not depend on in the result instead of stopping. Take the no path on optional offers. Cause no side effect outside the working tree — no push, post, comment, label, publish, external send, or live-system change — unless the caller's prompt names it; list those actions in the result. Reads are fine. A question the prompt or thread already answers is not a gate. Full rule and result format: `[sdlc-root]/process/headless-mode.md`.
+<!-- MIRROR-END: headless-mode.md#headless-stop-rule -->
+
 ## When This Applies
 
 Use this skill when the current session has surfaced something that needs work, but addressing it now would derail the work in flight. Common triggers:
@@ -180,7 +184,7 @@ Do NOT auto-clear the current session. The user decides when to context-switch.
 
 ### 7. Commit (optional)
 
-If the project commits SDLC docs and the user wants the handoff visible across branches or to teammates, ask via `AskUserQuestion` whether to commit it now. Suggested message:
+If the project commits SDLC docs and the user wants the handoff visible across branches or to teammates, ask via `AskUserQuestion` whether to commit it now. **Headless run:** if the project commits SDLC docs, commit the handoff locally without asking and say so in the result's `notes`; never push it (`[sdlc-root]/process/headless-mode.md`). Suggested message:
 
 ```
 docs: add {slug} handoff
@@ -221,7 +225,7 @@ If any check fails, fix the doc before reporting completion.
 | "Multiple handoffs from one session can share a doc" | One handoff = one doc. Bundling makes the receiver disentangle them. Write separate docs. |
 | "I'll write this as an idea brief instead" | Idea briefs are produced by `sdlc-idea` AFTER exploration. Handoffs are pre-exploration session captures. Different artifacts, different filenames (`*_idea-brief.md` vs `*_handoff.md`). |
 | "The handoff doc is for me — terse notes are fine" | The handoff is for a future session that has zero shared context. Write for that reader. Telegraphic notes that depend on this conversation are worthless to the receiver. |
-| "I'll skip Step 7 (Commit) — the user didn't ask for it" | The commit step is gated by `AskUserQuestion` for a reason: a handoff that lives only on the source-session branch is invisible to a session on `main` or another branch. Always ask. The user decides; you don't decide for them by skipping. |
+| "I'll skip Step 7 (Commit) — the user didn't ask for it" | The commit step is gated by `AskUserQuestion` for a reason: a handoff that lives only on the source-session branch is invisible to a session on `main` or another branch. Always ask in an interactive run. The user decides; you don't decide for them by skipping. A headless run commits locally instead (step 7). |
 
 ## Integration
 

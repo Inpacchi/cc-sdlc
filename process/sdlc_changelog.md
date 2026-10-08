@@ -34,6 +34,126 @@ Each entry contains:
 
 ---
 
+## 2026-10-09: Headless runs dispatch agents in the foreground
+
+**Origin:** The software factory's first live lite-plan run (quantile #30) ended after 4 minutes. The Agent tool launched the plan writer in the background by default. The orchestrator ended its turn to wait for it, and the run closed with the plan unwritten.
+
+**What changed:**
+- `process/headless-mode.md` § Ending a Headless Run: every agent is dispatched in the foreground, and the run waits for its result. Callers switch background launches off in the runtime (`CLAUDE_CODE_DISABLE_BACKGROUND_TASKS=1`). Added a Red Flags row.
+
+**Rationale:** A headless run ends with the orchestrator's turn. This was already a rule in the factory's `sdlc-implement` skill; every headless skill that dispatches agents needs it.
+
+---
+
+## 2026-10-08: Headless mode — the rule for running skills with no person present
+
+**Origin:** Software-factory handoff (`docs/current_work/ideas/software-factory_handoff.md`), phase 2 prerequisite "Headless rule". Decision F13 made it a cc-sdlc framework change from the start, ahead of the opt-in `factory` bundle. Phases 0–1 now run `/sdlc-triage` unattended on a self-hosted runner in quantile, and phase 2 will run implementation skills the same way.
+
+**What happened:** Every skill assumed CD was present. Questions went through `AskUserQuestion`, spec approval waited for CD, plan approval went through `EnterPlanMode`/`ExitPlanMode`, phase triage SKIP/REVISE_PLAN waited for confirmation, and the review-loop round cap escalated through `AskUserQuestion`. Under `claude -p` with `--permission-prompts none`, `AskUserQuestion` does not exist, and nothing said what a skill should do instead. The likely failure was guessing past a gate or approving its own work to keep going. The framework had never defined a headless run (the evaluation's Explore pass: "the framework has never run headless").
+
+**Changes made:**
+
+1. **`process/headless-mode.md`** (new) — The rule.
+   - **Detection:** a line starting `SDLC headless mode:` in the caller's prompt or appended system prompt (primary). The phrase quoted in the rule, `CLAUDE.md` or a skill doesn't count. Fallback: no ask-the-user tool can be used — neither `AskUserQuestion` nor the harness's equivalent (OpenCode's `question`) is available or loadable, or a call to it is denied without an answer. A deferred tool counts as available.
+   - **Subagents:** a dispatched subagent is never headless itself. In a headless run the orchestrator says so in every dispatch prompt, so the limits bind the subagent.
+   - **The rule:** every point that needs CD stops the run, and nothing is guessed, defaulted, self-approved or skipped. Seven kinds of point:
+     - a question the next step depends on → `needs-input`;
+     - a bounded loop that ran out without meeting its bar (review round cap, a FIX that failed twice — not reclassified headless: the run stops and CD decides where it goes — the External Review Gate's fix-round limit, debug-incident T6, the tests-run round limit) → `escalated`;
+     - an approval gate (spec, plan mode, or an action plan such as `sdlc-archive`'s archive set or `sdlc-migrate`'s change plan) → save it and stop with `awaiting-approval`. An action plan goes in the result in full, never call `EnterPlanMode`/`ExitPlanMode`, and the next run executes exactly what was approved or stops again;
+     - a soft gate (FAR, FACTS) → continue on a pass, stop with `needs-input` on a fail;
+     - a question the next step doesn't depend on (PRE-EXISTING findings, minor PLAN findings) → list it under `deferred` and continue. A critical or major PLAN finding stops, because deferring it needs CD (manager rule);
+     - an optional offer → take the no path and list it under `skipped`;
+     - confirmation of local, reversible work (committing the skill's own output, even when framed as optional) → proceed.
+   - **Answered questions are not gates:** a question the prompt or thread already answers doesn't stop the run. Skill pacing rules still hold, and work done before the stop stays.
+   - **Outward actions go to the caller:** no side effect outside the working tree. That rules out push, PRs, comments, labels, publishing, messages, external sends and live-system changes, and github-provenance checkpoint writes (their local half still runs, and their GitHub half becomes a rendered `outbound` entry). Reads from anywhere are fine (Context7, web search, `gh` reads, an upstream fetch), and writes to the project's configured knowledge backend count as local. The External Review Gate runs only against a local model or a durably authorized hosted provider. Each skipped action is listed under `outbound`, unless the caller's prompt names it.
+   - **Ending:** a stop is a result, so the run ends its turn normally. The run can't set its own exit code, so the status carries the outcome. `failed` with a `reason` is for a precondition the caller must fix.
+   - **Result format:** a skill's own closing report comes first and the result last. With `--json-schema`, the caller's schema is the contract; any field it lacks (`notes`, `deferred`, `skipped`, `outbound`) goes into the stage's saved document under `## Headless Result`. Otherwise the run ends with a `## Headless Result` block: status, stage, reason, questions, findings, documents, deferred, notes, skipped, outbound.
+   - **Restart, not resume.** A skill whose restart from step 1 would repeat a side effect or lose counted state carries a **Headless restart** paragraph in its entry step. It skips work already done, never registers the deliverable twice, and keeps counting completed phases, review rounds and the frozen roster.
+   - **Kept out of core:** factory specifics (labels, markers, writer jobs, approval by merging the doc PR).
+2. **Every skill in `skills/`** (27) — Carries the `headless-stop-rule` mirrored block verbatim, inside `MIRROR` markers.
+   - **Placement:** directly after the `**AskUserQuestion mandate:**` paragraph where a skill has one (`sdlc-plan`, `sdlc-lite-plan`, `sdlc-execute`, `sdlc-lite-execute`, `sdlc-tests-create`, `sdlc-create-reference-doc`, `sdlc-debug-incident`). Otherwise, before the first `##` section.
+   - **Coverage:** every skill carries it, including skills that never ask anything, so choosing consumers takes no judgment. Project skills may carry it too.
+   - **How it was done:** copied by script from the source. The audit's drift check reports no drift across all 33 mirrored copies: 27 headless and 6 review-loop.
+   - This follows the 2026-05-19 lesson that a pointer alone gets skipped.
+3. **Gate-site lines** (outside the mirrored block):
+   - **`sdlc-plan`:**
+     - step 0 **Headless restart**: skip registration and finished steps, and never mint a second D-number. Spec approval → set Ready and start at 3d, or stop again if the spec changed since. Spec feedback → the SPEC-REVISION block in step 3. A discovery answer → the DISCOVERY-GATE in step 1. DECIDE answers, a FACTS decision or an escalated review → step 5 at the recorded round with the frozen roster. `notes` carry the D-number, complexity, worktree, agent list, prior context and ADR constraints, playbook match, review round, roster and open findings.
+     - DISCOVERY-GATE: answered questions count toward the minimum; on a FAIL, stop with the single most blocking question.
+     - FAR and FACTS: continue on a pass, stop on a fail.
+     - step 3 spec hard gate: `awaiting-approval`.
+     - step 6: skip 6a–6c and stop with `awaiting-approval`. "Follow these sub-steps in exact order" is now labelled **Interactive run**, as is the step's opening line.
+     - Output section and a red flag.
+   - **`sdlc-lite-plan`:** step 0 **Headless restart** (never a second ID or plan file; resume at FACTS or review with the recorded round and roster), step 5 (the same as step 6), FACTS (pass = every phase meets the thresholds), the summary line, the Output section, and a red flag.
+   - **`sdlc-execute` and `sdlc-lite-execute`:**
+     - step 0: no plan → `failed` with the reason. A **Headless restart** paragraph reads the plan, partial result doc and notes, skips completed phases, and continues the review round count with the frozen roster.
+     - PRE-GATE "Triage ≠ BUILD": stop with `needs-input`, giving the phase, SKIP or REVISE_PLAN, and the reason.
+     - Completion Report: the Headless Result follows it as the last output.
+     - `sdlc-execute` step 4: no push or PR, both listed under `outbound`.
+   - **`sdlc-handoff`:** step 7 commits the handoff locally without asking (when the project commits SDLC docs), never pushes; the "Always ask" red flag is scoped to interactive runs.
+4. **`process/review-fix-loop.md`** § Round Cap — New headless bullet:
+   - at the cap with a critical or major finding open, save the partial result doc and stop with `escalated`;
+   - DECIDE and unresolved INVESTIGATE findings stop with `needs-input`;
+   - a FIX that fails twice is not reclassified and stops with `escalated`;
+   - PRE-EXISTING and minor PLAN findings go under `deferred`, and a critical or major PLAN finding stops with `needs-input`.
+
+   It sits outside the `MIRROR-SOURCE` blocks, so the six review-loop copies are unchanged. The Step C "FIX failure escalation" line and the § Round Cap closing line, plus **`process/finding-classification.md`** § FIX Failure Escalation, say a headless run stops with `escalated` instead of reclassifying.
+5. **`process/html-rendering.md`** § Post-Skill Offer — Headless runs take the no path and list the offer under `skipped`.
+6. **`process/external-review-gate.md`** § Data egress — In a headless run without durable authorization, hosted-model runs are skipped and listed under `skipped`. A local model or a durably authorized provider runs as usual. The opening list of sanctioned reasons to skip a configured reviewer now includes this one.
+7. **`process/github-checkpoints.md`** — New § Headless Runs. The run never writes to GitHub itself, and each checkpoint splits in two:
+   - **Local half (still done):** when the issue is known (named in the caller's prompt, or already recorded in an earlier artifact's frontmatter or the catalog's linked ID cell), CP-1 writes `github_issue:` (and `github_board:`) into the first artifact's frontmatter and the catalog ID cell as a link. The ⎘ checkpoints commit their artifact locally under § Commit Conventions, without pushing.
+   - **GitHub half (handed to the caller):** each checkpoint, and `sdlc-archive`'s parked-issue closure, adds a rendered entry to `outbound` in firing order. The fields are `checkpoint`, `deliverable`, `issue` (or `new <repo>` for CP-1 or CP-12), `title`, `labels`, `type`, `parent`, `board`, `board_add`, the whole rendered `comment`, `status` (column name and rank, or `—`), `write_if` (the floor rule, or CP-S2's exact match), `close` (`completed` or `not planned`, set only when the skill's closing conditions hold), `needs_push` (the commits the links need, and the branch), and `note`. A `ranks` item travels inside `outbound`: it includes the `never_write` columns above every SDLC rank, an empty Status is rank 0, and an unmapped column means skip the write, so a caller can never move a card backward.
+   - **Caller order:**
+     - **Push** the linked commits unchanged. A `git bundle` keeps the SHAs; a re-applied patch breaks the links, but the comment still posts. CP-10 waits until the moved files are on the default branch, by any merge method.
+     - **Find or create the issue:** search open and closed issues for the `Dnn` title prefix and link a match before creating; create with title, labels, type and the comment as body in one call, then link the parent sub-issue. Under rule 4, `issue: new` carries candidate repos in `note`, and the caller waits for CD to name one.
+     - **Board add, then comment** (skipped when the comment was the new issue's body).
+     - **Status:** write only if `write_if` holds, using `ranks`.
+     - **Close last:** skip it if the issue is already closed or an earlier entry for the same issue failed; CP-10 waits until the moved files are on the default branch, by any merge method, and closes only after its main-branch links resolve. The `sdlc-archive` fragment's checklist executor gains a headless line: its GitHub rows are earlier entries for the same issue.
+   - **Missing links are caught up:** any later headless run whose prompt names the issue writes missing links before its own work, including a restart that skips registration and a lite deliverable's first execute run. The rule lives in the six fragments' activation lines, not in core skill text, so projects without the bundle never see it.
+   - A handed-off checkpoint is not a failure: no miss-log entry and no notice; reconciliation sees the gap if the caller drops it. CP-11b never fires headless. The caller may hand checkpoint writes to the run; if it does, CP-11b's offer takes the no path and repo selection rule 4 skips that one checkpoint (listed under `outbound`) rather than stopping the SDLC step, so the never-block invariant holds.
+   - **`bundles/github-provenance/fragments/{sdlc-plan,sdlc-lite-plan,sdlc-execute,sdlc-lite-execute,sdlc-handoff,sdlc-archive}.md`:** the activation gate line says that in a headless run each checkpoint does only its local half and hands its GitHub half to the caller as a rendered `outbound` entry, unless the caller hands checkpoints to the run.
+   - The first draft simply skipped checkpoints and listed only the CP id and D-number. CD asked for the two changes above, because the factory's writer job doesn't know the checkpoint recipes, so the provenance trail would have gone dark for every headless run. A review of the split found five majors, all fixed before landing: the `ranks` map omitted `never_write` columns (a backward write over the deploy pipeline), creation skipped the `Dnn` duplicate search, nothing wrote the CP-1 links once a caller created the issue, the entry lacked `type`, `board` and `parent`, and CP-10's main-branch links and close were unguarded. Round 2 found no majors; its seven minors were fixed and re-reviewed. Round 3 (the cap) found no critical or major findings, and its four wording minors were applied after the cap without re-review.
+8. **`CLAUDE-SDLC.md`** § Use AskUserQuestion for All Questions — A self-contained headless paragraph, matching the mirrored block: detection, subagents, stop and end normally, never guess or self-approve, deferred questions, no path on offers, no actions outside the working tree unless the caller names them, answered questions aren't gates. It points at the process doc.
+9. **`process/project-section-markers.md`** § MIRROR Markers — Lists the headless stop rule as a user. New rule 6: prose never spells a live marker. A source doc describes its markers with `{id}`, and a skill never writes the copy-marker form with a file name. The drift check matches marker text, and both forms produced false drift while this change was drafted:
+   - `headless-mode.md`'s own Markers paragraph made all 27 copies report drift;
+   - `sdlc-develop-skill`'s authoring bullet made that skill report drift.
+10. **`skills/sdlc-develop-skill/SKILL.md`**, **`.claude/skills/ccsdlc-create-skill/SKILL.md`** — All-types required sections now include the headless stop-rule block: its marker label form, placement and scope, the fact that no mirror-table row is needed, when a gate gets its own **Headless run:** line (its stop needs stating at the gate: status, payload, a skipped step, or an outward action), and a **Headless restart** paragraph for skills that can be restarted. In a target project the § Integration list is upstream-owned, so `sdlc-develop-skill` proposes the entry upstream instead of editing it. `sdlc-develop-skill` also:
+    - CREATE step 1.5 (item 4) and MODIFY M1.5 exempt `MIRROR` blocks from extraction. Without the exemption, its DRY audit would recommend reducing the now-universal block to a pointer.
+    - M2 gains a "Inside a `MIRROR` block → source-doc change" row: propose the change upstream, never edit the copy.
+    - New red flag: "never asks anything, so the headless block is noise".
+11. **`process/skill-agent-review.md`** § Required Sections — Mirrored blocks: the headless stop rule in every skill, and the review-loop block in loop-bearing skills.
+12. **`agents/sdlc-reviewer.md`** (`.claude/agents` is a symlink to `../agents`) — The mirrored-block drift check names `headless-mode.md` § Mirrored Stop Rule (which lists every skill) beside the review-loop table.
+13. **`.claude/skills/ccsdlc-audit/references/compliance-methodology.md`** — Dimension 10 check 5 names both mirror sources and adds a one-line completeness check: `grep -L 'MIRROR-START: headless-mode.md#headless-stop-rule' skills/*/SKILL.md` must print nothing.
+14. **`process/README.md`**, **`skeleton/manifest.json`** — `headless-mode.md` registered: a Shared Behavioral Protocols row, and an entry in `source_files.process`.
+
+**Review:** round 1 ran three `sdlc-reviewer` passes (`sdlc-plan`; `sdlc-lite-plan` + `sdlc-develop-skill`; the two execute skills) and one cross-framework consistency review. There were no critical findings. All majors were fixed:
+- the skip-vs-"do not skip any sub-step" contradiction;
+- no restart entry in `sdlc-plan`;
+- the DISCOVERY-GATE unanswerable headless;
+- the lite-execute line citing a triage table lite never produces;
+- OpenCode's ask tool tripping the fallback;
+- an outward-action ban too narrow, missing live-system changes, egress and subagents;
+- no `failed` status;
+- unsaved action plans approved by question.
+
+Round 2 (three fresh reviewers) confirmed every round-1 fix and found three new majors, now fixed: (1) a twice-failed FIX had three different outcomes across the docs, one of which let a critical finding be deferred; (2) `sdlc-lite-plan` had no restart entry, so a restarted run would mint a second D-number; (3) both execute skills had no restart entry, so a restarted run could redo finished phases and reset the review round count. Round-2 minors were fixed in the same pass: the `failed` status was added to the mirrored block, reads were allowed explicitly, schema fallback now covers every field, the commit-confirmation rule was settled, the external gate's sanctioned-skip list was updated, the gate-line criterion was stated once, and the § Integration list was completed. Round 3 (two fresh reviewers, the cap) found no critical or major findings. Its ten minors were applied after the cap and checked mechanically, not re-reviewed: twice-failed-FIX qualifiers in `review-fix-loop.md` and `finding-classification.md`; the restart-paragraph scope narrowed to skills whose restart from step 1 would repeat a side effect or lose counted state; `sdlc-plan` records the spec's content hash for the unchanged-since-approval check and splits the FAR, FACTS and review restart cases; `sdlc-lite-execute` restart notes reflect its single step-4 commit; `sdlc-handoff` step 7 commits locally headless. Known open item: the plan → execute hop has no unchanged-since-approval guard for the plan (a design question for the approval row). Pre-existing findings were left alone. These include `sdlc-plan`'s Integration structure, skill length, the `§3c` references, sibling drift between the execute skills, bare paths in `sdlc-develop-skill`, and the Manager Rule copies.
+
+**Not changed:**
+- The `code-review-mechanics` and `plan-review-mechanics` blocks still say "escalate to CD via `AskUserQuestion`". The mirrored stop rule and the § Round Cap bullet cover headless runs, and editing those blocks would mean re-copying them into six skills.
+- Parking a draft PR at the review cap with `factory:review-capped`, the labels, the markers, the writer-job split and the per-stage output schemas are factory concerns. They stay in quantile until the `factory` bundle.
+- No `contract_changes.yaml` entry: the new process doc is a direct copy and the rest are in-place edits, so no migration behavior is needed.
+- Neuroloom: no new knowledge-layer references, so this is not a contract change.
+
+**Versioning:** a new cross-skill process convention, so this is a **minor** bump at the next release. No tag was cut.
+
+**Rationale:** The factory is the first caller, but the gap is general. Any unattended run (CI, a scheduled job, `claude -p`) reaches the same gates. Stopping cleanly with a structured result does three things:
+- keeps CD's decisions with CD;
+- lets a caller tell "needs CD" from "broke";
+- gives the next cold run what it needs to continue.
+
+The rule sits in core with a mirrored line in every skill, not only a pointer, because pointer-only guardrails have been skipped before.
+
+---
+
 ## 2026-10-06: Unify and bound the review loops — one severity scale, mechanical re-review, critical/major exit bar, 3-round cap
 
 **Origin:** A software-factory and cost evaluation session measured 30 days of Claude Code usage (local transcript token counts to 2026-10-06, priced at API list rates — on the Max plan this is usage limits and waiting time, not dollars). About $16.3k equivalent in total; subagents were 67% (~$10.9k) and 95% of all cost was re-reading context. Review and re-review were ~3,008 of 4,775 subagent dispatches and ~$5.1k — 47% of subagent cost. Median review checkpoint roster 7 reviewers (p90 12, max 15); rounds labelled up to 23 (469 dispatches in rounds 3–5, 224 in rounds 6–10, 183 in round 11+); 60–75% of reviewers reported findings in every round bucket, and hand-sampled late-round reports were nearly all self-described minor. Fable and Codex (GPT-6-Astra, `ultra`) ruled independently on proposed changes (consult record: `docs/current_work/ideas/review-loop-unification_consult-record.md`); CD decided D1–D14 (`docs/current_work/ideas/review-loop-unification_handoff.md`).
