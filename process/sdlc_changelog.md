@@ -34,6 +34,23 @@ Each entry contains:
 
 ---
 
+## 2026-10-09: Add-ons finish small follow-ups; Follow-Up Items become issue-ready
+
+**Origin:** CD, after the software factory's first executed plan (quantile D13) deferred two stale knowledge entries and left its follow-ups in the result doc. CD's direction: SDLC hygiene is part of the work, a quick follow-up is finished in the PR as an add-on, and anything else becomes its own issue and goes through triage. Cross-checked with Fable and Codex.
+
+**What changed:**
+- `skills/sdlc-lite-execute` and `skills/sdlc-execute`: an **Add-ons and follow-ups** rule.
+  - **Add-ons:** small, no new decision, inside the touched area, dispatched and verified like planned work, listed in the result doc.
+  - **SDLC hygiene:** knowledge entries or parking-lot notes the change makes wrong are corrected in the same deliverable.
+  - **Everything else is a Follow-Up Item:** F-numbered, an issue-ready title, why not now. Nothing is dropped silently.
+  - The PR body example's Scope gains Add-ons and Follow-ups lines.
+- `templates/sdlc_lite_result_template.md` and `templates/result_template.md`: a new **Add-ons Beyond the Plan** section, and **Follow-Up Items** in a parseable checklist format (`- [ ] **F1: title**: what _Not now: why_`).
+- `templates/pr_description_template.md`: Scope's Deferred line becomes Add-ons and Follow-ups. Follow-ups are a checklist CD can prune before merging.
+
+**Rationale:** Follow-ups that live only in a result doc are forgotten, and tiny ones aren't worth an issue each. Finishing small ones in the PR and making the rest issue-ready lets a project (the factory does) file them automatically.
+
+---
+
 ## 2026-10-09: Codex calls can't hang on stdin
 
 **Origin:** A direct `codex exec` consult run from a background shell sat idle for 35 minutes. It printed "Reading additional input from stdin..." and waited for an end-of-file the open, empty pipe never sent.

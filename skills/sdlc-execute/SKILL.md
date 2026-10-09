@@ -329,6 +329,8 @@ Stubs: [none | list with file:line and disposition: deferred-to-phase-N | defect
 2. List every file the agent actually created or modified (from the git diff or agent report)
 3. Compare the two lists. Any file in list 2 that is NOT in list 1 is a deviation — regardless of whether the agent describes it as "related", "fixing the same pattern", or "obviously necessary"
 4. If any deviation exists: log the deviation (file name and reason) and continue execution. Include all deviations in the result doc's Deviations section. Do not stop for approval — but do not silently absorb them either; they must be visible in the final report.
+
+**Add-ons and follow-ups.** A small follow-up the work turns up is finished in this deliverable as an **add-on**: no decision CD hasn't made, inside the files or area the plan touched, dispatched to the domain agent like any change, verified like planned work, and listed in the result doc's Add-ons section. A knowledge entry or parking-lot note the change makes wrong is corrected in the same deliverable (SDLC hygiene), not deferred. Anything bigger is a **Follow-Up Item**: an id (`F1`, `F2`, ...), an issue-ready title, and why it isn't done now, including the plan's own deferrals. Never drop one silently. Where the project files follow-ups as issues (the software factory files checked items when CD merges an executed plan), they become issues; otherwise the completion report proposes them to CD.
 5. **NEVER revert a deviated file.** Do not run `git checkout --`, `git restore`, or any command that discards changes in the deviated file. The file may contain the user's concurrent uncommitted work that predates this session. If you believe the deviation is harmful, ask the user via `AskUserQuestion` — but the default is to keep and log, never to revert.
 
 - **Phase bleeding check:** If an agent returns work that covers scope belonging to a subsequent phase (within plan-listed files): (1) output a one-line note to CD identifying which phase was anticipated, (2) in the subsequent phase's dispatch prompt, include a summary of what the earlier agent already implemented and instruct the agent to verify completeness and implement only what remains. If the bleeding substantially changes a subsequent phase (e.g., makes it a verify-only pass), flag to CD rather than silently absorbing. Document any skipped or substantially reduced phases in the result doc under 'Skipped Phases'.
@@ -551,7 +553,8 @@ Commits lists every commit made during execution (per phase and the final commit
 **Scope**
 - Tackled: [what this did]
 - Not tackled: [what was deliberately skipped or left incomplete, and why]
-- Deferred: [each follow-up, as a proposed issue]
+- Add-ons: [each small fix beyond the plan, its files, and how it was verified]
+- Follow-ups: [each Follow-Up Item as `F1: title`; checked ones are filed as issues where the project does that]
 
 **Scope integrity:** No tests or CI checks weakened; touched only the planned files. — or each exception with its reason.
 

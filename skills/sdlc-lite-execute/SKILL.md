@@ -356,7 +356,9 @@ Reference the template at `[sdlc-root]/templates/sdlc_lite_result_template.md`. 
 - Acceptance criteria verification (map each criterion from the plan to pass/partial/deferred)
 - Worker Agent Reviews (append the section from 3a)
 - Open Minor Findings (per `[sdlc-root]/process/finding-classification.md` § Open Minor Findings)
-- Follow-up items
+- Add-ons beyond the plan, and Follow-Up Items (below)
+
+**Add-ons and follow-ups.** A small follow-up the work turns up is finished in this deliverable as an **add-on**: no decision CD hasn't made, inside the files or area the plan touched, dispatched to the domain agent like any change, verified like planned work, and listed in the result doc's Add-ons section. A knowledge entry or parking-lot note the change makes wrong is corrected in the same deliverable (SDLC hygiene), not deferred. Anything bigger is a **Follow-Up Item**: an id (`F1`, `F2`, ...), an issue-ready title, and why it isn't done now, including the plan's own deferrals. Never drop one silently. Where the project files follow-ups as issues (the software factory files checked items when CD merges an executed plan), they become issues; otherwise the completion report proposes them to CD.
 
 The result doc lives alongside the plan file in `docs/current_work/sdlc-lite/`. When the plan is moved to `completed/`, the result doc moves with it.
 
@@ -481,7 +483,8 @@ Lite execution commits once (step 4) and moves the result doc to `completed/` be
 **Scope**
 - Tackled: [what this did]
 - Not tackled: [what was deliberately skipped or left incomplete, and why]
-- Deferred: [each follow-up, as a proposed issue]
+- Add-ons: [each small fix beyond the plan, its files, and how it was verified]
+- Follow-ups: [each Follow-Up Item as `F1: title`; checked ones are filed as issues where the project does that]
 
 **Scope integrity:** No tests or CI checks weakened; touched only the planned files. — or each exception with its reason.
 
