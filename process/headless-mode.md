@@ -25,7 +25,7 @@ CD-facing points come in these kinds:
 |---|---|---|
 | **Question the next step depends on** | Any `AskUserQuestion` not covered by another row; DECIDE findings; an unresolved INVESTIGATE; phase triage SKIP or REVISE_PLAN (`sdlc-execute`, `sdlc-lite-execute`); a data value that cannot be traced to its source; a request whose premise the code contradicts | Stop with status `needs-input`. |
 | **A bounded loop ran out** without meeting its bar | A review loop at its round cap with a critical or major finding open (`[sdlc-root]/process/review-fix-loop.md` § Round Cap); a FIX that failed twice (a headless run stops instead of reclassifying it to INVESTIGATE or PLAN, and CD decides where it goes); the External Review Gate's fix-round limit; `sdlc-debug-incident`'s T6 escalation; `sdlc-tests-run`'s round limit | Stop with status `escalated` and the open-findings table or the loop's own stuck report. |
-| **Approval gate** — CD approves a document or an action plan before the next step runs | Spec approval (`sdlc-plan` step 3); the plan-mode execution prompt (`EnterPlanMode` / `ExitPlanMode` in `sdlc-plan` step 6 and `sdlc-lite-plan` step 5); approval of an action plan such as `sdlc-archive`'s archive set or `sdlc-migrate`'s change plan | Save the document and stop with status `awaiting-approval`. An action plan that would exist only inside the question goes into the result itself, in full. Do not call `EnterPlanMode` or `ExitPlanMode`. Approval happens outside the run, and the next step starts in a new run that executes **exactly** what was approved; if the state no longer matches it, that run stops again. |
+| **Approval gate** — CD approves a document or an action plan before the next step runs | Spec approval (`sdlc-plan` step 3); plan approval, where the Approval Brief is presented (`sdlc-plan` step 6, `sdlc-lite-plan` step 5); approval of an action plan such as `sdlc-archive`'s archive set or `sdlc-migrate`'s change plan | Save the document and stop with status `awaiting-approval`. An action plan that would exist only inside the question goes into the result itself, in full. Approval happens outside the run, and the next step starts in a new run that executes **exactly** what was approved; if the state no longer matches it, that run stops again. |
 | **Soft gate** — scores CD may act on | The FAR gate (`sdlc-plan` discovery) and the FACTS gate (`sdlc-plan`, `sdlc-lite-plan`) | On a pass, record the scores in `notes` and continue. On a fail, stop with `needs-input` and the scores. |
 | **Question the next step does not depend on** | PRE-EXISTING findings; minor PLAN findings; follow-ups for later work | Do not stop. List each under `deferred`, with its severity and options, and continue. A critical or major PLAN finding is not in this row: deferring it needs CD (`[sdlc-root]/process/manager-rule.md` § No Unilateral Finding Demotion), so it stops with `needs-input`. |
 | **Optional offer** — CD may say yes or no, and no is safe | The explainer or walkthrough offer (`[sdlc-root]/process/html-rendering.md` § Post-Skill Offer); CP-11b's issue-creation offer; any "want me to also…" | Take the no path and list the offer under `skipped`. Never take the yes path: it does work CD did not ask for. |
@@ -63,7 +63,7 @@ Local work is fine: writing files in the working tree, running tests and builds,
 
 Every headless run ends with a result, whether it stopped at a gate, failed a precondition, or finished. A skill's own closing output (a completion report, a summary) comes first; the result is always last.
 
-- **If the caller passed an output schema** (`--json-schema`), that schema is the contract. Map the result onto its fields — its state or status field, its questions field — and return nothing else. The skill's own closing output still goes where the skill saves it (a result doc, for instance). Anything the schema has no field for — `notes`, `deferred`, `skipped`, `outbound` — goes into the stage's saved document under a `## Headless Result` heading, if the stage saves one. Callers running stages that can stop should give their schema those fields. When the schema has fields for a pull request's description (a `brief` object, or one field per section), fill them per `[sdlc-root]/templates/pr_description_template.md`: plain language, written for CD to approve, and never pasted from the plan, which stays the agent's contract.
+- **If the caller passed an output schema** (`--json-schema`), that schema is the contract. Map the result onto its fields — its state or status field, its questions field — and return nothing else. The skill's own closing output still goes where the skill saves it (a result doc, for instance). Anything the schema has no field for — `notes`, `deferred`, `skipped`, `outbound` — goes into the stage's saved document under a `## Headless Result` heading, if the stage saves one. Callers running stages that can stop should give their schema those fields. When the schema has fields for a pull request's description (a `brief` object, or one field per section), fill them per `[sdlc-root]/templates/pr_description_template.md`. For a spec or plan, take them from its Approval Brief (`[sdlc-root]/process/writing-for-cd.md` § Approval Briefs) rather than writing a second brief. Never paste them from the plan body, which stays the agent's contract.
 - **Otherwise** end with this block as the final message:
 
 ```markdown
@@ -110,7 +110,6 @@ Every skill carries a verbatim copy of the block below, so the stop rule is read
 |---|---|
 | "Nobody's here to ask, so I'll pick the reasonable option" | That is guessing at a decision CD owns. Stop with `needs-input`. |
 | "The spec is solid; I'll treat it as approved and start the plan" | Approval happens outside the run. Stop with `awaiting-approval`. |
-| "I'll call `ExitPlanMode` and let the run continue" | Plan mode is CD's approval surface. A headless run never calls `EnterPlanMode` or `ExitPlanMode`. |
 | "CD will approve the archive set when they see the result, so I'll describe it briefly" | The restarted run executes exactly what CD approved. Put the whole action plan in the result. |
 | "I'll ask everything at once to save a round trip" | Ask what blocks the next step, and follow the skill's own pacing rule. |
 | "This PRE-EXISTING finding needs CD, so I'll stop" | The next step does not depend on it. List it under `deferred` and continue. |
@@ -131,8 +130,8 @@ Every skill carries a verbatim copy of the block below, so the stop rule is read
 - **States it for every session:** `CLAUDE-SDLC.md` § Use AskUserQuestion for All Questions
 - **Mirrored in:** every `sdlc-*` skill (§ Mirrored Stop Rule)
 - **Gate sites with their own headless line:**
-  - `sdlc-plan`: step 0 (headless restart), the DISCOVERY-GATE, the FAR gate, step 3 (spec approval), the FACTS gate, step 6 (plan mode), and the Output section
-  - `sdlc-lite-plan`: step 0 (headless restart), the FACTS gate, step 5 (plan mode), and the Output section
+  - `sdlc-plan`: step 0 (headless restart), the DISCOVERY-GATE, the FAR gate, step 3 (spec approval), the FACTS gate, step 6 (plan approval), and the Output section
+  - `sdlc-lite-plan`: step 0 (headless restart), the FACTS gate, step 5 (plan approval), and the Output section
   - `sdlc-execute`: step 0 (headless restart; no plan → `failed`), phase triage, step 4's push and pull request, and step 5's Completion Report
   - `sdlc-lite-execute`: step 0 (headless restart; no plan → `failed`), phase triage, and step 5's Completion Report
   - `sdlc-handoff`: step 7 (local commit) and its red flag
@@ -141,4 +140,4 @@ Every skill carries a verbatim copy of the block below, so the stop rule is read
   - `[sdlc-root]/process/external-review-gate.md` (sanctioned skips; § Data egress)
   - `[sdlc-root]/process/github-checkpoints.md` § Headless Runs, the activation line of each checkpoint-firing `github-provenance` fragment, and `sdlc-archive`'s archive-time checklist executor
 - **Manager rule (subagent escalation):** `[sdlc-root]/process/manager-rule.md`
-- **PR-description fields in a caller's schema:** `[sdlc-root]/templates/pr_description_template.md`
+- **PR-description fields in a caller's schema:** `[sdlc-root]/templates/pr_description_template.md`, filled from the Approval Brief for a spec or plan (`[sdlc-root]/process/writing-for-cd.md`)

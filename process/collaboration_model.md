@@ -31,7 +31,7 @@ The AI collaborator who:
 - Escalations (review-loop round cap, 3-strike rule, unresolvable findings)
 - Any moment where you need user input before proceeding
 
-Status updates, completion reports, and informational output that do NOT require a response should be typed as normal text.
+Status updates, completion reports, and informational output that do NOT require a response should be typed as normal text. The one approval asked without the tool is spec and plan approval: the Approval Brief message ends the turn, and CD's reply is the answer (`[sdlc-root]/process/writing-for-cd.md` § Approval Briefs).
 
 ### 1. Proposal-First
 
@@ -57,9 +57,9 @@ For status-only updates with no decision needed, use normal text.
 
 ### 4. Completion Reports
 
-When work is done (no question — normal text):
+When work is done (no question — normal text), the report leads with what CD needs and stays plain (`[sdlc-root]/process/writing-for-cd.md`). A deliverable ends with the Completion Report in `sdlc-execute` / `sdlc-lite-execute` step 5. Smaller work ends in a few sentences:
 
-**CC:** "D42 complete. Created 3 files, modified 2. All tests pass. Result documented in results/."
+**CC:** "Done: the session now refreshes itself, so users stay signed in past an hour. I checked it by signing in and waiting out the old timeout; the 12 auth tests pass. Nothing for you to do."
 
 ---
 

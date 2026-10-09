@@ -132,6 +132,7 @@ When you make changes to SDLC process files (skills, agents, process docs, CLAUD
 ### Key References
 - `[sdlc-root]/process/overview.md` — Full workflow
 - `[sdlc-root]/process/commands.md` — All SDLC commands and skills
+- `[sdlc-root]/process/writing-for-cd.md` — How anything CD reads is written: plain language, length budgets, approval briefs
 - `[sdlc-root]/templates/` — Document templates (spec, plan, result, concept index, PR description)
 - `[sdlc-root]/templates/html-design-system.html` — HTML design system for explainers and exploration artifacts
 - `[sdlc-root]/process/html-rendering.md` — HTML conventions, visual doctrine, and document-type storyboards
@@ -171,6 +172,20 @@ When dispatching domain agents for phases that involve external library integrat
 
 ---
 
+## Writing for CD
+
+Everything addressed to CD follows `[sdlc-root]/process/writing-for-cd.md`: status updates, questions, summaries, approval briefs, completion reports and PR descriptions.
+- **Lead with what CD needs** to decide, know or do. Background comes after, if at all.
+- **Plain language.** Define a term or leave it out. Internal labels (gate names, DECIDE, deliverable numbers) never carry a sentence on their own.
+- **Say each thing once.** Show evidence, not claims. Say where you're unsure. Don't invent.
+- **Budgets:** a status update in 1–2 sentences, an end-of-turn summary in about 150 words, an approval brief in about 450, a completion report in about 500.
+- **Status blocks are one line on the happy path.** The full block appears only when a check fails or CD must act.
+- **CD approves a spec or plan from its Approval Brief,** shown verbatim with the document's path.
+
+The documents agents work from keep their detail: the bodies of specs, plans and result docs, and dispatch prompts.
+
+---
+
 ## Use AskUserQuestion for All Questions
 
 **Always use the `AskUserQuestion` tool when you need user input.** Do not type questions as conversational text. This includes:
@@ -183,7 +198,7 @@ When dispatching domain agents for phases that involve external library integrat
 
 **Why:** Conversational questions create pause points where the user has to type free-text responses like "do it", "yes", "continue", "go" to unblock execution. `AskUserQuestion` presents structured options, reduces friction, and makes the decision point explicit.
 
-**Exception:** Status updates, findings tables, and informational output are not questions — those are plain text.
+**Exception:** Status updates, findings tables, and informational output are not questions — those are plain text. Spec and plan approval is asked by the Approval Brief message, which ends the turn; CD's reply is the answer (`[sdlc-root]/process/writing-for-cd.md` § Approval Briefs).
 
 **Headless runs (no person present).** A run is headless when the caller's prompt or appended system prompt has a line starting `SDLC headless mode:`, or when no ask-the-user tool (`AskUserQuestion`, or the harness's equivalent) can be used in the session running the skill — none is available or loadable, or a call to it is denied without an answer. A dispatched subagent is never headless itself, but in a headless run the orchestrator tells each subagent so, and the same limits bind it. Nobody can answer, so every question the next step depends on, every approval gate, and every escalation **stops the run** at that point. Save the work so far, then end the turn normally with the questions, the document or action plan awaiting approval, or the open-findings table as the run's result (in the caller's output schema if it passed one). A stop is a result, not an error; a missing precondition the caller must fix ends the run with status `failed` and the reason. Never guess an answer, take a default for a decision CD owns, approve your own work, or skip the gate. Questions the next step does not depend on are listed in the result, not stopped on. Take the no path on optional offers. Cause no side effect outside the working tree — no push, post, comment, label, publish, external send, or live-system change — unless the caller's prompt names it, and list those actions in the result; reads are fine. A question the prompt or thread already answers is not a gate. Full rule and result format: `[sdlc-root]/process/headless-mode.md`.
 

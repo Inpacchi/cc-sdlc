@@ -354,18 +354,17 @@ Phase 3: UI components (depends on Phase 1, NOT Phase 2)
 
 ### 2. Completion Review
 
-**MANDATORY — NO PAUSE.** When the last phase's POST-GATE clears, proceed directly to the review loop. A brief phase summary is fine, but do not stop and wait for user input — no "what's next?", no "ready to review?", no waiting for confirmation. The plan already defines the review agents — emit the REVIEW-GATE block and dispatch them in the same response. Phase completion is a waypoint, not a stopping point.
+**MANDATORY — NO PAUSE.** When the last phase's POST-GATE clears, proceed directly to the review loop. A brief phase summary is fine, but do not stop and wait for user input — no "what's next?", no "ready to review?", no waiting for confirmation. The plan already defines the review agents — emit the REVIEW-GATE line and dispatch them in the same response. Phase completion is a waypoint, not a stopping point.
 
-You must emit this block before dispatching review agents:
+You must emit this line before dispatching review agents:
 
 ```
-REVIEW-GATE — entering completion review
-Phases completed: [list phase numbers]
-Review agents (from plan + code-reviewer + software-architect): [list all agent names]
-Dispatching: [count] agents
+REVIEW-GATE: phases [list] done — entering completion review
 ```
 
-After ALL phases are done, run the **Review-Fix Loop** per `[sdlc-root]/process/review-fix-loop.md`. Agent source for round 1: the plan's agent assignment table, plus `code-reviewer` and `software-architect` if the plan omits them, plus any domain surfaced during implementation. Every round — not just round 1 — emits the `review-fix-loop.md` Step A checklist (`Review round N of 3 — dispatching (full roster | narrow: raisers + standing reviewers):`) before dispatch. For user-facing changes, also run experiential verification (`review-fix-loop.md` Step 0.5) before the first round: start the dev server and walk the golden path, check adjacent features, verify scroll/resize, and check state transitions. Fix experiential failures before entering agent review.
+The Step A roster line that follows names the reviewers (plan agents + `code-reviewer` + `software-architect`).
+
+After ALL phases are done, run the **Review-Fix Loop** per `[sdlc-root]/process/review-fix-loop.md`. Agent source for round 1: the plan's agent assignment table, plus `code-reviewer` and `software-architect` if the plan omits them, plus any domain surfaced during implementation. Every round — not just round 1 — emits the `review-fix-loop.md` Step A roster line (`Review round N of 3 — dispatching (full roster | narrow: raisers + standing reviewers): …`) before dispatch. For user-facing changes, also run experiential verification (`review-fix-loop.md` Step 0.5) before the first round: start the dev server and walk the golden path, check adjacent features, verify scroll/resize, and check state transitions. Fix experiential failures before entering agent review.
 
 <!-- MIRROR-START: review-fix-loop.md#code-review-mechanics -->
 **Review-fix loop — critical mechanics.** Canonical protocol: `[sdlc-root]/process/review-fix-loop.md`. Shared definitions (severity, deduplication, Open Minor Findings): `[sdlc-root]/process/finding-classification.md`. These steps are inlined so that skipping the read does not skip the behavior.
@@ -518,70 +517,76 @@ Before claiming the work is done:
    ```
    **Types:** `feat` (new feature), `fix` (bug fix), `refactor` (restructure, no behavior change), `docs` (documentation only), `test` (adding/updating tests), `chore` (build, config, tooling, dependencies), `style` (formatting, no logic change), `perf` (performance improvement), `ci` (CI/CD changes), `sdlc` (SDLC process, skills, agents, or framework changes)
    **Example:** `feat[D-042](auth): add session refresh endpoint`
-7. Present the full commit to the user:
-
-```
-Commit: {short-sha}
-
-{full commit message — title, body, and footers as written}
-
-Files changed:
-- {file path}
-- {file path}
-```
-
-8. If on a feature branch, push and create a PR. Write its description for CD per `[sdlc-root]/templates/pr_description_template.md` (code variant): Deviations from the approved plan come from the result doc, and How it was verified shows the step 1 build and the test results. **Headless run:** do neither; list both under the result's `outbound`, and fill the caller's PR-description schema fields per the template.
-9. Emit the **Completion Report** (step 5)
+7. If on a feature branch, push and create a PR. Write step 5's report sections first, then open the PR from them in the template's PR form, after the template's fresh-reader check (`[sdlc-root]/process/writing-for-cd.md` § Completion Reports); step 5 then emits the report. **Headless run:** do neither; list both under the result's `outbound`, and fill the caller's PR-description schema fields from the report's sections.
+8. Emit the **Completion Report** (step 5). It names the commits; the full message stays in git.
 
 ### 5. Completion Report
 
-Every execution MUST end with a Completion Report presented to the user. This is the final output — the definitive summary of what happened. Emit this block after all commits are made. (**Headless run:** the Headless Result follows the report as the very last output — `[sdlc-root]/process/headless-mode.md`.)
+Every execution MUST end with a Completion Report presented to the user, emitted after all commits are made. It is what CD reads to understand the change. Its shape is shared with the other execution skill and defined in `[sdlc-root]/process/writing-for-cd.md` § Completion Reports. (**Headless run:** the Headless Result follows the report as the very last output — `[sdlc-root]/process/headless-mode.md`. With a caller schema, the block's last rule applies.)
+
+Commits lists every commit made during execution (per phase and the final commit from step 4).
+
+<!-- MIRROR-START: writing-for-cd.md#completion-report -->
+**Completion Report.** The report is the code variant of `[sdlc-root]/templates/pr_description_template.md`: the same sections in the same order, with bold labels instead of headings (they read better in a terminal), What was built in place of What you're approving, What you need to do first and Commits last. About 500 words, not counting What you need to do and Commits. Read the template's section rules and its Risk Tiers, with the project's always-high areas, before writing it. The result doc keeps the full record of every file, test and finding.
 
 ```
-# [deliverable ID] — Completion Report
+# [deliverable ID] done: [what was built, in plain words]
 
-[2-3 sentences: what was built, the core value delivered]
+**What you need to do**
+- [a step outside the code: deploy, migration, environment variable, account, API key]
+- [ ] [a smoke test: what to do in the app, and what to check]
 
----
+**The problem**
+[What prompted this, and the symptom a user saw, in 1–2 sentences.]
+
+**What changes for users**
+- [each visible change, in the user's terms] — or: Nothing visible.
+
+**What was built**
+1. **[the behavior now in the code]** [the alternative it rejects, only where one was weighed]
+
+**Deviations from the approved plan**
+- [what changed from the plan, and why] — or: None.
+
+**Scope**
+- Tackled: [what this did]
+- Not tackled: [what was deliberately skipped or left incomplete, and why]
+- Deferred: [each follow-up, as a proposed issue]
+
+**Scope integrity:** No tests or CI checks weakened; touched only the planned files. — or each exception with its reason.
+
+**Risk:** [Low | Medium | High], [why]. [The top 1–3 risks.] Undo: [how].
+
+**Review focus**
+- [where CD should look first, and why]
+- [each critical or major finding CD directed past the review cap: severity, finding, CD's direction]
+- [N] open minor findings, listed in the result doc
+
+**How it was verified**
+- `[command]`: [the result, with counts]
+- [a UI check and what it showed]
+- Not run: [the check, and why]
+
+**How it works**
+[The approach and how the pieces fit, in a short paragraph.]
+
+**Learn the change**
+- Files, in reading order: `path`: [its role in this change]; `path`: [role]
+- Concepts: **[term]**: [plain definition]
 
 **Commits**
-- `{short-sha}` {repo name} — {commit message title}
-
----
-
-**What Changed**
-- **{file or component}** — {what changed and why}
-- **{file or component}** — {what changed and why}
-
----
-
-**Infra / Deploy**
-- {what needs to happen outside of the code — deployments, migrations, env vars, accounts, API keys, database changes, search index config, etc.}
-
----
-
-**Smoke Tests**
-- [ ] {user-facing action — what to do in the app and what to verify}
-- [ ] {another user-facing action}
-
-**Deeper Testing**
-- {area} — {what to test and why it's worth deeper attention}
-
----
-
-**Known Gaps**
-- {what was deliberately skipped or left incomplete, and why}
-
-**Next Steps**
-- {planned forward motion — what comes next}
+- `{short-sha}` {commit title}
+- Full record: `[the result doc's final path]`
 ```
 
-**Rules:**
-- **Smoke tests are user-facing actions.** "Open the app and navigate to X", "Try creating a Y", "Check that Z appears on the dashboard." These are things you do in the running application — NOT CLI commands. Exception: if the deliverable's domain is CLI/terminal tooling (e.g., a CLI app, build scripts, developer tools, CME/LME), then commands are the appropriate smoke test format.
-- **Omit sections when empty.** Infra / Deploy, Known Gaps, and Next Steps should be omitted entirely when not applicable. Don't include empty sections or "none" placeholders.
-- **"What Changed" is exhaustive** — every meaningful change, not just the highlights. This is the audit trail.
-- **"Known Gaps" is separate from "Next Steps."** Gaps = deliberately incomplete or skipped. Next steps = planned forward motion. They serve different purposes.
-- **"Infra / Deploy" absorbs the deployment guide.** If the work requires manual deployment steps, environment variables, migrations, database changes, or account setup, it goes here. This replaces the standalone deployment guide step.
+- **Always present:** The problem, What changes for users, What was built, Deviations (`None.` when there were none), Scope's Tackled line, Scope integrity, Risk, Review focus, How it was verified, How it works, Learn the change's Files line, and Commits. **Left out when empty:** What you need to do, Not tackled, Deferred, a Review focus finding line with nothing to list, and Concepts.
+- **What you need to do comes first,** because it is what CD acts on. It holds the deployment guide (manual deploy steps, environment variables, migrations, database changes, account setup) as bullets, and smoke tests as checkboxes. A change users can see always gets at least one smoke test. Smoke tests are user-facing actions: "Open the app and navigate to X", "Try creating a Y", "Check that Z appears on the dashboard". They are things you do in the running application, not CLI commands, unless the deliverable is CLI or terminal tooling.
+- **A skipped phase** goes under Deviations, with its reason.
+- **Evidence, not claims.** How it was verified shows this session's commands and results. Scope integrity comes from the POST-GATE file-deviation log and `git diff --stat` of the work over test and CI paths: a deleted, skipped or loosened test or check is an exception, with its reason.
+- **Commits:** one line per commit made during execution.
+- **A pull request** carrying the work uses these sections in the template's PR form (headings, What you're approving, the agent record collapsed, no What you need to do or Commits), and passes the template's fresh-reader check before it opens.
+- **Headless run with a caller schema:** the sections fill the schema's PR-description fields instead of being printed.
+<!-- MIRROR-END: writing-for-cd.md#completion-report -->
 
 ### Session Handoff
 
@@ -619,7 +624,7 @@ When the deliverable is complete, the "Let's organize the chronicles" command mo
 | "I pre-read 8 files so now I have complete context and can implement" | Pre-reading is the first step toward self-implementation. Read the plan file; let agents read the implementation files they need. |
 | "I'll just merge the conflict / fix the loose ends myself" | Parallel conflict or partial completion is still an agent task. Re-dispatch the affected agent. |
 | "Findings are minor, ship it" | Minors get one batched fix pass once no critical or major findings remain. Any still open go in the result doc's Open Minor Findings table — never silently dropped, and only CD closes them. |
-| "I dispatched most of the agents" / "Re-review is overkill" | Re-review is mandatory; its roster comes from the mechanical trigger, never judgment. Small, file-local minor fixes get the narrow roster (raisers + standing reviewers) — they never get no roster. Count the checklist. Count the dispatches. They must match. |
+| "I dispatched most of the agents" / "Re-review is overkill" | Re-review is mandatory; its roster comes from the mechanical trigger, never judgment. Small, file-local minor fixes get the narrow roster (raisers + standing reviewers) — they never get no roster. Count the names on the roster line. Count the dispatches. They must match. |
 | "I'll skip the PRE-GATE / POST-GATE" | The mandatory output blocks exist because these were skipped in 100% of early executions. Emit the block. |
 | "One more iteration and I'll get it" | The loop is capped at three review rounds. At the cap with critical or major findings open, escalate to CD with the open-findings table and documented attempts. |
 | "This only touches the frontend" | Check. Features rarely affect one layer. If it changes data shape or API contract, backend must review too. |
@@ -656,6 +661,6 @@ When the deliverable is complete, the "Let's organize the chronicles" command mo
 ## Integration
 
 - **Feeds into:** `sdlc-tests-run` (post-commit test verification), `sdlc-archive` (when deliverable is complete)
-- **Uses:** worker domain agents (implementation + review), `sdlc-plan` output (the plan file), `[sdlc-root]/process/manager-rule.md`, `[sdlc-root]/process/collaboration_model.md`, `[sdlc-root]/process/review-fix-loop.md`, `[sdlc-root]/process/finding-classification.md`, `[sdlc-root]/templates/pr_description_template.md` (code variant, step 4)
+- **Uses:** worker domain agents (implementation + review), `sdlc-plan` output (the plan file), `[sdlc-root]/process/manager-rule.md`, `[sdlc-root]/process/collaboration_model.md`, `[sdlc-root]/process/review-fix-loop.md`, `[sdlc-root]/process/finding-classification.md`, `[sdlc-root]/templates/pr_description_template.md` (code variant, steps 4–5), `[sdlc-root]/process/writing-for-cd.md` (§ Completion Reports, step 5)
 - **Complements:** `sdlc-lite-execute` (handles lite deliverables), `sdlc-audit` (can audit execution quality post-hoc)
 - **Does NOT replace:** `sdlc-plan` (plan must exist before execution), `sdlc-tests-run` (separate test verification step)

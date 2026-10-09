@@ -9,17 +9,17 @@ The description of a pull request that asks CD to approve agent-written work. Wr
 
 ## Rules
 
-- **Tell CD, for sure:** the original problem, what changes for users, what CD is approving, what's tackled and what's left out, the risk, and how it will be (or was) verified.
-- **Plain language.** Write for someone who knows the product but not this change. Define a term the first time you use it, or leave it out. Use code names (files, functions, commands) only where they help CD find or check something: How it works, Learn the change, verification evidence and findings.
-- **Fixed order, fixed headings.** The sections below, in this order. Omit a section only where it says so, and add none. Detail that doesn't fit goes in the agent record or stays in the plan.
-- **About 450 words above the agent record** for a plan PR, about 500 for a code PR, with each section's share given below. If the change won't fit, it is probably too big for one PR. A PR has one purpose you can state in a sentence.
-- **Say each thing once.** The problem describes today; What changes for users describes afterwards; What you're approving names the choices; Scope names the boundaries; How it works explains the flow; Learn the change explains files and terms.
-- **Evidence over claims.** A code PR shows what ran and what came out. "All tests pass" on its own is a claim.
-- **Say where you're unsure.** Review focus is where the author is least confident and what CD may not have thought of, not a recap.
-- **Don't invent.** An empty Deferred, Deviations or Concepts list is fine. Write what is true, from the plan or the diff you read, never from memory.
-- **The approach goes here; lines go in code.** How it works explains the approach and how the pieces fit. Why a particular line exists goes in a comment beside it.
+The rules for anything CD reads come first: `[sdlc-root]/process/writing-for-cd.md`. Lead with what CD needs, use plain language, say each thing once, show evidence over claims, say where you're unsure, and don't invent. On top of those, a PR:
 
-**Before opening the PR,** give a fresh reader only the description and the plan or diff (in a skill run, a subagent dispatched in the foreground). It answers two questions. Could someone who didn't watch the work explain the problem, the change, the choices, the risks and the evidence from the description alone? Does every statement match the plan or the diff? Fix what it finds, then cut every sentence CD needs neither to approve the change nor to learn from it.
+- **Tells CD, for sure:** the original problem, what changes for users, what CD is approving, what's tackled and what's left out, the risk, and how it will be (or was) verified.
+- **Uses code names only where they help CD find or check something:** How it works, Learn the change, verification evidence and findings.
+- **Keeps the fixed order and headings.** The sections below, in this order. Omit a section only where it says so, and add none. Detail that doesn't fit goes in the agent record or stays in the plan.
+- **Fits about 450 words above the agent record** for a plan PR, about 500 for a code PR, with each section's share given below. If the change won't fit, it is probably too big for one PR. A PR has one purpose you can state in a sentence.
+- **Gives each section one job.** The problem describes today; What changes for users describes afterwards; What you're approving names the choices; Scope names the boundaries; How it works explains the flow; Learn the change explains files and terms.
+- **Puts the approach here and lines in code.** How it works explains the approach and how the pieces fit. Why a particular line exists goes in a comment beside it.
+- **Leaves an empty list empty.** No Deferred, Deviations or Concepts is fine.
+
+**A plan or spec PR's description is the document's Approval Brief** (`[sdlc-root]/process/writing-for-cd.md` § Approval Briefs), which already passed a fresh reader. For a code PR, **before opening it,** give a fresh reader only the description and the diff (in a skill run, a subagent dispatched in the foreground). It answers two questions. Could someone who didn't watch the work explain the problem, the change, the choices, the risks and the evidence from the description alone? Does every statement match the diff? Fix what it finds, then cut every sentence CD needs neither to approve the change nor to learn from it.
 
 ## Risk Tiers
 

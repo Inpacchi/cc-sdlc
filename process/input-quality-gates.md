@@ -2,7 +2,7 @@
 
 Phase-transition gates that score artifact quality before downstream consumption. These catch structural deficiencies early — before agents invest tokens planning from weak research or executing from weak plans.
 
-These are **soft gates**: the orchestrator scores and presents results; the human reviews and decides whether to proceed, revise, or override. They do not block phase advancement automatically.
+These are **soft gates**: the orchestrator scores and presents results; the human reviews and decides whether to proceed, revise, or override. They do not block phase advancement automatically. When everything passes, the gate prints one line and the run continues; when anything fails, the orchestrator presents the scores and waits for CD.
 
 ## Design Principles
 
@@ -126,7 +126,14 @@ Lite plans use the same FACTS dimensions and thresholds. Code snippets in lite p
 
 ## Output Format
 
-Both gates produce a compact scoring block appended to the orchestrator's output:
+When every item passes, each gate is one line (`[sdlc-root]/process/writing-for-cd.md` § Status Blocks):
+
+```
+FAR: PASS · [N] findings · lowest: [finding] (F:x A:x R:x)
+FACTS: PASS · mean [x.x] · lowest: phase [N] ([x.x])
+```
+
+When any item fails, the gate produces this scoring block, appended to the orchestrator's output:
 
 ```
 ── FAR Gate ──────────────────────────────

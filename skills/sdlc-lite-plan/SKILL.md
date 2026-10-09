@@ -13,7 +13,7 @@ description: >
 
 # SDLC-Lite Planning
 
-Domain worker agents write the plan and review it. You are the manager and never do work yourself. This skill produces a plan saved to `docs/current_work/sdlc-lite/`, then enters plan mode so the user gets the standard execution prompt with the option to clear context. A headless run stops at `awaiting-approval` instead.
+Domain worker agents write the plan and review it. You are the manager and never do work yourself. This skill produces a plan saved to `docs/current_work/sdlc-lite/`, then presents the plan's Approval Brief, so CD approves from a short brief and starts execution in a new session. A headless run stops at `awaiting-approval` instead.
 
 **This skill produces the plan. It does NOT execute it.** Execution happens via `sdlc-lite-execute`.
 
@@ -29,8 +29,9 @@ Concretely, the saved plan file must let a reader answer:
 4. **How do we know it worked?** — per-phase acceptance criteria plus an overall post-execution review gate
 5. **What decisions are still open?** — DECIDE items marked explicitly (`USER DECISION NEEDED: ...`), never left as prose ambiguity
 6. **What did domain experts push back on?** — Worker Agent Reviews section with bracketed agent names and concrete feedback, appended after review converges
+7. **Can CD approve it without reading all of it?** — an Approval Brief in plain language, about 450 words, naming every decision left to CD, checked by a fresh reader (step 4a)
 
-If any of these six are missing or vague, the plan is not done — regardless of which steps below were followed. The Steps section exists to make these outcomes reliable; when a step conflicts with an outcome (e.g. the plan demonstrably satisfies 1–6 but a step prescribes further work), surface the conflict rather than forcing the step.
+If any of these seven are missing or vague, the plan is not done — regardless of which steps below were followed. The Steps section exists to make these outcomes reliable; when a step conflicts with an outcome (e.g. the plan demonstrably satisfies 1–7 but a step prescribes further work), surface the conflict rather than forcing the step.
 
 ## When This Applies
 
@@ -49,9 +50,9 @@ If the work introduces entirely new subsystems or architectural patterns — tha
 This skill produces:
 
 1. **Plan file** at `docs/current_work/sdlc-lite/dNN_{slug}_plan.md` — persists across context clears, uses a deliverable ID from the catalog
-2. **Plan mode prompt** via `EnterPlanMode` — gives the user the standard execution options (clear context, bypass permissions, etc.). Interactive runs only: a headless run ends with status `awaiting-approval` and the plan path.
+2. **The Approval Brief message** (step 5): the plan's brief, its path, and the line that starts execution in a new session. Interactive runs only: a headless run ends with status `awaiting-approval` and the plan path.
 
-**Approval by pull request.** When the plan goes to CD as a pull request (a factory plan stage, or CD asks for one), write the PR description for CD per `[sdlc-root]/templates/pr_description_template.md` (plan variant). In a headless run, fill the caller's PR-description schema fields the same way. The plan file doesn't change: it stays the agent's contract.
+**Approval by pull request.** When the plan goes to CD as a pull request (a factory plan stage, or CD asks for one), the PR description is the plan's Approval Brief (step 4a), in the plan variant of `[sdlc-root]/templates/pr_description_template.md`. In a headless run, fill the caller's PR-description schema fields from it. The rest of the plan stays the agent's contract.
 
 The execution skill (`sdlc-lite-execute`) will additionally produce a **result doc** at `docs/current_work/sdlc-lite/dNN_{slug}_result.md` — capturing what was built, deviations, and acceptance criteria verification.
 
@@ -70,7 +71,8 @@ digraph sdlc_lite_planning {
     "Round 3 done?" [shape=diamond];
     "ESCALATE to CD\n(AskUserQuestion +\nopen-findings table)" [shape=box, color=red];
     "4. Verify plan file exists\n+ append Worker Agent Reviews\n(+ Open Minor Findings)" [shape=box];
-    "5. Enter plan mode\n(triggers execution prompt)" [shape=doublecircle];
+    "4a. Approval Brief\n(writer + fresh reader + word count)" [shape=box];
+    "5. Present the Approval Brief\n(CD executes in a new session)" [shape=doublecircle];
 
     "1. Identify relevant worker domain agents" -> "2. Worker domain agent WRITES and SAVES the plan file";
     "2. Worker domain agent WRITES and SAVES the plan file" -> "3. Review plan with the round-1 roster\n(fresh reviewers, round N of 3)";
@@ -82,7 +84,8 @@ digraph sdlc_lite_planning {
     "Round 3 done?" -> "3. Review plan with the round-1 roster\n(fresh reviewers, round N of 3)" [label="no"];
     "Round 3 done?" -> "ESCALATE to CD\n(AskUserQuestion +\nopen-findings table)" [label="yes"];
     "FIX findings to incorporate\nor DECIDE open?" -> "4. Verify plan file exists\n+ append Worker Agent Reviews\n(+ Open Minor Findings)" [label="no — exit bar met"];
-    "4. Verify plan file exists\n+ append Worker Agent Reviews\n(+ Open Minor Findings)" -> "5. Enter plan mode\n(triggers execution prompt)";
+    "4. Verify plan file exists\n+ append Worker Agent Reviews\n(+ Open Minor Findings)" -> "4a. Approval Brief\n(writer + fresh reader + word count)";
+    "4a. Approval Brief\n(writer + fresh reader + word count)" -> "5. Present the Approval Brief\n(CD executes in a new session)";
 }
 ```
 
@@ -98,7 +101,7 @@ The canonical agent-to-domain mapping is `[sdlc-root]/process/agent-selection.ya
 
 The full model is in `[sdlc-root]/process/collaboration_model.md` (role definitions, decision authority table, autonomy spectrum). The critical directives:
 
-**AskUserQuestion mandate:** every question directed at the user MUST use the `AskUserQuestion` tool — do not type questions as conversational text. Status updates and completion reports that need no response use normal text. Planning is where this matters most — CC proposes approaches, CD approves.
+**AskUserQuestion mandate:** every question directed at the user MUST use the `AskUserQuestion` tool — do not type questions as conversational text. Status updates and completion reports that need no response use normal text. Planning is where this matters most — CC proposes approaches, CD approves. The one exception is plan approval: the Approval Brief message ends the turn, and CD's reply is the answer (step 5; `[sdlc-root]/process/writing-for-cd.md` § Approval Briefs).
 
 <!-- MIRROR-START: headless-mode.md#headless-stop-rule -->
 **Headless runs (no person present).** This run is headless if the caller's prompt or appended system prompt has a line starting `SDLC headless mode:`, or if no ask-the-user tool (`AskUserQuestion`, or the harness's equivalent such as OpenCode's `question`) can be used — none is available or loadable, or a call to it is denied without an answer. A dispatched subagent is never headless itself; in a headless run the orchestrator tells each subagent so, and the limits below bind it too. In a headless run, every point in this skill that asks CD something the next step depends on, waits for CD's approval, or escalates to CD **stops the run there**: save the work so far, return the questions, the document or action plan awaiting approval, or the open-findings table as the run's result (in the caller's output schema if it passed one), and end the turn normally — a stop is a result, not an error. A missing precondition the caller must fix ends the run with status `failed` and the reason. Never guess an answer, take a default for a decision CD owns, approve your own work, or skip the gate. List questions the next step does not depend on in the result instead of stopping. Take the no path on optional offers. Cause no side effect outside the working tree — no push, post, comment, label, publish, external send, or live-system change — unless the caller's prompt names it; list those actions in the result. Reads are fine. A question the prompt or thread already answers is not a gate. Full rule and result format: `[sdlc-root]/process/headless-mode.md`.
@@ -122,7 +125,7 @@ Follow the state machine in `[sdlc-root]/process/deliverable_lifecycle.md`. When
 
 ## Steps
 
-These steps exist because LLMs reliably fail the Definition of Done without scaffolding — writers drift into HOW-only plans, skip cross-domain review, summarize when asked to present verbatim, and quietly absorb revision work the writing agent should own. Follow the steps. But the steps are guardrails, not the product: the product is a plan that satisfies outcomes 1–6 above.
+These steps exist because LLMs reliably fail the Definition of Done without scaffolding — writers drift into HOW-only plans, skip cross-domain review, summarize when asked to present verbatim, and quietly absorb revision work the writing agent should own. Follow the steps. But the steps are guardrails, not the product: the product is a plan that satisfies outcomes 1–7 above.
 
 ### 0. Register Deliverable ID
 
@@ -132,7 +135,7 @@ These steps exist because LLMs reliably fail the Definition of Done without scaf
 
 This ID will be used in the plan filename (`dNN_{slug}_plan.md`).
 
-**Headless restart.** When the prompt restarts an existing deliverable at a named stage, skip registration and every step before that stage: never claim a second ID or write a second plan file. Read the saved plan and the earlier result's `notes`. If the prompt carries CD's answers to DECIDE findings, a FACTS fail, or an escalated review, resume at that point (the FACTS gate in step 2, or step 3 at the recorded review round with the frozen round-1 roster). Each headless stop's `notes` carry what a restart needs: the D-number, slug, plan path, writing agent, agent list, and during review the round number, frozen roster and open-findings table (`[sdlc-root]/process/headless-mode.md` § Resuming).
+**Headless restart.** When the prompt restarts an existing deliverable at a named stage, skip registration and every step before that stage: never claim a second ID or write a second plan file. Read the saved plan and the earlier result's `notes`. If the prompt carries CD's answers to DECIDE findings, a FACTS fail, or an escalated review, resume at that point (the FACTS gate in step 2, or step 3 at the recorded review round with the frozen round-1 roster). If it carries CD's changes to the plan, send them to the writing agent, re-run review when its re-review triggers fire (step 3 at the recorded round, frozen roster), then step 4a. Each headless stop's `notes` carry what a restart needs: the D-number, slug, plan path, writing agent, agent list, and during review the round number, frozen roster and open-findings table (`[sdlc-root]/process/headless-mode.md` § Resuming).
 
 ### Agent Dispatch Protocol
 
@@ -162,6 +165,14 @@ Read `[sdlc-root]/knowledge/architecture/model-tier-strategy.yaml` for model/eff
 
 **VERIFICATION-GATE** — you cannot dispatch agents to write the plan until this block appears in your response. If there are no external libraries and no infrastructure/cost claims, emit the block with `none` entries — the block must still appear.
 
+**One line when every check passes** (`[sdlc-root]/process/writing-for-cd.md` § Status Blocks):
+
+```
+VERIFICATION-GATE: PASS · libraries: [name X.Y.Z via Context7 <resolved-id> | WebFetch <docs URL>, installed X.Y.Z; … | none] · infrastructure: [incremental on <platform> | greenfield | none], checked via [project config | deployment files | user confirmation] · external APIs: [name via source; … | none]
+```
+
+**The full block when the gate fails,** or when a library's verified and installed versions differ:
+
 ```
 VERIFICATION-GATE
 External libraries:
@@ -176,7 +187,7 @@ External API contracts:
 Gate: PASS | FAIL (unverified: [list what's missing])
 ```
 
-If the gate shows FAIL, resolve the unverified items before proceeding. Do not dispatch agents with unverified claims — the agent will write confidently from training data, producing plausible but wrong details that survive into the approved spec.
+If the gate shows FAIL, resolve the unverified items before proceeding. Do not dispatch agents with unverified claims — the agent will write confidently from training data, producing plausible but wrong details that survive into the approved plan.
 
 ### 1. Identify Relevant Worker Domain Agents
 
@@ -269,7 +280,7 @@ The most relevant worker domain agent writes the plan **and saves it directly to
 
 **The writing worker agent — not the manager — owns the file write.** The dispatch prompt must instruct the agent to save the plan to `docs/current_work/sdlc-lite/dNN_{slug}_plan.md` (pass the exact path computed from the deliverable ID in step 0 and a snake_case slug derived from the plan title). The agent returns a short confirmation — not the plan body. If the agent returns the plan body instead of saving the file, re-dispatch with explicit instructions to use the `Write` tool.
 
-**Plan structure:** Use the template at `[sdlc-root]/templates/sdlc_lite_plan_template.md`. Read it before writing the plan.
+**Plan structure:** Use the template at `[sdlc-root]/templates/sdlc_lite_plan_template.md`. Read it before writing the plan. The writing agent leaves the `## Approval Brief` section as the template has it: it is written in step 4a, once review is done.
 
 **Plan rules:**
 - **Default to WHAT and WHY.** Phases should lead with outcomes and constraints — what must be true when the phase is done, and why it matters. This is the baseline because it lets the executing agent reason against the live codebase rather than following stale instructions.
@@ -284,27 +295,23 @@ The most relevant worker domain agent writes the plan **and saves it directly to
 
 **Post-write: offer an explainer or a walkthrough.** Ask CD whether they want an HTML explainer (`sdlc-explain`, **plan** storyboard) or a guided walkthrough (`sdlc-walkthru`) of the plan — never unprompted. Mechanics and the precedes-approval rule: `[sdlc-root]/process/html-rendering.md` § Post-Skill Offer.
 
-**FACTS Gate** — after verifying completeness, score each phase using the FACTS rubric in `[sdlc-root]/process/input-quality-gates.md`. This is a soft gate: present the per-phase scores and overall mean, then let the human decide whether to proceed to review or revise low-scoring phases first. Code snippets in lite plans count as Clarity evidence — phases with concrete signatures or diffs score higher on C than prose-only descriptions. **Headless run:** on a pass (every phase: mean ≥ 3.0, C ≥ 3, T ≥ 3), record the scores in the result's `notes` and proceed to review; on a fail, stop with status `needs-input` and the per-phase scores.
+**FACTS Gate** — after verifying completeness, score each phase using the FACTS rubric in `[sdlc-root]/process/input-quality-gates.md`. This is a soft gate: present the scores, then let the human decide whether to proceed to review or revise low-scoring phases first. When every phase passes, print one line and continue: `FACTS: PASS · mean [x.x] · lowest: phase [N] ([x.x])`. When any phase fails the bar, present the per-phase lines from `input-quality-gates.md` and wait for CD. Code snippets in lite plans count as Clarity evidence — phases with concrete signatures or diffs score higher on C than prose-only descriptions. **Headless run:** on a pass (every phase: mean ≥ 3.0, C ≥ 3, T ≥ 3), record the scores in the result's `notes` and proceed to review; on a fail, stop with status `needs-input` and the per-phase scores.
 
 ### 3. Worker Domain Agent Plan Review
 
 Before executing, dispatch the review roster — `code-reviewer`, `software-architect`, and one worker agent per touched domain (§ Agent Selection) — to review the full plan. Each reviews through their domain lens.
 
-Before dispatching, output a checklist:
+Before dispatching, output the roster as one line:
 
 ```
-Plan review round N of 3 — dispatching:
-- [ ] agent-name-1
-- [ ] agent-name-2
-- [ ] agent-name-3
-- [ ] external-reviewer (cross-vendor, via external-review.sh) — if configured
+Plan review round N of 3 — dispatching: agent-name-1, agent-name-2, agent-name-3, external-reviewer (if configured)
 ```
 
-**Every checkbox must have a corresponding agent dispatch. Count the checkboxes. Count the dispatches. They must match.** If the count doesn't match, stop and fix.
+**Every name must have a corresponding agent dispatch. Count the names. Count the dispatches. They must match.** If the count doesn't match, stop and fix.
 
-**External reviewer (first-class when configured):** If `[sdlc-root]/external-review.sh` exists and is executable, the external reviewer is part of the review roster — add its checklist entry and run it in the same review round as the worker agents. Build the plan-review payload (plan only — lite plans have no spec) per `[sdlc-root]/process/external-review-gate.md` § Planning Integration; mid-tier at `high` is the norm for lite plans; state data egress for hosted models. Its findings enter the classification table attributed `[external:<model>]`; the external model never revises the plan. On re-review it participates with the roster, capped at 2 rounds of its own inside the loop's three-round cap — after that, remaining new external findings classify as DECIDE. If the wrapper is absent, omit the checklist entry; if it errors, record "external plan review errored — skipped" and continue.
+**External reviewer (first-class when configured):** If `[sdlc-root]/external-review.sh` exists and is executable, the external reviewer is part of the review roster — add it to the roster line and run it in the same review round as the worker agents. Build the plan-review payload (plan only — lite plans have no spec) per `[sdlc-root]/process/external-review-gate.md` § Planning Integration; mid-tier at `high` is the norm for lite plans; state data egress for hosted models. Its findings enter the classification table attributed `[external:<model>]`; the external model never revises the plan. On re-review it participates with the roster, capped at 2 rounds of its own inside the loop's three-round cap — after that, remaining new external findings classify as DECIDE. If the wrapper is absent, leave it off the roster line; if it errors, record "external plan review errored — skipped" and continue.
 
-**Writing agent in review:** The worker agent that wrote the plan (step 2) may be included as a reviewer for self-verification, but cross-domain reviewers typically provide higher marginal value. Whether or not the writing agent reviews, the checklist must reflect only the agents actually dispatched — the count-must-match rule applies to the dispatched set, not the step-1 list.
+**Writing agent in review:** The worker agent that wrote the plan (step 2) may be included as a reviewer for self-verification, but cross-domain reviewers typically provide higher marginal value. Whether or not the writing agent reviews, the roster line must reflect only the agents actually dispatched — the count-must-match rule applies to the dispatched set, not the step-1 list.
 
 Dispatch all review worker agents in parallel. Collect feedback.
 
@@ -315,7 +322,7 @@ Dispatch all review worker agents in parallel. Collect feedback.
 2. **Deduplicate, calibrate, then classify.** Merge duplicates first, then calibrate every severity by impact × likelihood (the impact on the implementation if the plan is executed as written), then classify each finding in the Classification Table. Fill the `Scope change` column for every FIX finding: `yes` if the fix changes the approach, adds or removes files, or changes a phase or agent assignment. Never downgrade a severity to reach the exit bar.
 3. **One revision dispatch per round.** All FIX findings go to the writing agent in a single revision dispatch. DECIDE findings go to CD via `AskUserQuestion`. PRE-EXISTING findings appear in the table and need no action.
 4. **Re-review trigger is mechanical.** Before the revision dispatch, record the plan's Files list and phase/agent assignments from your last Read of the plan file; after the writer returns, Read it again and compare. Re-review is mandatory if ANY of these is true: (1) any FIX finding has `Scope change` = yes, (2) the revised plan's Files list differs from the pre-revision Files list, or (3) a phase was added, removed, or its assigned agent changed. Otherwise there is no re-review. Read the `Scope change` column and compare the before/after Files list; do not reason about whether the revision "changed the approach."
-5. **Re-review dispatches the full roster.** The roster is the round-1 dispatch checklist (plus the external reviewer, inside its own 2-round cap). When re-review fires, dispatch every reviewer on it — not a subset chosen by what the revision changed. Plans have no narrow re-review.
+5. **Re-review dispatches the full roster.** The roster is the round-1 roster line (plus the external reviewer, inside its own 2-round cap). When re-review fires, dispatch every reviewer on it — not a subset chosen by what the revision changed. Plans have no narrow re-review.
 6. **Exit bar.** Review ends when no `critical` or `major` FIX finding remains unaddressed and no DECIDE finding is unresolved. Minor FIX findings the revision did not incorporate go in an **Open Minor Findings** table in the plan file. They are never silently closed; only CD closes them.
 7. **Three-round cap.** At most 3 review rounds: the first round plus up to 2 re-reviews, and every round counts. If any `critical` or `major` finding is open at the cap, or round 3's revision fires a re-review trigger: stop, escalate to CD via `AskUserQuestion` with the open-findings table, and never claim the review is clean. At the cap with only minors open: exit with the Open Minor Findings table.
 <!-- MIRROR-END: review-fix-loop.md#plan-review-mechanics -->
@@ -326,16 +333,15 @@ If agents have findings, deduplicate and calibrate them, then classify per `[sdl
 - DECIDE findings go to the user via `AskUserQuestion`
 - PRE-EXISTING findings require no action but must appear in the table
 
-If there are FIX findings, re-dispatch the worker domain agent who wrote the plan (from step 2) with only the FIX findings. **That worker agent produces the revision AND overwrites the plan file** using the `Write` tool at the same path. You do not write the revision, and you do not save it. The re-dispatch prompt must pass the plan file path and explicitly instruct the agent to overwrite it — not return the body. Output a dispatch checklist before re-dispatching:
+If there are FIX findings, re-dispatch the worker domain agent who wrote the plan (from step 2) with only the FIX findings. **That worker agent produces the revision AND overwrites the plan file** using the `Write` tool at the same path. You do not write the revision, and you do not save it. The re-dispatch prompt must pass the plan file path and explicitly instruct the agent to overwrite it — not return the body. Output one line before re-dispatching:
 
 ```
-Plan revision — dispatching:
-- [ ] [writing-agent-name]: incorporate N findings (K critical, M major, P minor; S scope-change), overwrite plan file
+Plan revision — dispatching: [writing-agent-name] to incorporate N findings (K critical, M major, P minor; S scope-change) and overwrite the plan file
 ```
 
-The checkbox-must-match-dispatch rule from Step 3 applies here too. If you find yourself editing the plan directly — or saving the agent's returned body yourself — stop. Both violate the Manager Rule.
+The names-must-match-dispatches rule from Step 3 applies here too. If you find yourself editing the plan directly — or saving the agent's returned body yourself — stop. Both violate the Manager Rule.
 
-**Re-review:** the trigger and the roster are mechanical (steps 4–5 of the block above). The roster is the round-1 dispatch checklist — copy it, re-emitting it each round with N updated (`Plan review round N of 3 — dispatching:`) and dropping the `external-reviewer` entry once its 2-round cap is spent; do not reason about which worker agents are "relevant to this revision."
+**Re-review:** the trigger and the roster are mechanical (steps 4–5 of the block above). The roster is the round-1 roster line — copy it, re-emitting it each round with N updated (`Plan review round N of 3 — dispatching:`) and dropping `external-reviewer` once its 2-round cap is spent; do not reason about which worker agents are "relevant to this revision."
 
 **Stopping condition:** the exit bar (step 6 of the block above) — no critical or major FIX finding unaddressed, no DECIDE unresolved. Minor FIX findings the revision did not incorporate are listed in an **Open Minor Findings** table (`[sdlc-root]/process/finding-classification.md` § Open Minor Findings), appended after the Worker Agent Reviews section in step 4 — not dropped.
 
@@ -380,34 +386,42 @@ The plan file was saved by the writing worker agent in step 2 (and overwritten b
 
 Where `NN` is the deliverable ID from step 0 and `{slug}` is a short snake_case name derived from the plan title (e.g., `d8_card_overlay_controls_plan.md`). The `docs/current_work/sdlc-lite/` directory is created by the writing agent on first save, not by the manager.
 
-### 5. Enter Plan Mode
+### 4a. Approval Brief
 
-**Explainer precedes approval:** if CD opted into an HTML explainer of the plan, regenerate it now so it reflects the final revised plan **before** the execution prompt appears — CD approves what they last saw explained. Never generate it after the approval or in the same step as the approval prompt.
+CD approves the plan from its `## Approval Brief` section (`[sdlc-root]/process/writing-for-cd.md` § Approval Briefs), written now, from the final plan, Worker Agent Reviews included.
 
-**Headless run:** skip 5a–5c. Do not call `EnterPlanMode` or `ExitPlanMode`; the reviewed plan is saved, so stop with status `awaiting-approval` and the plan path (`[sdlc-root]/process/headless-mode.md`).
+<!-- MIRROR-START: writing-for-cd.md#approval-brief -->
+**Approval Brief procedure.** The document's writing agent writes the brief once the document is final (after review, for a plan). The manager never writes it, except a WORDING fix CD asked for during spec approval.
 
-**Interactive run:** follow these sub-steps in exact order. Do not combine or skip any.
+1. **Dispatch the writing agent** to fill the document's `## Approval Brief` section with `Edit`, changing nothing else in the file. It fills the template's `###` headings, keeping them at level 3 and adding no agent-record `<details>`, as the plan variant of `[sdlc-root]/templates/pr_description_template.md` describes each section: plain language, about 450 words, from the document as it now stands. Every decision the document leaves to CD goes under What you're approving: a table CD approves, a `USER DECISION NEEDED`, or scope beyond what was asked for or approved. For a plan, pass it the review round count and the number of open minor findings for the brief's Review line.
+2. **Dispatch a fresh reader** in the foreground: a new subagent given only the document's path, told to read the brief first and then the rest. It reports whether someone who didn't watch the work could explain the problem, the change, the choices, the risks and the evidence from the brief alone; any statement the document doesn't support; and any decision left to CD that the brief leaves out. Send its findings to the writing agent to fix. One pass, not a loop.
+3. **Count the words:** `awk '/^## Approval Brief/{f=1;next} /^## /{f=0} f' <document path> | wc -w`. If the brief runs well past 450 words (over about 600), send it back to the writing agent once to cut.
+<!-- MIRROR-END: writing-for-cd.md#approval-brief -->
 
-**5a.** Use the `Read` tool to read the plan file at `docs/current_work/sdlc-lite/dNN_{slug}_plan.md` (saved by the writing worker agent in step 2 and augmented with Worker Agent Reviews in step 4). You need the tool output — do not work from memory.
+### 5. Present the Approval Brief
 
-**5b.** Use `EnterPlanMode`. The content you pass to `EnterPlanMode` must be the complete file contents returned by the `Read` tool in step 5a — pasted in full, start to finish. Do not transform, shorten, summarize, or rephrase the read output in any way. Copy-paste it.
+**Explainer precedes approval:** if CD opted into an HTML explainer of the plan, regenerate it now so it reflects the final revised plan **before** the brief is presented — CD approves what they last saw explained. Never generate it after the approval or in the same message as the brief.
 
-**5c.** Use `ExitPlanMode` immediately after.
+**Headless run:** skip 5a–5b; the reviewed plan is saved, so stop with status `awaiting-approval` and the plan path (`[sdlc-root]/process/headless-mode.md`).
 
-**Why this procedure exists:** The LLM's default behavior when asked to "present" content is to summarize it. This has caused compliance failures where the manager wrote a condensed version of the plan instead of the verbatim file. The Read-then-paste procedure eliminates the summarization pathway by making the file contents the direct input to the tool call, with no intermediate "understand and re-express" step.
+**Interactive run:** follow these sub-steps in order.
 
-The execution prompt appears as:
+**5a.** Use the `Read` tool to read the plan file at `docs/current_work/sdlc-lite/dNN_{slug}_plan.md` (saved by the writing worker agent in step 2, augmented with Worker Agent Reviews in step 4, and given its Approval Brief in step 4a). You need the tool output — do not work from memory.
+
+**5b.** End your turn with one message: the plan's `## Approval Brief` section exactly as the `Read` output shows it, from its heading to the next `## ` heading, followed by:
 
 ```
-Claude has written up a plan and is ready to execute. Would you like to proceed?
+Full plan: `docs/current_work/sdlc-lite/dNN_{slug}_plan.md`
 
- ❯ 1. Yes, clear context and bypass permissions
-   2. Yes, and bypass permissions
-   3. Yes, manually approve edits
-   4. Type here to tell Claude what to change
+To approve and execute, start a new session and say: **Execute the plan at docs/current_work/sdlc-lite/dNN_{slug}_plan.md**
+To change it, tell me what to change.
 ```
 
-When execution begins (whether in this session or a fresh one), `sdlc-lite-execute` loads the plan from the saved file.
+Nothing else, and no `AskUserQuestion` in the same turn. Do not transform, shorten, summarize, or rephrase the brief in any way. Copy-paste it.
+
+**Why this procedure exists:** The LLM's default behavior when asked to "present" content is to summarize it. This has caused compliance failures where the manager wrote a condensed version of the plan instead of the verbatim file. CD approves from a short brief, but the manager still never writes it: the plan's author wrote the brief and a fresh reader checked it against the plan (step 4a). The Read-then-paste procedure makes that section the message itself, with no intermediate "understand and re-express" step.
+
+**Approval** is CD starting execution in a new session; `sdlc-lite-execute` loads the plan from the saved file. **A change request** goes back to the writing agent. Re-run review when its re-review triggers fire, then step 4a, then present the brief again.
 
 ### Session Handoff
 
@@ -431,8 +445,12 @@ The Manager Rule remains in effect per `[sdlc-root]/process/manager-rule.md` —
 | "I'll include exact code so execution is easier" | Lite plans are typically executed same-session, so code snippets (function signatures, before/after diffs, structural patterns) are acceptable and improve execution reliability. Frame them as intent indicators — the executing agent should verify against actual code before implementing. Avoid exact line numbers, which shift even within a session. |
 | "The constraint is specified but the value isn't known yet" | That's a DECIDE finding. Mark it `USER DECISION NEEDED` so the reviewer routes it. |
 | "Only one domain is involved" | Most tasks touch 2+ domains. Check again. |
-| "Headless run, plan saved — I'll call `EnterPlanMode` so the execution prompt appears" | Plan mode is CD's approval surface. A headless run skips 5a–5c and stops with `awaiting-approval`. |
-| "I'll write the plan mode content from memory" | Interactive run: follow step 5 exactly: Read the file with the Read tool, then paste the full Read output into EnterPlanMode. Working from memory produces summaries. |
+| "Headless run, plan saved — I'll present the brief so CD can approve" | Nobody is there to read it. A headless run skips 5a–5b and stops with `awaiting-approval`; the caller shows CD the brief. |
+| "I'll write the brief message from memory" | Interactive run: follow step 5 exactly: Read the file with the Read tool, then paste the Approval Brief section from the Read output, with the path and the execute line. Working from memory produces summaries. |
+| "I'll paste the whole plan so CD sees everything" | CD approves from the brief. A plan pasted in full is where CD stops reading. The plan is one path away. |
+| "The brief just needs a small fix; I'll make it" | The plan's writing agent writes and fixes the brief (step 4a). The manager only counts its words. |
+| "The author's brief reads fine; skip the fresh reader" | The fresh reader catches agent-speak and a missing decision. Run it, then count the words. |
+| "The plan has a table CD approves, but it won't fit in the brief" | Every decision left to CD goes under What you're approving, or the fresh reader fails the brief. Cut elsewhere. |
 | "Plan's approved — now I'll offer the explainer" | Explainer precedes approval, never follows it. The offer resolves (declined, or accepted and delivered) before the approval gate; a post-approval explainer can't inform the decision it exists to support. |
 | "The plan is done, let me just quickly fix this other thing" | Manager Rule applies for the full session. Dispatch the domain agent. |
 | "I know how this library works" | Verify external library APIs via Context7. Never assume. VERIFICATION-GATE must show the resolved ID and version. |
@@ -443,6 +461,6 @@ The Manager Rule remains in effect per `[sdlc-root]/process/manager-rule.md` —
 ## Integration
 
 - **Feeds into:** `sdlc-lite-execute` (executes the reviewed plan from the saved file)
-- **Uses:** worker domain agents (plan writing + review), `[sdlc-root]/process/manager-rule.md`, `[sdlc-root]/process/collaboration_model.md`, `[sdlc-root]/process/deliverable_lifecycle.md`, `[sdlc-root]/process/external-review-gate.md` § Planning Integration (external reviewer in plan review when configured), `[sdlc-root]/templates/pr_description_template.md` (plan variant, when the plan is approved through a pull request)
+- **Uses:** worker domain agents (plan writing + review), `[sdlc-root]/process/manager-rule.md`, `[sdlc-root]/process/collaboration_model.md`, `[sdlc-root]/process/deliverable_lifecycle.md`, `[sdlc-root]/process/external-review-gate.md` § Planning Integration (external reviewer in plan review when configured), `[sdlc-root]/templates/pr_description_template.md` (plan variant, when the plan is approved through a pull request), `[sdlc-root]/process/writing-for-cd.md` (the Approval Brief written in step 4a and presented in step 5, one-line status blocks)
 - **Complements:** `sdlc-plan` (handles full SDLC deliverables that need specs)
 - **Does NOT replace:** `sdlc-plan` (use that for new features, integrations, or architectural changes)
