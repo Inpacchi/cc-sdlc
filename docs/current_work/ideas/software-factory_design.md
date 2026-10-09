@@ -133,7 +133,7 @@ Agent jobs run in rootless-Docker containers firewalled from the host and LAN; i
 
    Re-run smoke on every action, image or tool-policy change.
 6. **Workflow edits are trusted only through review.** The boundary against a malicious workflow change is:
-   - CODEOWNERS on `.github/`, `.claude/`, `CLAUDE.md`, `.mcp.json` and the test and build config, enforced by the `main` ruleset;
+   - CODEOWNERS on `.github/`, `.claude/`, `CLAUDE.md`, `.mcp.json`, `ops/sdlc/` and the test and build config, enforced by the `main` ruleset. The discipline parking lots (`ops/sdlc/disciplines/*.md`) are the exception: an owner-less line unowns them so agents can add entries (CD, 2026-10-09). The writer's guard follows GitHub's last-match-wins rule, and CD still sees each entry in the PR diff;
    - the factory's own GitHub App (Z Software Factory) has no `workflows` permission, so no factory token can push a workflow change. Its key is in the `factory-writer` environment, which only `main` can use, so a factory branch can't mint the token;
    - the runtime sandbox probe (rule 5).
 

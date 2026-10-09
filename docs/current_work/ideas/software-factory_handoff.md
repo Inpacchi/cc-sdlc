@@ -86,6 +86,7 @@ The work splits across machines and repos:
 | `factory:needs-input` | any stage | Waiting on CD. The question comment carries `<!-- factory-stage: <stage> -->`. CD's reply comment restarts that stage. |
 | `factory:wait` | triage | Doesn't fit now. The comment says what would change that. |
 | `factory:review-capped` | execute | The 3-round review cap was hit. A draft PR is parked with an open-findings table (phase 2+). |
+| `factory:advisor` | triage or CD | A property, not a state (2026-10-09): planning (plan, later spec) gets a Fable advisor. Triage sets it when the plan turns on judgment and clears it otherwise; a label CD added always stands. State sweeps leave it alone. Implement and execute never use an advisor. |
 | `factory:escalated` | revise workflow | The PR had 3 revise runs and CD requested changes again. No more automatic runs; CD decides (F16). |
 
 ## What needs to happen
@@ -527,6 +528,22 @@ Work through these in order. The isolation steps come before any job runs (F14).
 - Containers discard session transcripts (F4), so the loop harvests **human PR review comments, reactions and `needs-input` reasons**, as Warp's `improve-review-pr` does, rather than session JSONL. The alternative is mounting `~/.claude/projects` to a volume.
 - It proposes skill and knowledge updates through `sdlc-audit` improvement mode or `sdlc-reflect`.
 - It could run as a Claude Code Routine (Max OK, schedule trigger, runs in Anthropic's cloud) or as a scheduled workflow on the runner.
+
+**Phase 5 (optional, exploratory): factory memory through Neuroloom (CD, 2026-10-09).** Not committed work: explore first, after the lite path runs end to end. The open questions below (workspace access, server-side tag enforcement, whether memory beats parking lots plus the improve loop at all) decide whether this phase happens.
+- **Why:** job containers are ephemeral, so nothing a factory agent learns survives the run except what lands in a reviewed PR. File-based agent memory doesn't fit:
+  - **Git:** `.claude/agent-memory/` is gitignored by cc-sdlc rule (`CLAUDE-SDLC.md`: "Agent memories are not git-tracked"). Persisting it would mean tracking it in factory PRs.
+  - **Auto-load:** the first 200 lines of `MEMORY.md` load into every future agent's system prompt, CD's local sessions included.
+  - **The factory blocks it anyway:** Edit/Write deny `**/.claude/**`, and CODEOWNERS owns `.claude/`.
+  - **Discipline parking lots** are the reviewed channel for lessons today (unowned in CODEOWNERS on 2026-10-09).
+- **Shape:** give the factory's agent jobs the Neuroloom MCP server (`memory_search`, `memory_store`, `memory_rate`) as factory memory.
+  - **Credential:** HTTP MCP like Context7, with the API key in the MCP config held by the main process. Sandboxed Bash never sees it.
+  - **Policy:** `workflow_policy.py` allows it as a second server. The key goes in a GitHub secret, scoped to the factory environments.
+  - **Leave the knowledge layer alone at first:** no full neuroloom-sdlc-plugin install in quantile. That rewrites the skills' knowledge routing and changes CD's local sessions too; it's a separate decision.
+- **The design point: writes land unreviewed.** `memory_store` bypasses the PR gate, and factory runs read issue text and, on the planning tier, the open internet. A poisoned or wrong memory would surface in later runs, and in CD's sessions if they share a workspace. Pick one:
+  - a **dedicated factory API key** (Neuroloom resolves the workspace from the key), which keeps factory memories out of CD's workspace. Open: can the factory also get read-only access to CD's curated workspace?
+  - the **same workspace with quarantined writes:** every factory write is tagged (`source:factory`, `unreviewed`), CD's searches filter those tags out, and entries are promoted after review. The tag has to be enforced server-side, not left to the agent.
+- **Promotion:** reviewed factory memories flow into the knowledge stores or CD's workspace, through `sdlc-reflect` or the phase 4 improve loop. `memory_rate` feedback from runs helps rank what to promote.
+- **Threat model:** `memory_store` is an outbound text channel. Planning runs read production data, so aggregates could reach Neuroloom. Add it to D3 beside WebSearch and Context7.
 
 ### Exploration: persistent planning sessions (before phase 3; CD asked to explore, nothing decided)
 
