@@ -5,6 +5,24 @@
 
 ---
 
+## Approval Brief
+
+> For CD, who approves the plan from this section. Written last, after review, by the plan's author: the plan variant of `[sdlc-root]/templates/pr_description_template.md`, in about 450 words (`[sdlc-root]/process/writing-for-cd.md` § Approval Briefs). Every decision this plan leaves to CD appears under What you're approving. Execution follows the sections below, not this one.
+
+### The problem
+### What changes for users
+### What you're approving
+### Scope
+### Risk
+### Review focus
+### How it will be verified
+### How it works
+### Learn the change
+
+**Review:** [N] rounds; [K] open minor findings, listed at the end of this plan.
+
+---
+
 ## Overview
 
 [Brief summary of what will be implemented]

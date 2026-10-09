@@ -42,7 +42,7 @@ How the two HTML categories and the walkthrough relate:
 
 After a skill writes a deliverable MD file to `docs/current_work/`, CC **asks CD** whether they want an explainer (`sdlc-explain`) or a walkthrough (`sdlc-walkthru`) — never unprompted. The markdown stands on its own; both are optional ways for a human to absorb it. CD picks one, both, or neither. If CD accepts the explainer, it is built with the document type's storyboard defaults (below) and no further Q&A.
 
-**Offer precedes approval — never in sequence with it.** When the deliverable feeds an approval gate (spec approval, the plan-mode execution prompt), the offer is its own interaction, fully resolved before approval is requested: offer, and if accepted, deliver so CD can absorb it *before* being asked to approve. Never bundle the offer into the approval question, and never deliver after approval — a post-approval explainer cannot inform the decision it exists to support.
+**Offer precedes approval — never in sequence with it.** When the deliverable feeds an approval gate (spec approval, plan approval), the offer is its own interaction, fully resolved before approval is requested: offer, and if accepted, deliver so CD can absorb it *before* being asked to approve. Never bundle the offer into the approval question, and never deliver after approval — a post-approval explainer cannot inform the decision it exists to support.
 
 **Headless runs** (no person present) take the no path: no offer, no explainer, no walkthrough. The run's result lists the offer under `skipped` (`[sdlc-root]/process/headless-mode.md`).
 

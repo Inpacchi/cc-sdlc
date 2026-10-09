@@ -97,16 +97,13 @@ Experiential verification:
 
 **Plan contract injection (when available):** When the review-fix loop is invoked from an execution skill (`sdlc-execute`, `sdlc-lite-execute`), the plan document is available. Each reviewer's dispatch prompt must include the plan's specification for the work they are reviewing — expected behavior, acceptance criteria, and implementation approach. This enables **plan compliance review**: reviewers check "does the implementation match what was specified?" alongside standard code quality checks. Without the plan contract, a well-structured stub that builds clean will pass review — the reviewer has no way to know the plan required a real implementation.
 
-Before dispatching, output this checklist:
+Before dispatching, output the roster as one line (`[sdlc-root]/process/writing-for-cd.md` § Status Blocks):
 
 ```
-Review round N of 3 — dispatching (full roster | narrow: raisers + standing reviewers):
-- [ ] agent-name-1
-- [ ] agent-name-2
-- [ ] agent-name-3
+Review round N of 3 — dispatching (full roster | narrow: raisers + standing reviewers): agent-name-1, agent-name-2, agent-name-3
 ```
 
-Every box must have a corresponding agent dispatch. If the number of dispatched agents doesn't match the checklist count, **stop and fix before proceeding**.
+Every name must have a corresponding agent dispatch. If the number of dispatched agents doesn't match the number of names, **stop and fix before proceeding**.
 
 ## Step B: Collect Findings
 
@@ -243,7 +240,7 @@ Plan review (`sdlc-plan`, `sdlc-lite-plan`) uses this loop's definitions — fre
 - **Severity is read as impact on the implementation if the plan is executed as written**, and every FIX finding also carries the `Scope change` marker (`[sdlc-root]/process/finding-classification.md` § Scope-Change Marker).
 - **One revision dispatch per round.** All FIX findings go to the writing agent together; there is no separate minor batch pass. Minor FIX findings the revision does not incorporate go into the Open Minor Findings table in the plan file.
 - **Re-review fires on scope change, not severity.** Re-review is mandatory if ANY of: (1) any FIX finding has `Scope change` = yes, (2) the revised plan's Files list differs from the pre-revision Files list, or (3) a phase was added, removed, or its assigned agent changed. Otherwise there is no re-review. These are exactly the cases the pre-2026-10 trigger fired on (trigger (1) used to read "Severity = `critical`", when critical *meant* scope change).
-- **When re-review fires, it dispatches the full roster** — the round-1 dispatch checklist. Step D's narrow re-review does not apply to plans.
+- **When re-review fires, it dispatches the full roster** — the round-1 roster line. Step D's narrow re-review does not apply to plans.
 - **At the cap, an unreviewable revision escalates.** If round 3's revision would fire a re-review trigger, there is no round left to review it — escalate to CD under § Round Cap rather than exiting.
 
 ## Mirrored Critical-Steps Blocks
@@ -280,7 +277,7 @@ Skills that run a review loop must not reduce their loop steps to a bare "read a
 2. **Deduplicate, calibrate, then classify.** Merge duplicates first, then calibrate every severity by impact × likelihood (the impact on the implementation if the plan is executed as written), then classify each finding in the Classification Table. Fill the `Scope change` column for every FIX finding: `yes` if the fix changes the approach, adds or removes files, or changes a phase or agent assignment. Never downgrade a severity to reach the exit bar.
 3. **One revision dispatch per round.** All FIX findings go to the writing agent in a single revision dispatch. DECIDE findings go to CD via `AskUserQuestion`. PRE-EXISTING findings appear in the table and need no action.
 4. **Re-review trigger is mechanical.** Before the revision dispatch, record the plan's Files list and phase/agent assignments from your last Read of the plan file; after the writer returns, Read it again and compare. Re-review is mandatory if ANY of these is true: (1) any FIX finding has `Scope change` = yes, (2) the revised plan's Files list differs from the pre-revision Files list, or (3) a phase was added, removed, or its assigned agent changed. Otherwise there is no re-review. Read the `Scope change` column and compare the before/after Files list; do not reason about whether the revision "changed the approach."
-5. **Re-review dispatches the full roster.** The roster is the round-1 dispatch checklist (plus the external reviewer, inside its own 2-round cap). When re-review fires, dispatch every reviewer on it — not a subset chosen by what the revision changed. Plans have no narrow re-review.
+5. **Re-review dispatches the full roster.** The roster is the round-1 roster line (plus the external reviewer, inside its own 2-round cap). When re-review fires, dispatch every reviewer on it — not a subset chosen by what the revision changed. Plans have no narrow re-review.
 6. **Exit bar.** Review ends when no `critical` or `major` FIX finding remains unaddressed and no DECIDE finding is unresolved. Minor FIX findings the revision did not incorporate go in an **Open Minor Findings** table in the plan file. They are never silently closed; only CD closes them.
 7. **Three-round cap.** At most 3 review rounds: the first round plus up to 2 re-reviews, and every round counts. If any `critical` or `major` finding is open at the cap, or round 3's revision fires a re-review trigger: stop, escalate to CD via `AskUserQuestion` with the open-findings table, and never claim the review is clean. At the cap with only minors open: exit with the Open Minor Findings table.
 <!-- MIRROR-SOURCE-END: plan-review-mechanics -->
@@ -309,7 +306,7 @@ These are judgment calls that require product context, taste, and sustained hand
 | Code review — execution | `sdlc-execute`, `sdlc-lite-execute` | Plan's agent assignment table (+ domains surfaced during implementation) | Step 0 + Step 0.5 | `code-reviewer`, `software-architect` | Step D (mechanical full/narrow) | Result doc |
 | Code review — on demand | `sdlc-review-code` | Step 3's dispatch checklist — **that dispatch is round 1**, so Step 5b's re-reviews are rounds 2 and 3 | Step 0 (tests, types, lint) after every fix round; not before round 1, which reviews the diff as submitted (possibly a historical commit) | `code-reviewer`, `software-architect` | Step D | Fix Summary (final report) |
 | Code review — direct dispatch | "Review before committing" in `CLAUDE-SDLC.md` | Touched domains + standing reviewers (Step A) | Step 0 | `code-reviewer`, `software-architect` | Step D | Final report to CD |
-| Plan review | `sdlc-plan`, `sdlc-lite-plan` | The skill's step-1 agent list, reconfirmed (AGENT-RECONFIRM, round 1 only), as dispatched — the round-1 dispatch checklist | None | n/a — no narrow re-review | § Plan Review (scope-change triggers; full round-1 roster) | The plan file |
+| Plan review | `sdlc-plan`, `sdlc-lite-plan` | The skill's step-1 agent list, reconfirmed (AGENT-RECONFIRM, round 1 only), as dispatched — the round-1 roster line | None | n/a — no narrow re-review | § Plan Review (scope-change triggers; full round-1 roster) | The plan file |
 | Reference-doc review | `sdlc-create-reference-doc` | The skill's review quorum | None (no build gate) | The skill's standing reviewer: `code-reviewer` (on every quorum) | Step D | The commit message |
 
 Lite and full tiers run the identical loop — there are no lite-specific review rules. Lite work gets lighter naturally: smaller rosters under the Step A roster rule and fewer rounds under § Exit Bar and § Round Cap.

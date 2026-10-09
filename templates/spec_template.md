@@ -7,6 +7,22 @@
 
 ---
 
+## Approval Brief
+
+> For CD, who approves the spec from this section. Written last, once the rest of the spec is done, by the spec's author: the plan variant of `[sdlc-root]/templates/pr_description_template.md`, in about 450 words (`[sdlc-root]/process/writing-for-cd.md` § Approval Briefs). Every decision this spec leaves to CD appears under What you're approving. How it works covers only the approach the spec settles. Planning follows the sections below.
+
+### The problem
+### What changes for users
+### What you're approving
+### Scope
+### Risk
+### Review focus
+### How it will be verified
+### How it works
+### Learn the change
+
+---
+
 ## 1. Problem Statement
 
 [What problem does this solve? Why is it needed?]

@@ -6,7 +6,7 @@ The canonical taxonomy for classifying review findings. Every skill that triages
 
 ## Classification Table
 
-Classify each finding individually in a table before acting — no narrative paragraphs, no blanket dismissals:
+Classify each finding individually in a table before acting — no narrative paragraphs, no blanket dismissals. Before the table, one plain sentence tells CD what it means: how many findings, how many get fixed now, and which need CD's decision (`[sdlc-root]/process/writing-for-cd.md` § Status Blocks). For example: "Five findings: three get fixed now, one is already in the code, and one needs your decision (the retry limit)."
 
 ```
 | # | Finding | Agent | Classification | Severity | Rationale |

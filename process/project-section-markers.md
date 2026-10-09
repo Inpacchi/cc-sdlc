@@ -129,7 +129,7 @@ Copy the bundle's files → inject its fragments → record the bundle in `insta
 
 ## MIRROR Markers
 
-Upstream-owned **verbatim copies** of a process-doc section, carried inline in skills so a critical step is never reduced to a skippable pointer. The users are the two review-loop critical-steps blocks defined in `[sdlc-root]/process/review-fix-loop.md` § Mirrored Critical-Steps Blocks, and the headless stop rule in `[sdlc-root]/process/headless-mode.md` § Mirrored Stop Rule, which every skill carries.
+Upstream-owned **verbatim copies** of a process-doc section, carried inline in skills so a critical step is never reduced to a skippable pointer. The users are the two review-loop critical-steps blocks defined in `[sdlc-root]/process/review-fix-loop.md` § Mirrored Critical-Steps Blocks, the headless stop rule in `[sdlc-root]/process/headless-mode.md` § Mirrored Stop Rule, which every skill carries, and the Approval Brief procedure and Completion Report in `[sdlc-root]/process/writing-for-cd.md` § Mirrored Blocks, which the planning and execution skills carry.
 
 ```html
 <!-- In the source process doc -->

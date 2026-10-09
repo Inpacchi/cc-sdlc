@@ -34,6 +34,87 @@ Each entry contains:
 
 ---
 
+## 2026-10-09: Writing for CD — plain, short output in every session
+
+**Origin:** CD, after the PR description standard landed: "I regularly find that I tune out because the agent is just so verbose and it just becomes information overload." CD wanted the PR's readability in every interactive SDLC session, and asked whether this belongs in the framework or in an installed output style.
+
+**What happened:** Most of the overload was written into the skills themselves. Plan approval pasted the whole plan into plan mode (quantile's D13 plan is 12,020 words). The completion report's change list was required to be "exhaustive". Gate checklists and review rosters printed in full every time. An output style can't override that, and the docs confirm it doesn't reach dispatched agents. Only one style can be active, and CD already uses personal ones (Architect Mentor, and ELI5 Finance Mentor in quantile). So the fix goes in the framework, and personal styles stay a teaching layer on top. Mid-change, CD also dropped plan mode: "I generally close a session and start a new one to execute the plan."
+
+**Changes made:**
+
+1. **`process/writing-for-cd.md`** (new) — The standard for anything CD reads.
+   - **Rules:** lead with what CD needs, plain language, say each thing once, evidence over claims, say where you're unsure, don't invent, keep to the budget.
+   - **Length budgets:** status updates 1–2 sentences, end-of-turn summaries about 150 words, approval briefs about 450, completion reports about 500.
+   - **Status blocks:** one line on the happy path, and a plain sentence before any findings table.
+   - **Approval Briefs:** shown verbatim, then the path, in a message that ends the turn. CD's reply is the approval: the one approval asked without `AskUserQuestion`, now stated in `CLAUDE-SDLC.md` and `process/collaboration_model.md` too.
+   - **Two mirrored blocks:** the Approval Brief procedure (`approval-brief`) and the Completion Report (`completion-report`). The procedure: the writing agent fills the brief's `###` headings with `Edit`, naming every decision CD approves; a fresh reader checks it; the manager counts its words. Both blocks are registered in § Mirrored Blocks and `process/project-section-markers.md`.
+   - **Soft gates (a behavior change):** a FAR or FACTS gate that passes now prints one line and the run continues, where before every soft gate waited for CD. A failing one still waits (also in `process/input-quality-gates.md`). To restore the pause, revert that sentence in the two plan skills and the gates doc.
+2. **`CLAUDE-SDLC.md`** — new § Writing for CD for every session. Key References lists the doc.
+3. **Approval Briefs** — `templates/spec_template.md`, `planning_template.md` and `sdlc_lite_plan_template.md` gain a `## Approval Brief` section at the top.
+   - `sdlc-plan` gains step 2a (spec brief) and step 5b (plan brief); `sdlc-lite-plan` gains step 4a. Each carries the `approval-brief` block; the process diagrams gain the new nodes, and the headless restart paths cover a plan change request.
+   - Spec approval (step 3) shows the brief, the path and "To approve, reply approved" as a message of its own, and takes CD's reply as the answer. SPEC-REVISION re-runs step 2a after a scope change or pivot.
+   - The lite plan's Definition of Done gains a seventh item for the brief.
+4. **Plan mode removed** — `sdlc-plan` step 6 and `sdlc-lite-plan` step 5 are now "Present the Approval Brief".
+   - The plan file is read, the brief is pasted verbatim, then the path and "start a new session and say: Execute the plan at …".
+   - Approval is CD starting execution in a new session. `EnterPlanMode`/`ExitPlanMode` and the execution-prompt text are gone, from the skills and from `process/headless-mode.md` and `process/html-rendering.md` too.
+   - The Read-then-paste rule against summarizing stays.
+5. **Completion report** (`sdlc-execute`, `sdlc-lite-execute` step 5) — now the `completion-report` block:
+   - the code variant of the PR template, with the same sections in the same order, bold labels for the terminal, What was built in place of What you're approving, What you need to do first and Commits last;
+   - explicit always-present and left-out-when-empty sections;
+   - critical or major findings CD directed past the cap shown under Review focus;
+   - Scope integrity drawn from the deviation log and a diff of test and CI paths;
+   - about 500 words, with the exhaustive file list kept in the result doc;
+   - "Present the full commit" folded into the Commits line;
+   - a PR opened from the report's sections in the template's PR form, after the fresh-reader check.
+6. **One-line status blocks:**
+   - pass lines for VERIFICATION-GATE (keeping the resolved library ID and how infrastructure was checked) and DISCOVERY-GATE;
+   - FAR and FACTS pass lines (also in `process/input-quality-gates.md`);
+   - REVIEW-GATE as one line, without repeating the roster;
+   - review rosters and plan revision dispatches as one line instead of checkbox lists, in `process/review-fix-loop.md` Step A and both plan skills. The count-must-match rule now counts names.
+7. **`process/finding-classification.md`** — one plain sentence before the Classification Table.
+8. **`templates/pr_description_template.md`** — the general rules now live in the writing standard. A plan or spec PR's description is the document's Approval Brief. `process/headless-mode.md` fills a caller's PR fields from the brief.
+9. **`process/collaboration_model.md`** § Completion Reports, and `sdlc-lite-execute`'s description — updated to match.
+10. **`skeleton/manifest.json`** — lists `process/writing-for-cd.md`.
+
+11. **Quality gate** — `sdlc-reviewer` ran on the four skills in two parallel passes and found 0 critical, 7 major and about 35 minor findings and nits. All majors were fixed:
+   - the brief's heading level (it must stay `###`, or the word count and the shown brief break);
+   - the `sdlc-plan` diagram;
+   - the report's empty-section rules;
+   - the PR/report shape and order;
+   - open critical findings in the report;
+   - the duplicated report and brief procedure, now mirrored blocks.
+
+   Most minors were fixed too: stale "checklist" wording, restart paths, the approval exception, the FAR metric, the VERIFICATION-GATE one-liner, and the red flags. Not fixed, because they predate this change: skill size, `sdlc-plan`'s Integration labels, `sdlc-review-code`'s own dispatch checklist, and the diagrams' missing step 5 node in the execute skills.
+
+**Rationale:** CD approves and steers from what the agent shows, and a wall of text gets skimmed: an approval CD couldn't follow isn't an approval. The documents agents work from keep their detail; only what CD reads gets shorter and plainer. Briefs come from the document's author and are checked by a fresh reader, so the manager never paraphrases, which was the reason for the old verbatim-paste rule. Release type: minor (a new cross-skill convention and new skill steps).
+
+---
+
+## 2026-10-09: A reviewable PR description standard
+
+**Origin:** `docs/current_work/ideas/pr-description-standard_handoff.md`. The software factory opened its first plan PR (quantile #31, the D13 plan for issue #30). CD couldn't approve it: "It doesn't really feel right for me to read and approve something that I don't understand."
+
+**What happened:** The plan is written for the executing agent: exact functions, file lines, test fixtures. That is the right content for the agent's contract and the wrong document for CD's approval, and the PR body inherited the same voice. Every PR that asks CD to approve agent-written work has this problem, interactive or factory-made. cc-sdlc had no PR-description guidance at all.
+
+**Changes made:**
+
+1. **`templates/pr_description_template.md`** (new) — The standard, with a plan/spec variant and a code variant.
+   - **Fixed sections, in order:** The problem; What changes for users; What you're approving (numbered decisions, each with the alternative it rejects, plus any scope beyond the issue); Scope (tackled, not tackled, deferred); Risk (tier, top risks, undo); Review focus; How it will be verified; How it works (the approach and why it is shaped that way); Learn the change (files in reading order with their roles, and concepts); then a collapsed agent record. Each section has a word share.
+   - **Code variant:** How it was verified shows results, not intent. It adds Scope integrity and Deviations from the approved plan (omitted for a direct fix). Open critical or major findings go under Review focus, in plan PRs too.
+   - **Rules:** plain language, with code names only where they help CD find or check something. About 450 words above the agent record for a plan, 500 for code. Say each thing once. Evidence over claims. Don't invent: an empty list is fine. Line-level explanation stays in code comments. Headless fields are plain sentences, because the caller renders the formatting.
+   - **Fresh-reader check before opening:** a reader given only the description and the plan or diff must be able to explain the change, and every statement must match its source.
+   - **Risk tiers:** high, medium and low, decided by what valid use gets and whether a revert undoes it, with the highest fitting tier winning. Each project lists its always-high areas in its own `PROJECT-SECTION` block.
+   - **Examples:** a complete plan PR from quantile #30 (D13), and the code-only sections for the same change.
+2. **`CLAUDE-SDLC.md`** — new § Pull Request Description: every PR that asks CD to approve agent-written work follows the template, whether a person or the factory opens it. Key References names the template.
+3. **`process/headless-mode.md`** § Ending a Headless Run — when a caller's schema has PR-description fields, fill them per the template, never pasted from the plan. Integration lists the template.
+4. **`skills/sdlc-plan`, `skills/sdlc-lite-plan`** (Output) — when the spec or plan is approved through a PR, its description follows the plan variant. The plan file is unchanged.
+5. **`skills/sdlc-execute`** step 4 item 8 and **`skills/sdlc-lite-execute`** step 4 — a PR carrying the work follows the code variant: deviations come from the result doc, and verification shows the build and test results.
+6. **`skeleton/manifest.json`** — lists the template. `sdlc-migrate` §2.1 already direct-copies every manifest-listed template and preserves `PROJECT-SECTION` blocks, so it needs no change.
+
+**Rationale:** CD approves through the PR and, as CD put it, reviewing PRs "is going to be the predominant way in which I look at the code in the first place." So the PR has to say for sure what is being approved, why, at what risk and with what proof, and leave CD understanding the codebase better. The research behind the sections is in the handoff: Google's CL descriptions and Bacchelli & Bird on the why; Willison, Osmani and Phabricator test plans on evidence; Osmani, Atlassian and Kubernetes on review focus; Spotify Honk and GitHub's agent-PR guide on scope integrity; the Rust RFC guide-level explanation and PEP "How to Teach This" on learning. CD overrode Google's "explanations belong in code comments" for the approach-level "How it works". Line-level explanation still goes in comments. A Codex cross-check (gpt-6.1-sol) before building shaped four choices: one file map rather than separate read-order and key-file lists, a fresh-reader check, "don't invent" for lists that can be empty, and risk tiers by reversibility. Release type: minor (a new cross-skill convention).
+
+---
+
 ## 2026-10-09: Headless runs dispatch agents in the foreground
 
 **Origin:** The software factory's first live lite-plan run (quantile #30) ended after 4 minutes. The Agent tool launched the plan writer in the background by default. The orchestrator ended its turn to wait for it, and the run closed with the plan unwritten.
