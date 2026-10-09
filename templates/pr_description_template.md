@@ -51,7 +51,8 @@ Anything beyond what the issue asked for is a numbered decision here that says s
 ## Scope
 [≤40] - **Tackled:** what this does
 - **Not tackled:** non-goals
-- **Deferred:** each as a proposed follow-up issue (omit when none)
+- **Add-ons:** small fixes beyond the plan or issue, each with its files and how it was verified (omit when none)
+- **Follow-ups:** each as `F1: issue-ready title`, a checklist CD can prune before merging; where the project files follow-ups as issues (the software factory, for an executed plan), the checked ones are filed on merge (omit when none)
 
 ## Risk
 [≤45] **Low | Medium | High**: why, in one clause, by the Risk Tiers table.

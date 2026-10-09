@@ -65,13 +65,27 @@ OR
 
 ---
 
-## Follow-Up Items
+## Add-ons Beyond the Plan
+
+Small fixes done in this deliverable that the plan didn't list: no new decision, inside the area it touched, verified like planned work.
 
 - None
 
 OR
 
-- [ ] [Follow-up item 1]
+- **[what]**: [why]. Files: `[path]`. Verified: [how]
+
+---
+
+## Follow-Up Items
+
+Work for later, one issue each. Keep the format: tools parse it (the software factory files checked items as issues when CD merges an executed plan).
+
+- None
+
+OR
+
+- [ ] **F1: [issue-ready title]**: [what and why] _Not now: [why it isn't done here]_
 
 ---
 
