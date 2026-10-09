@@ -34,6 +34,18 @@ Each entry contains:
 
 ---
 
+## 2026-10-09: Codex calls can't hang on stdin
+
+**Origin:** A direct `codex exec` consult run from a background shell sat idle for 35 minutes. It printed "Reading additional input from stdin..." and waited for an end-of-file the open, empty pipe never sent.
+
+**What changed:**
+- `process/external-review-gate.md`: direct `codex exec` calls (no piped payload) end with `< /dev/null`, and the Task-Based Model Selection example shows it. The wrapper bullets list the new time limit and the stdin refusal.
+- `templates/external-review.sh.template` and `templates/external-review-knowledge.sh.template`: refuse to run without piped stdin, and bound the codex call with `CODEX_TIMEOUT_SECS` (default 1800) through a portable `perl` alarm. A stall now skips the gate with a message instead of hanging.
+
+**Rationale:** The wrappers always pipe a payload, so they were safe in normal use, but nothing stopped a background or ad-hoc call from waiting forever, and a stalled model call had no bound at all.
+
+---
+
 ## 2026-10-09: Writing for CD — plain, short output in every session
 
 **Origin:** CD, after the PR description standard landed: "I regularly find that I tune out because the agent is just so verbose and it just becomes information overload." CD wanted the PR's readability in every interactive SDLC session, and asked whether this belongs in the framework or in an installed output style.

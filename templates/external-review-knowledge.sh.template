@@ -27,6 +27,11 @@ set -euo pipefail
 
 model="${CODEX_MODEL:-}"
 effort="${CODEX_REASONING_EFFORT:-high}"
+# A stalled codex call fails the gate instead of hanging the session (CODEX_TIMEOUT_SECS,
+# default 30 minutes). perl, not timeout(1): macOS has no timeout.
+timeout_secs="${CODEX_TIMEOUT_SECS:-1800}"
+# codex reads stdin when it isn't a terminal; without a piped payload it would wait forever.
+if [ -t 0 ]; then echo "external-review-knowledge: pipe the review payload on stdin" >&2; exit 2; fi
 
 echo "external-review-knowledge: sending payload to OpenAI Codex (hosted egress)${model:+, model=$model}, effort=$effort" >&2
 
@@ -37,7 +42,7 @@ trap 'rm -f "$out"' EXIT
 # ARG_MAX limits on large batches. -o captures only the final message so
 # codex's progress/echo noise never reaches stdout; verdicts alone are the
 # contract.
-codex exec \
+perl -e 'alarm shift; exec @ARGV' "$timeout_secs" codex exec \
   ${model:+-m "$model"} \
   --config model_reasoning_effort="$effort" \
   --sandbox read-only \
@@ -51,7 +56,7 @@ Corroboration must be the same claim, not an adjacent one — do not credit a ca
 
 Return one line per entry, no other output:
 N | PROMOTE|DEMOTE | one-sentence justification" \
-  >/dev/null
+  >/dev/null || { echo "external-review-knowledge: codex failed or ran past ${timeout_secs}s; judge skipped" >&2; exit 1; }
 
 # Empty output violates this wrapper's contract (unlike external-review.sh,
 # where empty stdout legitimately means "no findings") — treat it as a

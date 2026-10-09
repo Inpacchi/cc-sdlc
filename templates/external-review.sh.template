@@ -27,6 +27,11 @@ set -euo pipefail
 
 model="${CODEX_MODEL:-}"
 effort="${CODEX_REASONING_EFFORT:-medium}"
+# A stalled codex call fails the gate instead of hanging the session (CODEX_TIMEOUT_SECS,
+# default 30 minutes). perl, not timeout(1): macOS has no timeout.
+timeout_secs="${CODEX_TIMEOUT_SECS:-1800}"
+# codex reads stdin when it isn't a terminal; without a piped payload it would wait forever.
+if [ -t 0 ]; then echo "external-review: pipe the review payload on stdin" >&2; exit 2; fi
 
 echo "external-review: sending payload to OpenAI Codex (hosted egress)${model:+, model=$model}, effort=$effort" >&2
 
@@ -37,7 +42,7 @@ trap 'rm -f "$out"' EXIT
 # ARG_MAX limits on large payloads. -o captures only the final message so
 # codex's progress/echo noise never reaches stdout; the requested output
 # alone is the contract.
-codex exec \
+perl -e 'alarm shift; exec @ARGV' "$timeout_secs" codex exec \
   ${model:+-m "$model"} \
   --config model_reasoning_effort="$effort" \
   --sandbox read-only \
@@ -50,6 +55,6 @@ codex exec \
 If the rubric does not specify an output format, return findings one per line as: SEVERITY | location | finding
 where SEVERITY is one of: critical, major, minor (impact x likelihood: critical = certain or very likely data loss, breach, or complete failure; major = significant impact, likely to manifest; minor = partial, workaround exists, or cosmetic).
 If there are no findings, return nothing." \
-  >/dev/null
+  >/dev/null || { echo "external-review: codex failed or ran past ${timeout_secs}s; gate skipped" >&2; exit 1; }
 
 cat "$out"

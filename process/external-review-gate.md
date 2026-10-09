@@ -166,6 +166,12 @@ have to rediscover them:
   codex progress/echo noise never contaminates the findings contract.
 - **`--sandbox read-only --ephemeral`** — the external model can execute
   nothing and persists nothing.
+- **Time limit** — `CODEX_TIMEOUT_SECS` (default 1800) bounds the codex call
+  with a portable `perl` alarm (macOS has no `timeout`), so a stalled call
+  skips the gate instead of hanging the session.
+- **No payload, no wait** — the wrapper refuses to run without piped stdin.
+  The codex CLI reads stdin whenever it isn't a terminal and waits for
+  end-of-file, so a background call with an open, empty stdin hangs forever.
 - **Egress disclosure on stderr** — each run announces where the payload is
   going and at what model/effort, satisfying the disclosure rule above.
 - **Payload-neutral prompt** — the embedded prompt defers to the payload's
@@ -203,8 +209,12 @@ reasoning effort per task instead of accepting the wrapper's defaults. The
 Codex CLI accepts both on the command line:
 
 ```bash
-codex exec -m <model> --config model_reasoning_effort="<minimal|low|medium|high|xhigh>" "<prompt>"
+codex exec -m <model> --config model_reasoning_effort="<minimal|low|medium|high|xhigh>" "<prompt>" < /dev/null
 ```
+
+**Direct calls close stdin.** Any `codex exec` without a piped payload, such as an ad-hoc consult or a
+call from a background shell, ends with `< /dev/null`. Otherwise codex prints "Reading additional input
+from stdin..." and waits indefinitely for end-of-file that never comes.
 
 The convention: wrappers pass these through from environment variables, and
 the invoking skill sets them at the call site —
