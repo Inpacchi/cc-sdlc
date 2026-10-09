@@ -92,6 +92,8 @@ When complete in an interactive run, prompt the user to begin execution (a headl
 >
 > (Recommend clearing context first — execution benefits from a fresh context budget.)
 
+**Approval by pull request.** When the spec or plan goes to CD as a pull request (a factory plan stage, or CD asks for one), write the PR description for CD per `[sdlc-root]/templates/pr_description_template.md` (plan variant). In a headless run, fill the caller's PR-description schema fields the same way. The spec and plan files don't change: they stay the agent's contract.
+
 ## Feasibility Gate
 
 For tasks with genuine technical uncertainty, **resolve the uncertainty BEFORE writing the spec** — not during execution. Pick the resolution method by where the uncertainty lives:
@@ -744,4 +746,5 @@ The Manager Rule remains in effect per `[sdlc-root]/process/manager-rule.md` —
 ## Integration
 
 - **sdlc-execute** — The next skill in the pipeline; executes the approved plan
+- **PR description** — `[sdlc-root]/templates/pr_description_template.md` (plan variant) when the spec or plan is approved through a pull request (Output section)
 - **External Review Gate** — `[sdlc-root]/process/external-review-gate.md` § Planning Integration: when `[sdlc-root]/external-review.sh` is configured, the external reviewer joins the approach decision (step 3d) and the plan review roster (step 5)

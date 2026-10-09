@@ -132,7 +132,7 @@ When you make changes to SDLC process files (skills, agents, process docs, CLAUD
 ### Key References
 - `[sdlc-root]/process/overview.md` — Full workflow
 - `[sdlc-root]/process/commands.md` — All SDLC commands and skills
-- `[sdlc-root]/templates/` — Document templates (spec, plan, result, concept index)
+- `[sdlc-root]/templates/` — Document templates (spec, plan, result, concept index, PR description)
 - `[sdlc-root]/templates/html-design-system.html` — HTML design system for explainers and exploration artifacts
 - `[sdlc-root]/process/html-rendering.md` — HTML conventions, visual doctrine, and document-type storyboards
 - `docs/_index.md` — Deliverable catalog
@@ -305,4 +305,10 @@ Every commit must include **all** artifacts produced during the work — not jus
 **Intentional line breaks are fine** when they serve meaning — bullet lists, grouped clauses, or separating a trailing footer like `Co-Authored-By:`. What's out is mechanical wrapping at column 72.
 
 **Structure:** Subject line, blank line, paragraph-form body explaining the *why*. Bullet lists only when the content is genuinely enumerable (a list of behaviors, a list of affected files) — not as a default format. Close with any `Co-Authored-By:` trailer on its own line.
+
+---
+
+## Pull Request Description
+
+A pull request that asks CD to approve agent-written work is written for CD, not for the agent: for code, the PR is usually where CD starts reading. Follow `[sdlc-root]/templates/pr_description_template.md` for every such PR, whether a person or the factory opens it: plain language, a fixed section order, and about one screen above a collapsed agent record. Plan and spec PRs use the plan variant; code PRs use the code variant. Every PR tells CD the original problem, what changes for users, what CD is approving, what's in and out of scope, the risk, and how the change will be (or was) verified. It also teaches the change: how it works, which files to read and in what order, and the key concepts. The plan, spec and result documents don't change. They stay the agent's contract, and only the PR is written for CD.
 

@@ -51,6 +51,8 @@ This skill produces:
 1. **Plan file** at `docs/current_work/sdlc-lite/dNN_{slug}_plan.md` — persists across context clears, uses a deliverable ID from the catalog
 2. **Plan mode prompt** via `EnterPlanMode` — gives the user the standard execution options (clear context, bypass permissions, etc.). Interactive runs only: a headless run ends with status `awaiting-approval` and the plan path.
 
+**Approval by pull request.** When the plan goes to CD as a pull request (a factory plan stage, or CD asks for one), write the PR description for CD per `[sdlc-root]/templates/pr_description_template.md` (plan variant). In a headless run, fill the caller's PR-description schema fields the same way. The plan file doesn't change: it stays the agent's contract.
+
 The execution skill (`sdlc-lite-execute`) will additionally produce a **result doc** at `docs/current_work/sdlc-lite/dNN_{slug}_result.md` — capturing what was built, deviations, and acceptance criteria verification.
 
 ## The Process
@@ -441,6 +443,6 @@ The Manager Rule remains in effect per `[sdlc-root]/process/manager-rule.md` —
 ## Integration
 
 - **Feeds into:** `sdlc-lite-execute` (executes the reviewed plan from the saved file)
-- **Uses:** worker domain agents (plan writing + review), `[sdlc-root]/process/manager-rule.md`, `[sdlc-root]/process/collaboration_model.md`, `[sdlc-root]/process/deliverable_lifecycle.md`, `[sdlc-root]/process/external-review-gate.md` § Planning Integration (external reviewer in plan review when configured)
+- **Uses:** worker domain agents (plan writing + review), `[sdlc-root]/process/manager-rule.md`, `[sdlc-root]/process/collaboration_model.md`, `[sdlc-root]/process/deliverable_lifecycle.md`, `[sdlc-root]/process/external-review-gate.md` § Planning Integration (external reviewer in plan review when configured), `[sdlc-root]/templates/pr_description_template.md` (plan variant, when the plan is approved through a pull request)
 - **Complements:** `sdlc-plan` (handles full SDLC deliverables that need specs)
 - **Does NOT replace:** `sdlc-plan` (use that for new features, integrations, or architectural changes)

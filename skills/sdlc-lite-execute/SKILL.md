@@ -461,6 +461,8 @@ Files changed:
 
 7. Emit the **Completion Report** (step 5)
 
+**Pull request.** This skill opens none. When a PR carries this work (CD opens one, or the caller opens one from a headless result), its description follows `[sdlc-root]/templates/pr_description_template.md` (code variant): Deviations from the approved plan come from the result doc, and How it was verified shows the build and test results. In a headless run, fill the caller's PR-description schema fields per the template.
+
 ### 5. Completion Report
 
 Every execution MUST end with a Completion Report presented to the user. This is the final output — the definitive summary of what happened. Emit this block after all commits are made. (**Headless run:** the Headless Result follows the report as the very last output — `[sdlc-root]/process/headless-mode.md`.)
@@ -561,6 +563,6 @@ The Manager Rule remains in effect per `[sdlc-root]/process/manager-rule.md` —
 ## Integration
 
 - **Feeds into:** `sdlc-tests-run` (post-commit test verification), `sdlc-archive` (when deliverable is complete)
-- **Uses:** worker domain agents (implementation + review), `sdlc-lite-plan` output (the plan file), `[sdlc-root]/process/manager-rule.md`, `[sdlc-root]/process/collaboration_model.md`, `[sdlc-root]/process/review-fix-loop.md`, `[sdlc-root]/process/finding-classification.md`
+- **Uses:** worker domain agents (implementation + review), `sdlc-lite-plan` output (the plan file), `[sdlc-root]/process/manager-rule.md`, `[sdlc-root]/process/collaboration_model.md`, `[sdlc-root]/process/review-fix-loop.md`, `[sdlc-root]/process/finding-classification.md`, `[sdlc-root]/templates/pr_description_template.md` (code variant, step 4)
 - **Complements:** `sdlc-execute` (handles full SDLC deliverables)
 - **Does NOT replace:** `sdlc-lite-plan` (plan must exist before execution), `sdlc-tests-run` (separate test verification step)

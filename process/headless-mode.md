@@ -63,7 +63,7 @@ Local work is fine: writing files in the working tree, running tests and builds,
 
 Every headless run ends with a result, whether it stopped at a gate, failed a precondition, or finished. A skill's own closing output (a completion report, a summary) comes first; the result is always last.
 
-- **If the caller passed an output schema** (`--json-schema`), that schema is the contract. Map the result onto its fields — its state or status field, its questions field — and return nothing else. The skill's own closing output still goes where the skill saves it (a result doc, for instance). Anything the schema has no field for — `notes`, `deferred`, `skipped`, `outbound` — goes into the stage's saved document under a `## Headless Result` heading, if the stage saves one. Callers running stages that can stop should give their schema those fields.
+- **If the caller passed an output schema** (`--json-schema`), that schema is the contract. Map the result onto its fields — its state or status field, its questions field — and return nothing else. The skill's own closing output still goes where the skill saves it (a result doc, for instance). Anything the schema has no field for — `notes`, `deferred`, `skipped`, `outbound` — goes into the stage's saved document under a `## Headless Result` heading, if the stage saves one. Callers running stages that can stop should give their schema those fields. When the schema has fields for a pull request's description (a `brief` object, or one field per section), fill them per `[sdlc-root]/templates/pr_description_template.md`: plain language, written for CD to approve, and never pasted from the plan, which stays the agent's contract.
 - **Otherwise** end with this block as the final message:
 
 ```markdown
@@ -141,3 +141,4 @@ Every skill carries a verbatim copy of the block below, so the stop rule is read
   - `[sdlc-root]/process/external-review-gate.md` (sanctioned skips; § Data egress)
   - `[sdlc-root]/process/github-checkpoints.md` § Headless Runs, the activation line of each checkpoint-firing `github-provenance` fragment, and `sdlc-archive`'s archive-time checklist executor
 - **Manager rule (subagent escalation):** `[sdlc-root]/process/manager-rule.md`
+- **PR-description fields in a caller's schema:** `[sdlc-root]/templates/pr_description_template.md`

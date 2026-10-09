@@ -34,6 +34,31 @@ Each entry contains:
 
 ---
 
+## 2026-10-09: A reviewable PR description standard
+
+**Origin:** `docs/current_work/ideas/pr-description-standard_handoff.md`. The software factory opened its first plan PR (quantile #31, the D13 plan for issue #30). CD couldn't approve it: "It doesn't really feel right for me to read and approve something that I don't understand."
+
+**What happened:** The plan is written for the executing agent: exact functions, file lines, test fixtures. That is the right content for the agent's contract and the wrong document for CD's approval, and the PR body inherited the same voice. Every PR that asks CD to approve agent-written work has this problem, interactive or factory-made. cc-sdlc had no PR-description guidance at all.
+
+**Changes made:**
+
+1. **`templates/pr_description_template.md`** (new) — The standard, with a plan/spec variant and a code variant.
+   - **Fixed sections, in order:** The problem; What changes for users; What you're approving (numbered decisions, each with the alternative it rejects, plus any scope beyond the issue); Scope (tackled, not tackled, deferred); Risk (tier, top risks, undo); Review focus; How it will be verified; How it works (the approach and why it is shaped that way); Learn the change (files in reading order with their roles, and concepts); then a collapsed agent record. Each section has a word share.
+   - **Code variant:** How it was verified shows results, not intent. It adds Scope integrity and Deviations from the approved plan (omitted for a direct fix). Open critical or major findings go under Review focus, in plan PRs too.
+   - **Rules:** plain language, with code names only where they help CD find or check something. About 450 words above the agent record for a plan, 500 for code. Say each thing once. Evidence over claims. Don't invent: an empty list is fine. Line-level explanation stays in code comments. Headless fields are plain sentences, because the caller renders the formatting.
+   - **Fresh-reader check before opening:** a reader given only the description and the plan or diff must be able to explain the change, and every statement must match its source.
+   - **Risk tiers:** high, medium and low, decided by what valid use gets and whether a revert undoes it, with the highest fitting tier winning. Each project lists its always-high areas in its own `PROJECT-SECTION` block.
+   - **Examples:** a complete plan PR from quantile #30 (D13), and the code-only sections for the same change.
+2. **`CLAUDE-SDLC.md`** — new § Pull Request Description: every PR that asks CD to approve agent-written work follows the template, whether a person or the factory opens it. Key References names the template.
+3. **`process/headless-mode.md`** § Ending a Headless Run — when a caller's schema has PR-description fields, fill them per the template, never pasted from the plan. Integration lists the template.
+4. **`skills/sdlc-plan`, `skills/sdlc-lite-plan`** (Output) — when the spec or plan is approved through a PR, its description follows the plan variant. The plan file is unchanged.
+5. **`skills/sdlc-execute`** step 4 item 8 and **`skills/sdlc-lite-execute`** step 4 — a PR carrying the work follows the code variant: deviations come from the result doc, and verification shows the build and test results.
+6. **`skeleton/manifest.json`** — lists the template. `sdlc-migrate` §2.1 already direct-copies every manifest-listed template and preserves `PROJECT-SECTION` blocks, so it needs no change.
+
+**Rationale:** CD approves through the PR and, as CD put it, reviewing PRs "is going to be the predominant way in which I look at the code in the first place." So the PR has to say for sure what is being approved, why, at what risk and with what proof, and leave CD understanding the codebase better. The research behind the sections is in the handoff: Google's CL descriptions and Bacchelli & Bird on the why; Willison, Osmani and Phabricator test plans on evidence; Osmani, Atlassian and Kubernetes on review focus; Spotify Honk and GitHub's agent-PR guide on scope integrity; the Rust RFC guide-level explanation and PEP "How to Teach This" on learning. CD overrode Google's "explanations belong in code comments" for the approach-level "How it works". Line-level explanation still goes in comments. A Codex cross-check (gpt-6.1-sol) before building shaped four choices: one file map rather than separate read-order and key-file lists, a fresh-reader check, "don't invent" for lists that can be empty, and risk tiers by reversibility. Release type: minor (a new cross-skill convention).
+
+---
+
 ## 2026-10-09: Headless runs dispatch agents in the foreground
 
 **Origin:** The software factory's first live lite-plan run (quantile #30) ended after 4 minutes. The Agent tool launched the plan writer in the background by default. The orchestrator ended its turn to wait for it, and the run closed with the plan unwritten.

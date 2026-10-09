@@ -105,6 +105,7 @@
       "templates/test_spec_template.md",
       "templates/sdlc_lite_plan_template.md",
       "templates/sdlc_lite_result_template.md",
+      "templates/pr_description_template.md",
       "templates/postmortem_template.md",
       "templates/decision_record_template.md",
       "templates/reference_doc_template.md",

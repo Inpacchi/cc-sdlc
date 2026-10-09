@@ -530,7 +530,7 @@ Files changed:
 - {file path}
 ```
 
-8. If on a feature branch, push and create a PR. **Headless run:** do neither; list both under the result's `outbound`.
+8. If on a feature branch, push and create a PR. Write its description for CD per `[sdlc-root]/templates/pr_description_template.md` (code variant): Deviations from the approved plan come from the result doc, and How it was verified shows the step 1 build and the test results. **Headless run:** do neither; list both under the result's `outbound`, and fill the caller's PR-description schema fields per the template.
 9. Emit the **Completion Report** (step 5)
 
 ### 5. Completion Report
@@ -656,6 +656,6 @@ When the deliverable is complete, the "Let's organize the chronicles" command mo
 ## Integration
 
 - **Feeds into:** `sdlc-tests-run` (post-commit test verification), `sdlc-archive` (when deliverable is complete)
-- **Uses:** worker domain agents (implementation + review), `sdlc-plan` output (the plan file), `[sdlc-root]/process/manager-rule.md`, `[sdlc-root]/process/collaboration_model.md`, `[sdlc-root]/process/review-fix-loop.md`, `[sdlc-root]/process/finding-classification.md`
+- **Uses:** worker domain agents (implementation + review), `sdlc-plan` output (the plan file), `[sdlc-root]/process/manager-rule.md`, `[sdlc-root]/process/collaboration_model.md`, `[sdlc-root]/process/review-fix-loop.md`, `[sdlc-root]/process/finding-classification.md`, `[sdlc-root]/templates/pr_description_template.md` (code variant, step 4)
 - **Complements:** `sdlc-lite-execute` (handles lite deliverables), `sdlc-audit` (can audit execution quality post-hoc)
 - **Does NOT replace:** `sdlc-plan` (plan must exist before execution), `sdlc-tests-run` (separate test verification step)
