@@ -55,6 +55,14 @@
 #   field: field name to add.
 #   default: default value to back-fill when absent.
 #
+# catalog_column_added
+#   column: the new column's header text in the deliverable catalog's active
+#     table (docs/_index.md, the table whose header starts `| ID | Name | Status`).
+#   after: the existing column it goes after.
+#   default: the value back-filled into every existing row.
+#   note: optional bullet appended to the catalog's `## Notes` section.
+#   Migrate §4.5a applies it; a catalog that already has the column is left alone.
+#
 # other
 #   notes: free-text description of the change and what migrate must do.
 #   Prefer this over stretching a defined type.
@@ -320,3 +328,20 @@ changes:
       Review Deck (slide layout, review checkboxes, filter chips) — direct
       copy replaces it. Adapter action: none beyond the standard
       rename_skill handling; no phrasing-contract change.
+
+  - id: "0016"
+    date: "2026-10-09"
+    title: "Deliverable catalog gains a Depends on column (dependencies and splits)"
+    type: catalog_column_added
+    column: "Depends on"
+    after: "Status"
+    default: "—"
+    note: "Depends on: the deliverables that must be Complete first, comma-separated (`D11a, D12`); `—` when none. Which phases each one gates is in the plan's Phase Dependencies table; one no phase names gates the whole deliverable. A split parent depends on its parts. See [sdlc-root]/process/deliverable_lifecycle.md § Dependencies"
+    changelog_ref: "2026-10-09: Dependencies between deliverables, and splitting a deliverable"
+    notes: >
+      Additive data-schema change (minor release). Existing rows get `—`;
+      projects back-fill real dependencies by hand (sdlc-status and the
+      compliance auditor surface what's missing). Tools that parse catalog
+      rows by position must find columns by header name. quantile's factory
+      claim job matches only the ID cell (`^\| *\[?D[0-9]+`), so it is
+      unaffected. Adapter action: none; no knowledge-layer phrasing changes.

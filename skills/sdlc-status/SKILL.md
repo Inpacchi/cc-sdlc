@@ -37,6 +37,11 @@ Scan the project's SDLC artifacts and present a status summary. This is read-onl
 
    If a matching issue file exists in `issues/`, mark it **Blocked** regardless of other artifacts.
 
+   **Dependencies** (the catalog's `Depends on` column; `[sdlc-root]/process/deliverable_lifecycle.md` § Dependencies):
+   - **Waiting on a prerequisite:** a deliverable with a prerequisite that isn't Complete. Mark it `Plan ready — waiting on DNN` (or the stage it's at, plus the wait).
+   - **Forgotten prerequisite:** a prerequisite of active work that has no plan and isn't In Progress. Its Next Action is to plan it. These are what drop out of sight.
+   - A split parent (its `Depends on` lists its own parts) shows as `Split — waiting on its parts` until they're all Complete.
+
 4. **Scan recent chronicles** — list the 5 most recently modified `_index.md` files under `docs/chronicle/`.
 
 5. **Present the dashboard:**
@@ -50,6 +55,10 @@ Scan the project's SDLC artifacts and present a status summary. This is read-onl
 |----|------|-------|-------------|
 | D1 | ... | Complete | Archive via "Let's organize the chronicles" |
 | D2 | ... | Plan ready | Execute via sdlc-execute |
+
+## Forgotten Prerequisites ({N})
+
+- D__ (needed by D__): no plan, not in progress — plan it next
 
 ## Blocked Items ({N})
 

@@ -34,6 +34,34 @@ Each entry contains:
 
 ---
 
+## 2026-10-09: Dependencies between deliverables, and splitting a deliverable
+
+**Origin:** quantile D11. D11 split into D11a → D11b → D11c, but the split and the dependencies lived only in prose, so D11a dropped out of sight while D11b was planned against it (`docs/current_work/ideas/prerequisite-tracking_handoff.md`). The software factory also needed a split it could act on (`software-factory-gaps_design.md`, gap 2). CD approved building both together, cross-checked with Codex and Fable.
+
+**What changed:**
+- **Catalog:** a `Depends on` column in the deliverable catalog (`skeleton/manifest.json` template, `skills/sdlc-initialize` seed), with a Notes bullet on its format.
+- **`process/deliverable_lifecycle.md`:**
+  - **§ Dependencies:** where dependencies are recorded (the catalog column; a deliverable ID in a plan's Phase Dependencies row gates that phase), who fills them, and what checks them.
+  - **§ Splitting a Deliverable:** split records, part rows, the parent as umbrella, one level only.
+- **`templates/split_record_template.md` (new):** the document CD approves for a split. Its parts table carries name, tier, dependencies, a reused spec and scope.
+- **`templates/planning_template.md`, `templates/sdlc_lite_plan_template.md`:** a phase's Depends On may name a deliverable.
+- **`skills/sdlc-plan`:**
+  - a § Splitting a Deliverable procedure (propose parts, write the split record, register the parts, approval; headless stops with `awaiting-approval` and the split record);
+  - the Feasibility Gate and the phase limit point to it;
+  - registration fills `Depends on`, and existing deliverables report unplanned prerequisites.
+- **`skills/sdlc-lite-plan`:** uses an existing ID (a split part) instead of claiming one, fills `Depends on`, and reports unplanned prerequisites.
+- **`skills/sdlc-execute`, `skills/sdlc-lite-execute`:** at load, run only phases no unfinished prerequisite gates. Interactive runs ask CD whether to continue; headless runs stop with `needs-input`.
+- **`skills/sdlc-status`:** shows deliverables waiting on a prerequisite, split parents, and a **Forgotten Prerequisites** section.
+- **`skills/sdlc-audit/references/compliance-methodology.md`, `agents/sdlc-compliance-auditor.md`:** flag missing IDs, cycles, Draft prerequisites of active work, and split parents without a split record.
+- **`process/headless-mode.md`:** split approval is an approval gate, and the execute prerequisite stop is listed in § Integration.
+- **`skeleton/contract_changes.yaml` and `skills/sdlc-migrate` §4.5a:** a new `catalog_column_added` entry type, and entry 0016, which back-fills `—` into existing catalogs.
+
+**Release:** minor. New contract surface (a catalog column projects write, a new template and a new entry type), purely additive with a back-fill default.
+
+**Rationale:** A dependency no tool reads is a dependency nobody sees. One column plus a few checks surfaces the three failures that bit D11: blocked work, execution starting before a prerequisite is done, and a prerequisite nobody is moving forward. A split record gives CD one document to approve, and gives the factory something it can act on.
+
+---
+
 ## 2026-10-09: Add-ons finish small follow-ups; Follow-Up Items become issue-ready
 
 **Origin:** CD, after the software factory's first executed plan (quantile D13) deferred two stale knowledge entries and left its follow-ups in the result doc. CD's direction: SDLC hygiene is part of the work, a quick follow-up is finished in the PR as an add-on, and anything else becomes its own issue and goes through triage. Cross-checked with Fable and Codex.

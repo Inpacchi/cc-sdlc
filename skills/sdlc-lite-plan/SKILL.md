@@ -131,9 +131,13 @@ These steps exist because LLMs reliably fail the Definition of Done without scaf
 
 1. **Read `docs/_index.md`** to find the next deliverable ID (listed in the header as "Next ID: **DNN**").
 2. Claim the ID by incrementing the "Next ID" counter in the catalog.
-3. Add the deliverable to the catalog table with status `In Progress` and tier `lite`.
+3. Add the deliverable to the catalog table with status `In Progress`, tier `lite`, and `Depends on` (`—`, or the IDs the work already needs finished first).
 
 This ID will be used in the plan filename (`dNN_{slug}_plan.md`).
+
+**An ID that already exists** (a part of a split, such as D11a, or a deliverable CD names): don't claim a new one. Use the existing row, set its status to `In Progress`, and plan only the scope its catalog row and split record give it.
+
+**Prerequisites.** Read the deliverable's `Depends on`. For each prerequisite that has no plan or isn't Complete, tell CD and offer to plan it next (headless: record it in `notes`). Planning may continue. The plan's Phase Dependencies table names the phases each prerequisite gates, and the Approval Brief's review focus repeats any prerequisite still unplanned (`[sdlc-root]/process/deliverable_lifecycle.md` § Dependencies).
 
 **Headless restart.** When the prompt restarts an existing deliverable at a named stage, skip registration and every step before that stage: never claim a second ID or write a second plan file. Read the saved plan and the earlier result's `notes`. If the prompt carries CD's answers to DECIDE findings, a FACTS fail, or an escalated review, resume at that point (the FACTS gate in step 2, or step 3 at the recorded review round with the frozen round-1 roster). If it carries CD's changes to the plan, send them to the writing agent, re-run review when its re-review triggers fire (step 3 at the recorded round, frozen roster), then step 4a. Each headless stop's `notes` carry what a restart needs: the D-number, slug, plan path, writing agent, agent list, and during review the round number, frozen roster and open-findings table (`[sdlc-root]/process/headless-mode.md` § Resuming).
 

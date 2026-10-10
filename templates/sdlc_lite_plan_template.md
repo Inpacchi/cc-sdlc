@@ -29,6 +29,8 @@
 | 1     | —         | agent | —                 |
 | 2     | Phase 1   | agent | Phase 3           |
 
+Depends On may also name another deliverable (`Phase 5, D11a`): that phase waits until the deliverable is Complete. List the deliverable in the catalog row's `Depends on` too (`[sdlc-root]/process/deliverable_lifecycle.md` § Dependencies).
+
 ## Phases
 
 ### Phase 1: [Name]

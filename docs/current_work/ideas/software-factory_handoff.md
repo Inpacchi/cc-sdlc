@@ -529,6 +529,21 @@ Work through these in order. The isolation steps come before any job runs (F14).
 - It proposes skill and knowledge updates through `sdlc-audit` improvement mode or `sdlc-reflect`.
 - It could run as a Claude Code Routine (Max OK, schedule trigger, runs in Anthropic's cloud) or as a scheduled workflow on the runner.
 
+**Gaps found 2026-10-09 (CD: record now, build later).**
+- **Plans that touch production.** quantile's D11b plan restores a pinned production database snapshot (on the NAS), deploys, and restarts services on pop-os. The strict tier has no production path by design (D2), and the planning tier reads production read-only through one proxied database login (D3). Nothing can execute a plan with production steps. Needs a decision:
+  - a production-capable execution tier, with its own boundary and CD approval per step;
+  - or a rule that such plans split into factory-executable phases and CD-run deploy and proof steps, with the plan template marking which is which;
+  - or both.
+
+  Until then, triage and the plan stage should flag a plan that needs production access, so it isn't routed to unattended execution.
+- **Splitting deliverables.** When planning hits the phase cap, `sdlc-plan`'s feasibility gate proposes a split (D11 became D11a → D11b → D11c). The factory handles one deliverable per issue and can't split:
+  - it has no step to mint sibling IDs and file their issues;
+  - it doesn't record which split part depends on which (see cc-sdlc `prerequisite-tracking_handoff.md`);
+  - it doesn't run each part through the stages.
+
+  Today it would stop with `needs-input` and leave the split to CD.
+- **Deliverables registered outside the factory** (started interactively, like D11a and D11c) can't be planned by the factory: triage skips them, and the plan stage's claim would mint a new ID. A temporary bridge was built and then reverted on 2026-10-09. If it's needed again, reuse the catalog's ID for the issue and read an approved spec from the catalog row.
+
 **Phase 5 (optional, exploratory): factory memory through Neuroloom (CD, 2026-10-09).** Not committed work: explore first, after the lite path runs end to end. The open questions below (workspace access, server-side tag enforcement, whether memory beats parking lots plus the improve loop at all) decide whether this phase happens.
 - **Why:** job containers are ephemeral, so nothing a factory agent learns survives the run except what lands in a reviewed PR. File-based agent memory doesn't fit:
   - **Git:** `.claude/agent-memory/` is gitignored by cc-sdlc rule (`CLAUDE-SDLC.md`: "Agent memories are not git-tracked"). Persisting it would mean tracking it in factory PRs.

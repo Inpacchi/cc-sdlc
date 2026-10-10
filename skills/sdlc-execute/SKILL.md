@@ -60,6 +60,8 @@ If the plan file doesn't exist or can't be found, **stop immediately** and tell 
 
 Do NOT write a plan yourself. Do NOT proceed without one. **Headless run:** end with status `failed`, reason: no approved plan at the expected path; run `sdlc-plan` first.
 
+**Prerequisites.** Before Phase 1, read the deliverable's `Depends on` in `docs/_index.md`. A phase is gated when its row in the plan's Phase Dependencies table names a deliverable that isn't Complete; a catalog prerequisite no phase names gates Phase 1. Run the phases nothing gates, in order, and stop before the first gated phase. Tell CD which prerequisite blocks it and its status, and ask whether to continue anyway; CD may override. **Headless run:** stop there with status `needs-input`, naming the prerequisite and the phases left. Work done before the stop stays (`[sdlc-root]/process/deliverable_lifecycle.md` § Dependencies).
+
 **Headless restart.** When the prompt restarts this deliverable at a named stage (an answer to a phase triage, a DECIDE finding, or an escalated review), read the plan, the partial result doc and the earlier result's `notes`. Skip phases already complete, and continue from the stopped phase, or from the review loop at the recorded round with the frozen round-1 roster. Never redo a completed phase or restart the round count. Each headless stop's `notes` carry what a restart needs: completed phases and their commits, the current phase, and during review the round number, frozen roster and open-findings table (`[sdlc-root]/process/headless-mode.md` § Resuming).
 
 ## The Process
