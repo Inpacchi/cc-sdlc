@@ -51,15 +51,34 @@ The factory runs in `endless-galaxy-studios/quantile` on self-hosted runners on 
 
 - **The full-tier test (D14, issue #34), not to be executed:**
   - #34's split PR #45 merged, which filed parts #46–#49 (D14a–d).
-  - **D14b (#47)** was released. Its spec run is 38032179372. Two earlier runs died on bugs, both fixed: the brief limit, and the database proxy.
-- **Next for D14b:** open the spec PR. CD merges it, which tests advancing to the plan. Then **close the plan PR without merging**, so nothing executes.
+  - **D14b (#47)** was released. Three runs died on bugs, all fixed: the brief limit, the database proxy, and the brief check crashing on `import catalog` (6eeecc3).
+  - The third run, 38032179372, finished planning and returned **needs-input**, not a spec: the parity bar can't be met under Rule C because of live's deferred 5m derives (options a–d in that run's log, `RESULT` in the brief-check step). The crash lost it, so the question was never posted. It also found that **D11b's Ready plan has the same defect**.
+  - The fourth run, 38036403477, didn't ask. It returned **awaiting-approval** with a spec that keeps Rule C and treats a deferred-derive FAIL as an expected possible outcome. **Publish refused it:** quantile's `ops/sdlc/process/sdlc_changelog.md` is 747 KB, over the guard's 200 KB blob cap, so no stage could ever commit to the changelog (a729ed5 made it writable when it was already too big, and smoke never commits to it). Fixed in b1bf1d2: a file already over the cap may grow by up to the patch cap. Checked against that run's bundle. fe96527 also stops a failing brief check or rewrite from discarding a finished run.
+  - That spec can't be re-published: publish checks out the run's base, so re-running the failed job uses the old guard. A fresh release is needed (about 75 minutes).
+  - **CD chose option (a)** (availability = the first stored 1m minute at or after the bar's close, plus the tick) when shown the lost run's question. CD then chose to re-release **without** posting it, so a run that asks tests reply-and-resume. The plan stage's "Resume planning" step has never run live. **The fifth run, 38070170182** (17:03Z, on b1bf1d2, 40 minutes, one review round), **didn't ask either: spec PR #50 is open, on Rule C.** Late 5m bars aren't called out: a late mismatch is a blocking row, so the replay may FAIL, which the spec allows ("a FAIL stands"). The run committed no changelog, so b1bf1d2 is still unproven live. Reply-and-resume for planning is still untested: test it on purpose later, with an issue built to need a question. **(a) is CD's decision for whenever D14b or D11b runs for real.**
+  - **Found by the runs, for real work:**
+    - `api/.dockerignore` lacks `*.pem`.
+    - The admin Approve button never renders: `VersionHistoryTable.tsx` filters on `pending_approval`, which the backend never emits. Both runs found this.
+    - `docs/ml/MONITORING_RUNBOOK.md` J5 evidence rules lapse if D11b never executes.
+    - The ADR index cites `api/ml/inference.py:221`, which has moved; cite it by symbol instead.
+    - A read-only census and an off-host copy of the day-0 Kalshi capture on pop-os.
+- **Next for D14b:** CD merges spec PR #50, which tests advancing to the plan. Then **close the plan PR without merging**, so nothing executes.
+- **Follow-ups from this:**
+  - a smoke case that commits to the changelog;
+  - a cc-sdlc question for CD: should the changelog rotate or archive? cc-sdlc's is 649 KB, and nothing in the framework archives it.
 - **Then clean up:** close or mark D14/D14a–d as a test in the catalog (`docs/_index.md`), and close #34 and #46–#49.
 
 ### Next steps, in order
 
 1. **Finish the full-tier test** (above), including the reply-and-resume path if discovery asks a question.
 2. **The improve loop (phase 4):** build it in a fresh session from § Next build below. CD's decisions are in it: Sunday 22:23 UTC, report only, a substantial actionable report covering everything.
-3. **The production runner (gap 1): unowned; redesign needed.** Start from CD's decision (§ Gaps) and the reusable parts of `software-factory-gaps_design.md`: gates between plan phases (a CD step with a checklist, report-back fields and rollback), pinning the approved plan by its blob hash, and the `factory:handoff` state. Its gap 1 sections are otherwise superseded. Cover the security boundary: keys, which steps, how approval binds to one step without replay, audit, rollback, and the approval surface (CD prefers one long-standing PR with gates as steps, not a PR per approval). Cross-check with Fable and Codex, and design only until CD approves. Then fold the result into § Gaps and delete the gaps doc. The session that wrote the first design, cc-sdlc-52, is no longer running.
+3. **The production runner (gap 1): built, not yet live.** Design rule D4 (`software-factory_design.md`); § Gaps below has the summary. The framework half (production gates in plans) is in cc-sdlc; the factory half is on quantile branch `factory-gates`. To go live, CD does the setup in quantile's `.github/factory/README.md` § Production gates:
+   - environment `factory-production`;
+   - runner group `factory-production`;
+   - labels `factory:gate` and `factory:gate-retry`;
+   - `setup-production.sh` on pop-os, then commit the printed public key.
+
+   The first proof is a read-only gate on a test issue, then a deploy gate with its rollback.
 4. **Revise for plan and spec PRs:** a doc-revise path on the planning tier, 5 revisions. Not built: today, changes to a plan or spec PR mean closing it and re-running.
 5. **Next services work,** from research into how other factories do it (Stripe, Uber, Snap, Shopify, Tessl and Claude Code keep credentials in a broker or proxy; Warp and HumanLayer put them in the agent's environment):
    - **CLIs:** installed in a setup step that has no secrets (Codex's pattern), or baked into the job image.
