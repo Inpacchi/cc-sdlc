@@ -18,7 +18,7 @@ Read `.claude/skills/sdlc-audit/references/compliance-methodology.md` for the fu
 
 ## Audit Dimensions (summary)
 
-1. **Deliverable catalog integrity** — `docs/_index.md` matches reality
+1. **Deliverable catalog integrity** — `docs/_index.md` matches reality, including `Depends on` (missing IDs, cycles, Draft prerequisites of active work)
 2. **Artifact traceability** — spec → plan → result chains complete
 3. **Untracked work detection** — git commits without deliverable tracking
 4. **Knowledge freshness** — CLAUDE.md, agent memories, docs current

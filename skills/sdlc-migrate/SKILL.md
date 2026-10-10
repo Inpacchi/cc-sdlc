@@ -287,6 +287,7 @@ Select entries with `id` > `last_applied_contract_id`. Call this set **pending_c
 - §2.1a upstream-deletion exemptions (bundle skill paths are exempt regardless of contract entry; see below)
 - §4.3a CLAUDE.md compatibility check (entries with `type: rename_skill`)
 - §4.5 manifest update (entries with `type: manifest_field_added`; also persists `last_applied_contract_id`)
+- §4.5a catalog columns (entries with `type: catalog_column_added`)
 - §4.7 bundle offer (entries with `type: bundle_debut` not yet installed)
 
 Log the selection so CD can see what's being applied:
@@ -962,6 +963,15 @@ fi
 
 echo "$MANIFEST" > .sdlc-manifest.json
 ```
+
+### 4.5a Catalog Columns
+
+For each `catalog_column_added` entry in pending_changes, update the project's `docs/_index.md` (skip if the file doesn't exist):
+
+1. Find the active deliverables table: the first table whose header row starts `| ID | Name | Status`. If its header already has the entry's `column`, skip the entry (the project added it by hand or a previous run did).
+2. Insert the column after the entry's `after` column in the header, a `---` cell in the separator row, and the entry's `default` in every data row of that table. Leave every other table alone.
+3. If the entry has a `note` and the file has a `## Notes` section, append the note as a bullet there unless an equivalent bullet already exists.
+4. Show CD the diff of `docs/_index.md` with the migration summary. It is project content, so it's never overwritten wholesale. Run this before §4.5 step 5, so a failure leaves `last_applied_contract_id` where it was.
 
 ### 4.6 Report to User
 

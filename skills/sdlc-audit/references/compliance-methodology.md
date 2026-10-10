@@ -25,6 +25,13 @@ Deep Verify (§6m) is NOT part of this sequence — it is an opt-in, orchestrato
 - Check for orphaned artifacts (files in `docs/current_work/` or `docs/chronicle/` not referenced in catalog)
 - Validate deliverable ID sequencing (no gaps, no duplicates, sub-deliverables properly suffixed)
 - Confirm status labels match actual artifact state (e.g., "complete" should have `_COMPLETE.md`)
+- **Dependencies** (the `Depends on` column; `[sdlc-root]/process/deliverable_lifecycle.md` § Dependencies). Flag:
+  - a dependency on an ID that isn't in the catalog;
+  - a cycle;
+  - a Draft prerequisite of a Ready or In Progress deliverable (the D11a pattern: the prerequisite dropped out of sight);
+  - a plan whose Phase Dependencies table names a deliverable missing from its catalog row's `Depends on`.
+
+  A catalog without the column predates it: one minor finding to add it (`sdlc-migrate` back-fills `—`), not one per row.
 
 ## Dimension 2: Artifact Traceability
 
@@ -34,6 +41,7 @@ For each active deliverable, verify the expected artifact chain:
 - Result at `docs/current_work/results/dNN_name_result.md`
 - Completed deliverables archived to `docs/chronicle/` with `_COMPLETE.md` suffix
 - Flag deliverables with missing intermediate artifacts (e.g., has result but no spec)
+- A split parent has a split record (`docs/current_work/planning/dNN_name_split.md`) instead of a plan, and its parts carry their own chains. A parent with parts in the catalog but no split record is a finding.
 
 ## Dimension 3: Untracked Work Detection
 

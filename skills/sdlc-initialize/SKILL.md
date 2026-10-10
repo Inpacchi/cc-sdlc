@@ -288,8 +288,8 @@ This is the single source of truth for all deliverable IDs and their statuses.
 
 ## Active Deliverables
 
-| ID | Name | Status | Spec | Plan | Result |
-|----|------|--------|------|------|--------|
+| ID | Name | Status | Depends on | Spec | Plan | Result |
+|----|------|--------|------------|------|------|--------|
 
 ## Completed Deliverables
 
@@ -301,6 +301,7 @@ This is the single source of truth for all deliverable IDs and their statuses.
 - IDs are sequential and never reused (D1, D2, ... Dnn)
 - Sub-deliverables use letter suffixes: D1a, D1b
 - Status: Draft | Ready | In Progress | Validated | Deployed | Complete | Archived
+- Depends on: the deliverables that must be Complete first, comma-separated (`D11a, D12`); `—` when none. Which phases each one gates is in the plan's Phase Dependencies table; one no phase names gates the whole deliverable. A split parent depends on its parts. See [sdlc-root]/process/deliverable_lifecycle.md § Dependencies
 ```
 
 **Detect project structure before writing manifest:**

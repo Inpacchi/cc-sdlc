@@ -26,7 +26,7 @@ Domain agents own the planning lifecycle: they write the spec, they write the pl
 
 The full model is in `[sdlc-root]/process/collaboration_model.md` (role definitions, decision authority table, autonomy spectrum). The critical directives:
 
-**AskUserQuestion mandate:** every question directed at the user MUST use the `AskUserQuestion` tool — do not type questions as conversational text. Status updates and completion reports that need no response use normal text. Planning is where this matters most — CC proposes approaches, CD approves. The one exception is spec and plan approval: the Approval Brief message ends the turn, and CD's reply is the answer (steps 3 and 6; `[sdlc-root]/process/writing-for-cd.md` § Approval Briefs).
+**AskUserQuestion mandate:** every question directed at the user MUST use the `AskUserQuestion` tool — do not type questions as conversational text. Status updates and completion reports that need no response use normal text. Planning is where this matters most — CC proposes approaches, CD approves. The one exception is spec, plan and split approval: the Approval Brief (or the split record's summary) ends the turn, and CD's reply is the answer (steps 3 and 6, § Splitting a Deliverable; `[sdlc-root]/process/writing-for-cd.md` § Approval Briefs).
 
 <!-- MIRROR-START: headless-mode.md#headless-stop-rule -->
 **Headless runs (no person present).** This run is headless if the caller's prompt or appended system prompt has a line starting `SDLC headless mode:`, or if no ask-the-user tool (`AskUserQuestion`, or the harness's equivalent such as OpenCode's `question`) can be used — none is available or loadable, or a call to it is denied without an answer. A dispatched subagent is never headless itself; in a headless run the orchestrator tells each subagent so, and the limits below bind it too. In a headless run, every point in this skill that asks CD something the next step depends on, waits for CD's approval, or escalates to CD **stops the run there**: save the work so far, return the questions, the document or action plan awaiting approval, or the open-findings table as the run's result (in the caller's output schema if it passed one), and end the turn normally — a stop is a result, not an error. A missing precondition the caller must fix ends the run with status `failed` and the reason. Never guess an answer, take a default for a decision CD owns, approve your own work, or skip the gate. List questions the next step does not depend on in the result instead of stopping. Take the no path on optional offers. Cause no side effect outside the working tree — no push, post, comment, label, publish, external send, or live-system change — unless the caller's prompt names it; list those actions in the result. Reads are fine. A question the prompt or thread already answers is not a gate. Full rule and result format: `[sdlc-root]/process/headless-mode.md`.
@@ -83,6 +83,7 @@ This skill produces three artifacts:
 | Catalog entry | `docs/_index.md` (new row in Active Work table) | 0 |
 | Spec | `docs/current_work/specs/dNN_name_spec.md` | 2 |
 | Plan | `docs/current_work/planning/dNN_name_plan.md` | 5 |
+| Split record, instead of a plan, when the deliverable splits | `docs/current_work/planning/dNN_name_split.md` | § Splitting a Deliverable |
 
 When complete in an interactive run, step 6 presents the plan's Approval Brief, its path, and the line that starts execution in a new session (a headless run ends with status `awaiting-approval` and the plan path instead).
 
@@ -104,11 +105,28 @@ Either way:
 1. Define the question(s) to answer
 2. Run the prototype (external) or feasibility audit (internal)
 3. Document the finding in `docs/current_work/prototypes/dNN_name_prototype.md`
-4. Use the finding to inform the spec and the phasing — proceed if feasible, flag to CD if not
+4. Use the finding to inform the spec and the phasing — proceed if feasible, flag to CD if not. If it shows the work is several deliverables, split it (§ Splitting a Deliverable) instead of writing one plan.
 
 **The deferral anti-pattern (the core rule):** If a feasibility question's answer would change the plan's *structure* — one deliverable vs. split, phase count, scope, sequencing, or a one-vs-many decision — it MUST be resolved here, at planning time. Scheduling a "prove the primitives" spike as the *first execution phase* (P0), then phasing the rest of the plan on the speculative answer with a mid-execution GO/NO-GO checkpoint, is the smell. The spike's whole purpose is to answer a planning-time question; run it now and let the *real* engine cost shape the plan, rather than committing to a structure you may have to unwind. Verifying against the actual code now resolves most open questions before phasing — cheaper than discovering them mid-execution.
 
 **Skip decision must be explicit:** If skipping, state the precedent: "Skipping feasibility check — this follows the same pattern as [prior implementation]." Do not skip silently.
+
+## Splitting a Deliverable
+
+Split when the Feasibility Gate shows the work is several deliverables, or the plan would need an eighth phase (§ Phase limit). Splitting is a decision CD approves; the split record is the document CD approves, in place of a plan. Rules: `[sdlc-root]/process/deliverable_lifecycle.md` § Splitting a Deliverable.
+
+1. **Propose the parts** with the domain agents who ran the feasibility audit:
+   - **IDs:** the parent's ID plus letters, in execution order (D11 → D11a, D11b, D11c).
+   - **For each part:** a name, a scope, a tier (lite or full), what it depends on, and, for a full-tier part, whether the parent's approved spec covers it.
+   - **Coverage:** together the parts cover the parent's scope, or the split record says what stays with the parent.
+2. **Write the split record** at `docs/current_work/planning/dNN_name_split.md` from `[sdlc-root]/templates/split_record_template.md` (status Proposed). Every part gets a next action.
+3. **Register the parts** in `docs/_index.md`:
+   - **Part rows:** Draft, with `Depends on` filled. Next ID doesn't change, because parts use the parent's number.
+   - **Parent row:** set its `Depends on` to its parts. It stays as the umbrella.
+4. **Approval:** present the split record's Why, the parts table and the order in plain language, then end the turn; CD's reply is the approval or the change. After approval, set the record's status to Approved and offer to plan the first part. Planning a part is a new run of this skill (or `sdlc-lite-plan`), with its ID already registered.
+
+   **Headless run:** stop with status `awaiting-approval` and the split record as the document (a caller with its own status for a split, such as the factory's `split`, maps to it). List the parts in the result. The caller files and starts the parts after CD approves.
+5. **One level only.** A part doesn't split again. If a part is still too big, the split is wrong, so stop and ask CD (headless: `needs-input`).
 
 ## Worktree Rule
 
@@ -204,12 +222,14 @@ Dispatch prompts must pass through all relevant context — outcomes, constraint
 2. **Ask the user for a deliverable name** using AskUserQuestion:
    > Starting deliverable **DNN**. What's the name? (e.g., "User Authentication", "Payment Integration")
 3. **Create the catalog entry.** Edit `docs/_index.md` to:
-   - Add a new row to the Active Work table with the ID, name, and status "Draft"
+   - Add a new row to the Active Work table with the ID, name, status "Draft", and `Depends on` (`—`, or the IDs the work already needs finished first)
    - Increment the "Next ID" counter in the header
 4. **Confirm and continue:**
    > Deliverable **DNN — Name** registered. Proceeding to agent selection.
 
 **If a deliverable ID already exists** (user says "plan D7" or references an existing catalog entry), skip registration — read the catalog to confirm the ID exists and proceed to step 1.
+
+**Prerequisites.** Read the deliverable's `Depends on`. For each prerequisite that has no plan or isn't Complete, tell CD now and offer to plan it next (headless: record it in `notes`). Planning may continue, because a prerequisite blocks execution, not planning. The plan's Phase Dependencies table names the phases each prerequisite gates, and the Approval Brief's review focus repeats any prerequisite still unplanned (`[sdlc-root]/process/deliverable_lifecycle.md` § Dependencies).
 
 **Headless restart.** When the prompt restarts an existing deliverable at a named stage, skip registration and every step before that stage, and never mint a second D-number. Read the saved spec or plan and the earlier result's `notes` instead. Then:
 - **CD approved the spec:** if the saved spec still matches the version that was awaiting approval, set its `**Status:**` to Ready and start at step 3d. If it has changed since, stop again with `awaiting-approval`.
@@ -572,7 +592,7 @@ The plan MUST include:
 
   These checkpoints feed directly into the POST-GATE UI smoke check during execution and the experiential verification in the review loop. Without them, the executor can only check "does the page render" — not "does the phase's specific outcome appear."
 
-**Phase limit:** Plans are capped at 7 phases. If a plan reaches phase 8, **stop writing and split into sub-deliverables** (D1a, D1b) before continuing. Over-phased plans signal insufficient decomposition.
+**Phase limit:** Plans are capped at 7 phases. If a plan reaches phase 8, **stop writing and split into sub-deliverables** (D1a, D1b) before continuing (§ Splitting a Deliverable). Over-phased plans signal insufficient decomposition.
 
 **The writing agent must produce the complete plan AND save it to disk.** The dispatch prompt must instruct the agent to use the `Write` tool to save the plan to `docs/current_work/planning/dNN_name_plan.md` (pass the exact path computed from the deliverable ID). The agent returns a short confirmation — not the plan body. If the agent returns the plan body instead of saving the file, re-dispatch with explicit instructions to use the `Write` tool. **The manager does not save the plan** — saving the agent's returned body yourself risks transcription drift and violates the Manager Rule.
 
