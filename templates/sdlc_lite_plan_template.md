@@ -29,7 +29,7 @@
 | 1     | —         | agent | —                 |
 | 2     | Phase 1   | agent | Phase 3           |
 
-Depends On may also name another deliverable (`Phase 5, D11a`): that phase waits until the deliverable is Complete. List the deliverable in the catalog row's `Depends on` too (`[sdlc-root]/process/deliverable_lifecycle.md` § Dependencies).
+Depends On may also name another deliverable (`Phase 5, D11a`): that phase waits until the deliverable is Complete. List the deliverable in the catalog row's `Depends on` too (`[sdlc-root]/process/deliverable_lifecycle.md` § Dependencies). A production gate is a row of its own (`G1 | Phase 1 | CD | —`); a phase that needs its results depends on it.
 
 ## Phases
 
@@ -38,6 +38,17 @@ Depends On may also name another deliverable (`Phase 5, D11a`): that phase waits
 **Outcome:** [What must be true when this phase is done]
 **Why:** [Why it matters]
 **Guidance:** [Optional — approach hints, key files/functions, non-obvious context that helps the executing agent]
+
+### Gate G1: [production work between phases; delete when the plan touches no production]
+> Deploys, migrations on a shared database, restarts, backups and live checks happen only in gates, never in a phase. Gates don't count toward the 4-phase limit, and the last item is always a phase. Rules: `[sdlc-root]/process/production-gates.md`.
+
+**After:** Phase 1. **Changes production:** yes | no (read-only).
+**Why here:** [why this happens between these phases]
+**Preconditions:** [what must be true first]
+**Runbook:**
+- [ ] [each step, with the exact command or operation, in order]
+**Report back:** `field`: [what it is and which phase uses it]
+**Rollback:** [how to undo it, or "none: read-only"]
 
 ### Phase 2: [Name]
 ...
