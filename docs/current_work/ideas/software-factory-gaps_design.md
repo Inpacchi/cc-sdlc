@@ -1,10 +1,25 @@
 # Design: factory gaps 1 and 2 (production-touching plans, splitting deliverables)
 
-**Status:** draft, awaiting CD's decisions (nothing built). **Date:** 2026-10-09.
+**Status:** gap 2 built (quantile `f5ef1a9`, cc-sdlc `68782df`). Gap 1 reversed by CD and awaiting redesign; the gap 1 sections below are the superseded first design, kept for reference. **Date:** 2026-10-09, updated 2026-10-10.
 **Source:** `software-factory_handoff.md` § "Gaps found 2026-10-09", items 1 and 2. Item 3 (deliverables registered outside the factory) is CD's.
 **Cross-checked** with Codex (read-only, against quantile `f5098bf`) and a Fable reviewer. Their main corrections are folded in below.
 
-## Principle
+## CD's decisions (2026-10-09)
+
+- **Gap 2 first; built.** CD accepted recommendations 5, 6 and 7:
+  - merging the split PR approves it, and the parts then wait for `factory:go`;
+  - parts reuse the parent's approved spec when the split names it;
+  - the prerequisite-tracking column and checks are built together.
+
+  The defaults stand: a part can't split again, and CD closes the parent by hand. Follow-ups per segment wait for gates.
+- **Gap 1 reversed.** CD wants:
+  - a **production-capable runner** that does production steps without CD's hands, with **per-step approval** through labels or tags;
+  - **no new PR per approval:** one long-standing PR with the gates posted as steps and approved in place, or another mechanism. CD isn't settled on the PR mechanics.
+
+  That replaces recommendation 1 ("plans mark them for CD to run") and the segment-per-PR flow below. A redesign comes next, with its security boundary: keys, which steps, approval binding, audit. The gate structure in plans (§ Gates) likely survives, with the factory running CD gates after approval instead of CD.
+- The handoff (`software-factory_handoff.md`, gaps section) records the same decisions.
+
+## Principle (first design; superseded for gap 1)
 
 Plans mark the steps that need production. The factory stops at them, and CD runs them. No agent gets production or host access. One mechanism, **gates**, handles both CD steps and waits on other deliverables.
 
@@ -75,7 +90,7 @@ Plans mark the steps that need production. The factory stops at them, and CD run
 - **A `full` part whose parent spec CD already approved** would re-run the spec stage unless the plan stage's mode chooser reads the catalog's Spec column. That is the same bridge as handoff item 3 (CD's).
 - **Contract versioning (Codex):** the new statuses (`handoff`, `split`) and fields change the result contracts. They ship with end-to-end tests: guard unit tests, a smoke case per status, and a dry run on a test issue.
 
-## Decisions for CD
+## Decisions for CD (as first asked; answered above)
 
 1. Should an agent ever hold the keys to the production box (a new runner with per-step approval), or do plans mark those steps for you to run? **Recommended:** plans mark them.
 2. When a plan reaches one of your steps, the factory stops, opens a PR for the work so far and posts your checklist. You merge, do the step, then add `factory:go`. **OK?**

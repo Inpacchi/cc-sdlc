@@ -10,6 +10,9 @@ active_deliverable: null
 related_files:
   - docs/current_work/ideas/software-factory_evaluation.md
   - docs/current_work/ideas/software-factory_design.md
+  - docs/current_work/ideas/software-factory-gaps_design.md
+  - docs/current_work/ideas/software-factory-phase4_handoff.md
+  - docs/current_work/ideas/software-factory-phase4-services_design.md
   - docs/current_work/ideas/review-loop-unification_handoff.md
   - docs/current_work/ideas/review-loop-unification_consult-record.md
   - process/github-checkpoints.md
@@ -20,7 +23,75 @@ related_files:
   - ~/Projects/quantile/.sdlc-manifest.json
 ---
 
-# Handoff: Software factory, phases 0-1 (runner, then triage)
+# Handoff: Software factory
+
+## Current state and next steps (2026-10-10): read this first
+
+The factory runs in `endless-galaxy-studios/quantile` on self-hosted runners on pop-os. **Phases 0–3 are built and proven live.** The rest of this file is history (phases 0–3 as they happened) plus the design rules. The quantile side's operating manual is `.github/factory/README.md` there: the stage contract, Follow-ups, Revise, Services, labels.
+
+### What's built (quantile `main`; every stage has run live)
+
+- **Triage:** tier (direct, lite, full), estimate, and Fable-advisor choice (`factory:advisor`).
+- **Implement:** direct fixes, finishing small related fixes as declared add-ons.
+- **Plan:**
+  - lite;
+  - full: discovery, then a spec PR, then a plan from the merged spec;
+  - **split** when the work exceeds the phase cap: a split PR, then part issues filed as sub-issues with Depends on, each held for `factory:go`.
+- **Execute:** `/sdlc-lite-execute` or `/sdlc-execute` on a merged plan.
+- **Revise:** code PRs, 3 revisions, through a Request-changes review or the `factory:revise` label.
+- **Follow-ups:** an executed plan's PR lists up to 10 as a checklist. On merge they're filed as issues, triaged, then held for `factory:go`. Direct fixes and a follow-up's own follow-ups file nothing.
+- **SDLC hygiene is agent-writable:** discipline parking lots, knowledge YAMLs (except `agent-context-map.yaml` and the agent-governing files) and the SDLC changelog. PRs name every such file.
+- **PR descriptions** follow `[sdlc-root]/templates/pr_description_template.md`, rendered by the guard. An over-long brief gets a resume-and-rewrite step instead of failing the run.
+- **Services:** `services.json` plus credential slots `FACTORY_SVC_1..4`. The sandbox masks every slot, and the proxy injects a value only on that service's domains. Every entry needs `read_only: true`. MCP attach is deferred. Planning stages only. Proven in the smoke run with a stand-in service.
+- **Hardening found this session:**
+  - the guard refuses agent and gate configuration at any depth;
+  - owner-less CODEOWNERS lines unown only the exact files they name;
+  - the policy check rejects apostrophes in schemas;
+  - planning agents get the full git history;
+  - the planning database proxy starts clean and reports its errors.
+
+### In flight right now
+
+- **The full-tier test (D14, issue #34), not to be executed:**
+  - #34's split PR #45 merged, which filed parts #46–#49 (D14a–d).
+  - **D14b (#47)** was released. Its spec run is 38032179372. Two earlier runs died on bugs, both fixed: the brief limit, and the database proxy.
+- **Next for D14b:** open the spec PR. CD merges it, which tests advancing to the plan. Then **close the plan PR without merging**, so nothing executes.
+- **Then clean up:** close or mark D14/D14a–d as a test in the catalog (`docs/_index.md`), and close #34 and #46–#49.
+
+### Next steps, in order
+
+1. **Finish the full-tier test** (above), including the reply-and-resume path if discovery asks a question.
+2. **The improve loop (phase 4):** build it in a fresh session from `software-factory-phase4_handoff.md`. CD's decisions are in it: Sunday 22:23 UTC, report only, a substantial actionable report covering everything.
+3. **The production runner (gap 1):** cc-sdlc-52 owns the redesign, routed to CD for decisions (see "Gaps found" below and `software-factory-gaps_design.md`). Design only until CD approves.
+4. **Revise for plan and spec PRs:** a doc-revise path on the planning tier, 5 revisions. Not built: today, changes to a plan or spec PR mean closing it and re-running.
+5. **Next services work,** from research into how other factories do it (Stripe, Uber, Snap, Shopify, Tessl and Claude Code keep credentials in a broker or proxy; Warp and HumanLayer put them in the agent's environment):
+   - **CLIs:** installed in a setup step that has no secrets (Codex's pattern), or baked into the job image.
+   - **Tokens:** CLIs run with masked, read-only tokens (`SENTRY_AUTH_TOKEN=$FACTORY_SVC_n sentry-cli …`).
+   - **Methods:** limit read-only services to GET and HEAD if the sandbox supports it.
+   - **MCP:** later, through one gateway that holds the credentials. Projects pick from a catalog CD approved, with tools off by default and allowlisted per tool (Copilot's, Tessl's and Uber's patterns).
+   - **Avoid:** real secrets in the agent's environment, and sharing the host's logged-in CLIs.
+6. **Shared scripts:** extract the prepare, publish and report logic duplicated across the stage workflows.
+7. **Small items:**
+   - switch `create-github-app-token`'s deprecated `app-id` to `client-id`;
+   - smoke after `ubuntu-latest` moves to Ubuntu 26 (2026-10-19);
+   - a Redis version floor for the Lua CVE;
+   - wire the `extractMessage` `node --test` suite into CI (needs `web/package.json`, which is CD's).
+
+### Parked or deferred by CD
+
+- **Moving cc-sdlc into the org** ("after"). Then the improve loop can file framework proposals there, decision A3(b).
+- **#33's follow-ups (#35–#44):** held. #42 needs CD's two `max_spread` answers; #44 waits on D11b.
+- **D11 (D11a/b/c):** set aside. D11b's plan touches production, which is gap 1.
+- **Deliverables registered outside the factory:** CD handles this separately.
+- **Runner 1's migration:** CD runs `sudo bash ~/factory-setup/setup.sh` on pop-os.
+- **Neuroloom factory memory:** optional, exploratory (Phase 5 below).
+
+### Other sessions
+
+- **cc-sdlc-52** owns the gap 1 redesign.
+- **cc-sdlc-89** did the PR-description standard, the writing-for-CD port, and the cc-sdlc history rewrite (force-pushed; old SHAs map in its messages).
+- **When working in quantile:** fetch before pushing, and build in a worktree off `origin/main`. Other sessions push there.
+
 
 ## Why this is a handoff
 
@@ -87,6 +158,9 @@ The work splits across machines and repos:
 | `factory:wait` | triage | Doesn't fit now. The comment says what would change that. |
 | `factory:review-capped` | execute | The 3-round review cap was hit. A draft PR is parked with an open-findings table (phase 2+). |
 | `factory:advisor` | triage or CD | A property, not a state (2026-10-09): planning (plan, later spec) gets a Fable advisor. Triage sets it when the plan turns on judgment and clears it otherwise; a label CD added always stands. State sweeps leave it alone. Implement and execute never use an advisor. |
+| `factory:follow-up` | follow-up filer | A property (2026-10-10): filed from a merged plan's checklist. Triage runs, then holds; the App's provenance marker, not the label, decides the hold. |
+| `factory:go` | CD | Releases a held issue (a follow-up or a split part): starts its triaged stage once, then removes itself. Needs write access. |
+| `factory:revise` | CD | On a factory code PR: revise it from the review comments since the last revision (works on any PR; a Request-changes review also triggers revise on PRs opened after 2026-10-10). |
 | `factory:escalated` | revise workflow | The PR had 3 revise runs and CD requested changes again. No more automatic runs; CD decides (F16). |
 
 ## What needs to happen
@@ -535,6 +609,12 @@ Work through these in order. The isolation steps come before any job runs (F14).
   - or a rule that such plans split into factory-executable phases and CD-run deploy and proof steps, with the plan template marking which is which;
   - or both.
 
+  **CD's decision (2026-10-10): build a production-capable runner.**
+  - It works on its own, without CD's hands, and CD approves **each production step** with a label or tag.
+  - **No new PR per approval.** CD prefers one long-standing PR where the approval gates are posted as steps and approved in place, or another mechanism that avoids a PR per gate. The PR mechanics aren't settled ("No I'm not sure").
+  - **Owner and status:** cc-sdlc-52 owns the redesign: the security boundary (which keys, which steps, how approval binds to a step, the audit trail), after splitting is proven. Nothing is built.
+  - `software-factory-gaps_design.md` predates this decision. Its recommendation that plans mark steps for CD to run is superseded.
+
   Until then, triage and the plan stage should flag a plan that needs production access, so it isn't routed to unattended execution.
 - **Splitting deliverables.** When planning hits the phase cap, `sdlc-plan`'s feasibility gate proposes a split (D11 became D11a → D11b → D11c). The factory handles one deliverable per issue and can't split:
   - it has no step to mint sibling IDs and file their issues;
@@ -640,8 +720,7 @@ Work through these in order. The isolation steps come before any job runs (F14).
 
 ## Recommended next step
 
-1. Open a session **on the Linux PC** and work through **Phase 0** by direct dispatch, using this file as the checklist. It is infrastructure with a settled approach.
-2. Then open a session in `~/Projects/quantile` for **Phase 1**. It is Light-to-Moderate: one skill and two workflows. Direct dispatch fits. Use `sdlc-lite-plan` if the receiving session judges the skill-plus-workflow coupling worth a reviewed plan.
+See **Current state and next steps** at the top. (The original steps here, phase 0 on the PC and then phase 1 in quantile, are done.)
 
 ## Open questions (for the receiving sessions)
 
