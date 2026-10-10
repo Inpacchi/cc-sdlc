@@ -5,7 +5,6 @@ created: 2026-10-08
 status: draft
 related_files:
   - docs/current_work/ideas/software-factory_handoff.md
-  - docs/current_work/ideas/software-factory_evaluation.md
   - process/headless-mode.md
 ---
 

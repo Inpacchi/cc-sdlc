@@ -7,7 +7,7 @@
 
 ## Read first
 
-1. `docs/current_work/ideas/software-factory-phase4-services_design.md`, **Part A** and **Cross-check results**. It's the design and its review corrections. Part B (services) is already built.
+1. **The design** and its review corrections, both below (§ Design, § Cross-check corrections). This file is self-contained. Services, the design's other half, is built; see quantile's `.github/factory/README.md` § Services.
 2. `docs/current_work/ideas/software-factory_design.md`, D1–D3, the factory's rules, and `software-factory_handoff.md` for how the factory got here.
 3. In `endless-galaxy-studios/quantile`:
    - `.github/factory/README.md` (stage contract, Follow-ups, Revise, Services);
@@ -68,3 +68,80 @@ Once a week, read the factory's own GitHub record of what CD did to its output, 
 
 1. **The report's home:** a new issue each week (recommended, linked to the previous one), or one long-lived pinned issue updated weekly?
 2. **Should the report also notify CD elsewhere,** such as an email or a push notification, or is the GitHub issue enough?
+
+## Design (cross-checked by Fable and Codex, 2026-10-10)
+
+### Goal
+
+Once a week, turn what CD did to the factory's output into concrete proposals that make the next run better. The factory then learns from CD's reviews instead of repeating mistakes CD already corrected.
+
+### Signals (what CD's actions say)
+
+Job containers discard session transcripts (F4), so the loop reads the factory's **GitHub record**. All of it is already structured by markers and labels:
+
+| Signal | Source | What it tells |
+|---|---|---|
+| Revision requests and their outcomes | CD's Request-changes reviews and inline comments on factory PRs; revise comments (`factory-revise: N`) with done, declined or needs-your-call | What the agents got wrong the first time; what they refused |
+| Revision count, escalations | the `factory-revise` markers; `factory:escalated` and `factory:review-capped` | Where review caps bite |
+| PRs closed without merging | factory PRs, state closed and not merged | Rejected work and the reason CD gave |
+| Questions asked | `needs-input` comments (stage markers) and CD's replies | Gaps in issue context or in the skills; questions the thread already answered |
+| Triage overrides | CD adding or removing `factory:advisor`, re-adding `factory:triage`, a manual `tier` on a dispatched plan | Where triage's judgment is off |
+| Follow-up pruning | items CD unchecked at merge (the PR body as merged versus as opened) | What the agents over-propose |
+| Failures | `report-failure` comments; failed runs with their failing step | Brittle steps, recurring environment problems |
+| Run statistics | the transcripts' `result` records (cost, turns, models, permission denials), read while the 7-day artifacts last, **as numbers only** | Cost trends, stages that struggle |
+| Reactions | 👍/👎 that CD puts on factory comments | Lightweight quality signal |
+
+**Trust:** only content authored by maintainers (OWNER, MEMBER, COLLABORATOR, not bots) and the factory App's own markers is harvested. Agent text in transcripts is never read as text, only counted. The digest is data.
+
+### Shape
+
+1. **Harvest** (`factory-improve.yml`, a hosted job, read-only token, deterministic code `improve_harvest.py`)
+   - **Trigger:** weekly cron, plus manual dispatch with a window.
+   - **Output:** a JSON digest of the window's signals, grouped by stage and by factory PR or issue, with links. It's uploaded as an artifact, and the run summary gets the counts.
+2. **Analyze** (an agent job on the strict tier, Opus, no write credential)
+   - It runs `sdlc-audit`'s improvement mode headless, with the digest as a new input type ("factory digest").
+   - It reads the skills, process docs and knowledge the signals point at.
+   - It returns proposals in a schema: target file, change type, the evidence (links to the signals), severity, and a **route**.
+3. **Route** (hosted writer jobs). Each proposal goes where its target can be changed:
+   - **Project SDLC hygiene** (`ops/sdlc/knowledge/**/*.yaml` except the agent-governing files, `ops/sdlc/disciplines/*.md`, the changelog): committed by the agent in the analyze job, published as an **improvement PR** through the guard like any other factory PR. CD reviews and merges.
+   - **Project skills, agents, process docs, CODEOWNERS paths:** the guard refuses agent commits to `.claude/` and owned paths, by design. These are listed as **proposals** in the weekly report issue, each with a ready-to-apply patch. CD applies them, or asks an interactive session to.
+   - **Framework-level** (the problem is in cc-sdlc itself, for example a headless rule or a skill every project shares): listed in the report under "For cc-sdlc", with the evidence. See decision A3 for how they reach cc-sdlc.
+4. **The report**: one issue per week, "Factory improvement report YYYY-WW", posted by the App. It has a summary (counts, cost trend, top three problems), the proposals by route, and links to the improvement PR and the digest. No proposal is applied without CD.
+
+### Guard rails
+
+- The loop never edits `.claude/`, `CLAUDE.md`, workflows or CODEOWNERS. Agent-config refusal stays absolute.
+- One run a week, one improvement PR at most. A proposal repeated across weeks is linked, not re-proposed (it's keyed by target and evidence).
+- An empty window posts nothing.
+- The analysis cites signals by link. A proposal without evidence is dropped by the guard.
+
+### Decisions for CD (Part A)
+
+- **A1. Cadence:** weekly cron (Monday) plus manual dispatch? *Rec: yes.*
+- **A2. What the loop may change by itself:** hygiene via an improvement PR, and everything else as proposals? *Rec: yes.* Skills stay CD-applied.
+- **A3. Framework-level proposals:**
+  - **(a)** listed in the report for CD to carry to cc-sdlc. *Recommended to start.*
+  - **(b)** install the factory App on `Inpacchi/cc-sdlc` (a personal repo, outside the org installation) and file issues there.
+  - **(c)** open a handoff file in cc-sdlc via PR (needs (b) too).
+- **A4. Transcripts:** count-only statistics from the 7-day artifacts? *Rec: yes.* The alternative, mounting `~/.claude/projects` to a volume to keep full transcripts, keeps agent text around and widens what the loop reads.
+- **A5. Where the loop lives:** in each project's `.github/` (quantile now; copied on rollout)? *Rec: yes for now.* A shared reusable workflow is blocked by the policy check's no-reusable-workflow rule, and is part of the shared-scripts item.
+
+## Cross-check corrections (apply these over the design above)
+
+**Part A changes before building:**
+1. **Report-only first** (Codex). The weekly run posts the report issue only. Hygiene improvement PRs come after a dedicated guard stage, `improve`, with its own schema, an exact allowlist (knowledge YAMLs except governing files, discipline parking lots, the changelog), a renderer, and evidence IDs validated against the harvest. The report issue is created before any PR that refs it (Fable).
+2. **Metrics at the source** (Codex, Fable). Each stage run emits an allowlisted metrics record (stage, status, cost, turns, models, failing step), retained for at least 30 days, instead of a weekly scrape of 7-day transcript artifacts that races the expiry. Missing means unknown, not zero. Cost and turns can also be read from PR bodies' agent records today.
+3. **Trust** (Codex):
+   - "maintainer" means CD's pinned identity, or a repository permission check, not `author_association: MEMBER`;
+   - factory content is recognized by bot ID plus marker grammar;
+   - all quoted text stays untrusted, with inputs capped and reports rendered deterministically;
+   - failures are read from Actions metadata.
+4. **Snapshots** (Codex, Fable):
+   - follow-up pruning comes from the filer's summary comment ("Unchecked at merge, so not filed");
+   - manual tier selections are recorded at dispatch, since the workflow-run API doesn't expose inputs;
+   - close-and-replan and comparison runs are distinguished from rejection.
+5. **Durable dispositions** (Codex). Each proposal gets a stable fingerprint, new evidence is appended, and a status is recorded (accepted, rejected, deferred). Report creation is idempotent.
+6. **cc-sdlc change** (Fable). `sdlc-audit` improvement mode gains a "factory digest" input and a headless contract (proposals returned, `awaiting-approval`, never applied), with a changelog entry and a port to projects.
+7. **Cadence** (Codex). Monday, not on the hour, with manual bounded windows, and catch-up from the last successful harvest (GitHub cron can be delayed or dropped).
+
+**Decisions, revised:** A1 yes (with catch-up); A2 report-only first; A3 (a) for now, (b) after the repo moves into the org; A4 metrics at the source, 30 days; A5 per-project.
