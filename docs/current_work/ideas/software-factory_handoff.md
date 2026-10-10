@@ -59,7 +59,7 @@ The factory runs in `endless-galaxy-studios/quantile` on self-hosted runners on 
 
 1. **Finish the full-tier test** (above), including the reply-and-resume path if discovery asks a question.
 2. **The improve loop (phase 4):** build it in a fresh session from § Next build below. CD's decisions are in it: Sunday 22:23 UTC, report only, a substantial actionable report covering everything.
-3. **The production runner (gap 1):** the session `software-factory-working-session-pr` (peer name cc-sdlc-52, session `48db9c41-4b62-4c7e-aae9-6bccc11221c1`) is redesigning it from CD's decision (§ Gaps), with decisions routed to CD. Its working doc is `software-factory-gaps_design.md`, which folds into § Gaps once the redesign lands. Design only until CD approves.
+3. **The production runner (gap 1): unowned; redesign needed.** Start from CD's decision (§ Gaps) and the reusable parts of `software-factory-gaps_design.md`: gates between plan phases (a CD step with a checklist, report-back fields and rollback), pinning the approved plan by its blob hash, and the `factory:handoff` state. Its gap 1 sections are otherwise superseded. Cover the security boundary: keys, which steps, how approval binds to one step without replay, audit, rollback, and the approval surface (CD prefers one long-standing PR with gates as steps, not a PR per approval). Cross-check with Fable and Codex, and design only until CD approves. Then fold the result into § Gaps and delete the gaps doc. The session that wrote the first design, cc-sdlc-52, is no longer running.
 4. **Revise for plan and spec PRs:** a doc-revise path on the planning tier, 5 revisions. Not built: today, changes to a plan or spec PR mean closing it and re-running.
 5. **Next services work,** from research into how other factories do it (Stripe, Uber, Snap, Shopify, Tessl and Claude Code keep credentials in a broker or proxy; Warp and HumanLayer put them in the agent's environment):
    - **CLIs:** installed in a setup step that has no secrets (Codex's pattern), or baked into the job image.
@@ -85,7 +85,7 @@ The factory runs in `endless-galaxy-studios/quantile` on self-hosted runners on 
 
 ### Other sessions
 
-- **cc-sdlc-52** (`software-factory-working-session-pr`, session `48db9c41-4b62-4c7e-aae9-6bccc11221c1`; resume with `claude --resume 48db9c41-4b62-4c7e-aae9-6bccc11221c1`) owns the gap 1 redesign.
+- **cc-sdlc-52** (App identity, splitting, the first gap 1 design) has ended. The gap 1 redesign is unowned (next step 3).
 - **cc-sdlc-89** did the PR-description standard, the writing-for-CD port, and the cc-sdlc history rewrite (force-pushed; old SHAs map in its messages).
 - **When working in quantile:** fetch before pushing, and build in a worktree off `origin/main`. Other sessions push there.
 
@@ -141,7 +141,7 @@ Once a week, read the factory's own GitHub record of what CD did to its output, 
   - factory PRs never merge by bypass;
   - build in a worktree off `origin/main`, and fetch before pushing, because other sessions push there;
   - keep `.github/factory/*.schema.json` free of apostrophes (the policy check enforces it).
-- **Other live sessions:** cc-sdlc-52 owns the production-runner redesign (gap 1). Coordinate through SendMessage if you touch the same files.
+- **Other sessions:** check ListAgents before starting. Whoever takes the production-runner redesign (gap 1) works in the same factory files, so coordinate through SendMessage.
 
 ### Open questions for CD (ask before building the affected part)
 
@@ -291,7 +291,7 @@ Job containers discard session transcripts (F4), so the loop reads the factory's
   **CD's decision (2026-10-10): build a production-capable runner.**
   - It works on its own, without CD's hands, and CD approves **each production step** with a label or tag.
   - **No new PR per approval.** CD prefers one long-standing PR where the approval gates are posted as steps and approved in place, or another mechanism that avoids a PR per gate. The PR mechanics aren't settled ("No I'm not sure").
-  - **Owner and status:** cc-sdlc-52 owns the redesign: the security boundary (which keys, which steps, how approval binds to a step, the audit trail), after splitting is proven. Nothing is built.
+  - **Owner and status:** unowned (see next step 3). The redesign covers the security boundary (which keys, which steps, how approval binds to a step, the audit trail), after splitting is proven. Nothing is built.
   - `software-factory-gaps_design.md` predates this decision. Its recommendation that plans mark steps for CD to run is superseded.
 
   Until then, triage and the plan stage should flag a plan that needs production access, so it isn't routed to unattended execution.
