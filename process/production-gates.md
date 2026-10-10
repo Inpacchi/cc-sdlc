@@ -12,6 +12,10 @@ A gate sits between two phases. It holds the production steps the plan needs at 
 
 **The last item in a plan is always a phase.** It reads the last gate's results, writes the records and sets the catalog to Complete. A plan that ends in a live check still has a closing phase.
 
+**No phase after a gate starts before the gate is done,** whether or not its Depends On names the gate.
+
+**Status:** approving a deploy gate is CD's authorization to deploy before the deliverable is Validated (`[sdlc-root]/process/deliverable_lifecycle.md` § Deployed). The deliverable stays In Progress until the closing phase.
+
 **Gates aren't prerequisites.** A wait on another deliverable is a `Depends on` entry (`[sdlc-root]/process/deliverable_lifecycle.md` § Dependencies), not a gate.
 
 ## The Gate Section
@@ -46,9 +50,9 @@ A gate is its own section in the plan, between the phases it separates, and its 
 
 ## At a Gate
 
-**Interactive run:** show CD the gate (runbook, report-back fields, rollback) with `AskUserQuestion`. CD does it, or approves the runner to do it, and gives the report-back values or the runner's result. Record them in the result doc's Gates section, then continue with the next phase. If the gate fails, CD decides: roll back, retry, or stop. A failed gate is never worked around inside a phase.
+**Interactive run:** present the gate (runbook, report-back fields, rollback) as a completed message, then ask with `AskUserQuestion` whether CD will do it or approve the runner to. Once it's done, ask for the report-back values or the runner's result. If a step uses `${head}`, push the branch first so the runner can reach that commit. Record them in the result doc's Gates section, then continue with the next phase. If the gate fails, CD decides: roll back, retry, or stop. A failed gate is never worked around inside a phase.
 
-**Headless run:** stop before the gate with status `awaiting-approval`. The gate is the action plan awaiting approval: name it in `stage` (`sdlc-execute — after gate G1`), and in a `gate` field if the caller's schema has one. List its steps under `outbound`. The run never does a gate's steps itself: they are live-system changes (`[sdlc-root]/process/headless-mode.md` § Outward Actions Go to the Caller).
+**Headless run:** stop before the gate with status `awaiting-approval` (the caller publishes the commits before it asks for the gate). The gate is the action plan awaiting approval: name it in `stage` (`sdlc-execute — after gate G1`), and in a `gate` field if the caller's schema has one. List its steps under `outbound`. The run never does a gate's steps itself: they are live-system changes (`[sdlc-root]/process/headless-mode.md` § Outward Actions Go to the Caller).
 
 **Headless restart after a gate:** the caller passes the gate's result. If the gate succeeded and every report-back field is present, record the result in the result doc's Gates section and continue with the next phase. Otherwise stop with `needs-input`, saying what's missing or what failed.
 
@@ -56,7 +60,7 @@ A gate is its own section in the plan, between the phases it separates, and its 
 
 A project with a production runner (in the software factory, a runner that runs gates after CD approves them) keeps an **operations catalog**: the only operations the runner can do, each a reviewed script with typed parameters. The project's `CLAUDE.md` names the catalog's path. A plan's gates then carry a `gate-ops` block naming only catalog operations.
 
-- **Parameters** are literals, or placeholders resolved when CD is asked to approve:
+- **Parameters** are typed: the catalog gives each one a pattern its value must match. A value is a literal, or a placeholder resolved when CD is asked to approve:
   - `${head}`: the commit the execution branch is at;
   - `${G<n>.<field>}`: an earlier gate's report-back value;
   - in `rollback` only, `${steps.<id>.<field>}`: a value from a step of the same run, resolved when the runner runs it.

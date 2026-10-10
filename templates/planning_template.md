@@ -73,10 +73,6 @@
 
 [Detailed instructions]
 
-### Step 3: [Name]
-
-[Continue as needed]
-
 ### Gate G1: [production work between steps; delete when the plan touches no production]
 
 > Deploys, migrations on a shared database, restarts, backups and live checks happen only in gates, never in a step. Gates don't count toward the 7-phase limit, and the plan's last item is always a step. Rules: `[sdlc-root]/process/production-gates.md`.
@@ -90,6 +86,10 @@
 **Rollback:** [how to undo it, or "none: read-only"]
 
 [A `gate-ops` block naming catalog operations, only when the project has an operations catalog.]
+
+### Step 3: [Name]
+
+[Continue as needed]
 
 ---
 

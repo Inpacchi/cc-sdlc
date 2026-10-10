@@ -271,7 +271,7 @@ Some plans need production: quantile's D11b deploys, migrates and restarts servi
 4. **Two approvals.** Merging the plan approves what each gate may do; the plan guard refuses an unknown operation or a broken parameter. Approving the gate run approves doing it now, with the values filled in.
 5. **Approval is GitHub's deployment review.** Each gate gets a run of `factory-gate.yml` whose title carries the request's digest; its job waits on environment `factory-production` (CD the required reviewer, `main` only). Labels and comments authorize nothing: `factory:gate-retry` only asks for a fresh run.
 6. **The digest binds everything:** repository, issue, PR, gate, attempt, plan path and blob, PR head, the resolved steps and rollback, and a hash of the installed operations.
-7. **The broker checks for itself** (root, socket-activated, one instance per request, reachable only by the runner user): the run is `factory-gate.yml` dispatched on `main`; an approver approved its deployment; the request it rebuilds from the plan blob on `main`, the PR head, its own ledger and its installed operations has the title's digest; every earlier gate is done (operation gates in its ledger, CD gates by an approved run); production's deployed commit is the one it last recorded for this PR; nothing is unfinished; the digest never started.
+7. **The broker checks for itself** (root, socket-activated, one instance per request, reachable only by the runner user): the run is `factory-gate.yml` dispatched on `main`; an approver approved its deployment; the request it rebuilds from the plan blob on `main`, the PR head, its own ledger and its installed operations has the title's digest; the run is in progress; every earlier gate is done (operation gates in its ledger, CD gates by an approved run); production's deployed commit is the one it last recorded (after any gate, or a `baseline` CD records after changing production by hand); nothing is unfinished; the digest never started.
 8. **Signed receipts.** The broker signs every result with a root-only ed25519 key. The hosted report job verifies it with the committed public key before posting it or continuing execution; an unverified result changes nothing.
 9. **Never twice, and never unknown.** The ledger records each step. A finished digest returns its stored receipt; an interrupted run blocks every gate until CD resolves it on the host.
 10. **Keys.** The runner user has no sudo, no Docker group and the strict firewall, and holds only the job's read-only token. The broker runs operations as the operator user, with the host's credentials in place. The runner group takes only `factory-gate.yml` from `refs/heads/main`.
@@ -299,7 +299,7 @@ Some plans need production: quantile's D11b deploys, migrates and restarts servi
 
 - Operations for snapshot restores, scratch replays, evidence export, restore drills and UI checks (CD gates until then).
 - Read-only gates on a schedule without approval; approval per operation.
-- Out-of-band change detection before a PR's first gate (only the fast-forward rule guards it).
+- Out-of-band change detection before the first gate ever runs (no baseline yet; only the fast-forward rule guards it).
 - More hosts or projects; the promotion of `gates.py` and the broker into the `factory` bundle.
 
 ### Evidence

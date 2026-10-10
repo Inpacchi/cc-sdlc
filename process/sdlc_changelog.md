@@ -34,6 +34,24 @@ Each entry contains:
 
 ---
 
+## 2026-10-10: Production gates — fixes from the convention review
+
+**Origin:** an `sdlc-reviewer` pass over the production-gates change (f04b214), the same day.
+
+**What happened:** The new gate text left four gaps: lite execution still said it commits once; the review loop before a gate ended with step 2's hand-off to step 3, which would skip the rest of the plan; a plan with production work inside a phase (D11b's shape) had no stop at execution; and the interactive gate put a runbook and a question in one turn.
+
+**Changes made:**
+
+1. **`skills/sdlc-execute/SKILL.md`, `skills/sdlc-lite-execute/SKILL.md`** — the review before a gate emits its own REVIEW-GATE line and proceeds to the gate, not to step 3 (past the cap at CD's direction, with the open findings recorded); every loop's open minors and feedback go in the result doc; the gate is presented as a completed message before the question, and the report-back values are asked once it's done; a phase holding production work is triaged REVISE_PLAN and never dispatched; gate rows are never dispatched; the review after a gate starts at round 1. Lite: the per-gate commit uses step 4's format, and the "commits once" lines say so.
+2. **`process/production-gates.md`** — no phase after a gate starts before it's done; approving a deploy gate authorizes deploying before Validated, and the deliverable stays In Progress; typed parameters defined; push the branch before a gate whose steps use `${head}`.
+3. **`process/headless-mode.md`** — `production-gates.md` § At a Gate joins the gate-site list; the approval row says the next run receives the gate's result.
+4. **`skills/sdlc-lite-plan/SKILL.md`, `skills/sdlc-plan/SKILL.md`** — reviewers check each gate in both; "catalog patterns".
+5. **`templates/planning_template.md`** — the example gate sits between Step 2 and Step 3, matching its "After: Step 2".
+
+**Rationale:** each gap would have shown up the first time a plan reached a gate: an execution ending early after the pre-gate review, or an older plan's deploy dispatched to an agent.
+
+---
+
 ## 2026-10-10: Production gates — production work happens only in gates between phases
 
 **Origin:** the software factory's gap 1 (`docs/current_work/ideas/software-factory_handoff.md` § Gaps). quantile D11b's plan mixed a deploy into a phase ("Phase 3: code + Deploy step 1"), so nothing running plans unattended could tell which steps needed production. CD decided the factory gets a production-capable runner with per-step approval; the framework half is the plan structure every project uses, with or without a runner. Cross-checked with a Fable advisor and Codex (`gpt-6-astra`, max effort).
