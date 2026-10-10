@@ -12,7 +12,7 @@ related_files:
 
 The binding rules for the factory, kept here while it incubates in quantile (F13). They are framework rules, not project architecture: every repo that adopts the factory inherits them. At promotion this draft becomes the `factory` bundle's process doc, which installs into each project's `[sdlc-root]/process/`.
 
-Three decisions so far: **D1, the stage contract**, **D2, the credential boundary**, and **D3, the planning tier**. Each has the rules and what they forbid, what it leaves open, its unvalidated assumptions and the evidence for it. Where a rule can be a check instead of prose, prefer the check: the smoke probes already are, and a lint of agent-job permissions should be.
+Four decisions so far: **D1, the stage contract**, **D2, the credential boundary**, **D3, the planning tier**, and **D4, the production tier**. Each has the rules and what they forbid, what it leaves open, its unvalidated assumptions and the evidence for it. Where a rule can be a check instead of prose, prefer the check: the smoke probes already are, and a lint of agent-job permissions should be.
 
 Both decided 2026-10-08 (CD), first drafted as quantile ADR-21/22 and moved here because they are generic.
 
@@ -41,7 +41,7 @@ Letting stages post with different identities (App token, PAT) would silently br
 2. **Dispatch advances.** A stage starts by `workflow_dispatch` of `factory-<stage>.yml` with an `issue_number` input, sent from a writer job (`GITHUB_TOKEN`, `actions: write`). A stage workflow may also accept its label event, so CD can start it by hand.
 3. **Agents hold no write credential.** An agent job's `github_token` is the job's read-only `GITHUB_TOKEN`, never unset. The agent returns structured output (from phase 2, also a patch or bundle artifact). A writer job on a GitHub-hosted runner validates it and acts on it.
 4. **One identity for comments and markers.** Comments, labels and markers are posted only as the factory App (`z-software-factory[bot]`), with an issues-only App token each writer job mints in `factory-writer`. Pushes and PR creation use a separate contents and pull-requests App token, in a writer job that posts no markers. Dispatch alone uses `GITHUB_TOKEN`. Exceptions that show as `github-actions[bot]`: failure reports when the App token can't be made (they fall back so a broken key still gets reported) and `factory-advance`'s "plan approved" comment (a `pull_request` event can't use the `main`-only environment). Changed 2026-10-09 from "only with `GITHUB_TOKEN`": CD wanted one visible factory identity, and markers became harder to forge, since only default-branch jobs in `factory-writer` can mint the App's token, where any workflow with `issues: write` can post as `github-actions[bot]`. App-set labels start workflows, so rule 2's label events count only from a person (`sender.type != 'Bot'`, in the job condition and the concurrency group).
-5. **Marker grammar.** Markers form a block of consecutive lines at the top of a factory comment:
+5. **Marker grammar.** Markers form a block of consecutive lines at the top of a factory comment (D4's gate markers on execution PRs are display only, never trusted for anything):
    - **stage marker,** first when present: `<!-- factory-stage: <stage> [k=v ...] -->`, meaning "waiting on CD; a reply restarts `<stage>`";
    - **decision record:** `<!-- factory-triage: {...} -->`;
    - **deliverable reservation:** `<!-- factory-id: Dnn -->`, posted by the plan stage's claim job before planning starts (F11 without a push to `main`): the next ID is the highest of the catalog's Next ID, its rows and every earlier reservation, plus one, claimed one at a time across the repository;
@@ -248,6 +248,64 @@ Spec and plan stages make judgement calls that depend on how the system behaves 
 
 - Session resume across containers works through the action (quantile `39828cc`, smoke run 37895543752): a second job in a fresh container resumed the first job's session file with `--resume` and recalled its code word. The spec stage keeps its memory this way, with a discovery-notes comment as the fallback.
 - Credential masking is documented for sandboxed commands (Claude Code sandboxing docs, § Mask credentials): honored from user, managed and `--settings` scopes.
+
+---
+
+## D4: Production Tier (gates CD approves, run by a broker no agent can reach)
+
+### Context
+
+Some plans need production: quantile's D11b deploys, migrates and restarts services on pop-os, which is both the runner host and the production box. D2 keeps every agent job away from production, and D3 lets planning read it, never change it. CD decided (2026-10-10) on a production-capable runner that does production steps without CD's hands, with per-step approval, and without a new PR per approval. Two cross-checks (a Fable advisor; Codex `gpt-6-astra` at max effort) shaped the result: the first design trusted labels and App comments, which any repository writer can edit or race, and a sudo wrapper the runner unit's `NoNewPrivileges` would have blocked.
+
+### Options considered
+
+1. **Plans mark production steps for CD to run** (the first gaps design). Safe, but every gate needs CD's hands and a PR per segment. CD declined it.
+2. **An agent with production access, per-step approval.** The agent's judgment in production is what D2 exists to prevent, and a prompt injection would then reach production.
+3. **A deterministic broker runs reviewed operations after CD approves each gate (chosen).** No agent touches production; the approval is GitHub's own deployment review, which nobody can edit or forge.
+
+### Rules
+
+1. **No agent in the production tier.** Agents plan gates and write code; a deterministic broker runs the gates. D2 and D3 hold unchanged.
+2. **Production work happens only in gates** between phases (cc-sdlc `process/production-gates.md`). The plan's last item is a phase; the factory also needs a phase before the first gate.
+3. **Operations come from a reviewed catalog** (`.github/factory/production/ops.json`, code-owned): kind, parameters and outputs with an anchored pattern each, timeout, required earlier operations, rollback-only operations. Outputs are typed values, never free text. Scripts are installed root-owned by CD's setup run, never loaded from a workspace.
+4. **Two approvals.** Merging the plan approves what each gate may do; the plan guard refuses an unknown operation or a broken parameter. Approving the gate run approves doing it now, with the values filled in.
+5. **Approval is GitHub's deployment review.** Each gate gets a run of `factory-gate.yml` whose title carries the request's digest; its job waits on environment `factory-production` (CD the required reviewer, `main` only). Labels and comments authorize nothing: `factory:gate-retry` only asks for a fresh run.
+6. **The digest binds everything:** repository, issue, PR, gate, attempt, plan path and blob, PR head, the resolved steps and rollback, and a hash of the installed operations.
+7. **The broker checks for itself** (root, socket-activated, one instance per request, reachable only by the runner user): the run is `factory-gate.yml` dispatched on `main`; an approver approved its deployment; the request it rebuilds from the plan blob on `main`, the PR head, its own ledger and its installed operations has the title's digest; every earlier gate is done (operation gates in its ledger, CD gates by an approved run); production's deployed commit is the one it last recorded for this PR; nothing is unfinished; the digest never started.
+8. **Signed receipts.** The broker signs every result with a root-only ed25519 key. The hosted report job verifies it with the committed public key before posting it or continuing execution; an unverified result changes nothing.
+9. **Never twice, and never unknown.** The ledger records each step. A finished digest returns its stored receipt; an interrupted run blocks every gate until CD resolves it on the host.
+10. **Keys.** The runner user has no sudo, no Docker group and the strict firewall, and holds only the job's read-only token. The broker runs operations as the operator user, with the host's credentials in place. The runner group takes only `factory-gate.yml` from `refs/heads/main`.
+11. **Rollback is approved with the gate,** runs automatically when a step fails, and only for steps that got far enough to need it. Schema changes are expand-only.
+12. **One gate at a time on the host,** never during the nightly backup (the broker holds its lock).
+13. **Release model:** a deploy gate deploys the execution PR's head; production may run ahead of `main` until CD merges it with a merge commit. Deploys only fast-forward, and refuse infrastructure files; compose files and `docker/` are code-owned.
+
+### Forbids
+
+1. An agent on the production runner, or a production path, credential or runner reachable from an agent job.
+2. An operation outside the installed catalog, or a parameter that breaks its pattern.
+3. A gate run without an approver's environment approval, or a digest run twice.
+4. A production runner job from any workflow but `factory-gate.yml` on `main`, with a container, a `uses:` step, a secret, or any permission beyond read.
+5. Operation scripts loaded from a workspace; agent commits to compose files, Dockerfiles or `docker/`.
+6. Posting or continuing on a gate result whose signature doesn't verify.
+
+### Costs
+
+- CD sets up an environment, a runner group, labels, the host (`setup-production.sh`) and commits the public key, once; and re-runs setup after any change to the operations.
+- The operator user's credentials are in reach of the operation scripts: they are the boundary's weakest part, so they stay few, typed and reviewed.
+- Production can run code that isn't on `main` while a deliverable is mid-gate, which blocks unrelated deploys until it merges.
+- Unknown outcomes need CD on the host.
+
+### Leaves open
+
+- Operations for snapshot restores, scratch replays, evidence export, restore drills and UI checks (CD gates until then).
+- Read-only gates on a schedule without approval; approval per operation.
+- Out-of-band change detection before a PR's first gate (only the fast-forward rule guards it).
+- More hosts or projects; the promotion of `gates.py` and the broker into the `factory` bundle.
+
+### Evidence
+
+- Built in quantile (branch `factory-gates`, 2026-10-10): 119 factory unit tests, including RFC 8032 vectors for the signatures and the broker's checks against a fake GitHub; an end-to-end dry run of the hosted flow (request, re-check, stale refusal, forged-receipt refusal, CD-gate rejection, retry); the workflow policy's new rule shown to catch each broken case.
+- Not yet run live: it needs CD's setup on pop-os. The first proof is a read-only gate on a test issue.
 
 ---
 

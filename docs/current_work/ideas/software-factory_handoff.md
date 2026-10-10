@@ -9,7 +9,7 @@ source_session_summary: "Two sessions (software-factory-take-1 and take-2) evalu
 active_deliverable: null
 related_files:
   - docs/current_work/ideas/software-factory_design.md
-  - docs/current_work/ideas/software-factory-gaps_design.md
+  - process/production-gates.md
   - docs/current_work/ideas/review-loop-unification_handoff.md
   - docs/current_work/ideas/review-loop-unification_consult-record.md
   - process/github-checkpoints.md
@@ -78,14 +78,15 @@ The factory runs in `endless-galaxy-studios/quantile` on self-hosted runners on 
 
 - **Moving cc-sdlc into the org** ("after"). Then the improve loop can file framework proposals there, decision A3(b).
 - **#33's follow-ups (#35–#44):** held. #42 needs CD's two `max_spread` answers; #44 waits on D11b.
-- **D11 (D11a/b/c):** set aside. D11b's plan touches production, which is gap 1.
+- **D11 (D11a/b/c):** set aside. D11b's plan touches production: to run it through the factory, it needs re-planning with gates (D4), and its snapshot proofs stay CD gates until the catalog grows.
 - **Deliverables registered outside the factory:** CD handles this separately.
 - **Runner 1's migration:** CD runs `sudo bash ~/factory-setup/setup.sh` on pop-os.
 - **Neuroloom factory memory:** optional, exploratory (Phase 5 below).
 
 ### Other sessions
 
-- **cc-sdlc-52** (App identity, splitting, the first gap 1 design) has ended. The gap 1 redesign is unowned (next step 3).
+- **cc-sdlc-52** (App identity, splitting, the first gap 1 design) has ended.
+- **cc-sdlc-de** built the gap 1 redesign (next step 3).
 - **cc-sdlc-89** did the PR-description standard, the writing-for-CD port, and the cc-sdlc history rewrite (force-pushed; old SHAs map in its messages).
 - **When working in quantile:** fetch before pushing, and build in a worktree off `origin/main`. Other sessions push there.
 
@@ -279,6 +280,8 @@ Job containers discard session transcripts (F4), so the loop reads the factory's
 | `factory:go` | CD | Releases a held issue (a follow-up or a split part): starts its triaged stage once, then removes itself. Needs write access. |
 | `factory:revise` | CD | On a factory code PR: revise it from the review comments since the last revision (works on any PR; a Request-changes review also triggers revise on PRs opened after 2026-10-10). |
 | `factory:escalated` | revise workflow | The PR had 3 revise runs and CD requested changes again. No more automatic runs; CD decides (F16). |
+| `factory:gate` | execute | The issue's execution is stopped before a production gate (D4). Its PR's gate run waits for CD's approval in environment `factory-production`. |
+| `factory:gate-retry` | CD | On an execution PR: build a fresh gate request (the next attempt) and start its gate run, after a failed, rejected or refused gate or a stale request. |
 
 ## Gaps (open)
 
@@ -288,13 +291,14 @@ Job containers discard session transcripts (F4), so the loop reads the factory's
   - or a rule that such plans split into factory-executable phases and CD-run deploy and proof steps, with the plan template marking which is which;
   - or both.
 
-  **CD's decision (2026-10-10): build a production-capable runner.**
-  - It works on its own, without CD's hands, and CD approves **each production step** with a label or tag.
-  - **No new PR per approval.** CD prefers one long-standing PR where the approval gates are posted as steps and approved in place, or another mechanism that avoids a PR per gate. The PR mechanics aren't settled ("No I'm not sure").
-  - **Owner and status:** unowned (see next step 3). The redesign covers the security boundary (which keys, which steps, how approval binds to a step, the audit trail), after splitting is proven. Nothing is built.
-  - `software-factory-gaps_design.md` predates this decision. Its recommendation that plans mark steps for CD to run is superseded.
+  **CD's decision (2026-10-10): build a production-capable runner.** It works without CD's hands, CD approves each production step, and there's no new PR per approval.
 
-  Until then, triage and the plan stage should flag a plan that needs production access, so it isn't routed to unattended execution.
+  **Built (2026-10-10), not yet live: design rule D4.** Cross-checked with a Fable advisor and Codex (`gpt-6-astra`, max effort). Codex's review found 2 critical and 10 major problems in the first draft, all folded in.
+  - **Plans** put production work in gates between phases (cc-sdlc `process/production-gates.md`). A gate names operations from quantile's reviewed catalog, or is a CD gate (CD runs its runbook). Execution reviews and commits before each gate, then stops (`awaiting-approval`).
+  - **One execution PR per deliverable.** Later segments push to it, fast-forward only. A deploy ships the PR's head, so production can run ahead of `main` until CD merges with a merge commit.
+  - **Approval is GitHub's deployment review** of each gate's run (environment `factory-production`), not a label (CD's choice after the cross-check). Labels and comments can be edited by any writer, and a label can't say which request it approves.
+  - **A root broker runs the gate,** reached over a socket only the runner user can open. It re-derives the request from the plan on `main`, checks CD's approval with GitHub, runs only catalog operations, keeps a ledger so nothing runs twice, and signs its result.
+  - **The cc-sdlc gaps design doc is deleted.** Its content is in D4 and in git history (`63c8d2e`).
 - **Splitting deliverables.** When planning hits the phase cap, `sdlc-plan`'s feasibility gate proposes a split (D11 became D11a → D11b → D11c). The factory handles one deliverable per issue and can't split:
   - it has no step to mint sibling IDs and file their issues;
   - it doesn't record which split part depends on which (see `[sdlc-root]/process/deliverable_lifecycle.md` § Dependencies);
