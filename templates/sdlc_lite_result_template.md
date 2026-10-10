@@ -30,6 +30,16 @@
 
 ---
 
+## Gates
+
+[Only when the plan has production gates (`[sdlc-root]/process/production-gates.md`); otherwise delete this section.]
+
+| Gate | Outcome | When (UTC) | Done by | Report back |
+|------|---------|------------|---------|-------------|
+| G1: [title] | Done / Failed, rolled back / Failed | [start → end] | CD / [runner run link] | `field` = [value]; ... |
+
+---
+
 ## Deviations from Plan
 
 [Any differences from the plan and why]

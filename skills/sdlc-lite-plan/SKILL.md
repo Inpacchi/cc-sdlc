@@ -292,7 +292,8 @@ The most relevant worker domain agent writes the plan **and saves it directly to
 - **Required regardless of detail level:** Outcome (what "done" looks like), constraints (what must not break), and acceptance criteria. Implementation details are additive — they supplement the outcome description, they don't replace it.
 - **Constraint values must be concrete** — "maximum 4 items" not "a maximum count". If the value is a product decision the user hasn't made, mark it explicitly (e.g., `USER DECISION NEEDED: max table count — what should the limit be?`) so the reviewer routes it as DECIDE.
 
-- **Maximum 4 phases.** If you need more, this probably warrants a deliverable — check with the user.
+- **Maximum 4 phases.** If you need more, this probably warrants a deliverable — check with the user. Production gates don't count toward it.
+- **Production work goes in gates.** Deploys, migrations on a shared database, restarts, backups and live checks go in a gate between phases, never in a phase (`[sdlc-root]/process/production-gates.md`): an exact runbook, report-back fields, and a real rollback when the gate changes production. The last item is a phase. When the project's `CLAUDE.md` names an operations catalog, each gate also carries a `gate-ops` block naming only catalog operations, with parameters that match their patterns. The Approval Brief lists every gate under What you're approving.
 - **Assign each phase** to the worker domain agent with the most relevant expertise.
 - **Approach comparison:** If the approach follows an existing codebase pattern, cite the precedent. Otherwise, briefly compare 2 approaches with tradeoffs and state which was selected.
 - **The writing agent must produce the complete plan.** Every section shown in the template above — scope, files, agents, phase dependencies table, phases, and post-execution review — must be present in the saved file. After the agent confirms the save, Read the file to verify. If the saved plan is missing any template section, re-dispatch the writing agent to complete it and re-save. Do not fill in missing sections yourself.
@@ -446,6 +447,7 @@ The Manager Rule remains in effect per `[sdlc-root]/process/manager-rule.md` —
 | "Only the reviewers who found issues need to re-check the revision" | Plans have no narrow re-review. A fired trigger re-dispatches the full round-1 roster; no trigger means no re-review. |
 | "Add one more reviewer, just in case" | Breadth is per touched domain, not headcount. Beyond five reviewers, each extra agent needs a one-sentence statement of what it uniquely adds. |
 | "This needs 5+ phases" | That's a full SDLC deliverable. Check with the user. |
+| "The deploy is one command; I'll put it in the last phase" | Production work goes in a gate between phases, approved by CD, with a rollback. The last item is a phase that writes the records (`[sdlc-root]/process/production-gates.md`). |
 | "I'll include exact code so execution is easier" | Lite plans are typically executed same-session, so code snippets (function signatures, before/after diffs, structural patterns) are acceptable and improve execution reliability. Frame them as intent indicators — the executing agent should verify against actual code before implementing. Avoid exact line numbers, which shift even within a session. |
 | "The constraint is specified but the value isn't known yet" | That's a DECIDE finding. Mark it `USER DECISION NEEDED` so the reviewer routes it. |
 | "Only one domain is involved" | Most tasks touch 2+ domains. Check again. |
@@ -465,6 +467,6 @@ The Manager Rule remains in effect per `[sdlc-root]/process/manager-rule.md` —
 ## Integration
 
 - **Feeds into:** `sdlc-lite-execute` (executes the reviewed plan from the saved file)
-- **Uses:** worker domain agents (plan writing + review), `[sdlc-root]/process/manager-rule.md`, `[sdlc-root]/process/collaboration_model.md`, `[sdlc-root]/process/deliverable_lifecycle.md`, `[sdlc-root]/process/external-review-gate.md` § Planning Integration (external reviewer in plan review when configured), `[sdlc-root]/templates/pr_description_template.md` (plan variant, when the plan is approved through a pull request), `[sdlc-root]/process/writing-for-cd.md` (the Approval Brief written in step 4a and presented in step 5, one-line status blocks)
+- **Uses:** worker domain agents (plan writing + review), `[sdlc-root]/process/manager-rule.md`, `[sdlc-root]/process/collaboration_model.md`, `[sdlc-root]/process/deliverable_lifecycle.md`, `[sdlc-root]/process/production-gates.md` (production work in gates), `[sdlc-root]/process/external-review-gate.md` § Planning Integration (external reviewer in plan review when configured), `[sdlc-root]/templates/pr_description_template.md` (plan variant, when the plan is approved through a pull request), `[sdlc-root]/process/writing-for-cd.md` (the Approval Brief written in step 4a and presented in step 5, one-line status blocks)
 - **Complements:** `sdlc-plan` (handles full SDLC deliverables that need specs)
 - **Does NOT replace:** `sdlc-plan` (use that for new features, integrations, or architectural changes)

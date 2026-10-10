@@ -34,6 +34,26 @@ Each entry contains:
 
 ---
 
+## 2026-10-10: Production gates — production work happens only in gates between phases
+
+**Origin:** the software factory's gap 1 (`docs/current_work/ideas/software-factory_handoff.md` § Gaps). quantile D11b's plan mixed a deploy into a phase ("Phase 3: code + Deploy step 1"), so nothing running plans unattended could tell which steps needed production. CD decided the factory gets a production-capable runner with per-step approval; the framework half is the plan structure every project uses, with or without a runner. Cross-checked with a Fable advisor and Codex (`gpt-6-astra`, max effort).
+
+**What happened:** Plans had no place for production work. It sat inside phases, where an execute run would either do it (a live-system change no headless run may make) or skip it silently. Execution's review loop also ran only after the last phase, so a deploy in the middle of a plan would have shipped unreviewed code.
+
+**Changes made:**
+
+1. **`process/production-gates.md`** (new) — what a gate is (production work between phases, done by CD or the project's production runner after CD approves, never by an agent); the gate section (runbook, report-back fields, rollback, optional `gate-ops` block); gates don't count toward the phase limit; the last item is a phase; a review loop and commit before every gate; interactive and headless behavior at a gate and after it; the optional operations catalog with its placeholders and two approvals.
+2. **`templates/planning_template.md`, `templates/sdlc_lite_plan_template.md`** — a gate section between phases and gate rows in the Phase Dependencies table.
+3. **`templates/result_template.md`, `templates/sdlc_lite_result_template.md`** — a Gates section: outcome, when, done by, report-back values.
+4. **`skills/sdlc-plan/SKILL.md`, `skills/sdlc-lite-plan/SKILL.md`** — production work goes in gates; gates don't count toward the 7- or 4-phase limit; reviewers check runbook, rollback and report-back; the Approval Brief lists every gate. A red flag each.
+5. **`skills/sdlc-execute/SKILL.md`, `skills/sdlc-lite-execute/SKILL.md`** — before a gate: the review loop over the work since the last gate, then a commit (lite commits once per gate). At a gate: interactive shows CD the gate; headless stops with `awaiting-approval`, the gate named in `stage` (and a `gate` field when the caller's schema has one). The headless restart after a gate records its result or stops with `needs-input`. The completion review covers the work after the last gate. Three red flags each.
+6. **`process/headless-mode.md`** — a production gate is an approval gate whose action plan is the gate's steps; the execute skills' gate-site entries name it.
+7. **`skeleton/manifest.json`, `process/README.md`** — the new process doc.
+
+**Rationale:** Production work is the riskiest part of a plan and the one part an agent must never do on its own. Giving it a fixed place makes it visible at plan approval, approvable at the moment it happens, reversible by a stated rollback, and reviewable before it ships. The same structure serves a project where CD runs every gate by hand and one where a production runner does it after CD's approval. Release: minor (a new template structure and process convention, additive).
+
+---
+
 ## 2026-10-09: Dependencies between deliverables, and splitting a deliverable
 
 **Origin:** quantile D11. D11 split into D11a → D11b → D11c, but the split and the dependencies lived only in prose, so D11a dropped out of sight while D11b was planned against it (`docs/current_work/ideas/prerequisite-tracking_handoff.md`). The software factory also needed a split it could act on (`software-factory-gaps_design.md`, gap 2). CD approved building both together, cross-checked with Codex and Fable.

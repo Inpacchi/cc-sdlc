@@ -592,7 +592,9 @@ The plan MUST include:
 
   These checkpoints feed directly into the POST-GATE UI smoke check during execution and the experiential verification in the review loop. Without them, the executor can only check "does the page render" — not "does the phase's specific outcome appear."
 
-**Phase limit:** Plans are capped at 7 phases. If a plan reaches phase 8, **stop writing and split into sub-deliverables** (D1a, D1b) before continuing (§ Splitting a Deliverable). Over-phased plans signal insufficient decomposition.
+**Phase limit:** Plans are capped at 7 phases. If a plan reaches phase 8, **stop writing and split into sub-deliverables** (D1a, D1b) before continuing (§ Splitting a Deliverable). Over-phased plans signal insufficient decomposition. Production gates don't count toward the limit.
+
+**Production gates:** work that touches production (deploys, migrations on a shared database, restarts, backups, live checks) goes in a gate between phases, never in a phase (`[sdlc-root]/process/production-gates.md`). Each gate has an exact runbook, its report-back fields, and a real rollback when it changes production; the plan's last item is a phase. When the project's `CLAUDE.md` names an operations catalog, each gate also carries a `gate-ops` block naming only catalog operations, with parameters that match their patterns. Plan reviewers check each gate on those points, and the Approval Brief lists every gate under What you're approving.
 
 **The writing agent must produce the complete plan AND save it to disk.** The dispatch prompt must instruct the agent to use the `Write` tool to save the plan to `docs/current_work/planning/dNN_name_plan.md` (pass the exact path computed from the deliverable ID). The agent returns a short confirmation — not the plan body. If the agent returns the plan body instead of saving the file, re-dispatch with explicit instructions to use the `Write` tool. **The manager does not save the plan** — saving the agent's returned body yourself risks transcription drift and violates the Manager Rule.
 
@@ -799,6 +801,7 @@ Not every invocation needs a deliverable ID. For ad hoc work (bug fixes, small t
 | "I'll verify after the spec is written" | Verification happens BEFORE dispatch. Post-hoc verification means the spec was written from unverified claims and the agent's confident tone makes errors invisible. |
 | "The external reviewer is for code review, not planning" | When `external-review.sh` is configured, the external reviewer is a first-class planning participant: approach consult at 3d, review roster member at step 5. Cross-family deliberation is strongest at structural decisions — skipping it at planning time wastes it where it matters most. |
 | "The external model disagrees — I'll defer to it" / "…I'll ignore it" | Neither. Cross-vendor disagreement is signal, not authority. On approach disagreement, present both positions to CD. On plan findings, classify on evidence like any finding — uncorroborated objections that contradict recorded decisions lean DECIDE. |
+| "The deploy is part of Phase 3; it's one command" | Production work goes in a gate between phases, approved by CD, with a rollback. Gates don't count toward the 7-phase limit (`[sdlc-root]/process/production-gates.md`). |
 
 ### Session Handoff
 
@@ -807,6 +810,7 @@ The Manager Rule remains in effect per `[sdlc-root]/process/manager-rule.md` —
 ## Integration
 
 - **sdlc-execute** — The next skill in the pipeline; executes the approved plan
+- **Production gates** — `[sdlc-root]/process/production-gates.md`: production work goes in gates between phases (step 4, Production gates)
 - **Writing for CD** — `[sdlc-root]/process/writing-for-cd.md`: the Approval Briefs (steps 2a and 5b) CD approves from (steps 3 and 6), and the one-line status blocks
 - **PR description** — `[sdlc-root]/templates/pr_description_template.md` (plan variant) when the spec or plan is approved through a pull request (Output section)
 - **External Review Gate** — `[sdlc-root]/process/external-review-gate.md` § Planning Integration: when `[sdlc-root]/external-review.sh` is configured, the external reviewer joins the approach decision (step 3d) and the plan review roster (step 5)

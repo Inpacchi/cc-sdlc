@@ -77,6 +77,20 @@
 
 [Continue as needed]
 
+### Gate G1: [production work between steps; delete when the plan touches no production]
+
+> Deploys, migrations on a shared database, restarts, backups and live checks happen only in gates, never in a step. Gates don't count toward the 7-phase limit, and the plan's last item is always a step. Rules: `[sdlc-root]/process/production-gates.md`.
+
+**After:** Step 2. **Changes production:** yes | no (read-only).
+**Why here:** [why this happens between these steps]
+**Preconditions:** [what must be true first]
+**Runbook:**
+- [ ] [each step, with the exact command or operation, in order]
+**Report back:** `field`: [what it is and which step uses it]
+**Rollback:** [how to undo it, or "none: read-only"]
+
+[A `gate-ops` block naming catalog operations, only when the project has an operations catalog.]
+
 ---
 
 ## Phase Dependencies
@@ -85,8 +99,10 @@
 |-------|-----------|-------|-------------------|
 | 1 | — | [agent] | — |
 | 2 | Phase 1 | [agent] | Phase 3 |
+| G1 | Phase 2 | CD (or the production runner) | — |
+| 3 | G1 | [agent] | — |
 
-Depends On may also name another deliverable (`Phase 5, D11a`): that phase waits until the deliverable is Complete. List the deliverable in the catalog row's `Depends on` too (`[sdlc-root]/process/deliverable_lifecycle.md` § Dependencies).
+Depends On may also name another deliverable (`Phase 5, D11a`): that phase waits until the deliverable is Complete. List the deliverable in the catalog row's `Depends on` too (`[sdlc-root]/process/deliverable_lifecycle.md` § Dependencies). A gate is a row of its own; a phase that needs its results depends on it.
 
 ## Approach Comparison (Medium/Complex only)
 
