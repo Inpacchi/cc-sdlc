@@ -72,7 +72,9 @@ The factory runs in `endless-galaxy-studios/quantile` on self-hosted runners on 
    - switch `create-github-app-token`'s deprecated `app-id` to `client-id`;
    - smoke after `ubuntu-latest` moves to Ubuntu 26 (2026-10-19);
    - a Redis version floor for the Lua CVE;
-   - wire the `extractMessage` `node --test` suite into CI (needs `web/package.json`, which is CD's).
+   - wire the `extractMessage` `node --test` suite into CI (needs `web/package.json`, which is CD's);
+   - **revise has the hole Codex found in continue mode:** `factory-revise.yml` refuses only agent configuration on the PR branch, then runs `pip install` and `npm ci` from it. Apply the owned-path refusal continue mode now has (`factory-implement.yml`, gates branch);
+   - cc-sdlc: the `completion-report` mirror source in `process/writing-for-cd.md` still says "Deferred" where both execute skills say "Add-ons" and "Follow-ups" (drift since 2026-10-09). Update the source and re-copy it.
 
 ### Parked or deferred by CD
 
