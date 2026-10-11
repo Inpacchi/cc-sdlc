@@ -34,6 +34,20 @@ Each entry contains:
 
 ---
 
+## 2026-10-11: A headless run stops before its time limit, not at it
+
+**Origin:** the software factory's "work survives no stop" follow-up (`docs/current_work/ideas/software-factory_handoff.md`). quantile's D14b full-tier plan ran past its 2-hour step limit and was killed: about 2 hours of work, no result, no transcript.
+
+**What happened:** headless callers stop a run at a time limit, but nothing told the run how long it had, so it could only be killed. A killed run returns nothing: no document, no notes, no result for the caller to act on.
+
+**Changes made:**
+
+1. **`process/headless-mode.md`** — § Ending a Headless Run: a caller that kills the run at a time limit gives it a time budget (how long, and the margin to keep for stopping). The run checks the time between steps; at the margin it starts nothing new, commits what is done, and stops with the status the caller names for running out of time, with what is done and what is left in `notes`. A red flag for pushing past the margin.
+
+**Rationale:** a stop a few minutes early leaves a result the caller can resume or publish; a kill at the limit leaves nothing. The caller owns the clock and the status, so the rule only says to stop at its margin and with its status.
+
+---
+
 ## 2026-10-11: Improvement mode reads a factory digest, report-only when headless
 
 **Origin:** the software factory's phase 4, the weekly improve loop (`docs/current_work/ideas/software-factory_handoff.md` § Next build). CD decided (2026-10-10) that once a week the factory reads its own GitHub record of what CD did to its output and posts a report CD acts on: report only, every item actionable, every area covered, ranked, and tracked across weeks.

@@ -68,6 +68,8 @@ Local work is fine: writing files in the working tree, running tests and builds,
 
 **Dispatch every agent in the foreground and wait for its result.** Never use `run_in_background`, in any step, reviewers included. A headless run ends when the orchestrator's turn ends, so ending the turn to wait for a background agent ends the run, and the agent's work is lost. Run independent agents in parallel as several foreground calls in one message. Callers should also switch background launches off in the runtime (`CLAUDE_CODE_DISABLE_BACKGROUND_TASKS=1` for Claude Code), because some runtimes launch agents in the background by default.
 
+**Stop before a time limit, not at it.** A caller that kills the run at a time limit gives it a **time budget** in its prompt: how long the run has, and how much of it to keep for stopping. Note the time when the run starts (`date`) and check it between steps; a dispatched agent's work counts against the budget too. Once only the margin is left, start nothing new: finish or set aside the step in progress, commit what is done locally, and stop with the status the caller names for running out of time, putting what is done and what is left in `notes`. A run killed at the limit returns nothing, so stopping early with a result always beats running to the kill.
+
 **`failed` is for a precondition the caller must fix:** no deliverable catalog, no plan to execute, a broken environment. Give the `reason`. Crashes and exhausted turn or time limits reach the caller through its own failure path.
 
 Every headless run ends with a result, whether it stopped at a gate, failed a precondition, or finished. A skill's own closing output (a completion report, a summary) comes first; the result is always last.
@@ -132,6 +134,7 @@ Every skill carries a verbatim copy of the block below, so the stop rule is read
 | "The fix agent can restart the service; the incident is urgent" | A live-system change is an outward action. List it under `outbound`, unless the caller's prompt named it. |
 | "The subagent isn't headless, so the outward-action ban doesn't reach it" | The orchestrator tells every subagent the run is headless. The ban binds it through the dispatch prompt. |
 | "The next run can work this out again" | It starts cold. Put it in `notes`. |
+| "I'm near the time budget, but one more step will finish it" | A killed run returns nothing. At the margin, commit what is done and stop with the status the caller named. |
 | "We're at the review cap with a major open, but it's close enough" | Stop with `escalated` and the open-findings table. Never claim the loop is clean. |
 | "I'll accept the explainer offer so CD has it later" | Optional offers take the no path. |
 | "The thread already answers this, but I'll confirm" | An answered question is not a gate. Continue. The one exception is a discovery check-in the caller asked for, which comes once, after discovery. |
