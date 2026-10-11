@@ -34,6 +34,39 @@ Each entry contains:
 
 ---
 
+## 2026-10-11: Discovery check-in and headless results follow writing for CD
+
+**Origin:** the first live discovery check-in (quantile D14c, issue #48). CD asked whether it followed the writing-for-CD rules, and then asked that every surface the factory uses to reach CD does.
+
+**What happened:** The check-in question ran to about 1,150 words. It re-explained decisions CD had already approved item by item, listed implementation details CD doesn't decide, and gave each option a paragraph. The check-in rule set no budget and no filter, and `writing-for-cd.md` didn't name headless results as something CD reads, though callers post their questions, reasons and findings straight to CD.
+
+**Changes made:**
+
+1. **`process/writing-for-cd.md`** — § Where It Applies names the parts of a headless result a caller shows CD (questions, a stop's reason, findings, deferred items); `notes` keeps its detail. Length budgets add a stop's reason (1–2 sentences) and a discovery check-in (about 300 words, only what CD hasn't decided, one line per assumption and per choice). § Integration lists the check-in.
+2. **`process/headless-mode.md`** — the check-in is about 300 words: one line for what carries over from what CD approved, one line per undecided assumption with its source, one line per open choice with its recommendation and the alternative's cost. Facts go in `notes`. § Ending a Headless Run adds "Write the result for CD where CD will read it".
+3. **`skills/sdlc-plan/SKILL.md`** — the check-in block matches.
+4. **`CLAUDE-SDLC.md`** — § Writing for CD covers what a headless caller posts, and its budgets name the check-in.
+5. **`process/writing-for-cd.md`** — fixes mirror drift found by the consistency check. The Completion Report source block gets the Add-ons and Follow-ups lines that `sdlc-execute` and `sdlc-lite-execute` gained with add-ons (2026-10-09), so source and copies match again.
+
+**Rationale:** a check-in CD can't read in a minute gets skimmed, which defeats the point of asking. Headless results are the factory's main voice to CD, so they get the same budget as everything else CD reads.
+
+---
+
+## 2026-10-10: Discovery check-in — a headless spec run can confirm its basis with CD before writing
+
+**Origin:** the software factory's full-tier test (quantile D14b, issue #47), and CD's direction to have the spec stage ask its discovery questions.
+
+**What happened:** Three D14b spec runs reached discovery. One stopped with a real question (live's late 5m bars break the parity bar under Rule C). The other two settled all of discovery from D11b's records, never asked, and wrote specs that didn't address that problem. The headless DISCOVERY-GATE counts questions the records already answer, so a run with rich history never stops. That drifts from the factory's decision (F18) that the full-tier spec stage has a discovery conversation with CD.
+
+**Changes made:**
+
+1. **`process/headless-mode.md`** — § The Rule adds the **discovery check-in**, a caller option and the one exception to "ask what blocks the next step, and no more". When the caller's prompt asks for one, `sdlc-plan` stops once with `needs-input`, after the DISCOVERY-GATE and FAR gate pass and before the spec is written. The stop carries one question, "is this the right basis for the spec?", listing the assumptions with their sources and the open choices with recommendations. It is not a batch, and it happens once per deliverable. The answered-question red flag names the exception, and § Integration lists the new gate site.
+2. **`skills/sdlc-plan/SKILL.md`** — a **Discovery check-in** block as the last step before step 2, with its **Headless run:** line. The DISCOVERY-GATE's no-batching rule says the check-in isn't a batch. **Headless restart** gains a bullet (CD answered the check-in → apply it, start at step 2, never repeat it), and `notes` record whether it was asked and what CD answered.
+
+**Rationale:** confirming the assumptions costs CD one reply, while a wrong assumption found later costs a whole spec run. It's opt-in, so callers that don't want the stop keep today's behavior. This is new contract surface (a caller option in the headless contract), so it's a minor bump when CD cuts a release.
+
+---
+
 ## 2026-10-10: Production gates — fixes from the convention review
 
 **Origin:** an `sdlc-reviewer` pass over the production-gates change (the entry below), the same day.

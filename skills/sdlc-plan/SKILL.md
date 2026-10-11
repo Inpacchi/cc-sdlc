@@ -235,11 +235,12 @@ Dispatch prompts must pass through all relevant context — outcomes, constraint
 - **CD approved the spec:** if the saved spec still matches the version that was awaiting approval, set its `**Status:**` to Ready and start at step 3d. If it has changed since, stop again with `awaiting-approval`.
 - **CD gave feedback on the spec:** start at the SPEC-REVISION block in step 3.
 - **CD answered a discovery question or a FAR fail:** continue at the DISCOVERY-GATE in step 1, then the FAR gate. Findings CD accepted or discarded in the thread do not stop the run again.
+- **CD answered the discovery check-in:** apply what CD confirmed and corrected to the discovery findings and the Prior context table, then start at step 2. A correction that opens a new blocking question stops the run again with that one question. The check-in itself is never repeated.
 - **CD answered a FACTS fail:** resume at the FACTS gate in step 4. Step 5's round 1 then runs AGENT-RECONFIRM as usual.
 - **CD answered DECIDE findings or an escalated review:** resume step 5 at the recorded review round with the frozen round-1 roster. Do not re-run AGENT-RECONFIRM.
 - **CD asked for changes to the plan:** send them to the plan's writing agent, re-run review when its re-review triggers fire (step 5 at the recorded round, frozen roster), then step 5b.
 
-Never re-run finished discovery or rewrite an approved spec. Each headless stop's `notes` carry what a restart needs: the D-number, complexity, the worktree path or branch, the step-1 agent list, the plan's writing agent, the content hash (`git hash-object`) of a spec awaiting approval, the Prior context table and ADR constraints, the playbook match, and, during plan review, the round number, the frozen round-1 roster and the open-findings table (`[sdlc-root]/process/headless-mode.md` § Resuming).
+Never re-run finished discovery or rewrite an approved spec. Each headless stop's `notes` carry what a restart needs: the D-number, complexity, the worktree path or branch, the step-1 agent list, the plan's writing agent, the content hash (`git hash-object`) of a spec awaiting approval, the Prior context table and ADR constraints, the playbook match, whether the discovery check-in was asked and what CD answered, and, during plan review, the round number, the frozen round-1 roster and the open-findings table (`[sdlc-root]/process/headless-mode.md` § Resuming).
 
 ### 1. Identify Relevant Domain Agents
 
@@ -293,7 +294,7 @@ Gate: PASS | FAIL (need [N] more questions)
 
 Ask clarifying questions **one at a time** — batched questions get vague answers. Search the codebase BEFORE asking — don't ask what you can look up. Use LSP (`goToDefinition`, `findReferences`, `hover`) to verify function signatures, trace dependencies, and understand interface contracts — do not read files and infer types. Fall back to Grep for string literals and non-TypeScript content. If the gate shows FAIL, ask more questions before proceeding.
 
-**Headless run:** questions the prompt, the thread or CD's earlier answers already settle count toward the minimum; cite where each was answered. If the gate still shows FAIL, stop with status `needs-input` carrying the single most blocking question. Never mark PASS without the count, lower the minimum, or batch several questions into one stop.
+**Headless run:** questions the prompt, the thread or CD's earlier answers already settle count toward the minimum; cite where each was answered. If the gate still shows FAIL, stop with status `needs-input` carrying the single most blocking question. Never mark PASS without the count, lower the minimum, or batch several questions into one stop. The discovery check-in (below, before step 2) is not a batch: it is one question about the whole basis of the spec, asked after the gates pass.
 
 **FAR Gate (MEDIUM/COMPLEX only)** — after DISCOVERY-GATE passes, score each discovery finding using the FAR rubric in `[sdlc-root]/process/input-quality-gates.md`. This is a soft gate: present the scores and let the human decide whether to proceed, re-research, or discard low-scoring findings. When every finding passes, print one line and continue: `FAR: PASS · [N] findings · lowest: [finding] (F:x A:x R:x)`. When any fails, present the per-finding scores and wait for CD. Skip for SIMPLE complexity. **Headless run:** if every finding passes, record the scores in the result's `notes` and proceed; otherwise stop with status `needs-input` and the scores.
 
@@ -367,6 +368,15 @@ See `[sdlc-root]/process/adr-practice.md` for conventions, immutability rules, a
 Write exploration artifacts to `docs/current_work/ideas/` or `/tmp/` with descriptive names. Read the design system from `[sdlc-root]/templates/html-design-system.html` for visual tokens but use whatever JavaScript and interactivity the exploration requires — the static, stepper-only rule applies to explainers, not exploration artifacts. Offer to open them in the browser.
 
 These artifacts are optional and demand-driven — create them when the discovery reveals that a text description would be insufficient for CD to make a confident decision. Don't create interactive artifacts for simple decisions.
+
+**Discovery check-in (headless, only when the caller asks for one)** — the last step before step 2, so the DISCOVERY-GATE, FAR, CHRONICLE-CONTEXT and ADR-CONTEXT findings are all in it. Interactive runs skip it, because discovery already happened with CD, and so do headless runs whose caller didn't ask for it. **Headless run:** when the caller's prompt asks for a discovery check-in, stop with status `needs-input` and one question: is this the right basis for the spec? It runs about 300 words (`[sdlc-root]/process/writing-for-cd.md`):
+- one line naming what the spec carries over from what CD already approved (an earlier spec, a split record, an ADR, CD's answers), not restated item by item;
+- each assumption CD hasn't decided (this run's or an agent's own judgment), in one line with its source;
+- each open choice in one line: the choice, the recommendation, and what the main alternative would cost.
+
+Discovery facts and detail go in `notes`, not in the question.
+
+It is one question, not a batch. Blocking questions have already stopped the run one at a time at the DISCOVERY-GATE, and the check-in comes after the gates pass, when none is left. Ask it once per deliverable, and record it in `notes` (`[sdlc-root]/process/headless-mode.md` § The Rule).
 
 ### 2. Domain Agents Write the Spec
 

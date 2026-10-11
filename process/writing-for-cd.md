@@ -10,7 +10,8 @@ Everything addressed to CD:
 - approval briefs for specs and plans (§ Approval Briefs);
 - completion reports (`sdlc-execute` and `sdlc-lite-execute` step 5);
 - PR descriptions (`[sdlc-root]/templates/pr_description_template.md`);
-- findings CD must act on.
+- findings CD must act on;
+- the parts of a headless run's result that a caller shows CD: the questions, the reason for a stop, findings and deferred items (`[sdlc-root]/process/headless-mode.md` § Ending a Headless Run). The result's `notes` are for the next run and keep their detail.
 
 It doesn't apply to what agents work from: the body of a spec, plan or result doc, and dispatch prompts. Those keep their detail.
 
@@ -32,6 +33,8 @@ A personal output style can sit on top, for example to set how deeply terms get 
 |---|---|
 | A status update while working | 1–2 sentences |
 | A question | The decision, why it matters, and each option's consequence in a line |
+| The reason a headless run stopped | 1–2 sentences |
+| A discovery check-in (`sdlc-plan`, headless) | About 300 words: only what CD hasn't already decided, one line per assumption and per choice |
 | An end-of-turn summary | About 150 words |
 | An approval brief (spec or plan) | About 450 words |
 | A completion report or code PR description | About 500 words (a report's What you need to do and Commits come on top) |
@@ -89,7 +92,8 @@ The execution skills end with a Completion Report, shaped by the block below.
 **Scope**
 - Tackled: [what this did]
 - Not tackled: [what was deliberately skipped or left incomplete, and why]
-- Deferred: [each follow-up, as a proposed issue]
+- Add-ons: [each small fix beyond the plan, its files, and how it was verified]
+- Follow-ups: [each Follow-Up Item as `F1: title`; checked ones are filed as issues where the project does that]
 
 **Scope integrity:** No tests or CI checks weakened; touched only the planned files. — or each exception with its reason.
 
@@ -142,6 +146,7 @@ The skills carry verbatim copies of this doc's two procedures, so skipping this 
 - **Stated for every session:** `CLAUDE-SDLC.md` § Writing for CD, and the approval-by-reply exception in § Use AskUserQuestion for All Questions
 - **Approval briefs:** § Approval Briefs, mirrored into `sdlc-plan` steps 2a and 5b and `sdlc-lite-plan` step 4a, and presented in `sdlc-plan` steps 3 and 6 and `sdlc-lite-plan` step 5; the Approval Brief section of `[sdlc-root]/templates/spec_template.md`, `planning_template.md` and `sdlc_lite_plan_template.md`
 - **Completion reports:** § Completion Reports, mirrored into `sdlc-execute` and `sdlc-lite-execute` step 5
+- **Discovery check-in:** `sdlc-plan`, before step 2; `[sdlc-root]/process/headless-mode.md` § The Rule
 - **PR descriptions:** `[sdlc-root]/templates/pr_description_template.md`
 - **Status blocks with a one-line form:** VERIFICATION-GATE and the FACTS gate (`sdlc-plan`, `sdlc-lite-plan`; also `[sdlc-root]/process/input-quality-gates.md`); DISCOVERY-GATE and the FAR gate (`sdlc-plan`); PRE-GATE and POST-GATE (`sdlc-execute`, `sdlc-lite-execute`, which print REVIEW-GATE as one line); the review-round line (`[sdlc-root]/process/review-fix-loop.md` Step A)
 - **Findings tables:** `[sdlc-root]/process/finding-classification.md` § Classification Table

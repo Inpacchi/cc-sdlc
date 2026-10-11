@@ -35,6 +35,15 @@ CD-facing points come in these kinds:
 
 **Ask what blocks the next step, and no more.** Where a skill has its own pacing rule, it still holds: `sdlc-plan` discovery asks one question at a time, so a headless discovery stop carries one question.
 
+**Discovery check-in: the one exception, and only when the caller asks for it.** A caller that wants CD to confirm the basis of a spec before it is written asks for a **discovery check-in** in its prompt, in those words. `sdlc-plan` then stops once with status `needs-input`, after the DISCOVERY-GATE and the FAR gate pass and before any agent writes the spec. The stop carries one question, "is this the right basis for the spec?", in about 300 words (`[sdlc-root]/process/writing-for-cd.md`):
+- one line naming what the spec carries over from what CD already approved (an earlier spec, a split record, CD's answers), not restated item by item;
+- each assumption CD hasn't decided (the run's or an agent's own judgment), in one line with its source;
+- each open choice in one line: the choice, the recommendation, and what the main alternative would cost.
+
+Facts and detail go in `notes`.
+
+It is not a batch. Blocking questions still stop the run one at a time, and the check-in comes after the gates pass, when none is left. It happens once per deliverable, and CD's reply confirms or corrects the basis. *Why:* a headless run can settle discovery from records alone and never stop, and then a wrong assumption costs a whole spec run before CD sees it. Without the request, an answered question is still not a gate.
+
 **Work done before the stop stays.** Documents written to disk, local commits and a partial result doc are kept. Stopping is not a rollback.
 
 ## Outward Actions Go to the Caller
@@ -62,6 +71,8 @@ Local work is fine: writing files in the working tree, running tests and builds,
 **`failed` is for a precondition the caller must fix:** no deliverable catalog, no plan to execute, a broken environment. Give the `reason`. Crashes and exhausted turn or time limits reach the caller through its own failure path.
 
 Every headless run ends with a result, whether it stopped at a gate, failed a precondition, or finished. A skill's own closing output (a completion report, a summary) comes first; the result is always last.
+
+**Write the result for CD where CD will read it.** A caller posts the questions, the reason for a stop, findings and deferred items where CD reads them, so they follow `[sdlc-root]/process/writing-for-cd.md`: lead with the decision, use plain language, one line per option or item, and keep a stop's reason to 1–2 sentences. `notes` is for the next run and keeps its detail.
 
 - **If the caller passed an output schema** (`--json-schema`), that schema is the contract. Map the result onto its fields — its state or status field, its questions field — and return nothing else. The skill's own closing output still goes where the skill saves it (a result doc, for instance). Anything the schema has no field for — `notes`, `deferred`, `skipped`, `outbound` — goes into the stage's saved document under a `## Headless Result` heading, if the stage saves one. Callers running stages that can stop should give their schema those fields. When the schema has fields for a pull request's description (a `brief` object, or one field per section), fill them per `[sdlc-root]/templates/pr_description_template.md`. For a spec or plan, take them from its Approval Brief (`[sdlc-root]/process/writing-for-cd.md` § Approval Briefs) rather than writing a second brief. Never paste them from the plan body, which stays the agent's contract.
 - **Otherwise** end with this block as the final message:
@@ -123,14 +134,14 @@ Every skill carries a verbatim copy of the block below, so the stop rule is read
 | "The next run can work this out again" | It starts cold. Put it in `notes`. |
 | "We're at the review cap with a major open, but it's close enough" | Stop with `escalated` and the open-findings table. Never claim the loop is clean. |
 | "I'll accept the explainer offer so CD has it later" | Optional offers take the no path. |
-| "The thread already answers this, but I'll confirm" | An answered question is not a gate. Continue. |
+| "The thread already answers this, but I'll confirm" | An answered question is not a gate. Continue. The one exception is a discovery check-in the caller asked for, which comes once, after discovery. |
 
 ## Integration
 
 - **States it for every session:** `CLAUDE-SDLC.md` § Use AskUserQuestion for All Questions
 - **Mirrored in:** every `sdlc-*` skill (§ Mirrored Stop Rule)
 - **Gate sites with their own headless line:**
-  - `sdlc-plan`: step 0 (headless restart), the DISCOVERY-GATE, the FAR gate, step 3 (spec approval), the FACTS gate, step 6 (plan approval), § Splitting a Deliverable (split approval), and the Output section
+  - `sdlc-plan`: step 0 (headless restart), the DISCOVERY-GATE, the FAR gate, the discovery check-in (when the caller asks for one), step 3 (spec approval), the FACTS gate, step 6 (plan approval), § Splitting a Deliverable (split approval), and the Output section
   - `sdlc-lite-plan`: step 0 (headless restart), the FACTS gate, step 5 (plan approval), and the Output section
   - `sdlc-execute`: step 0 (headless restart; no plan → `failed`; an unfinished prerequisite gating the next phase → `needs-input`; a production gate → `awaiting-approval` after the review and commit before it), phase triage, step 4's push and pull request, and step 5's Completion Report
   - `sdlc-lite-execute`: step 0 (headless restart; no plan → `failed`; an unfinished prerequisite gating the next phase → `needs-input`; a production gate → `awaiting-approval` after the review and commit before it), phase triage, and step 5's Completion Report

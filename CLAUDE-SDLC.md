@@ -174,11 +174,11 @@ When dispatching domain agents for phases that involve external library integrat
 
 ## Writing for CD
 
-Everything addressed to CD follows `[sdlc-root]/process/writing-for-cd.md`: status updates, questions, summaries, approval briefs, completion reports and PR descriptions.
+Everything addressed to CD follows `[sdlc-root]/process/writing-for-cd.md`: status updates, questions, summaries, approval briefs, completion reports, PR descriptions, and what a headless run's caller posts for CD.
 - **Lead with what CD needs** to decide, know or do. Background comes after, if at all.
 - **Plain language.** Define a term or leave it out. Internal labels (gate names, DECIDE, deliverable numbers) never carry a sentence on their own.
 - **Say each thing once.** Show evidence, not claims. Say where you're unsure. Don't invent.
-- **Budgets:** a status update in 1–2 sentences, an end-of-turn summary in about 150 words, an approval brief in about 450, a completion report in about 500.
+- **Budgets:** a status update in 1–2 sentences, an end-of-turn summary in about 150 words, a discovery check-in in about 300, an approval brief in about 450, a completion report in about 500.
 - **Status blocks are one line on the happy path.** The full block appears only when a check fails or CD must act.
 - **CD approves a spec or plan from its Approval Brief,** shown verbatim with the document's path.
 
