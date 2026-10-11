@@ -28,6 +28,7 @@ Some files in the cc-sdlc source are **templates** that become project-specific 
 | `process/agent-selection.yaml` | Project's agent roster and dispatch rules — contains project-specific agent names |
 | `knowledge/agent-context-map.yaml` | Project's agent-to-knowledge mappings — already protected in §3.3 |
 | `knowledge/provenance_log.md` | Project's knowledge provenance records — append-only log of ingestions and research handoffs |
+| `process/sdlc_changelog.md` | Project's record of process changes — its own entries and the migrations it applied. Migration prepends an entry for itself (`sdlc-migrate` §4.5b) and never copies cc-sdlc's file over it; framework history is read from the source repo (§1.2) |
 
 Framework files may contain canonical agent names (e.g., `frontend-developer`) in examples. These are illustrative — they don't affect dispatch behavior. The project's actual agents in `.claude/agents/` and `agent-context-map.yaml` define what gets dispatched.
 

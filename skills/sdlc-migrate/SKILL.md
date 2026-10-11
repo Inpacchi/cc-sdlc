@@ -211,6 +211,8 @@ if current_hash != installed_hash:
     - DRIFTED-ORPHAN:   project edited, file removed/moved in upstream
 ```
 
+**Project-owned files are not drift.** Skip every file on the never-overwrite list (`[sdlc-root]/process/path-mappings.md` § Project-Specific Files): the project edits them by design, and migration never overwrites them, so a changed hash there needs no decision.
+
 **Drift categories and defaults:**
 
 | Category | Meaning | Gate Action |
@@ -240,7 +242,8 @@ Group the changed cc-sdlc files by migration strategy:
 | **Agent template** | `templates/agent-template.md` | Direct copy to `[sdlc-root]/templates/` (no project customizations) |
 | **Audit skill** | `skills/sdlc-audit/SKILL.md` + `references/` | Content-merge: update audit methodology, preserve project-specific additions |
 | **Knowledge YAMLs** | `knowledge/**/*.yaml` | Key-level merge: add new upstream keys, preserve project additions (§2.1b). Check for moved/deleted files (§2.1a) |
-| **Process docs** | `process/*.md` | Direct copy (framework-level) |
+| **Process docs** | `process/*.md` | Direct copy (framework-level), except the changelog (next row) |
+| **Process changelog** | `process/sdlc_changelog.md` | Never overwrite — the project's record of its own process changes. Migration prepends one entry for itself (§4.5b) |
 | **Disciplines** | `disciplines/*.md` | Content-merge: update framework guidance, preserve project parking lot entries |
 | **Context map** | `knowledge/agent-context-map.yaml` | Never overwrite — project has its own agent names. Update paths for moved/deleted files (§3.3) |
 | **Provenance log** | `knowledge/provenance_log.md` | Never overwrite — project's append-only ingestion/research records |
@@ -330,11 +333,11 @@ Before any file copying, compute the **effective install set** for this project 
 
 ### 2.1 Direct Copy Files
 
-**Step 0 — Load exclusion list before any writes.** Read `[sdlc-root]/process/path-mappings.md` § "Project-Specific Files (Never Overwrite)". For every file about to be written in this phase, confirm it does NOT appear on that list. If it does, skip it — no exceptions, no "I'll just update the header" rationalizations. Current exclusions: `agent-selection.yaml`, `agent-context-map.yaml`, `provenance_log.md`.
+**Step 0 — Load exclusion list before any writes.** Read `[sdlc-root]/process/path-mappings.md` § "Project-Specific Files (Never Overwrite)". For every file about to be written in this phase, confirm it does NOT appear on that list. If it does, skip it — no exceptions, no "I'll just update the header" rationalizations. Current exclusions: `agent-selection.yaml`, `agent-context-map.yaml`, `provenance_log.md`, `sdlc_changelog.md`.
 
 For files with no project customizations, copy directly from cc-sdlc to the project's `[sdlc-root]/` directory:
 
-- `process/*.md` (excluding `agent-selection.yaml` — project-specific, protected by Step 0)
+- `process/*.md` (excluding `agent-selection.yaml` and `sdlc_changelog.md` — project-specific, protected by Step 0)
 - `knowledge/**/*.yaml` (but NOT `agent-context-map.yaml`)
 - `knowledge/README.md` (to `[sdlc-root]/knowledge/`) — NOT `knowledge/provenance_log.md`; that's project-specific (see "Project-Specific Files")
 - `README.md` (to `[sdlc-root]/`)
@@ -973,6 +976,18 @@ For each `catalog_column_added` entry in pending_changes, update the project's `
 3. If the entry has a `note` and the file has a `## Notes` section, append the note as a bullet there unless an equivalent bullet already exists.
 4. Show CD the diff of `docs/_index.md` with the migration summary. It is project content, so it's never overwritten wholesale. Run this before §4.5 step 5, so a failure leaves `last_applied_contract_id` where it was.
 
+### 4.5b Record the Migration in the Project Changelog
+
+The project's changelog is its own record (§1.3, never overwritten), so the migration records itself there. Prepend one entry above the newest one, in the file's format:
+
+- **Title:** `## YYYY-MM-DD: Migrated to cc-sdlc vX.Y.Z (from vA.B.C)`
+- **Origin:** the migration, and who ran it.
+- **What happened:** one or two sentences: what kind of release it was (fixes, new capabilities, contract changes).
+- **Changes made:** the titles of the upstream changelog entries applied (from §1.2), each one line, and what the project decided: drift resolutions, bundles accepted or declined, PROJECT-SECTION reviews, files removed.
+- **Rationale:** omit unless the project made a choice worth explaining.
+
+Never copy upstream entries into the project's changelog: the source repo's changelog at the target tag is the full framework history (§1.2 reads it there).
+
 ### 4.6 Report to User
 
 ```markdown
@@ -1022,6 +1037,7 @@ For each `catalog_column_added` entry in pending_changes, update the project's `
 - Discipline parking lot entries and triage markers
 - Process Maturity Tracker (project-assessed levels, not source repo levels)
 - Agent-context-map agent names and project-specific mappings
+- The project's process changelog (one migration entry prepended, §4.5b)
 - Project agent domain content (scope, principles, workflow, anti-rationalization)
 - Knowledge file project additions (project-specific keys preserved via key-level merge)
 - Knowledge file `spec_relevant` project overrides (true values preserved)

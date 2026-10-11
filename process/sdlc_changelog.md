@@ -34,6 +34,21 @@ Each entry contains:
 
 ---
 
+## 2026-10-11: Migration never overwrites a project's changelog
+
+**Origin:** sizing the changelog for archiving (CD asked for it to be archived, 2026-10-11). Every project's changelog turned out to be a full copy of cc-sdlc's history plus its own entries (quantile: all 199 cc-sdlc entries from March to May, and 54 entries of its own).
+
+**What happened:** `sdlc-migrate` treated `process/sdlc_changelog.md` like any other process doc: a direct copy from upstream. Drift detection caught the project's edits, so on a tracked install every migration raised a hard three-way prompt over a file every project edits by design; on an install from before `installed_files`, the first migration had no drift data and would have copied over the project's own entries.
+
+**Changes made:**
+
+1. **`process/path-mappings.md`** — `process/sdlc_changelog.md` joins the Project-Specific Files (Never Overwrite) list.
+2. **`skills/sdlc-migrate/SKILL.md`** — the changelog is excluded from direct copies (§1.3's table, §2.1's Step 0 and list); drift detection skips every never-overwrite file, since their edits are expected; new §4.5b prepends one entry recording the migration (version, the upstream entries applied, the project's decisions) instead of copying upstream entries; § Preserved lists it.
+
+**Rationale:** the project's changelog is the project's record; the framework's history already lives in cc-sdlc, where §1.2 reads it. Archiving old entries (CD's decision) is a separate, larger design, in `docs/current_work/ideas/changelog-archiving_design.md`.
+
+---
+
 ## 2026-10-11: A headless run stops before its time limit, not at it
 
 **Origin:** the software factory's "work survives no stop" follow-up (`docs/current_work/ideas/software-factory_handoff.md`). quantile's D14b full-tier plan ran past its 2-hour step limit and was killed: about 2 hours of work, no result, no transcript.
