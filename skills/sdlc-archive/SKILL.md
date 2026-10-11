@@ -3,12 +3,13 @@ name: sdlc-archive
 description: >
   Archive completed deliverables and resolved idea briefs from `docs/current_work/` to
   `docs/chronicle/`. Only deliverables in the Complete state are eligible — verify `**Status:**`
-  marker before moving. Idea briefs, bug reports, handoffs, and lite deliverables are also handled.
+  marker before moving. Idea briefs, bug reports, handoffs, and lite deliverables are also handled,
+  and old process-changelog entries move to quarterly archive files once the changelog passes about 150 KB.
   Use when a deliverable is complete or an idea brief is resolved and needs to move from active work to the chronicle.
   Triggers on "let's organize the chronicles", "archive completed deliverables",
   "move to chronicle", "archive deliverable", "reconcile our recent work",
   "let's catalog our ad hoc work", "let's catch up the docs", "let's rejoin the process",
-  "/sdlc-archive".
+  "archive the changelog", "/sdlc-archive".
   Do NOT use for deliverables still In Progress or Validated — they stay in current_work until Complete.
   Do NOT use for restructuring or deleting chronicle entries — archive is one-way.
 ---
@@ -59,6 +60,14 @@ Perform a single exhaustive scan across ALL artifact types in `docs/current_work
 For EACH artifact found:
 1. Read its content and frontmatter (status field, problem statement, outcome)
 2. Check its entry in `docs/_index.md` — record the catalog status for cross-checking in step 2
+
+**The process changelog.** Also run the changelog script in dry-run mode and record what it would move:
+
+```bash
+python3 .claude/skills/sdlc-archive/scripts/changelog_archive.py archive [sdlc-root]/process/sdlc_changelog.md --dry-run
+```
+
+It proposes a move only when the changelog is over about 150 KB, and then only entries dated before the previous calendar quarter.
 
 If a type yields zero results for a given pattern, also try broader globs (e.g., `docs/current_work/ideas/*bug*`, `docs/current_work/ideas/*handoff*`) to catch naming variations.
 
@@ -115,6 +124,7 @@ Archive & cleanup plan — {N} items to archive, {M} to delete, {K} skipped (act
 | stale_bug-report | bug report | fixed in commit abc123 | — | Delete |
 | api_handoff | handoff | fully acted on | — | Delete |
 | D18 — New Feature | full deliverable | no result file yet | — | Skip |
+| Process changelog | 2026-Q1, 2026-Q2 (203 entries) | 644 KB, over 150 KB | changelog-archive/ | Archive |
 ```
 
 If catalog inconsistencies were found in step 2, append a **Catalog Fixes** section:
@@ -191,6 +201,16 @@ For each approved idea brief, bug report, or handoff marked for archival:
 
 Remove all artifacts marked for deletion in step 4. This includes stale bug reports, resolved handoffs, and duplicates.
 
+### 8a. Archive Old Changelog Entries
+
+If CD approved the changelog row, run the script without `--dry-run`:
+
+```bash
+python3 .claude/skills/sdlc-archive/scripts/changelog_archive.py archive [sdlc-root]/process/sdlc_changelog.md
+```
+
+It moves each whole quarter older than the previous one to `[sdlc-root]/process/changelog-archive/YYYY-Qn.md`, unedited and in its order, adds one pointer line to the changelog, and writes nothing unless every entry is still present exactly once across the files. Exit 2 means it refused: report its message and leave the files as they are. Never move entries by hand.
+
 ### 9. Knowledge Hygiene
 
 Archival is a natural triage checkpoint for parking lot entries generated during the work being archived. This is NOT discipline capture (no new insights are generated) — it closes the loop on entries that were captured during the original work sessions.
@@ -249,6 +269,7 @@ Commit with message format: `docs: archive DXX-DYY into chronicles`
 Include artifact types in the message when relevant:
 - `docs: archive DXX-DYY + idea briefs into chronicles`
 - `docs: archive DXX-DYY + lite deliverables + idea briefs, fix catalog`
+- `docs: archive DXX-DYY + changelog 2026-Q1..Q2`
 
 Ask for confirmation before committing.
 
@@ -264,10 +285,11 @@ Ask for confirmation before committing.
 | "No parking lot entries to triage, skip step 9" | Still check idea brief insights for missing coverage (step 9b). But if both 9a and 9b are clean, skip the triage table — don't fabricate work. |
 | "I'll ask the user at each step" | ONE AskUserQuestion in step 4. After approval, execute autonomously. Knowledge hygiene gets a second gate only if >3 ambiguous entries exist. |
 | "Lite deliverables go through the same path as full" | Lite deliverables may only have a result file — don't fail on missing spec/plan. Archive what exists. |
+| "I'll move the old changelog entries by hand" | Run the script. It moves entries unedited and checks none is lost or doubled; a hand move can drop or alter one. |
 | "Bug reports should always be archived" | Stale, duplicate, or fully-resolved bug reports can be deleted. Only archive bugs with valuable diagnostic context. |
 
 ## Integration
 - **Feeds into:** `sdlc-status` (chronicle is the source of truth for completed work), `sdlc-reflect` (archived deliverables inform retrospectives)
-- **Uses:** `[sdlc-root]/process/chronicle_organization.md`, `[sdlc-root]/process/ad_hoc_reconciliation.md` (Step 0), `[sdlc-root]/process/deliverable_lifecycle.md`, `docs/current_work/`, `docs/_index.md`, `[sdlc-root]/disciplines/*.md`
+- **Uses:** `[sdlc-root]/process/chronicle_organization.md`, `[sdlc-root]/process/ad_hoc_reconciliation.md` (Step 0), `[sdlc-root]/process/deliverable_lifecycle.md`, `docs/current_work/`, `docs/_index.md`, `[sdlc-root]/disciplines/*.md`, `scripts/changelog_archive.py` (Steps 1 and 8a; `sdlc-migrate` §4.5c runs it too)
 - **Complements:** `sdlc-status` (identifies archivable work), `sdlc-idea` (produces idea briefs that archive triages)
 - **Does NOT replace:** `sdlc-ingest` (knowledge capture — archive only triages existing parking lot entries, does not create new ones)

@@ -1,0 +1,38 @@
+name: Changelog archive check
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - 'process/sdlc_changelog.md'
+      - 'process/changelog-archive/**'
+      - 'skills/sdlc-archive/scripts/**'
+      - 'tests/**'
+      - '.github/workflows/changelog.yml'
+  pull_request:
+    paths:
+      - 'process/sdlc_changelog.md'
+      - 'process/changelog-archive/**'
+      - 'skills/sdlc-archive/scripts/**'
+      - 'tests/**'
+      - '.github/workflows/changelog.yml'
+  schedule:
+    - cron: '17 6 1 1,4,7,10 *'  # each quarter's first day: a quarter may have become archivable
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Test the archive script
+        run: python3 -m unittest discover -s tests -v
+
+      - name: Check the changelog
+        # Fails when the changelog is over about 150 KB and holds a quarter older than the
+        # previous one; the message names the command to run. CI never archives by itself.
+        run: python3 skills/sdlc-archive/scripts/changelog_archive.py check process/sdlc_changelog.md

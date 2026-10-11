@@ -345,3 +345,25 @@ changes:
       rows by position must find columns by header name. The factory's
       claim job matches only the ID cell (`^\| *\[?D[0-9]+`), so it is
       unaffected. Adapter action: none; no knowledge-layer phrasing changes.
+
+  - id: "0017"
+    date: "2026-10-11"
+    title: "Project changelogs are project-only and archived by quarter"
+    type: other
+    changelog_ref: "2026-10-11: Changelog archiving: project-only changelogs, quarterly archive files"
+    notes: >
+      Non-optional; a major release (CD's decision, 2026-10-11). Every
+      migration from this version on runs
+      .claude/skills/sdlc-archive/scripts/changelog_archive.py on the
+      project's changelog (sdlc-migrate §4.5c), without asking: entries
+      copied from cc-sdlc (heading matches one in cc-sdlc's changelog or
+      archive at the target tag) move unedited to
+      [sdlc-root]/process/changelog-archive/YYYY-Qn.md whatever their date;
+      the project's own entries move there once the file passes about
+      150 KB, those dated before the previous calendar quarter. New installs get
+      the changelog's header and one install entry, not cc-sdlc's history.
+      cc-sdlc's own process/changelog-archive/ is never installed; §1.2
+      reads it from the source. First non-Markdown skill file
+      (skills/sdlc-archive/scripts/), direct-copied, never content-merged.
+      Adapter action: exempt process/changelog-archive/*.md from
+      transformation, like process/sdlc_changelog.md.

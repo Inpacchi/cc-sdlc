@@ -173,7 +173,7 @@ If `source_version` is `"unknown"` or missing, treat this as a **full migration*
 
 **Before categorizing or applying anything**, read the changelog entries since the project's source version.
 
-Read `process/sdlc_changelog.md` from the cc-sdlc source repo (via `git -C [cc-sdlc-path] show [target_tag]:process/sdlc_changelog.md`), stopping when you reach entries older than the project's `source_version` date. This is the migration's release notes — it surfaces:
+Read `process/sdlc_changelog.md` from the cc-sdlc source repo (via `git -C [cc-sdlc-path] show [target_tag]:process/sdlc_changelog.md`), stopping when you reach entries older than the project's `source_version` date. When the project's version is older than the file's oldest entry, keep reading in `process/changelog-archive/` at the same tag, newest quarter first (`git -C [cc-sdlc-path] ls-tree --name-only [target_tag] process/changelog-archive/`, then `git show` each `YYYY-Qn.md`). A tag from before archiving has no archive; its changelog holds everything. This is the migration's release notes — it surfaces:
 
 - **Breaking changes** — renamed concepts, moved files, added structural markers, changed conventions
 - **New capabilities** — new knowledge files, new disciplines, new agent roles the project may want
@@ -229,7 +229,7 @@ Surface drifted files in the §1.3 change manifest with a `⚠ DRIFT` marker so 
 
 If `.sdlc-manifest.json` lacks an `installed_files` field:
 1. Log: "Drift detection unavailable — manifest predates installed_files field"
-2. Back-fill: hash each file listed in `skeleton/manifest.json` source_files at its installed path, record to `installed_files` with `installed_at: "backfilled-{CURRENT_VERSION}"`
+2. Back-fill: hash each file listed in `skeleton/manifest.json` source_files at its installed path, except the never-overwrite files (`[sdlc-root]/process/path-mappings.md` § Project-Specific Files), record to `installed_files` with `installed_at: "backfilled-{CURRENT_VERSION}"`
 3. Proceed without drift analysis for this migration — it becomes available starting with the next migration
 
 ### 1.3 Categorize Changes
@@ -239,11 +239,13 @@ Group the changed cc-sdlc files by migration strategy:
 | File Type | Location | Strategy |
 |-----------|----------|----------|
 | **Skills** | `skills/*/SKILL.md` | Content-merge: update framework sections, preserve project customizations |
+| **Skill scripts** | `skills/*/scripts/*` (manifest-listed) | Direct copy to `.claude/skills/*/scripts/`; never content-merged |
 | **Agent template** | `templates/agent-template.md` | Direct copy to `[sdlc-root]/templates/` (no project customizations) |
 | **Audit skill** | `skills/sdlc-audit/SKILL.md` + `references/` | Content-merge: update audit methodology, preserve project-specific additions |
 | **Knowledge YAMLs** | `knowledge/**/*.yaml` | Key-level merge: add new upstream keys, preserve project additions (§2.1b). Check for moved/deleted files (§2.1a) |
 | **Process docs** | `process/*.md` | Direct copy (framework-level), except the changelog (next row) |
 | **Process changelog** | `process/sdlc_changelog.md` | Never overwrite — the project's record of its own process changes. Migration prepends one entry for itself (§4.5b) |
+| **Changelog archive** | `process/changelog-archive/` | Not installed: cc-sdlc's archive is its own history (§1.2 reads it). The project's archive is never overwritten; §4.5c adds to it |
 | **Disciplines** | `disciplines/*.md` | Content-merge: update framework guidance, preserve project parking lot entries |
 | **Context map** | `knowledge/agent-context-map.yaml` | Never overwrite — project has its own agent names. Update paths for moved/deleted files (§3.3) |
 | **Provenance log** | `knowledge/provenance_log.md` | Never overwrite — project's append-only ingestion/research records |
@@ -333,11 +335,12 @@ Before any file copying, compute the **effective install set** for this project 
 
 ### 2.1 Direct Copy Files
 
-**Step 0 — Load exclusion list before any writes.** Read `[sdlc-root]/process/path-mappings.md` § "Project-Specific Files (Never Overwrite)". For every file about to be written in this phase, confirm it does NOT appear on that list. If it does, skip it — no exceptions, no "I'll just update the header" rationalizations. Current exclusions: `agent-selection.yaml`, `agent-context-map.yaml`, `provenance_log.md`, `sdlc_changelog.md`.
+**Step 0 — Load exclusion list before any writes.** Read `[sdlc-root]/process/path-mappings.md` § "Project-Specific Files (Never Overwrite)". For every file about to be written in this phase, confirm it does NOT appear on that list. If it does, skip it — no exceptions, no "I'll just update the header" rationalizations. Current exclusions: `agent-selection.yaml`, `agent-context-map.yaml`, `provenance_log.md`, `sdlc_changelog.md`, `process/changelog-archive/`.
 
 For files with no project customizations, copy directly from cc-sdlc to the project's `[sdlc-root]/` directory:
 
-- `process/*.md` (excluding `agent-selection.yaml` and `sdlc_changelog.md` — project-specific, protected by Step 0)
+- `process/*.md`, top level only (excluding `agent-selection.yaml` and `sdlc_changelog.md` — project-specific, protected by Step 0). Never copy `process/changelog-archive/`: it's cc-sdlc's history
+- `skills/*/scripts/*` (manifest-listed) → `.claude/skills/*/scripts/`
 - `knowledge/**/*.yaml` (but NOT `agent-context-map.yaml`)
 - `knowledge/README.md` (to `[sdlc-root]/knowledge/`) — NOT `knowledge/provenance_log.md`; that's project-specific (see "Project-Specific Files")
 - `README.md` (to `[sdlc-root]/`)
@@ -438,6 +441,8 @@ Check the cc-sdlc changelog for files that were **deleted, moved, or renamed** s
    ```bash
    git -C [cc-sdlc-path] diff --name-status [source_version]..[target_tag] | grep -E '^[DR]'
    ```
+
+   Ignore paths under `process/changelog-archive/`: cc-sdlc's archive is never installed, so nothing of it is in the project to remove or move.
 
 2. For each deleted file: remove it from the downstream project's `[sdlc-root]/` directory.
 
@@ -940,7 +945,7 @@ After migration, update `.sdlc-manifest.json`:
 1. **Update `source_version`** to the target release tag (e.g., `v1.4.0`). Also set `source_version_sha` to the tag's commit hash for precise diff resolution.
 2. **Add missing fields** if the manifest predates this migration:
    - `sdlc_root`: set to `[sdlc-root]` detected in pre-flight
-   - `installed_files`: back-fill if absent (hash every file in `skeleton/manifest.json` source_files **plus every installed bundle's `skills` and `process` files** at its installed path; mark `installed_at: "backfilled-{CURRENT_VERSION}"`)
+   - `installed_files`: back-fill if absent (hash every file in `skeleton/manifest.json` source_files **plus every installed bundle's `skills` and `process` files** at its installed path, except the never-overwrite files; mark `installed_at: "backfilled-{CURRENT_VERSION}"`)
    - `installed_bundles`: back-fill from the §2.0a detection result (empty array if no bundles detected)
    - `last_applied_contract_id`: if absent, back-fill to `"0000"` before consuming pending_changes; if already set, leave untouched until step 5 below
    - **Any field added by a `manifest_field_added` contract entry in pending_changes** — apply its `default` value
@@ -988,6 +993,24 @@ The project's changelog is its own record (§1.3, never overwritten), so the mig
 
 Never copy upstream entries into the project's changelog: the source repo's changelog at the target tag is the full framework history (§1.2 reads it there).
 
+### 4.5c Archive the Project Changelog
+
+After §4.5b's entry is in, run the archive script the migration just installed (§2.1), giving it cc-sdlc's changelog and archive files at the target tag:
+
+```bash
+{ git -C [cc-sdlc-path] show [target_tag]:process/sdlc_changelog.md
+  for f in $(git -C [cc-sdlc-path] ls-tree --name-only [target_tag] process/changelog-archive/); do
+    git -C [cc-sdlc-path] show "[target_tag]:$f"
+  done
+} | python3 .claude/skills/sdlc-archive/scripts/changelog_archive.py archive [sdlc-root]/process/sdlc_changelog.md --upstream -
+```
+
+Two kinds of entry move, unedited and in their order, to `[sdlc-root]/process/changelog-archive/YYYY-Qn.md`, and the changelog gets one pointer line:
+- **Entries copied from cc-sdlc** (older installs and migrations copied them; a `## YYYY-MM-DD: Title` line that matches one upstream), whatever their date and the file's size: the project's changelog holds only its own entries (CD, 2026-10-11).
+- **The project's own entries** dated before the previous calendar quarter, once the file is over about 150 KB.
+
+This is automatic (contract 0017): don't ask CD. Exit 2 means the files didn't parse or an entry appears twice, and nothing was written: report it and leave the changelog as it is. Put the counts it prints in §4.6's report. If an adapter declares `post-file-write`, don't run it on the archive files (hard exclusions).
+
 ### 4.6 Report to User
 
 ```markdown
@@ -1018,6 +1041,7 @@ Never copy upstream entries into the project's changelog: the source repo's chan
 - Auditor updated: yes/no
 - Plugin setup guides added: N [list new plugin setup files — recommend installation to user]
 - CLAUDE-SDLC.md merged into CLAUDE.md: yes/no/not needed
+- Changelog archived: N entries moved to `changelog-archive/` [list quarter files], changelog now N KB / not needed (under 150 KB or nothing older than the previous quarter)
 
 ### Legacy Cleanup
 - Standalone CLAUDE-SDLC.md removed: yes/no/not present
@@ -1037,7 +1061,7 @@ Never copy upstream entries into the project's changelog: the source repo's chan
 - Discipline parking lot entries and triage markers
 - Process Maturity Tracker (project-assessed levels, not source repo levels)
 - Agent-context-map agent names and project-specific mappings
-- The project's process changelog (one migration entry prepended, §4.5b)
+- The project's process changelog (one migration entry prepended, §4.5b; old quarters archived unedited, §4.5c)
 - Project agent domain content (scope, principles, workflow, anti-rationalization)
 - Knowledge file project additions (project-specific keys preserved via key-level merge)
 - Knowledge file `spec_relevant` project overrides (true values preserved)
@@ -1108,7 +1132,7 @@ Common anti-patterns and their corrections (20 entries covering direct-copy temp
 
 - **Feeds into:** `sdlc-audit` skill (post-migration compliance audit)
 - **Depends on:** cc-sdlc source repo (reads via git), `.sdlc-manifest.json` (version tracking)
-- **Uses:** `AskUserQuestion` (changelog review gate, user confirmation), `[sdlc-root]/process/adapter-lifecycle-protocol.md` (when adapter declared)
+- **Uses:** `AskUserQuestion` (changelog review gate, user confirmation), `[sdlc-root]/process/adapter-lifecycle-protocol.md` (when adapter declared), `.claude/skills/sdlc-archive/scripts/changelog_archive.py` (§4.5c)
 - **Related:** `sdlc-initialize` (first-time setup — use that, not this, for new projects)
 
 ## Migration vs Initialization

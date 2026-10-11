@@ -98,7 +98,7 @@ Do not cut or push tags without CD's explicit request.
 # Validate JSON
 python3 -c "import json; json.load(open('skeleton/manifest.json'))"
 ```
-- Glob `skills/*/SKILL.md`, `skills/*/references/*.md`, `agents/*.md`, `knowledge/**/*.yaml`, `knowledge/**/*.d2`, `process/*.md`, `templates/*.md`, `disciplines/*.md`, `plugins/*.md`, `playbooks/*.md`, `bundles/*/fragments/*.md`
+- Glob `skills/*/SKILL.md`, `skills/*/references/*.md`, `skills/*/scripts/*.py`, `agents/*.md`, `knowledge/**/*.yaml`, `knowledge/**/*.d2`, `process/*.md`, `templates/*.md`, `disciplines/*.md`, `plugins/*.md`, `playbooks/*.md`, `bundles/*/fragments/*.md`
 - Compare against manifest `source_files` entries **and `bundles` entries** (bundle skills/process/fragments are listed under `manifest.bundles`, not `source_files`). Report any file on disk not in manifest, or manifest entry without a file.
 
 **2. Stale reference scan** — Grep for old/removed names across the codebase:

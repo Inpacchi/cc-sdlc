@@ -164,7 +164,7 @@ This eliminates the materialization round-trip. No flat files are created, diffe
 ## post-file-write
 Applies to: `[sdlc-root]/**/*.md`, `.claude/agents/*.md`, `.claude/skills/*/SKILL.md`
 Skip: `[sdlc-root]/knowledge/**/*.yaml` (handled by knowledge-update)
-Hard exclusions: process/knowledge-routing.md, process/sdlc_changelog.md, agents/sdlc-reviewer.md, agents/sdlc-compliance-auditor.md
+Hard exclusions: process/knowledge-routing.md, process/sdlc_changelog.md, process/changelog-archive/*.md, agents/sdlc-reviewer.md, agents/sdlc-compliance-auditor.md
 ```
 
 Files not matching the filter are written by upstream with no adapter callout.

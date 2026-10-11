@@ -78,7 +78,7 @@ Grep across the entire codebase for references to old, removed, or renamed conce
 - Any recently renamed or removed agent names
 - References to old directory structures or file paths
 
-**Scope:** All `.md` and `.yaml` files in tracked directories. Exclude `process/sdlc_changelog.md` (changelog entries legitimately reference old names).
+**Scope:** All `.md` and `.yaml` files in tracked directories. Exclude `process/sdlc_changelog.md` and `process/changelog-archive/` (changelog entries legitimately reference old names).
 
 **Method:** Maintain a list of known renames/removals (check recent changelog entries for renames). Grep for each old name. Report any hits outside the changelog.
 

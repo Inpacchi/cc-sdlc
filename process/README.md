@@ -28,3 +28,4 @@ Workflow rules, behavioral protocols, and process definitions. Skills reference 
 | File | Purpose |
 |------|---------|
 | `sdlc_changelog.md` | Living record of process changes — what changed, why, and where the change originated |
+| `changelog-archive/` | Older changelog entries, one file per quarter (`YYYY-Qn.md`), moved there unedited once the changelog passes about 150 KB (`sdlc-archive`) |

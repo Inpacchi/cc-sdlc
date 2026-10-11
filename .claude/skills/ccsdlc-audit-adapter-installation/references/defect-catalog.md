@@ -104,7 +104,7 @@ Canonical phrases stayed untransformed. The rule either doesn't exist in the plu
 
 ```bash
 grep -rn '\[sdlc-root\]/\(knowledge\|disciplines\)/' <target>/.claude/ 2>/dev/null \
-  | grep -vE 'sdlc_changelog|knowledge-routing|sdlc-reviewer\.md|sdlc-compliance-auditor\.md|CLAUDE-SDLC\.md|provenance_log\.md'
+  | grep -vE 'sdlc_changelog|changelog-archive/|knowledge-routing|sdlc-reviewer\.md|sdlc-compliance-auditor\.md|CLAUDE-SDLC\.md|provenance_log\.md'
 ```
 
 Each hit needs per-line classification (see `classification-framework.md`).
@@ -150,7 +150,7 @@ Pass 2 of the plugin transformer (added in 0.4.0) translates file-mode concept t
 **Detection grep (Scan 3b in `SKILL.md`):**
 ```bash
 grep -rnE '\bknowledge files\b|\bdiscipline files\b|\bparking lot entr|\bknowledge stores\b|\bDiscipline parking lots\b|\bKnowledge YAMLs?\b|\bYAML knowledge files\b|\bagent-context-map\b' <target>/.claude/ 2>/dev/null \
-  | grep -vE 'sdlc_changelog|knowledge-routing|sdlc-reviewer\.md|sdlc-compliance-auditor\.md|CLAUDE-SDLC\.md|provenance_log\.md|agent-memory/'
+  | grep -vE 'sdlc_changelog|changelog-archive/|knowledge-routing|sdlc-reviewer\.md|sdlc-compliance-auditor\.md|CLAUDE-SDLC\.md|provenance_log\.md|agent-memory/'
 ```
 
 **Per-hit classification — context guards matter:** not every match is a regression. Some legitimate retentions:
@@ -194,6 +194,7 @@ These files must be copied verbatim from cc-sdlc source — zero transformation.
 **Exempt files (Neuroloom):**
 - `process/knowledge-routing.md` — the phrasing contract itself
 - `process/sdlc_changelog.md` — historical record
+- `process/changelog-archive/*.md` — historical record (the project's archived entries)
 - `agents/sdlc-reviewer.md` — reviewer's phrases-to-detect list
 - `agents/sdlc-compliance-auditor.md` — auditor's validation criteria
 - `CLAUDE-SDLC.md` — framework documentation

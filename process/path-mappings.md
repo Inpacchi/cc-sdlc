@@ -13,11 +13,13 @@ Throughout this migration, apply these transformations when copying or merging c
 | `playbooks/` | `[sdlc-root]/playbooks/` |
 | `examples/` | `[sdlc-root]/examples/` |
 | `agents/` | `.claude/agents/` (always — Claude Code requires this location) |
-| `skills/` | `.claude/skills/` (always — Claude Code requires this location) |
+| `skills/` | `.claude/skills/` (always — Claude Code requires this location), including a skill's `references/` and `scripts/` |
 
 **Not installed to child projects:**
 - `templates/optional/` — Conditional CLAUDE.md appendices (e.g., `data-pipeline-integrity.md`). Read from cc-sdlc source during initialization when needed, not installed.
 - `CLAUDE-SDLC.md` — Content is merged into the project's `CLAUDE.md` during initialization. No separate file is maintained.
+- `process/changelog-archive/` — cc-sdlc's own archived changelog entries: history, not framework content. Migration reads them from the source (`sdlc-migrate` §1.2); a project's own archive is written in the project.
+- `process/sdlc_changelog.md`'s entries — a new project's changelog is the file's header plus one install entry (`sdlc-initialize` Phase 1b), not a copy.
 
 ## Project-Specific Files (Never Overwrite)
 
@@ -29,6 +31,7 @@ Some files in the cc-sdlc source are **templates** that become project-specific 
 | `knowledge/agent-context-map.yaml` | Project's agent-to-knowledge mappings — already protected in §3.3 |
 | `knowledge/provenance_log.md` | Project's knowledge provenance records — append-only log of ingestions and research handoffs |
 | `process/sdlc_changelog.md` | Project's record of process changes — its own entries and the migrations it applied. Migration prepends an entry for itself (`sdlc-migrate` §4.5b) and never copies cc-sdlc's file over it; framework history is read from the source repo (§1.2) |
+| `process/changelog-archive/` | The project's archived changelog entries, one file per quarter, moved unedited from its changelog by `changelog_archive.py` (`sdlc-archive`, and `sdlc-migrate` §4.5c). Never copied from cc-sdlc, never transformed by an adapter |
 
 Framework files may contain canonical agent names (e.g., `frontend-developer`) in examples. These are illustrative — they don't affect dispatch behavior. The project's actual agents in `.claude/agents/` and `agent-context-map.yaml` define what gets dispatched.
 

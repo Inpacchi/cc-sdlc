@@ -9,7 +9,8 @@ This list mirrors the plugin's own "Transformation-Exempt Files" table in `neuro
 | File | Install path | Why exempt | Permitted deviations |
 |---|---|---|---|
 | `process/knowledge-routing.md` | `.claude/sdlc/process/knowledge-routing.md` | Phrasing contract itself — documents canonical AND forbidden phrases. Transforming destroys the documentation. | None. Any hunk = defect. |
-| `process/sdlc_changelog.md` | `.claude/sdlc/process/sdlc_changelog.md` | Historical record — entries quote canonical phrases as context. Transforming corrupts history. | None. Any hunk = defect. Missing upstream entries (diff shows source has a section sleeved doesn't) = content-loss defect. |
+| `process/sdlc_changelog.md` | `.claude/sdlc/process/sdlc_changelog.md` | Historical record — entries quote canonical phrases as context. Transforming corrupts history. | None in the project's own entries. Since contract 0017 the file is project-only: cc-sdlc's entries are expected to be absent (they live in cc-sdlc), so compare only entries the project wrote; a changed or missing one of those = defect. |
+| `process/changelog-archive/*.md` | `.claude/sdlc/process/changelog-archive/*.md` | The project's archived changelog entries, moved unedited by `changelog_archive.py`. Same reason as the changelog. | None. Any hunk = defect. cc-sdlc's own archive files are never installed; one in a project = defect. |
 | `agents/sdlc-reviewer.md` | `.claude/agents/sdlc-reviewer.md` | Reviewer's checklist lists canonical phrases as validation criteria. Transforming removes the phrases it exists to detect. | Adapter MAY add a supplementary Phrasing Contract Validation section listing adapter-specific forms; contents outside that section must be verbatim. |
 | `agents/sdlc-compliance-auditor.md` | `.claude/agents/sdlc-compliance-auditor.md` | Auditor's validation section lists canonical phrases as scan targets. | **Documented exception:** line ~116 section about PROJECT-SECTION scan may have `(resolve via .sdlc-manifest.json's sdlc_root field, or fall back to .claude/sdlc/)` in place of source's `(detected in methodology section above)` — this is a post-2026-04-22 adapter customization since the `**Path detection:**` block was dropped from the adapter version. Content outside that line must be verbatim. |
 | `CLAUDE-SDLC.md` | (merged into target's `CLAUDE.md`, not a standalone file) | Framework documentation inserted into project's CLAUDE.md; contains canonical phrases as examples. | The adapter merges this into the project's existing CLAUDE.md rather than overwriting, so the section's content should be verbatim within the merged file. |
@@ -39,7 +40,7 @@ The plugin emits `file_merged` events during stage 4.2. For each file on this ex
 
 ```bash
 grep '"event":"file_merged"' <target>/.sdlc-transaction-log \
-  | grep -E 'knowledge-routing\.md|sdlc_changelog\.md|sdlc-reviewer\.md|sdlc-compliance-auditor\.md|CLAUDE-SDLC\.md|provenance_log\.md' \
+  | grep -E 'knowledge-routing\.md|sdlc_changelog\.md|changelog-archive/|sdlc-reviewer\.md|sdlc-compliance-auditor\.md|CLAUDE-SDLC\.md|provenance_log\.md' \
   | grep -v '"subtype":"exempt_verbatim"'
 ```
 

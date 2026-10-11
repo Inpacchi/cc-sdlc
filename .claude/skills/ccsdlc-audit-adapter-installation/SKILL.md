@@ -88,7 +88,7 @@ Canonical phrases that should have been transformed sometimes stay untouched —
 
 ```bash
 grep -rn '\[sdlc-root\]/\(knowledge\|disciplines\)/' <target-path>/.claude/ 2>/dev/null \
-  | grep -vE 'sdlc_changelog|knowledge-routing|sdlc-reviewer\.md|sdlc-compliance-auditor\.md|CLAUDE-SDLC\.md|provenance_log\.md'
+  | grep -vE 'sdlc_changelog|changelog-archive/|knowledge-routing|sdlc-reviewer\.md|sdlc-compliance-auditor\.md|CLAUDE-SDLC\.md|provenance_log\.md'
 ```
 
 **Scan 3b — bare concept-terminology residue (Pass 2 phrasing-contract miss):**
@@ -97,7 +97,7 @@ Pass 2 in plugin 0.4.0+ translates file-mode vocabulary to memory-graph vocabula
 
 ```bash
 grep -rinE '\bknowledge files?\b|\bdiscipline files?\b|\bparking[- ]lot entr|\bknowledge stores?\b|\bknowledge-store entr|\bdiscipline parking lots?\b|\bknowledge YAMLs?\b|\bYAML knowledge files?\b|\bagent-context-map\b|\bknowledge area\b|\bsuggested knowledge area\b' <target-path>/.claude/ 2>/dev/null \
-  | grep -vE 'sdlc_changelog|knowledge-routing|sdlc-reviewer\.md|sdlc-compliance-auditor\.md|CLAUDE-SDLC\.md|provenance_log\.md|path-mappings\.md|agent-memory/'
+  | grep -vE 'sdlc_changelog|changelog-archive/|knowledge-routing|sdlc-reviewer\.md|sdlc-compliance-auditor\.md|CLAUDE-SDLC\.md|provenance_log\.md|path-mappings\.md|agent-memory/'
 ```
 
 The `agent-memory/` filter excludes project-authored agent-MEMORY.md content (project-specific, not framework-derived).

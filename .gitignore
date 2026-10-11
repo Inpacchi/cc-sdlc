@@ -35,3 +35,4 @@ node_modules/
 docs/current_work/audits/
 
 .obsidian/
+__pycache__/

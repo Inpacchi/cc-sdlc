@@ -181,7 +181,7 @@ As part of migration integrity (Dimension 7), verify that skills, agents, and pr
 
 6. **Exceptions (hits in these files are NOT findings):**
    - `process/knowledge-routing.md` — the phrasing contract itself; lists canonical and forbidden phrases as documentation
-   - `process/sdlc_changelog.md` — changelog may quote phrases as metadata
+   - `process/sdlc_changelog.md` and `process/changelog-archive/*.md` — changelog entries may quote phrases as metadata
    - `agents/sdlc-reviewer.md` checklist items — quote canonical phrases as validation criteria
    - `agents/sdlc-compliance-auditor.md` Phrasing Contract Validation section — this section itself lists the patterns to search for
    - Fenced code blocks (` ``` `) inside the above files — documentation examples, not instructions

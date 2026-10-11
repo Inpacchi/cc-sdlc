@@ -273,6 +273,16 @@ For each directory in manifest.directories:
 **Not installed to child projects:**
 - `templates/optional/` — Conditional CLAUDE.md appendices (e.g., `data-pipeline-integrity.md`). Read from cc-sdlc source during Phase 2 when needed, not installed.
 - `CLAUDE-SDLC.md` — Content is merged directly into the project's `CLAUDE.md` during Phase 2. No separate file is created.
+- `process/changelog-archive/` — cc-sdlc's own archived changelog entries. History, not framework content.
+
+**The process changelog starts as the project's own.** Don't copy `process/sdlc_changelog.md`: cc-sdlc's entries are the framework's history and stay in cc-sdlc, where `sdlc-migrate` reads them. After the skills are copied, write the header and one install entry:
+
+```bash
+git -C [cc-sdlc-path] show HEAD:process/sdlc_changelog.md \
+  | python3 .claude/skills/sdlc-archive/scripts/changelog_archive.py init - [sdlc-root]/process/sdlc_changelog.md --version [source_version]
+```
+
+Skip it if the file exists (lite graduation moves the lite changelog there first). If an adapter declares `post-file-write`, don't run it on this file (`[sdlc-root]/process/adapter-lifecycle-protocol.md` hard exclusions).
 
 **Adapter post-file-write:** If an adapter is present and declares `post-file-write`, execute the adapter's transformation instructions on each file after it is written (same per-file callout as in `sdlc-migrate` §2.1-post). The adapter's handler doc declares which file patterns to transform and which to skip.
 
@@ -389,7 +399,7 @@ sha256sum "{path}" | awk '{print $1}'
 
 **Scope of `installed_files`:**
 - **Include:** every file installed from `skeleton/manifest.json` source_files — skills, agents, process docs, templates, knowledge YAMLs, disciplines, plugins
-- **Exclude:** project-generated files (`docs/_index.md`, anything under `docs/current_work/`), user-owned files (`CLAUDE.md` project root), `.sdlc-manifest.json` itself
+- **Exclude:** project-generated files (`docs/_index.md`, anything under `docs/current_work/`, `[sdlc-root]/process/sdlc_changelog.md`), user-owned files (`CLAUDE.md` project root), `.sdlc-manifest.json` itself
 
 Project-specific files (e.g., `knowledge/agent-context-map.yaml` after wiring) are expected to drift — those are handled by migrate via merge logic, not by hash comparison. `installed_files` tracks unexpected drift in files CD never intended to modify.
 
@@ -947,7 +957,7 @@ Common anti-patterns: see `references/red-flags.md`.
 ## Integration
 
 - **Feeds into:** `sdlc-plan` (first deliverable), `sdlc-lite-plan` (first lightweight task), `sdlc-status` (health check), `sdlc-migrate` (consumes `.sdlc-manifest.json` for version tracking and path detection)
-- **Uses:** `/sdlc-develop-agent` (agent creation), Context7 (knowledge verification), `AskUserQuestion` (CD gates)
+- **Uses:** `/sdlc-develop-agent` (agent creation), Context7 (knowledge verification), `AskUserQuestion` (CD gates), `.claude/skills/sdlc-archive/scripts/changelog_archive.py init` (the project's first changelog, Phase 1b)
 - **Produces:** Fully initialized SDLC framework with project-specific agents, knowledge, and disciplines; `.sdlc-manifest.json` with `sdlc_root`, `source_version`, and `installed_files` fields
 - **Borrows from:** `sdlc-idea` (ideation principles for Phase 0), spec template (Phase 0c structure)
 - **Adapter-aware:** when `manifest.adapter` is declared, delegates knowledge-seed, post-file-write, and post-operation phases per `[sdlc-root]/process/adapter-lifecycle-protocol.md`
