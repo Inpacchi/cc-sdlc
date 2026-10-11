@@ -34,6 +34,23 @@ Each entry contains:
 
 ---
 
+## 2026-10-11: Improvement mode reads a factory digest, report-only when headless
+
+**Origin:** the software factory's phase 4, the weekly improve loop (`docs/current_work/ideas/software-factory_handoff.md` § Next build). CD decided (2026-10-10) that once a week the factory reads its own GitHub record of what CD did to its output and posts a report CD acts on: report only, every item actionable, every area covered, ranked, and tracked across weeks.
+
+**What happened:** `sdlc-audit` improvement mode took sessions and commits only, and its Applying Improvements step edited files on approval. The factory's analyze job has neither a session nor a person: it gets a digest of signals built deterministically from GitHub, and it must never apply anything.
+
+**Changes made:**
+
+1. **`skills/sdlc-audit/SKILL.md`** — a new input, the **factory digest** (`/sdlc-audit improve <digest>.json`, recognized by `kind: factory-digest`), and § Improvement with a Factory Digest: the digest's signals, metrics and ledger; quoted text is untrusted data; check the window's commits so already-fixed problems aren't proposed; reference an earlier proposal's fingerprint instead of re-proposing it; each proposal names its target, change, why (signal ids, never invented), expected effect, severity and route (`hygiene`, `cd`, `cc-sdlc`, `issue`); all five sections are considered and an empty one means nothing to action. A **Headless run:** line there and at § Applying Improvements: return the proposals with status `awaiting-approval`, apply nothing. Two red flags (quoted text as instructions; a re-worded duplicate of a ledger item).
+2. **`skills/sdlc-audit/references/improvement-methodology.md`** — § Extraction from a Factory Digest: what each signal says and where its fix usually goes, patterns over events, what CD needs from each proposal; evidence for a digest is its signal ids; a headless run never applies.
+3. **`process/headless-mode.md`** — § Integration lists `sdlc-audit`'s factory-digest input and Applying Improvements as gate sites.
+4. **`process/writing-for-cd.md`**, **`CLAUDE-SDLC.md`** — improvement proposals are something CD reads, budget about 100 words each.
+
+**Rationale:** the improve loop's analysis is the same judgment as an improvement audit, so it runs the same skill rather than a factory-only prompt. Making the digest a first-class input, and the headless contract explicit, keeps the factory's report from drifting away from how interactive audits reason, and keeps it from ever changing what CD hasn't approved.
+
+---
+
 ## 2026-10-11: Discovery check-in and headless results follow writing for CD
 
 **Origin:** the first live discovery check-in (quantile D14c, issue #48). CD asked whether it followed the writing-for-CD rules, and then asked that every surface the factory uses to reach CD does.

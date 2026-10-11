@@ -114,6 +114,37 @@ If the commits match an existing playbook's task type:
 3. Identify: were all playbook phases represented in commits? Were there commits for work NOT in the playbook?
 4. If gaps exist, propose playbook updates
 
+## Extraction from a Factory Digest
+
+A factory digest (SKILL.md § Improvement with a Factory Digest) is the record of what CD did to an agent factory's output. Each correction CD had to make is a signal that some stage, skill or check let the problem through.
+
+### Reading the Signals
+
+| Signal | What it says | Where the fix usually goes |
+|--------|--------------|----------------------------|
+| Revision requests (CD's request-changes reviews and inline comments) | What the agents got wrong the first time | The stage's skill or prompt, its review loop's checklist, or knowledge for the code area |
+| A revision's answers: declined, or needs CD's call | What the agents refused or couldn't decide | The skill's scope rules, or a decision CD should record once |
+| Revision limits hit, escalations, review caps | Where a loop doesn't converge | The loop's bar, the stage's tier, or triage's tier for that kind of issue |
+| PRs closed without merging (rejections only, not a replan or a comparison run) | Work CD didn't want; CD's reason, if given, says why | Triage calibration, plan scope rules, the issue template |
+| Questions and CD's answers | Gaps in the issue or the skills; a question the thread already answered means a skill re-asks | The skill's gate rules, triage's needs-input bar, the issue template |
+| Triage overrides (an advisor label added or removed by CD, a re-triage, a manual tier) | Where triage's judgment is off | The triage rubric |
+| Follow-ups CD unchecked at merge | What the agents over-propose | The execute skills' follow-up rules |
+| Failed runs and their failing step | Brittle steps and recurring environment problems | The workflow, guard, image or runner setup |
+| Run metrics by stage | Cost and turn outliers, stages that struggle | Prompts, model and effort choices, caps |
+| CD's reactions on factory comments | A light quality signal | Supporting evidence only |
+| Commits in the window to the factory or SDLC | What was already fixed | Nothing: drop proposals a later commit settled |
+
+### Patterns Over Events
+
+- **Recurrence decides weight.** The same correction on two issues outweighs a long comment on one. A one-off is a low-severity proposal at most, unless it caused a failure CD had to clean up.
+- **Look for the stage that let it through,** not only the file that was wrong. A missing test the review loop didn't flag is a review-checklist gap as much as a code gap.
+- **Separate the factory from the framework.** A problem in a project's own workflows or guards stays with the project. A problem any project running the same skill would hit goes to the framework (route `cc-sdlc`).
+- **Cost is a fact, not a verdict.** Flag a stage whose cost or turns jump against its own earlier runs, and say what changed. Don't propose cutting cost where the run did what it should.
+
+### What CD Needs from Each Proposal
+
+Each proposal is something CD can act on without reading the digest: what to change, where, why (the evidence, by signal id), and the expected effect. The proposal quality bar below applies. A proposal that only observes is not a proposal. When nothing in a section needs action, leave the section empty: an empty section reads as "nothing to action", and that is a valid result.
+
 ## Categorization Framework
 
 Every finding gets categorized for actionability:
@@ -177,7 +208,7 @@ Each proposal must include:
 1. **Target:** Specific file and section to modify
 2. **Change type:** Add / Modify / Remove
 3. **Description:** What to change and why
-4. **Evidence:** Where in the session/commits this gap was observed
+4. **Evidence:** Where in the session/commits this gap was observed (for a factory digest, the signal ids)
 5. **Severity:** High / Medium / Low
 6. **Draft change:** For skill/process modifications, include the actual text to add or modify. For knowledge additions, include a YAML skeleton.
 
@@ -189,6 +220,8 @@ Each proposal must include:
 - **Non-duplicative:** Check existing knowledge stores and parking lots before proposing additions
 
 ## Applying Changes
+
+A headless run never applies: it returns the proposals with status `awaiting-approval` (SKILL.md § Applying Improvements).
 
 When the user approves proposals:
 

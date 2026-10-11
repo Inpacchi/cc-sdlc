@@ -10,7 +10,7 @@ Everything addressed to CD:
 - approval briefs for specs and plans (§ Approval Briefs);
 - completion reports (`sdlc-execute` and `sdlc-lite-execute` step 5);
 - PR descriptions (`[sdlc-root]/templates/pr_description_template.md`);
-- findings CD must act on;
+- findings CD must act on, and improvement proposals (`sdlc-audit` improvement mode, including an agent factory's weekly report);
 - the parts of a headless run's result that a caller shows CD: the questions, the reason for a stop, findings and deferred items (`[sdlc-root]/process/headless-mode.md` § Ending a Headless Run). The result's `notes` are for the next run and keep their detail.
 
 It doesn't apply to what agents work from: the body of a spec, plan or result doc, and dispatch prompts. Those keep their detail.
@@ -38,6 +38,7 @@ A personal output style can sit on top, for example to set how deeply terms get 
 | An end-of-turn summary | About 150 words |
 | An approval brief (spec or plan) | About 450 words |
 | A completion report or code PR description | About 500 words (a report's What you need to do and Commits come on top) |
+| An improvement proposal | About 100 words: the change, why (with its evidence) and the expected effect, a line or two each |
 
 ## Status Blocks
 
