@@ -1,0 +1,43 @@
+{
+  "_doc": "How zsdlc-import-factory sorts the incubator's .github/factory/ (CD, 2026-10-12: quantile incubates the factory, z-sdlc imports it). Every file there is bundle code (copied into bundles/factory/tree/) unless it is a seed (the bundle keeps its own generic version in bundles/factory/seed/) or excluded (the project's own, never imported). free_settings: JSON seed settings whose keys are the project's own data, not compared. specific: patterns that mark incubator-specific text (its name, its host, private and VPN address ranges, home directories), flagged when an import adds them. last_import: the incubator commit the bundle code was last imported from; the tool updates it.",
+  "bundle": "factory",
+  "incubator": "endless-galaxy-studios/quantile",
+  "source": ".github/factory",
+  "seed": [
+    "factory.json",
+    "planning.json",
+    "services.json",
+    "triage-policy.md",
+    "README.md",
+    "tests/test_codeowners.py"
+  ],
+  "excluded": [
+    "production/*",
+    "host/*",
+    "db_access_check.py",
+    "db-access.json",
+    "tests/test_gates.py",
+    "tests/test_factory_op.py",
+    "tests/test_deploy_ops.py",
+    "*__pycache__*",
+    "*.DS_Store"
+  ],
+  "free_settings": {
+    "factory.json": [
+      "stack.env"
+    ]
+  },
+  "specific": [
+    "quantile",
+    "pop-os",
+    "192\\.168\\.",
+    "\\b10\\.[0-9]+\\.[0-9]+\\.[0-9]+\\b",
+    "\\b100\\.(6[4-9]|[7-9][0-9]|1[01][0-9]|12[0-7])\\.",
+    "/home/[a-z]",
+    "/Users/[A-Za-z]"
+  ],
+  "last_import": {
+    "commit": "ec4b0d97a4ce90325e6f7ee2758f1729c8584e5f",
+    "date": "2026-10-12"
+  }
+}

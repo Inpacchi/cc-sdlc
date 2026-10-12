@@ -37,6 +37,26 @@ Each entry contains:
 
 ---
 
+## 2026-10-12: zsdlc-import-factory: importing the factory from quantile is a command
+
+**Origin:** CD decided (2026-10-12) that quantile incubates the software factory and z-sdlc imports it, and asked for the import tool proposed then.
+
+**What happened:** the session that built the `factory` bundle imported it from quantile by hand five times. Each time, new files had to be remembered and new seed settings added by hand. Quantile's copy of `process/factory.md` fell a clause behind z-sdlc's, and the guard tests carried quantile's own CODEOWNERS into the bundle. The proof that an import installs and works lived in a throwaway script.
+
+**Changes made:**
+
+1. **`.claude/skills/zsdlc-import-factory/`** (new, source-only) — `SKILL.md` (report, apply, prove, record), `import.json` (which of quantile's `.github/factory/` files are seeds, which are excluded, settings whose keys are project data, patterns of quantile-specific text, the last imported commit), and `scripts/import_factory.py`. The script reads quantile at a commit, never its working tree. It reports bundle code added, changed and removed; JSON seed settings the bundle's seeds lack; text seeds quantile changed; quantile-specific text an import would add; and whether quantile's copies of the bundle's skills and process doc still match. `--apply` writes the bundle code and records the commit. Since later reports compare against that commit, it refuses while a [fix first] item is open (a missing seed setting, a quantile edit to z-sdlc's text). An added or removed file, quantile-specific text or a changed text seed needs `--accept`. `--prove` installs into a clone of quantile and into an empty project, then renders every template, checks the policy and runs the tests. `sdlc-reviewer` found that applying could hide open items. That's fixed in the script, and its other findings are fixed in the skill.
+2. **`tests/test_import_factory.py`** (new) — 19 tests against fixture repositories, including a z-sdlc fix kept and handed to quantile, a file z-sdlc added, a conflict merged in quantile, and a file quantile deleted.
+3. **`CLAUDE.md`** — the `factory` bundle is imported from quantile. Edited here instead: the skills, `process/factory.md`, the seeds, and a fix found in a project that installed the bundle, which goes straight into the bundle code (CD, 2026-10-12, for the ChronoCore pilot).
+
+Because of that last rule, the script compares each bundle code file three ways: quantile now, the bundle now, and quantile at the last import. Quantile's changes are imported. z-sdlc's own changes are kept, listed as `ahead`, and `--to-incubator` writes them (and newer skills and process docs) into quantile's working tree to commit there. A file changed on both sides is a conflict: merge in quantile, then `--apply --accept`. The proof installs the bundle with z-sdlc's own changes kept.
+
+**Proof:** against quantile `3b1ba7d` the report finds the bundle in sync and the proof passes (17 workflows, policy, every test). `import.json` records `3b1ba7d` as the last import.
+
+**Rationale:** the pilot will bring changes from two directions; every import now sorts, checks and proves the same way. Release type: patch (framework-development tooling; nothing installs into projects).
+
+---
+
 ## 2026-10-12: Debut the factory bundle: the software factory, promoted from quantile
 
 **Origin:** the factory's rollout (`docs/current_work/ideas/software-factory_rollout-design.md`). The software factory incubated in quantile (F13): issue-driven agent stages from triage to a draft PR, on self-hosted runners, with CD approving every plan, merge and production step. Steps 1-3 made it installable: shared scripts, workflows rendered from a per-repository `factory.json`, and the `python-node` stack profile. Step 4 moves it into z-sdlc as an opt-in bundle, with its design rules promoted to a process doc (F22); step 5 adds the GitHub setup. CD decided (2026-10-12) that quantile keeps incubating it and z-sdlc imports it, and that a fix found in a project that installed the bundle goes straight into z-sdlc.
