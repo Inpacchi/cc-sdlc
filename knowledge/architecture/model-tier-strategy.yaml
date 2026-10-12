@@ -380,7 +380,7 @@ assignment_rules:
       ai-architect fills BOTH functions (designs, and provides the escalated
       review), so the "duo" is implementer + opus-AI-lead, not three agents.
     decision:
-      - "AI is the CORE value prop (ML pipelines, RAG, agentic features, a recommendation/intelligence engine): dedicate the duo — an ai/ml-architect (opus: design authority AND escalated AI reviewer) + an ai/ml-engineer (sonnet: implements). The design surface is large and the silent-failure hazard high, so specialization earns its keep and avoids generalist-masking. Example: paire-appetit grew this organically as llm-engineer (sonnet) + taste-intelligence-engineer (opus)."
+      - "AI is the CORE value prop (ML pipelines, RAG, agentic features, a recommendation/intelligence engine): dedicate the duo — an ai/ml-architect (opus: design authority AND escalated AI reviewer) + an ai/ml-engineer (sonnet: implements). The design surface is large and the silent-failure hazard high, so specialization earns its keep and avoids generalist-masking. Example: one project grew this organically as an llm-engineer (sonnet) plus a domain intelligence engineer (opus)."
       - "AI is a FEATURE, not the core (one LLM-backed feature in an otherwise conventional app): do NOT spin up a dedicated architect. Use an llm/ml-engineer implementer (sonnet); cover the escalated review by dispatching the EXISTING software-architect + code-reviewer AT OPUS with the AI knowledge injected (knowledge/testing/ai-generated-code-verification.yaml, knowledge/architecture/ml-system-design.yaml, knowledge/architecture/prompt-engineering-patterns.yaml), plus security-engineer for the injection/tool-schema surface. The two functions are covered without a new agent."
       - "AI is INCIDENTAL (a single prompt somewhere): generic agents at normal tiers + a security reviewer for the injection surface. No AI specialist."
     rule: >
@@ -407,7 +407,7 @@ assignment_rules:
       them, so the reviewer_invariant shifts to the EFFORT axis: implementers
       opus/default, reviewers opus/high. This is the clearest case for why
       effort is a first-class lever, not optional decoration.
-    example: "ChronoCore (game/realtime) runs game-engine, gameplay, realtime, and web-gameplay implementers at opus; its reviewers should differ by effort, not model."
+    example: "A game/realtime project runs its game-engine, gameplay, realtime, and web-gameplay implementers at opus; its reviewers should differ by effort, not model."
 
   archetype_table:
     - { archetype: "domain writer / implementer", model: sonnet, effort: "unset", examples: "frontend-*, backend-*, data-engineer, realtime-*" }
@@ -420,14 +420,14 @@ assignment_rules:
 
   # ── Field evaluation of installed sub-agents (informs the rules above) ──
   survey_2026_07:
-    scope: "sleeved (28), ChronoCore (16), paire-appetit (22), endlessgalaxystudios (14), neuroloom (33) — 113 agents installed before the tier strategy existed"
+    scope: "five projects (28, 16, 22, 14 and 33 agents) — 113 agents installed before the tier strategy existed"
     findings:
       - "effort unset on 113/113 agents — the lever is defined but applied nowhere. Existing installs need an effort BACKFILL on next migration (recon→low, escalated reviewers/high-risk review→high)."
-      - "code-reviewer is sonnet in 3/5 (sleeved, endlessgalaxystudios, neuroloom) — violates the reviewer_invariant / MTS7 opus default; opus in ChronoCore and paire-appetit."
+      - "code-reviewer is sonnet in 3 of the 5 projects — violates the reviewer_invariant / MTS7 opus default; opus in the other two."
       - "security-review agents inconsistent (infosec-engineer/security-auditor/security-infrastructure-engineer: opus in some, sonnet in others) — G2 wants opus/high for high-risk-domain review."
-      - "deep-debugging split: opus in sleeved/ChronoCore, sonnet in paire-appetit and neuroloom's debugger — M2 wants opus for hard-reasoning debug."
-      - "AI/ML implementers (ai-engineer, llm-engineer, ml-engineer) are sonnet with non-escalated reviewers in sleeved/neuroloom — confirmed the G5 gap in the wild."
-      - "ChronoCore runs implementers at opus wholesale (game/realtime) — the project_baseline pattern; motivated making effort the reviewer differentiator when model is maxed."
+      - "deep-debugging split: opus in two projects, sonnet in two others — M2 wants opus for hard-reasoning debug."
+      - "AI/ML implementers (ai-engineer, llm-engineer, ml-engineer) are sonnet with non-escalated reviewers in two projects — confirmed the G5 gap in the wild."
+      - "The game/realtime project runs implementers at opus wholesale — the project_baseline pattern; motivated making effort the reviewer differentiator when model is maxed."
       - "role names drift across projects — the rules must key on archetype, not name (already reflected in archetype_table)."
     consequence: >
       No new tier LADDER was needed — the survey validated MTS1–MTS7. It added

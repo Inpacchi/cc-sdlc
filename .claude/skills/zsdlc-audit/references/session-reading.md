@@ -10,7 +10,7 @@ Session conversations are stored as JSONL files:
 ~/.claude/projects/<project-dir-hash>/<session-id>.jsonl
 ```
 
-The project directory hash is derived from the absolute path (e.g., `-Users-yovarniyearwood-Projects-z-sdlc`). Each session produces one JSONL file named by its UUID.
+The project directory hash is derived from the absolute path (e.g., `-Users-alex-Projects-z-sdlc`). Each session produces one JSONL file named by its UUID.
 
 Some sessions also have a companion directory (`<session-id>/`) containing subagent data.
 

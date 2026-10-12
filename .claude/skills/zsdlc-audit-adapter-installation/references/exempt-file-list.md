@@ -46,7 +46,7 @@ grep '"event":"file_merged"' <target>/.sdlc-transaction-log \
 
 Any output is a finding — the plugin ran non-verbatim transformation on an exempt file.
 
-## When sleeved version is MORE correct than source
+## When the target's version is MORE correct than source
 
 Sometimes the adapter's verbatim copy would propagate an upstream bug. The `agents/sdlc-compliance-auditor.md:13` case (broken methodology path) is an example. In these cases:
 

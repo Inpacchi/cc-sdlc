@@ -7,7 +7,7 @@ description: >
   from z-sdlc except where the adapter's phrasing contract explicitly permits. Produces a
   classified report: which defects need fixing in z-sdlc upstream, which need fixing in the
   plugin, which need both, which are correct as-is.
-  Triggers on "audit the adapter installation", "audit the neuroloom install", "audit sleeved",
+  Triggers on "audit the adapter installation", "audit the neuroloom install",
   "check the plugin transformations", "verify the migration output", "audit a neuroloom migration",
   "check adapter compliance", "did the migration deviate", "post-migration audit",
   "did the plugin handle this correctly". Use AFTER a user reports a migration completed or
@@ -21,7 +21,7 @@ description: >
 
 # Audit Adapter Installation
 
-This skill runs from the z-sdlc source repo and audits an adapter-produced installation (e.g., a Neuroloom-adapted sleeved-style project) for deviations from what z-sdlc intended. It complements — does not replace — the adapter plugin's own internal gates.
+This skill runs from the z-sdlc source repo and audits an adapter-produced installation (e.g., a Neuroloom-adapted project) for deviations from what z-sdlc intended. It complements — does not replace — the adapter plugin's own internal gates.
 
 ## Why this exists
 
@@ -41,7 +41,7 @@ The output is a structured report designed to feed directly into fix planning �
 /zsdlc-audit-adapter-installation <target-path> [adapter-name]
 ```
 
-- `<target-path>` — absolute or `~`-relative path to the target project (e.g., `~/Projects/sleeved`)
+- `<target-path>` — absolute or `~`-relative path to the target project (e.g., `~/Projects/my-app`)
 - `[adapter-name]` — optional; defaults to `neuroloom`. Currently the only supported adapter; future adapters register their own exempt lists and Pattern Mapping sources here.
 
 If the user invokes the skill without specifying a target, ask which project to audit. Don't guess.
@@ -64,7 +64,7 @@ These context facts frame the report — a v1.1.1 installation audited against c
 
 ### Step 2: Functional health check
 
-**2a. MCP integration health.** Count `memory_search(` + `memory_store(` occurrences across `<target-path>/.claude/sdlc/` and `<target-path>/.claude/agents/` and `<target-path>/.claude/skills/`. This gives a floor number — healthy Neuroloom installations have dozens of MCP calls (recent sleeved runs: 60–120). Zero or very-low counts indicate the adapter didn't transform, or transformation was reverted.
+**2a. MCP integration health.** Count `memory_search(` + `memory_store(` occurrences across `<target-path>/.claude/sdlc/` and `<target-path>/.claude/agents/` and `<target-path>/.claude/skills/`. This gives a floor number — healthy Neuroloom installations have dozens of MCP calls (recent the target runs: 60–120). Zero or very-low counts indicate the adapter didn't transform, or transformation was reverted.
 
 **2b. Known-defect output scan.** Grep for each pattern in `references/defect-catalog.md` — these are exact strings that a correct installation should never contain. Each hit is itself a finding, not just a signal. See `references/defect-catalog.md` for the full list; at minimum scan for:
 - Double-paren splices (`((discipline memories`, `((memory graph`, `((the agent knowledge graph`)
@@ -102,7 +102,7 @@ grep -rinE '\bknowledge files?\b|\bdiscipline files?\b|\bparking[- ]lot entr|\bk
 
 The `agent-memory/` filter excludes project-authored agent-MEMORY.md content (project-specific, not framework-derived).
 
-**Hard-coverage check (added post-`migrate-6f4217` sleeved audit, 2026-04-26):** sleeved's `deliverable_lifecycle.md:76` had upstream `- Testing knowledge files updated` overwrite the project's pre-migration `- Testing knowledge memory entries updated`. Pass 2 should have re-translated `knowledge files` → `knowledge memory entries` (rule exists in plugin pattern-mapping-rules.md ~line 136) but didn't fire. The audit before this update missed it because Scan 3a's grep didn't match — no `[sdlc-root]/` on the line. Scan 3b is the fix.
+**Hard-coverage check (added post-`migrate-6f4217` audit, 2026-04-26):** the target's `deliverable_lifecycle.md:76` had upstream `- Testing knowledge files updated` overwrite the project's pre-migration `- Testing knowledge memory entries updated`. Pass 2 should have re-translated `knowledge files` → `knowledge memory entries` (rule exists in plugin pattern-mapping-rules.md ~line 136) but didn't fire. The audit before this update missed it because Scan 3a's grep didn't match — no `[sdlc-root]/` on the line. Scan 3b is the fix.
 
 **For each hit (3a OR 3b), read context and classify per `references/classification-framework.md`:**
 - **Correctly exempt** — Integration section, fenced code block, audit-description prose that the contract allows, project-specific agent memory, or content where "knowledge files" / "YAML files" legitimately refers to the file mechanism (e.g., the discussion of YAML format in `sdlc-ingest`'s "Existing knowledge" line). Distinguishing signal: if the sentence describes Neuroloom-mode operation, the term is residue (defect); if it describes a YAML-file-based mechanism specifically (like agent-context-map's structure), it can be legitimately retained
@@ -110,7 +110,7 @@ The `agent-memory/` filter excludes project-authored agent-MEMORY.md content (pr
 - **Match failure** — Rule exists but didn't fire (plugin matcher bug; usually paired with telemetry gap if Pass 2 didn't emit `concept_terminology_applied`)
 - **Preservation boundary** — Section was preserved verbatim and contained the leak (plugin needs to re-transform inside preserved sections, or the user needs to normalize)
 
-**Scan 3c — stale agent reference scan (added post-`migrate-6f4217` sleeved audit, 2026-04-26):**
+**Scan 3c — stale agent reference scan (added post-`migrate-6f4217` audit, 2026-04-26):**
 
 Framework content references agents by name in dispatch maps, message envelopes, and routing tables. When the project's `.claude/agents/` doesn't include those names, those references break runtime dispatch silently. The plugin's §4.2-gate Stale Agent Reference Audit (added 0.4.7) catches this proactively at write time; this scan is the outside-the-run check that catches anything that escaped the gate or migrated before 0.4.7 lands.
 
@@ -138,7 +138,7 @@ grep -rohE '`[a-z][a-z0-9-]+(engineer|developer|architect|designer|auditor|speci
 
 - **Project-rename candidate:** project's roster includes a likely rename (e.g., project has `infosec-engineer`, content references `security-engineer`). Recommend declaring `agent_renames: {"security-engineer": "infosec-engineer"}` in `.sdlc-manifest.json` so future migrations apply the substitution consistently.
 
-**The bug this catches:** sleeved post-`migrate-6f4217` had ~11 stale agent references across `team-communication-protocol.md`, `sdlc-debug-incident.md`, `sdlc-plan.md`, `sdlc-execute.md`, `sdlc-tests-run.md`, etc. — names like `security-engineer`, `data-architect`, `ml-engineer`, `db-engineer`, `devops-engineer`, `frontend-engineer`, `data-pipeline-engineer`, `database-architect`, `ml-architect`, `security-auditor`, `systems-engineer`. The user discovered them by manually diffing `team-communication-protocol.md` weeks after migration completed. Both Scan 3a and Scan 3b miss this class — agent names don't contain `[sdlc-root]/` paths and aren't in the concept-terminology table. Scan 3c is the third leg.
+**The bug this catches:** the target, post-`migrate-6f4217`, had ~11 stale agent references across `team-communication-protocol.md`, `sdlc-debug-incident.md`, `sdlc-plan.md`, `sdlc-execute.md`, `sdlc-tests-run.md`, etc. — names like `security-engineer`, `data-architect`, `ml-engineer`, `db-engineer`, `devops-engineer`, `frontend-engineer`, `data-pipeline-engineer`, `database-architect`, `ml-architect`, `security-auditor`, `systems-engineer`. The user discovered them by manually diffing `team-communication-protocol.md` weeks after migration completed. Both Scan 3a and Scan 3b miss this class — agent names don't contain `[sdlc-root]/` paths and aren't in the concept-terminology table. Scan 3c is the third leg.
 
 ### Step 4: File-by-file diff audit
 
@@ -257,7 +257,7 @@ For the target project itself: **never** offer to cleanup target files manually 
 | "The exempt list already protects these files" | Informational exempt lists are aspirational. If the plugin's own post-op-audit doesn't hard-gate the allowlist, transformer ran over exempt files anyway. Verify per-file via the transaction log's `subtype: exempt_verbatim` markers. |
 | "Just grep for `[sdlc-root]/`" | That catches residue but misses botched transformation output (`Read memory_store`, double-paren, orphan debris). Those forms don't contain `[sdlc-root]` — they've already been mangled past it. |
 | "The plugin's internal audit passed, so we're fine" | The plugin audits from inside its own run with no access to z-sdlc source. This skill audits from outside with full diff. Both are necessary; neither replaces the other. |
-| "Upstream is always correct" | z-sdlc source itself can have broken references (see 2026-04-22 `sdlc-compliance-auditor.md:13` path bug). When sleeved's version is MORE correct than upstream because the adapter corrected a broken path, that's an upstream finding, not a plugin one. |
+| "Upstream is always correct" | z-sdlc source itself can have broken references (see 2026-04-22 `sdlc-compliance-auditor.md:13` path bug). When the target's version is MORE correct than upstream because the adapter corrected a broken path, that's an upstream finding, not a plugin one. |
 | "Version drift isn't a defect" | It isn't — but surface it in the headline so the user doesn't interpret version-drift hunks as plugin bugs. A v1.1.1→v1.2.3 audit against v1.2.3 source has different expectations than v1.2.3→v1.2.3. |
 
 ## Integration

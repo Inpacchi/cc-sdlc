@@ -41,7 +41,7 @@ Exception: `agents/sdlc-compliance-auditor.md` has a documented adapter customiz
 
 ### 4. Is the hunk a known malformed transformer output?
 
-If the sleeved side contains any of:
+If the target side contains any of:
 - `((discipline memories`, `((memory graph`, `((the agent knowledge graph`, `((via memory_store`
 - `*.md\`)` or `) *.md)` (orphan debris)
 - `Read memory_store` or `Read memory_search` (malformed API verb)
@@ -49,9 +49,9 @@ If the sleeved side contains any of:
 
 → **plugin** (transformer bug). See `defect-catalog.md` §1 for root causes.
 
-### 5. Does the sleeved side contain an untransformed canonical phrase?
+### 5. Does the target side contain an untransformed canonical phrase?
 
-If the hunk shows sleeved has `[sdlc-root]/knowledge/...` or `[sdlc-root]/disciplines/...` text that the plugin's Pattern Mapping should have transformed, and the file is not on the exempt list, and the context is not a fenced code block / Integration section / audit-description-by-design:
+If the hunk shows the target has `[sdlc-root]/knowledge/...` or `[sdlc-root]/disciplines/...` text that the plugin's Pattern Mapping should have transformed, and the file is not on the exempt list, and the context is not a fenced code block / Integration section / audit-description-by-design:
 
 - **Pattern Mapping gap** (no rule covers this phrasing) → **plugin**
 - **Match failure** (rule exists but didn't fire, e.g., mid-sentence verb or backtick-wrapped path) → **plugin**
@@ -61,17 +61,17 @@ All three collapse to **plugin** for fix routing, but in the findings detail not
 
 ### 6. Does the hunk show structural content loss?
 
-Compare heading counts / table row counts / numbered step counts between sleeved and z-sdlc source.
+Compare heading counts / table row counts / numbered step counts between the target and z-sdlc source.
 
-If sleeved has fewer of any structural element than source, and the delta doesn't match a PROJECT-SECTION or documented customization → **plugin** (content-merge content-loss).
+If the target has fewer of any structural element than source, and the delta doesn't match a PROJECT-SECTION or documented customization → **plugin** (content-merge content-loss).
 
-### 7. Does z-sdlc source have a bug sleeved corrected?
+### 7. Does z-sdlc source have a bug the target corrected?
 
-If sleeved's version is MORE correct than source — e.g., a path reference in source points at a non-existent location and sleeved's version points at the real one — → **upstream**.
+If the target's version is MORE correct than source — e.g., a path reference in source points at a non-existent location and the target's version points at the real one — → **upstream**.
 
-Verify by checking the file system: does the path in the source version resolve? If not and sleeved's does, source is buggy.
+Verify by checking the file system: does the path in the source version resolve? If not and the target's does, source is buggy.
 
-Canonical example: `agents/sdlc-compliance-auditor.md:13` — z-sdlc source had `[sdlc-root]/knowledge/compliance-methodology.md` (broken path); sleeved had `.claude/skills/sdlc-audit/references/compliance-methodology.md` (correct path). Upstream finding.
+Canonical example: `agents/sdlc-compliance-auditor.md:13` — z-sdlc source had `[sdlc-root]/knowledge/compliance-methodology.md` (broken path); the target had `.claude/skills/sdlc-audit/references/compliance-methodology.md` (correct path). Upstream finding.
 
 ### 8. Does z-sdlc source use non-canonical phrasing?
 
@@ -88,7 +88,7 @@ Default to picking one primary classification and note the secondary in the find
 
 ### 10. Everything else
 
-If the hunk is a clean canonical transformation (z-sdlc source uses a canonical phrase and the sleeved side shows the expected Pattern Mapping output) → **neither**.
+If the hunk is a clean canonical transformation (z-sdlc source uses a canonical phrase and the target side shows the expected Pattern Mapping output) → **neither**.
 
 If the hunk represents a no-op migration (files identical) → **neither**.
 
@@ -102,7 +102,7 @@ To calibrate your intuition, these are real findings from the 2026-04-22 audit:
 | `AGENT_TEMPLATE.md:133` shows `Read memory_store with tags [...]` | Step 4 — malformed API verb | **plugin** |
 | `AGENT_TEMPLATE.md:134` shows untransformed `knowledge stores (\`[sdlc-root]/knowledge/\`)` | Step 5 — Pattern Mapping rule exists but didn't fire mid-sentence | **plugin** |
 | `sdlc-reviewer.md:82-86` shows forbidden-phrases checklist transformed into Neuroloom forms | Step 3 — exempt-file violation | **plugin** |
-| `sdlc-compliance-auditor.md:13` shows `.claude/skills/sdlc-audit/references/compliance-methodology.md` where source has `[sdlc-root]/knowledge/compliance-methodology.md` | Step 7 — source path is broken, sleeved corrected it | **upstream** |
+| `sdlc-compliance-auditor.md:13` shows `.claude/skills/sdlc-audit/references/compliance-methodology.md` where source has `[sdlc-root]/knowledge/compliance-methodology.md` | Step 7 — source path is broken, the target corrected it | **upstream** |
 | `sdlc-plan.md:240-254` shows 3-step stub where source has 5-step "Library verification (MANDATORY)" procedure | Step 6 — structural content loss | **plugin** |
 | `sdlc-execute.md:257` shows `Discipline parking lot entries ((discipline memories, tagged sdlc:discipline:*) *.md\`)` | Step 4 — double-paren corruption | **plugin** |
 | `sdlc-compliance-auditor.md:116` shows `(resolve via .sdlc-manifest.json's sdlc_root field, or fall back to .claude/sdlc/)` instead of source's `(detected in methodology section above)` | Step 3 exception — documented customization in sdlc-compliance-auditor | **neither** |

@@ -37,6 +37,23 @@ Each entry contains:
 
 ---
 
+## 2026-10-12: Public and generic: project-internal material leaves z-sdlc
+
+**Origin:** z-sdlc is public and for anyone, and the factory is meant to be an abstraction every adopter can use (CD). A review of what z-sdlc publishes found no credentials, but it did find CD's own projects' internals: a runner host's network addresses in the factory's smoke template, the factory's design record (one project's hosts, operations, costs and history), another project's product material, and private projects named as examples in files every project installs.
+
+**Changes made:**
+
+1. **`process/factory.md`** — each of D1-D5 gains a Why section (the context and the options considered), written for any adopter. The factory's design record and rollout plan, which held one project's operations, leave `docs/current_work/ideas/` for CD's private documentation.
+2. **`bundles/factory/`** — smoke's isolation probe takes the runner host's own addresses from `factory.json`'s new `smoke.host_probes` (empty in the seed) and always adds the default Docker bridge and rootless gateways; the template no longer carries one host's addresses. Comments and test fixtures that named a host or project are generic, and code cites `process/factory.md` instead of the design record.
+3. **Installed files** — `knowledge/architecture/model-tier-strategy.yaml`'s survey, two design knowledge files' sources, the examples in `process/production-gates.md` and `process/deliverable_lifecycle.md`, `skills/sdlc-migrate`, `skills/sdlc-audit/references/session-reading.md`, and `templates/pr_description_template.md` (its worked example is now an orders API) no longer name private projects or people.
+4. **`docs/current_work/ideas/`** — the two pending handoffs (an ADR supersession gate, and option previews for `sdlc-explain`) keep their proposals without the source projects' details; the 155 KB reference page from another project is removed. `changelog-archiving_design.md` cites its numbers without naming projects.
+5. **Framework-development tooling** — the adapter-installation audit says "the target" for the project it audits; the import tool flags private and VPN address ranges and home directories instead of names.
+6. **`skeleton/contract_changes.yaml`** — 0019 and 0020's `changelog_ref` match the factory debut's heading; descriptions don't name projects.
+
+**Rationale:** what a public framework ships, and what its examples teach, should hold for any project; CD's own projects belong in CD's private records. Release type: patch.
+
+---
+
 ## 2026-10-12: zsdlc-import-factory: importing the factory from quantile is a command
 
 **Origin:** CD decided (2026-10-12) that quantile incubates the software factory and z-sdlc imports it, and asked for the import tool proposed then.
