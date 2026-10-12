@@ -1,4 +1,4 @@
-"""This project's CODEOWNERS against the factory's publish guard (z-sdlc process/factory.md, Enablement step 7):
+"""This project's CODEOWNERS against the factory's publish guard (z-sdlc process/factory.md, Enablement step 9):
 what agents may never change, what they may write, and the SDLC changelog's real publish path. The path lists
 are this project's; edit them with its CODEOWNERS. Run by CI: python -m unittest discover -s .github/factory/tests"""
 

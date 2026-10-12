@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
-"""Create the factory's GitHub App from its manifest (z-sdlc process/factory.md, Enablement step 2).
+"""Create the factory's GitHub App from its manifest (z-sdlc process/factory.md, Enablement step 5).
 
     python3 .github/factory/create_app.py <organization> [--name NAME] [--key-out PATH]
 
 Opens GitHub's create-an-App page for the organization with the factory's manifest filled in (a local
 page posts it); you confirm it there. GitHub sends the browser back to this script, which converts the
-result into the App's private key (written to --key-out, mode 600) and client ID, writes the App's bot
+result into the App's private key (written to --key-out, mode 600; by default in your home directory,
+outside any checkout) and client ID, writes the App's bot
 user into factory.json, and prints the install link and the commands that store the key and the client
 ID in the factory-writer environment. The App gets exactly the permissions bootstrap.py checks for
 (contents, issues and pull requests write, metadata read) and no webhook. Standard library only.
@@ -123,9 +124,11 @@ def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("organization")
     ap.add_argument("--name", help="the App's name (default: <organization>-factory)")
-    ap.add_argument("--key-out", default="factory-app.private-key.pem", help="where to write the private key")
+    ap.add_argument("--key-out", help="where to write the private key (default: ~/<name>.private-key.pem)")
     args = ap.parse_args(argv)
     name = args.name or f"{args.organization}-factory"
+    # Outside the repository by default, so no `git add` can pick the key up.
+    args.key_out = args.key_out or str(pathlib.Path.home() / f"{name}.private-key.pem")
     if pathlib.Path(args.key_out).exists():
         raise SystemExit(f"create_app: {args.key_out} exists; move it or pass --key-out")
     app = convert(wait_for_code(args.organization, name))

@@ -16,7 +16,7 @@ FACTORY = pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(FACTORY))
 import implement_guard as guard  # noqa: E402
 
-# A CODEOWNERS shaped like the one Enablement asks for (z-sdlc process/factory.md, step 7): the factory and
+# A CODEOWNERS shaped like the one Enablement asks for (z-sdlc process/factory.md, step 9): the factory and
 # agent configuration owned, with owner-less lines last for what agents may write.
 FIXTURE_CODEOWNERS = """/.github/ @cd
 .mcp.json @cd

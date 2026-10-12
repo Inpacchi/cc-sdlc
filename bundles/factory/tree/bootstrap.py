@@ -149,10 +149,11 @@ class Bootstrap:
         echo = (self.cfg.get("smoke") or {}).get("echo_host") or ""
         digest = image.get("digest") or ""
         unset = []
+        # The seed's placeholders, exactly (z-sdlc bundles/factory/seed/factory.json).
         if not (isinstance(app.get("user_id"), int) and app["user_id"] > 0) or not str(app.get("login", "")).endswith("[bot]") \
-                or str(app.get("login", "")).startswith("your-"):
+                or app.get("login") == "your-factory-app[bot]":
             unset.append("app.user_id and app.login: your factory App's bot user (Enablement step 5, create_app.py)")
-        if not image.get("repository") or "your-org" in image["repository"]:
+        if not image.get("repository") or image["repository"] == "ghcr.io/your-org/factory-job":
             unset.append("image.repository: where your job image is published (Enablement step 3)")
         if not re.fullmatch(r"sha256:[0-9a-f]{64}", digest) or set(digest[7:]) == {"0"}:
             unset.append("image.digest: the built image's digest (Enablement step 3)")

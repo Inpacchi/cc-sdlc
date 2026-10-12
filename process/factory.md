@@ -10,23 +10,26 @@ decisions never override them. A project keeps only its settings and operating n
 
 | Where | What | Owner |
 |---|---|---|
-| `.github/factory/` | The scripts, guards, schemas, tool policies, sandbox settings, workflow templates, the renderer (`render.py`), the workflow policy check, the stack profiles and their tests | z-sdlc: refreshed by every migration |
-| `.github/factory/factory.json`, `planning.json`, `services.json`, `triage-policy.md`, `README.md`, and the tests of the project's CODEOWNERS | The project's settings, triage policy and notes | The project: seeded once, never overwritten |
+| `.github/factory/` | The scripts, guards, schemas, tool policies, sandbox settings, workflow templates, the renderer (`render.py`), the workflow policy check, the stack profiles, the setup tools (`bootstrap.py`, `create_app.py`, `host/setup.sh`), the echo service's source (`echo/`) and their tests | z-sdlc: refreshed by every migration |
+| `.github/factory/factory.json`, `planning.json`, `services.json`, `triage-policy.md`, `README.md`, `host/host.conf`, and the tests of the project's CODEOWNERS | The project's settings, its runner host's settings, triage policy and notes | The project: seeded once, never overwritten |
 | `.github/workflows/factory-*.yml` | The workflows, rendered from the templates with `factory.json` | Generated: re-rendered on every migration; CI refuses a hand edit |
 | `.claude/skills/sdlc-triage`, `sdlc-implement`, `sdlc-revise` | The stages' skills. Headless only: the workflows run them, so they have no commands | z-sdlc |
 
-Not installed: the production tier's broker and operations (D4) and the hosts' setup. Both are
-per project and per host (`[sdlc-root]/process/production-gates.md` covers gates in plans).
+Not installed: the production tier, its broker, operations catalog, runner and host setup (D4
+rule 16). It is per project and per host (`[sdlc-root]/process/production-gates.md` covers gates in
+plans).
 
-**Names.** Runner labels, environments, the App's bot user and the image below are the defaults in
-`factory.json` (one App and shared runners for every project); a project that changes them changes
-them there, and the workflows and `workflow_policy.py` follow.
+**Names.** Runner labels, runner groups and environments are defaults in `factory.json`, shared by
+every project in an organization; a project that changes them changes them there, and the workflows,
+`workflow_policy.py`, `bootstrap.py` and the host setup follow. The App, the job image and the echo
+service are the organization's own: the seed holds placeholders for them, which Enablement fills
+(steps 3 to 5).
 
 **Limits of this version.** The project's SDLC root must be `ops/sdlc` (the scripts and the gate
-digest name it). The plan and spec stages need the planning tier's database (`planning.json`, D3).
-The one stack profile, `python-node`, is Django and Vite's: its `verify probe` runs `manage.py migrate
---plan`, and its `node` checks are eslint, `tsc -b` and the Vite build; smoke's tool-policy probe
-writes into `api/` and `web/`, the layout that profile assumes.
+digest name it). The runners need Linux hosts (systemd, nftables, rootless Docker). The one stack
+profile, `python-node`, is Django and Vite's: its `verify probe` runs `manage.py migrate --plan`, and
+its `node` checks are eslint, `tsc -b` and the Vite build; another stack needs a profile of its own
+(§ Stack Profiles). The plan and spec stages run with or without a database (`planning.json`, D3).
 
 ---
 
@@ -320,45 +323,103 @@ Every factory label. D1 rule 1: an issue carries at most one state label.
 
 ---
 
+## Stack Profiles
+
+A stack profile is how the factory builds, installs and checks one kind of project:
+`.github/factory/profiles/<name>/`, chosen by `factory.json`'s `stack.profile`. Every job runs in the
+profile's image, and the stages run the profile's commands, never the project's own scripts, which an
+agent could have edited. A profile has five files:
+
+| File | Run by | Does |
+|---|---|---|
+| `Dockerfile` | `factory-image`, on a GitHub-hosted runner | The job image: the stack's toolchain and test services, plus what the factory's own steps use (the Bash sandbox's `bubblewrap` and `socat`, `jq`, `git`, `curl`, `unzip`, and `pgbouncer` for the planning tier). No project dependencies. |
+| `install.sh <python-dir> <node-dir>` | The job, outside the sandbox, after secrets are out of the environment | Installs the project's dependencies: the implement sandbox has no network. |
+| `test-services.sh <socket-dir> <database>` | The job, as root, before the agent | Starts throwaway test services on the job container's loopback, with logins that can't run code, and prints their settings for the project's env file. |
+| `with-test-services <command>` | Commands inside the sandbox | Runs a command with the test services' ports reachable through the sandbox's proxy. |
+| `verify [python\|node\|probe]` | The stages and smoke | The project's checks (tests, lint, type check, build); `probe` proves the toolchain and the test database work. Reads its directories from `verify.conf`. |
+
+The interface is the first profile's shape: `agent_job.sh` passes `stack.python` and `stack.node` as
+the project's two directories, and `verify` takes `python` and `node` areas. A profile for another
+stack uses them for its own directories until the first such profile generalizes the stack block.
+Start from a copy of `python-node`, keep its security properties (no superuser test login, services
+started with an empty environment, nothing installed inside the sandbox), and prove it with
+`factory-smoke`.
+
+---
+
 ## Enablement
 
 The bundle installs inert: nothing runs until a person adds `factory:triage` to an issue, and the
-first run fails without the setup below, done in order. Once step 1 is done,
-`python3 .github/factory/bootstrap.py` checks steps 2 to 8 and changes nothing; with `--apply` it
-also does steps 3, 5 and 6 (labels, environments, runner-group entries). It reports, and never
-sets, the secrets, the App, CODEOWNERS and the `main` ruleset, which stay CD's. It needs an
-organization admin's `gh` login for the runner groups and the App.
+first run fails without the setup below, done in order. Steps 3 to 5 replace the seed's placeholders
+in `factory.json`; after each settings change, run `python3 .github/factory/render.py` and commit the
+settings and the workflows to `main`. `python3 .github/factory/bootstrap.py` checks steps 2 to 9 and
+changes nothing; with `--apply` it does step 6, and only once the placeholders are gone. It reports,
+and never sets, the secrets, the App's install, CODEOWNERS and the `main` ruleset, which stay CD's. It
+needs an organization owner's `gh` login (`admin:org`) for the runner groups and the App.
 
-1. **Settings.** In `.github/factory/factory.json`: the `stack` block (the profile, where the
-   project keeps its Python and Node code, its env file, its test database name, workspace paths its
-   code reads) and anything the shared defaults don't fit. Write `triage-policy.md` (its direction,
-   rules, containers, plan triggers and external sources). For the plan and spec stages, fill
-   `planning.json` and create the read-only database role it names (D3 rule 3). Then run
-   `python3 .github/factory/render.py`.
-2. **The App.** Install the factory's GitHub App on the repository: Contents and Pull requests read
-   and write, Issues read and write, Metadata read, no `workflows` or `actions` permission.
-3. **Environments**, each deployable from `main` only:
-   - writer (`factory-writer`): secret `FACTORY_APP_PRIVATE_KEY`, variable `FACTORY_APP_CLIENT_ID`;
-   - planning (`factory-planning`): secret `FACTORY_DB_READER_PASSWORD`, and `FACTORY_SVC_1`..`4`
-     for services (`services.json`, D3 rule 4);
-   - production (`factory-production`), only with the production tier: CD the required reviewer.
-4. **Repository secrets:** `CLAUDE_CODE_OAUTH_TOKEN` (from `claude setup-token`; never an
+1. **An organization; for a private repository, on GitHub Team or above.** The runners register to
+   an organization runner group, which a personal account doesn't have. The credential boundary
+   (D2) rests on environment secrets, environments deployable from `main` only and a ruleset
+   requiring code-owner review, which a private repository has from Team up; the production tier's
+   required reviewer (D4 rule 5) on a private repository needs GitHub Enterprise. Why an
+   organization, not a repository's own runners: one pool of hardened runners serves every project,
+   and the group's selected-workflows list keeps a project's other workflows off them.
+2. **Settings.** In `.github/factory/factory.json`, the `stack` block: the profile, where the project
+   keeps its Python and Node code, its env file, its test database name, and workspace paths its
+   code reads. Write `triage-policy.md` (its direction, rules, containers, plan triggers and external
+   sources). The planning tier (D3) is required; its database is optional. To give the plan and spec
+   stages one, fill `planning.json` and create the read-only role it names (D3 rule 3); list services
+   in `services.json` (D3 rule 4). Leave both empty for none.
+3. **The job image.** Set `image.repository` to where the organization publishes it (for example
+   `ghcr.io/<org>/factory-job`), render, and push to `main`: `factory-image` builds the profile's
+   `Dockerfile` on a GitHub-hosted runner and publishes it (or run it by hand). Its run on the
+   install's own push fails, publishing to the placeholder; this one is the first that counts. Copy the digest from
+   its run summary into `image.digest` and render again. Every factory job runs in this image, pinned
+   by its digest. Projects on the same profile can share one image: give each repository read
+   access to the package.
+4. **The echo service.** Smoke proves the sandbox's credential masking against a host that echoes
+   each request's headers back. Deploy `.github/factory/echo/worker.js` as a Cloudflare Worker on a
+   `workers.dev` address (for example `npx wrangler deploy .github/factory/echo/worker.js --name
+   factory-echo --compatibility-date 2025-01-01`), or run `echo/server.py` on any host behind HTTPS,
+   and set `smoke.echo_host` to its host name. It stores nothing, and receives only smoke's
+   throwaway values; one serves the whole organization.
+5. **The App.** `python3 .github/factory/create_app.py <organization>` creates the factory's GitHub
+   App from its manifest (Contents, Issues and Pull requests read and write, Metadata read; no
+   webhook, no `workflows` or `actions` permission), writes its bot user into `factory.json` and its
+   private key to a new file only you can read. Install it on the repository from the link it
+   prints. One App serves the whole organization: another project installs the same App and copies
+   `app` into its own `factory.json`.
+6. **`bootstrap.py --apply`.** Creates the labels (§ Labels); the environments, each deployable
+   from `main` only: writer (`factory-writer`), planning (`factory-planning`) and, with the production
+   tier, production (`factory-production`, CD the required reviewer); and the runner group
+   (`factory-pool`) with this repository and its agent workflows, or adds them to it. With the
+   production tier, `factory-gate.yml` goes to the project's own group instead
+   (`factory-pool-<repository>-prod`, on the host that runs its production). Through the API, an
+   update to a group replaces its selected-workflows list with the list it sends (an omitted list
+   empties it), and one that sends `visibility` empties its repository list: send the whole workflow
+   list and never `visibility` (`bootstrap.py` does).
+7. **Secrets.** In `factory-writer`: secret `FACTORY_APP_PRIVATE_KEY` and variable
+   `FACTORY_APP_CLIENT_ID` (the commands `create_app.py` printed; then delete the key file). In
+   `factory-planning`: `FACTORY_DB_READER_PASSWORD` with a planning database, and `FACTORY_SVC_1`..`4`
+   for services. Repository secrets: `CLAUDE_CODE_OAUTH_TOKEN` (from `claude setup-token`; never an
    organization secret), and optionally `CONTEXT7_API_KEY`.
-5. **Runners.** Add the repository to the shared runner group (`factory-pool`: the strict and
-   planning runners, shared by every project) and its agent workflows to the group's
-   selected-workflows list. With the production tier, `factory-gate.yml` goes to the project's own
-   production group instead (`factory-pool-<project>-prod`, on the host that runs its production).
-   Through the API, an update to a group replaces its selected-workflows list with the list it
-   sends (an omitted list empties it), and one that sends `visibility` empties its repository
-   list: send the whole workflow list and never `visibility` (`bootstrap.py` does).
-6. **Labels:** create every label in § Labels.
-7. **CODEOWNERS and the `main` ruleset** (D2 rule 6): code owners on `.github/`, `.claude/`,
+8. **The runner host.** A Linux host with systemd, nftables, `python3`, rootless Docker's extras
+   (`docker-ce-rootless-extras`) and room for the runners' work and images. From a checkout of
+   `main`, set the host's own settings in `.github/factory/host/host.conf`; then, for each tier, write a
+   runner registration token (`gh api -X POST orgs/<org>/actions/runners/registration-token --jq
+   .token`) to `.github/factory/host/reg-token` (mode 600) and run `sudo bash
+   .github/factory/host/setup.sh` (the strict tier) or `sudo TIER=planning bash
+   .github/factory/host/setup.sh` (the planning tier). It creates each tier's user, rootless Docker,
+   firewall and runners, and registers no runner whose jobs can reach the host or the LAN. Put the
+   host's own LAN and VPN addresses in `factory.json`'s `smoke.host_probes`, so smoke checks them
+   too. One host serves the whole organization.
+9. **CODEOWNERS and the `main` ruleset** (D2 rule 6): code owners on `.github/`, `.claude/`,
    `CLAUDE.md` at any depth, `.mcp.json`, `[sdlc-root]/` and the test and build configuration, with
    owner-less lines last for the discipline parking lots, the knowledge YAMLs (except the
    agent-governing ones) and the SDLC changelog; code-owner review required on `main`. The seeded
    `tests/test_codeowners.py` checks the file against the guard; until it exists it fails, and its
    path lists are the project's to extend (its test and build configuration, its source paths).
-8. **CI**, required on `main`: `python .github/factory/render.py --check`, then
-   `python .github/factory/workflow_policy.py .github/workflows`, then
-   `python -m unittest discover -s .github/factory/tests` (with PyYAML).
-9. **Smoke.** Run `factory-smoke`; every job must pass before the first issue (D2 rule 5).
+10. **CI**, required on `main`: `python .github/factory/render.py --check`, then
+    `python .github/factory/workflow_policy.py .github/workflows`, then
+    `python -m unittest discover -s .github/factory/tests` (with PyYAML).
+11. **Smoke.** Run `factory-smoke`; every job must pass before the first issue (D2 rule 5).

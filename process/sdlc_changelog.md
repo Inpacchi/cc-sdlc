@@ -37,6 +37,19 @@ Each entry contains:
 
 ---
 
+## 2026-10-12: factory.md's Enablement starts from zero, and says what a stack profile is
+
+**Origin:** with the bundle carrying everything an organization needs (the entry below), its Enablement still assumed Endless Galaxy's App, image, echo service and runners already existed (CD: the factory is an abstraction for anyone). Checking GitHub's documentation for the plan the factory needs corrected an earlier answer: a free organization isn't enough.
+
+**Changes made:**
+
+1. **`process/factory.md`** — Enablement starts from an organization (the runners are an organization runner group's), on GitHub Team or above for a private repository (environment secrets, `main`-only environments and rulesets), and says the production tier's required reviewer on a private repository needs Enterprise. New steps for the job image, the echo service, the App (`create_app.py`) and the runner host (`host/setup.sh`, `host.conf`); `bootstrap.py --apply` becomes its own step, after the placeholders are filled. The planning tier's database is optional. A new Stack Profiles section says what a profile's five files do, and that the interface keeps `python-node`'s shape until the first other profile generalizes it. The install table and limits match the bundle.
+2. **`bundles/factory/`** — imported from quantile c6520ae..6251b8c: `create_app.py` and the tests cite the new step numbers; `create_app.py` writes the App's private key to the home directory by default, outside any checkout; `bootstrap.py` compares with the seed's exact placeholders, so an organization named like one isn't locked out. The seeded `planning.json` says its database is optional, and the seeded `tests/test_codeowners.py` cites step 9.
+
+**Rationale:** Enablement is the one path a new organization follows, so it has to cover everything that path needs, in an order where each step has what it uses. Release type: patch.
+
+---
+
 ## 2026-10-12: The factory bundle sets up from zero: host setup, the App, the echo service, placeholders
 
 **Origin:** the factory is meant to be usable by anyone who installs z-sdlc, not only by CD's organization (CD). The bundle assumed Endless Galaxy's App, job image, echo service and runner host, and the host setup wasn't in it at all.

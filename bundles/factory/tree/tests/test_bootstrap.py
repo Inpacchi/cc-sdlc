@@ -354,6 +354,14 @@ class Bootstrap(unittest.TestCase):
                      "nothing applied: fill the settings above"):
             self.assertIn(text, out)
 
+    def test_only_the_seeds_exact_placeholders_count(self):
+        cfg = json.loads((self.root / ".github/factory/factory.json").read_text())
+        cfg.update({"app": {"user_id": 7, "login": "your-org-factory[bot]"},
+                    "image": {"repository": "ghcr.io/your-org-co/factory-job", "digest": "sha256:" + "c" * 64}})
+        (self.root / ".github/factory/factory.json").write_text(json.dumps(cfg))
+        code, out = self.run_it()
+        self.assertIn("factory.json names your App, image and echo service", out)
+
     def test_an_unreadable_factory_json_is_a_settings_error(self):
         (self.root / ".github" / "factory" / "factory.json").write_text("{}")
         err = io.StringIO()
