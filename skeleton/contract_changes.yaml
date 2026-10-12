@@ -383,3 +383,51 @@ changes:
       before the rename use cc-sdlc, and a factory's schema and ledger reader
       must accept both. Additive for readers: nothing breaks on an old adapter
       or an old ledger.
+
+  - id: "0019"
+    date: "2026-10-12"
+    title: "Bundle schema: files outside .claude/ and [sdlc-root] (tree, seed, render, requires)"
+    type: other
+    changelog_ref: "2026-10-12: Debut the factory bundle: the software factory, promoted from quantile"
+    notes: >
+      skeleton/manifest.json bundles may now carry `tree` ({from, to}: z-sdlc
+      files installed at the same relative paths under a project directory,
+      executable bits kept, hashed in installed_files and refreshed on every
+      migration), `seed` ({from, to}: written only where absent, then the
+      project's: never overwritten, hashed or removed), `render` (a command
+      run from the project root after the files are in place, on install and
+      every migration) and `requires` ({sdlc_root}: the install is refused when
+      the project's sdlc_root differs). Additive: no project action until a
+      bundle carrying them is installed. Tree files follow the §2.1a removal
+      rule like source_files when upstream drops one; seed files never do.
+      Adapter action: none; the files are code and settings, not knowledge-layer
+      references (exempt them from transformation, like scripts).
+
+  - id: "0020"
+    date: "2026-10-12"
+    title: "Debut factory bundle"
+    type: bundle_debut
+    bundle:
+      name: factory
+      description: >
+        Software factory: issue-driven agent stages (triage, implement, plan
+        and spec, revise, execute with production gates, the weekly improve
+        loop) on self-hosted runners, as GitHub Actions workflows rendered from
+        the project's .github/factory/factory.json. Inert until configured via
+        the process doc's Enablement section.
+      skills:
+        - skills/sdlc-triage/SKILL.md
+        - skills/sdlc-implement/SKILL.md
+        - skills/sdlc-revise/SKILL.md
+      process:
+        - process/factory.md
+    changelog_ref: "2026-10-12: Debut the factory bundle: the software factory, promoted from quantile"
+    notes: >
+      First bundle with a tree, seeds and a render step (contract 0019); see
+      manifest.bundles.factory for them. Predecessor detection applies at the
+      migrate §4.7 offer: a project that already has .github/factory/ (where
+      the factory incubated, or a copy) gets the adopt path: tree files replace its
+      copies after their differences are shown, its seed-path files stay as
+      they are, render re-renders its workflows, and its own extra files
+      (a production tier, host scripts) are left alone. Requires sdlc_root
+      ops/sdlc.

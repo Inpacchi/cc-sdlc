@@ -1,0 +1,51 @@
+# Factory revise trigger. CD asks for changes on a factory PR with a "Request changes" review, or with the
+# factory:revise label after commenting. This job only dispatches, on the default branch, factory-revise.yml
+# for a code PR (factory/<n>-impl) or factory-revise-doc.yml for a spec or plan PR (factory/<n>-spec,
+# factory/<n>-plan): a pull_request event's ref is the PR's merge ref, which the main-only %{environments.writer}
+# environment (the App key) refuses.
+# A review event runs this file from the PR's merge commit, so it fires only on PRs whose merge commit
+# includes it (every PR opened after it landed). The label path uses pull_request_target, which runs
+# from the default branch and so works on any open PR; it checks out nothing.
+name: factory-revise-trigger
+run-name: "factory-revise-trigger: PR #${{ github.event.pull_request.number }}"
+
+on:
+  pull_request_review:
+    types: [submitted]
+  pull_request_target:
+    types: [labeled]
+
+permissions: {}
+
+jobs:
+  dispatch:
+    # A person (never a bot) on a factory code, spec or plan PR from this repository.
+    if: >-
+      github.event.sender.type != 'Bot' &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      startsWith(github.event.pull_request.head.ref, 'factory/') &&
+      (endsWith(github.event.pull_request.head.ref, '-impl') || endsWith(github.event.pull_request.head.ref, '-spec') ||
+       endsWith(github.event.pull_request.head.ref, '-plan')) &&
+      github.event.pull_request.state == 'open' &&
+      ((github.event_name == 'pull_request_review' && github.event.review.state == 'changes_requested') ||
+       (github.event_name == 'pull_request_target' && github.event.label.name == 'factory:revise'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      actions: write
+    steps:
+      - name: Dispatch the revise stage
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          PR: ${{ github.event.pull_request.number }}
+          SENDER: ${{ github.event.sender.login }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+        run: |
+          case "$HEAD_REF" in
+            *-impl) workflow=factory-revise.yml ;;
+            *-spec|*-plan) workflow=factory-revise-doc.yml ;;
+            *) echo "::error::not a factory PR branch: $HEAD_REF"; exit 1 ;;
+          esac
+          gh workflow run "$workflow" --ref "$DEFAULT_BRANCH" -f pr="$PR" -f requester="$SENDER"

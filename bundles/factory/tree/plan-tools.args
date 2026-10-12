@@ -1,0 +1,8 @@
+--tools Read,Grep,Glob,Edit,Write,Bash,Agent,TodoWrite,WebSearch,WebFetch
+--allowedTools Read Grep Glob Edit Write Bash Agent TodoWrite WebSearch WebFetch mcp__context7
+--disallowedTools 'Read(//proc/**)' 'Read(//dev/**)' 'Read(//sys/**)' 'Read(**/.git/**)'
+--disallowedTools 'Read(//__w/_temp/**)' 'Read(//__w/_actions/**)' 'Read(//__e/**)' 'Read(//github/**)'
+--disallowedTools 'Edit(//usr/**)' 'Edit(//bin/**)' 'Edit(//sbin/**)' 'Edit(//lib/**)' 'Edit(//lib64/**)' 'Edit(//etc/**)' 'Edit(//opt/**)' 'Edit(//root/**)' 'Edit(//var/**)' 'Edit(//home/**)'
+--disallowedTools 'Edit(//proc/**)' 'Edit(//dev/**)' 'Edit(//sys/**)' 'Edit(//__w/_*/**)' 'Edit(//__e/**)' 'Edit(//__t/**)' 'Edit(//github/**)'
+--disallowedTools 'Edit(//tmp/**)' 'Edit(//run/**)' 'Edit(//mnt/**)' 'Edit(//srv/**)' 'Edit(//media/**)' 'Edit(//boot/**)'
+--disallowedTools 'Edit(**/.git/**)' 'Edit(/.github/**)' 'Edit(**/.claude/**)' 'Edit(**/CLAUDE.md)' 'Edit(**/CLAUDE.local.md)' 'Edit(**/.mcp.json)' 'Edit(/.factory/**)'

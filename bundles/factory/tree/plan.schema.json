@@ -1,0 +1,401 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "status",
+    "reason",
+    "deliverable",
+    "document",
+    "title",
+    "brief",
+    "parts",
+    "questions",
+    "findings",
+    "deferred",
+    "notes",
+    "outbound",
+    "orchestrator"
+  ],
+  "properties": {
+    "status": {
+      "type": "string",
+      "enum": [
+        "awaiting-approval",
+        "split",
+        "escalated",
+        "needs-input",
+        "rescope",
+        "failed"
+      ]
+    },
+    "reason": {
+      "description": "Why, for every status but awaiting-approval, in 1-2 sentences. Posted for CD: plain language per ops/sdlc/process/writing-for-cd.md.",
+      "type": "string",
+      "maxLength": 600
+    },
+    "deliverable": {
+      "description": "The deliverable ID the factory reserved (Dnn)",
+      "type": "string"
+    },
+    "document": {
+      "description": "Path of the plan or spec written, under docs/; empty when none",
+      "type": "string"
+    },
+    "title": {
+      "description": "PR title without the ID, at most 72 characters; empty when no document",
+      "type": "string",
+      "maxLength": 72
+    },
+    "brief": {
+      "description": "The PR description, one field per section of ops/sdlc/templates/pr_description_template.md (plan variant). Plain sentences, no markdown except backticks around a path or code name; about 450 words in all. Empty fields when stopping without a PR",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "problem",
+        "user_changes",
+        "decisions",
+        "scope",
+        "risk",
+        "review_focus",
+        "verification",
+        "how_it_works",
+        "files",
+        "concepts"
+      ],
+      "properties": {
+        "problem": {
+          "description": "The problem: what prompted this and the symptom a user sees, in 2-3 plain sentences",
+          "type": "string",
+          "maxLength": 400
+        },
+        "user_changes": {
+          "description": "Each change a user will see, in their terms; empty when nothing is visible",
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 160
+          },
+          "maxItems": 4
+        },
+        "decisions": {
+          "description": "What CD approves: each decision with the alternative it rejects and why; scope beyond the issue is a decision that says so",
+          "type": "array",
+          "maxItems": 6,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "choice",
+              "rejected"
+            ],
+            "properties": {
+              "choice": {
+                "description": "The decision, as a short sentence",
+                "type": "string",
+                "maxLength": 200
+              },
+              "rejected": {
+                "description": "The alternative not taken and why, written to follow the words Rather than",
+                "type": "string",
+                "maxLength": 160
+              }
+            }
+          }
+        },
+        "scope": {
+          "description": "What is tackled, what is not (non-goals), and follow-ups proposed as issues",
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "tackled",
+            "not_tackled",
+            "deferred"
+          ],
+          "properties": {
+            "tackled": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "maxLength": 160
+              },
+              "maxItems": 4
+            },
+            "not_tackled": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "maxLength": 160
+              },
+              "maxItems": 4
+            },
+            "deferred": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "maxLength": 200
+              },
+              "maxItems": 4
+            }
+          }
+        },
+        "risk": {
+          "description": "Tier by the template risk table (empty only when stopping early), why, the top risks, and how to undo",
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "tier",
+            "why",
+            "items",
+            "undo"
+          ],
+          "properties": {
+            "tier": {
+              "type": "string",
+              "enum": [
+                "",
+                "low",
+                "medium",
+                "high"
+              ]
+            },
+            "why": {
+              "type": "string",
+              "maxLength": 200
+            },
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "maxLength": 200
+              },
+              "maxItems": 3
+            },
+            "undo": {
+              "type": "string",
+              "maxLength": 200
+            }
+          }
+        },
+        "review_focus": {
+          "description": "Where the author is least sure, and what CD may not have thought of",
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 200
+          },
+          "maxItems": 4
+        },
+        "verification": {
+          "description": "How it will be verified: the tests and checks that will run, and what CD will be able to see",
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 240
+          },
+          "maxItems": 5
+        },
+        "how_it_works": {
+          "description": "The approach at a high level, how the pieces fit, and why it is shaped this way when not obvious",
+          "type": "string",
+          "maxLength": 500
+        },
+        "files": {
+          "description": "Key files in reading order, each with its role in this change",
+          "type": "array",
+          "maxItems": 6,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "path",
+              "role"
+            ],
+            "properties": {
+              "path": {
+                "description": "Repository path, read before naming it",
+                "type": "string",
+                "maxLength": 160
+              },
+              "role": {
+                "description": "Its role in this change",
+                "type": "string",
+                "maxLength": 160
+              }
+            }
+          }
+        },
+        "concepts": {
+          "description": "0-3 terms CD may not know, each with a plain definition",
+          "type": "array",
+          "maxItems": 3,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "term",
+              "meaning"
+            ],
+            "properties": {
+              "term": {
+                "type": "string",
+                "maxLength": 60
+              },
+              "meaning": {
+                "description": "A plain definition",
+                "type": "string",
+                "maxLength": 200
+              }
+            }
+          }
+        }
+      }
+    },
+    "parts": {
+      "description": "split only: the parts in execution order, exactly as the parts table of the split record lists them; empty for every other status",
+      "type": "array",
+      "maxItems": 6,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "part",
+          "name",
+          "tier",
+          "depends_on",
+          "spec",
+          "scope"
+        ],
+        "properties": {
+          "part": {
+            "description": "The ID of the parent plus a letter, in order (D34a, D34b, ...)",
+            "type": "string",
+            "pattern": "^D[0-9]+[a-z]$"
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 100
+          },
+          "tier": {
+            "type": "string",
+            "enum": [
+              "lite",
+              "full"
+            ]
+          },
+          "depends_on": {
+            "description": "Earlier parts or other deliverables that must be Complete first",
+            "type": "array",
+            "maxItems": 6,
+            "items": {
+              "type": "string",
+              "pattern": "^D[0-9]+[a-z]?$"
+            }
+          },
+          "spec": {
+            "description": "A full-tier part that reuses an approved spec: its docs/current_work/specs/ path; empty otherwise",
+            "type": "string",
+            "maxLength": 200
+          },
+          "scope": {
+            "description": "What this part delivers, one or two plain sentences",
+            "type": "string",
+            "maxLength": 300
+          }
+        }
+      }
+    },
+    "questions": {
+      "description": "1-3 entries when status is needs-input, empty otherwise. A question is the decision, why it matters, and each option with its consequence in one line, recommended first. A discovery check-in is one entry of about 300 words. Posted for CD: plain language per ops/sdlc/process/writing-for-cd.md.",
+      "type": "array",
+      "items": {
+        "type": "string",
+        "maxLength": 4800
+      },
+      "maxItems": 3
+    },
+    "findings": {
+      "description": "Open review findings: critical/major when escalated, open minors otherwise",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "severity",
+          "location",
+          "summary"
+        ],
+        "properties": {
+          "severity": {
+            "type": "string",
+            "enum": [
+              "critical",
+              "major",
+              "minor"
+            ]
+          },
+          "location": {
+            "type": "string",
+            "description": "Where: a file and line, or a document section",
+            "maxLength": 200
+          },
+          "summary": {
+            "type": "string",
+            "description": "One line: what is wrong and why it matters. Posted for CD: plain language per ops/sdlc/process/writing-for-cd.md.",
+            "maxLength": 400
+          }
+        }
+      }
+    },
+    "deferred": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "maxLength": 400
+      },
+      "description": "Questions and follow-ups that did not block the run, one line each with its options. Posted for CD: plain language per ops/sdlc/process/writing-for-cd.md."
+    },
+    "notes": {
+      "description": "What a restart needs: what was researched and decided so far (posted as the issues discovery notes). For the next run, not for CD: keep the detail here, not in questions",
+      "type": "string"
+    },
+    "outbound": {
+      "description": "Skipped actions outside the working tree, for CD: one line each, what to do and where. Posted for CD: plain language per ops/sdlc/process/writing-for-cd.md.",
+      "type": "array",
+      "items": {
+        "type": "string",
+        "maxLength": 400
+      }
+    },
+    "orchestrator": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "self_edits",
+        "review_rounds",
+        "agents",
+        "facts"
+      ],
+      "properties": {
+        "self_edits": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "review_rounds": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "agents": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "facts": {
+          "description": "FACTS scores: the mean and the lowest phase; empty when not scored",
+          "type": "string",
+          "maxLength": 300
+        }
+      }
+    }
+  }
+}

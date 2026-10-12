@@ -248,6 +248,8 @@ Read `skeleton/manifest.json` from the z-sdlc source. This manifest defines the 
 > Skills it adds: [list bundle.skills]
 > Process docs it adds: [list bundle.process — omit line if none]
 > Framework files it hooks into: [list distinct bundle.fragments targets — omit line if none]
+> Project files it installs: [bundle.tree.to and bundle.seed.to, with a count of each — omit line if neither]
+> Requires: [bundle.requires — omit line if none]
 >
 > Install it?
 >
@@ -255,6 +257,13 @@ Read `skeleton/manifest.json` from the z-sdlc source. This manifest defines the 
 > - No — skip (you can add it later via `/sdlc-migrate`)
 
 Record the accepted bundles. The effective install set adds every accepted bundle's `skills` and `process` files to the corresponding `source_files` lists. After all Phase 1 file copies complete, inject each accepted bundle's `fragments` into their target files per `[sdlc-root]/process/project-section-markers.md` § BUNDLE-SECTION Markers: strip any block with the same label, append the fragment content at end of file wrapped in `BUNDLE-SECTION-START/END: [bundle]/[fragment]` markers. Fragment injection counts as a file write — if an adapter declares `post-file-write`, run it on the target after injection.
+
+**Bundles with files outside `.claude/` and `[sdlc-root]/`** (`tree`, `seed`, `render`, `requires`; contract 0019), after the fragment step:
+
+1. **Requires.** If the bundle declares `requires.sdlc_root` and this project's SDLC root differs, don't install it: tell CD why and record it as declined.
+2. **Tree.** Copy every file under the z-sdlc directory `tree.from` to the same relative path under the project's `tree.to`, keeping executable bits (`git ls-files -s` mode `100755`). These are framework files: hash them in `installed_files`.
+3. **Seed.** For every file under `seed.from`, write it to the same relative path under `seed.to` only if nothing is there. Seeded files are the project's from then on: never hash them, never overwrite them.
+4. **Render.** Run the bundle's `render` command from the project root (for the factory, `python3 .github/factory/render.py`, which writes `.github/workflows/factory-*.yml` from the templates and `factory.json`). If it fails, report the error and leave the bundle installed but unrendered: rendering again after fixing the settings is the bundle's Enablement, not a reinstall.
 
 Record accepted bundles in `.sdlc-manifest.json` under an `installed_bundles: []` field, and every injected fragment under `bundle_fragments` (label → target path), so `sdlc-migrate` can tell them apart from legacy installs that pre-date the bundles manifest. **Ordering:** a bundle's entries are written to `installed_bundles`/`bundle_fragments` only after its files are copied and its fragments injected — a crashed install then under-claims rather than over-claims, and a re-run repairs it idempotently.
 
@@ -344,7 +353,7 @@ When an adapter is present, this skill delegates specific phases per `[sdlc-root
 
 When no adapter is found, behavior is identical to before this protocol existed.
 
-**Write `.sdlc-manifest.json`** at project root. Includes an `installed_files` map of SHA-256 hashes for every framework file written in Phase 1 — **including accepted bundles' `skills` and `process` files, hashed after fragment injection**. This enables `sdlc-migrate` to detect post-install manual edits (drift) before overwriting.
+**Write `.sdlc-manifest.json`** at project root. Includes an `installed_files` map of SHA-256 hashes for every framework file written in Phase 1 — **including accepted bundles' `skills` and `process` files, hashed after fragment injection, and their `tree` files** (never their seeds, which are the project's). This enables `sdlc-migrate` to detect post-install manual edits (drift) before overwriting.
 
 ```json
 {

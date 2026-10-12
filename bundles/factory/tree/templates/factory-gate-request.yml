@@ -1,0 +1,100 @@
+# Factory gate request (design rule D4). Builds the request for the production gate an execution PR is
+# stopped at, from the approved plan on the default branch, the PR's head and the earlier gates' signed
+# results, and dispatches factory-gate.yml with it. The run's title carries the request's digest; CD
+# approves that run. factory-implement dispatches this when execution stops at a gate, and
+# factory-gate-trigger.yml when CD adds factory:gate-retry. It never approves or runs anything itself.
+name: factory-gate-request
+run-name: "factory-gate-request: PR #${{ inputs.pr }}"
+
+on:
+  workflow_dispatch:
+    inputs:
+      pr:
+        description: The factory execution PR stopped at a gate
+        type: number
+        required: true
+      requester:
+        description: Who asked with factory:gate-retry (needs write access); empty when the factory asks
+        type: string
+        default: ""
+
+permissions: {}
+
+concurrency:
+  group: factory-gate-request-${{ inputs.pr }}
+
+env:
+  PR: ${{ inputs.pr }}
+  APP_ID: "%{app.user_id}"
+  RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+jobs:
+  request:
+    runs-on: ubuntu-latest
+    environment: %{environments.writer}
+    timeout-minutes: 10
+    permissions:
+      actions: write
+      contents: read
+      issues: read
+      pull-requests: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          persist-credentials: false
+
+      # Comments and labels on the PR as the factory App.
+      - uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        id: app
+        with:
+          client-id: ${{ vars.FACTORY_APP_CLIENT_ID }}
+          private-key: ${{ secrets.FACTORY_APP_PRIVATE_KEY }}
+          permission-issues: write
+          permission-pull-requests: write
+
+      - name: Build the request and dispatch the gate run
+        env:
+          GH_TOKEN: ${{ github.token }}
+          APP_TOKEN: ${{ steps.app.outputs.token }}
+          GH_REPO: ${{ github.repository }}
+          REQUESTER: ${{ inputs.requester }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          set -euo pipefail
+          say() { GH_TOKEN="$APP_TOKEN" gh api "repos/$GH_REPO/issues/$PR/comments" -f body="$1 <sub>factory gate request · [run]($RUN_URL)</sub>" > /dev/null; }
+          GH_TOKEN="$APP_TOKEN" gh api -X DELETE "repos/$GH_REPO/issues/$PR/labels/factory:gate-retry" > /dev/null 2>&1 || true
+          if [ -n "$REQUESTER" ]; then
+            perm=$(gh api "repos/$GH_REPO/collaborators/$REQUESTER/permission" --jq .permission 2> /dev/null || echo none)
+            case "$perm" in admin|maintain|write) ;; *) say "A gate retry needs someone with write access."; exit 0 ;; esac
+          fi
+          gh api "repos/$GH_REPO/pulls/$PR" > pr.json
+          gh api "repos/$GH_REPO/issues/$PR/comments" --paginate --jq '.[]' > comments.ndjson
+          plan=$(python3 -I .github/factory/gates.py plan-path --comments comments.ndjson --app-id "$APP_ID")
+          gh api "repos/$GH_REPO/contents/$plan?ref=$DEFAULT_BRANCH" > plan.json
+          if ! python3 -I .github/factory/gates.py request --repo "$GH_REPO" --app-id "$APP_ID" --factory-dir .github/factory \
+                 --pr-json pr.json --comments comments.ndjson --plan-meta plan.json --out request.json > why.txt; then
+            say "No gate run started: $(sed 's/^::error:://' why.txt | head -c 400)"; exit 1
+          fi
+          read -r gate attempt kind digest < <(jq -r '[.gate, .attempt, .kind, .digest] | @tsv' request.json)
+          # One gate run per PR at a time. One already waiting for this exact request: nothing to do. A run
+          # waiting on an older request is stale: cancel it, since approving it would only be refused.
+          active=$(for s in waiting queued in_progress pending requested; do
+                     gh api "repos/$GH_REPO/actions/workflows/factory-gate.yml/runs?status=$s&per_page=100" \
+                       --jq ".workflow_runs[] | select(.display_title | startswith(\"factory-gate #$PR \")) | [.id, .status, .display_title] | @tsv"
+                   done)
+          while IFS=$'\t' read -r id status title; do
+            [ -n "$id" ] || continue
+            if [ "${title##* }" = "$digest" ]; then
+              say "Gate $gate already has a run waiting for your approval: [run $id]($GITHUB_SERVER_URL/$GH_REPO/actions/runs/$id)."; exit 0
+            fi
+            if [ "$status" = waiting ]; then
+              gh api -X POST "repos/$GH_REPO/actions/runs/$id/cancel" > /dev/null
+              echo "Cancelled stale gate run $id" >> "$GITHUB_STEP_SUMMARY"
+            else
+              say "A gate run is in progress ([run $id]($GITHUB_SERVER_URL/$GH_REPO/actions/runs/$id)); wait for its result."; exit 0
+            fi
+          done <<< "$active"
+          gh workflow run factory-gate.yml --ref "$DEFAULT_BRANCH" -f pr="$PR" -f gate="$gate" -f attempt="$attempt" \
+            -f kind="$kind" -f digest="$digest" -f request="$(base64 -w0 request.json)"
+          echo "Requested $gate attempt $attempt ($kind) for PR #$PR: digest $digest" >> "$GITHUB_STEP_SUMMARY"

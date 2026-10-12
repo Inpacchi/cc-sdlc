@@ -1,0 +1,260 @@
+# Factory improve loop (phase 4). Once a week the factory reads its own GitHub record of what CD did to its
+# output and posts a report CD acts on. Report only: it changes nothing (CD, 2026-10-10).
+#   harvest  builds the digest deterministically (improve_harvest.py, read-only token, hosted)
+#   analyze  runs /sdlc-audit improve on it (strict tier, Read/Grep/Glob only, no write credential)
+#   report   renders the issue from the result (improve_report.py) and posts it as the factory App, once a week
+# A window with no signals posts nothing. Design rule D5 (z-sdlc process/factory.md); operating
+# notes: .github/factory/README.md § Improve loop.
+name: factory-improve
+run-name: "factory-improve${{ inputs.dry_run && ' (dry run)' || '' }}"
+
+on:
+  schedule:
+    # Sundays 22:23 UTC (CD, 2026-10-10): 18:23 Eastern in summer, 17:23 in winter. Off the hour, where
+    # GitHub delays or drops scheduled runs.
+    - cron: "%{improve.cron}"
+  workflow_dispatch:
+    inputs:
+      since:
+        description: Window start, an ISO date or time in UTC (empty, the end of the last report's window)
+        type: string
+        default: ""
+      until:
+        description: Window end (empty, now)
+        type: string
+        default: ""
+      dry_run:
+        description: Render the report into the run summary and an artifact; post nothing
+        type: boolean
+        default: false
+
+permissions: {}
+
+concurrency:
+  group: factory-improve-report
+  cancel-in-progress: false
+
+env:
+  RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+jobs:
+  harvest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    # Read-only: the record of issues, PRs, runs and artifacts (the metrics records).
+    permissions:
+      actions: read
+      contents: read
+      issues: read
+      pull-requests: read
+    outputs:
+      empty: ${{ steps.harvest.outputs.empty }}
+      week: ${{ steps.harvest.outputs.week }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          persist-credentials: false
+
+      - name: Harvest the window
+        id: harvest
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          # A scheduled run's event has no repository; it runs on the default branch.
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch || github.ref_name }}
+          SINCE: ${{ inputs.since }}
+          UNTIL: ${{ inputs.until }}
+        run: |
+          set -euo pipefail
+          python3 -I .github/factory/improve_harvest.py "$RUNNER_TEMP/improve/improve-digest.json" > "$RUNNER_TEMP/out.txt"
+          cat "$RUNNER_TEMP/out.txt" >> "$GITHUB_OUTPUT"
+          jq -r '"### Harvest \(.window.week)\n\n\(.window.since) to \(.window.until) (\(.window.from)\(if .window.capped then ", capped" else "" end))\n\n| Signal | Count |\n|---|---|\n" + ([.counts | to_entries[] | "| \(.key) | \(.value) |"] | join("\n")) + "\n\nMetrics records: \(.metrics | length). Ledger: \(.ledger | length) earlier proposals." + (if .empty then "\n\n**Empty window: nothing to report, nothing posted.**" else "" end)' \
+            "$RUNNER_TEMP/improve/improve-digest.json" >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: improve-digest
+          path: ${{ runner.temp }}/improve/improve-digest.json
+          retention-days: 30
+          if-no-files-found: error
+
+  analyze:
+    needs: harvest
+    if: needs.harvest.outputs.empty == 'false'
+    # The strict tier: no production path, no database. This workflow must be on the shared runner group's
+    # (`factory-pool`) selected-workflows list, or the job queues forever.
+    runs-on: [self-hosted, %{runners.strict}]
+    # Backstop only; the Analyze step's own timeout is the real bound.
+    timeout-minutes: 100
+    # Read-only: the agent job reads the repository and the digest, and writes nothing.
+    permissions:
+      contents: read
+      packages: read
+    container:
+      # Pinned by digest; bump together with a factory-smoke re-run.
+      image: %{image.repository}@%{image.digest}
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    outputs:
+      result: ${{ steps.claude.outputs.structured_output }}
+    env:
+      # A headless run ends with the orchestrator's turn: agents run in the foreground.
+      CLAUDE_CODE_DISABLE_BACKGROUND_TASKS: "1"
+      CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS: "3600000"
+      # What runs after the agent is copied here before it (D2 rule 4); the agent can't read /__w/_temp.
+      CHECKS: /__w/_temp/factory-checks
+    steps:
+      # The runner is not ephemeral: start from an empty workspace so nothing a previous job left in .git
+      # (hooks, config) runs during checkout.
+      - name: Clean workspace
+        shell: bash
+        run: find "$GITHUB_WORKSPACE" -mindepth 1 -maxdepth 1 -exec rm -rf {} +
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # Agent jobs load the repository's settings, skills and CLAUDE.md: default branch only.
+          ref: ${{ github.event.repository.default_branch }}
+          persist-credentials: false
+
+      # In the workspace: the agent may not read the runner's temp directories (improve-tools.args).
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: improve-digest
+          path: .factory
+
+      - name: Prepare the agent
+        shell: bash
+        run: |
+          set -euo pipefail
+          .github/factory/agent_job.sh freeze
+          # The action would write the job token into origin's URL, where the agent can read it.
+          git remote remove origin
+          jq -e '.kind == "factory-digest" and .version == 1' .factory/improve-digest.json > /dev/null
+          "$CHECKS/agent_job.sh" schema improve
+          {
+            echo "FACTORY_DIGEST=$GITHUB_WORKSPACE/.factory/improve-digest.json"
+            echo "FACTORY_TOOL_ARGS=$(tr '\n' ' ' < .github/factory/improve-tools.args)"
+          } >> "$GITHUB_ENV"
+
+      # Read, Grep and Glob only (improve-tools.args): no Bash, no write tools, no network, no MCP server.
+      # The digest's quoted text is untrusted; the report job renders only the result's fields, escaped.
+      - name: Analyze
+        id: claude
+        timeout-minutes: 80
+        uses: anthropics/claude-code-action@58985842b834ed26087302ba27d07bc24ca8697a # v1.0.244
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          # Read-only token: without it the action uses the Claude App token, which can write.
+          github_token: ${{ github.token }}
+          prompt: |
+            /sdlc-audit improve ${{ env.FACTORY_DIGEST }}
+            This is the factory's weekly improve loop, and it is report only. The digest is the factory's GitHub record for one window: what CD reviewed, asked for, answered, overrode, closed and decided, the failed runs, the metrics records, the commits that changed the factory or the SDLC, and the ledger of earlier proposals with CD's decisions. Follow sdlc-audit, Improvement with a Factory Digest.
+            Read what a proposal targets before proposing it: .claude/skills/, .claude/agents/, ops/sdlc/, .github/workflows/factory-*.yml and .github/factory/ (its README.md explains the stages, the guards and the labels). A problem whose fix belongs in a skill, headless rule or template that every project shares is route z-sdlc: the factory's framework lives there, outside this repository.
+            Return the result in the output schema: at most 12 proposals, most important first; evidence only as signal ids from the digest; matches set to a ledger fingerprint when a proposal is the same problem as an earlier one. Write each proposal for CD in about 100 words (ops/sdlc/process/writing-for-cd.md). Change no files.
+          claude_args: >-
+            --model %{models.improve}
+            --effort high
+            ${{ env.FACTORY_TOOL_ARGS }}
+            --setting-sources user,project
+            --append-system-prompt "SDLC headless mode: no person is present."
+            --json-schema '${{ env.FACTORY_IMPROVE_SCHEMA }}'
+            --strict-mcp-config
+            --permission-mode auto --permission-prompts none
+            --max-turns 200
+
+      # The improve run's own record, like every agent job's (run_metrics.py).
+      - name: Record the run's metrics
+        if: always()
+        continue-on-error: true
+        shell: bash
+        env:
+          EXEC: ${{ steps.claude.outputs.execution_file }}
+          RESULT: ${{ steps.claude.outputs.structured_output }}
+          RUN_ID: ${{ github.run_id }}
+          RUN_ATTEMPT: ${{ github.run_attempt }}
+          WORKFLOW: factory-improve
+        run: |
+          "$CHECKS/agent_job.sh" metrics improve
+          if [ -s "$EXEC" ]; then
+            jq -r '[.[] | select(.type == "result")] | last
+                   | "### Analysis\n\n| Turns | Cost (API-rate equivalent) |\n|---|---|\n| \(.num_turns) | $\(.total_cost_usd) |"' \
+              "$EXEC" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        continue-on-error: true
+        with:
+          name: factory-metrics
+          path: ${{ runner.temp }}/metrics/metrics.json
+          retention-days: 35
+
+  report:
+    needs: [harvest, analyze]
+    if: needs.analyze.result == 'success'
+    runs-on: ubuntu-latest
+    # The App key is in this environment, which only the default branch may use.
+    environment: %{environments.writer}
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      # The renderer and the guard it imports, from the default branch: nothing the agent touched runs here.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          persist-credentials: false
+
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: improve-digest
+          path: ${{ runner.temp }}/in
+
+      - name: Render the report
+        env:
+          RESULT: ${{ needs.analyze.outputs.result }}
+        run: |
+          set -euo pipefail
+          printf '%s' "$RESULT" > "$RUNNER_TEMP/result.json"
+          python3 -I .github/factory/improve_report.py "$RUNNER_TEMP/in/improve-digest.json" "$RUNNER_TEMP/result.json" \
+            "$RUN_URL" "$RUNNER_TEMP/report"
+          { echo "## $(cat "$RUNNER_TEMP/report/title")"; echo; cat "$RUNNER_TEMP/report/body.md"; echo;
+            cat "$RUNNER_TEMP/report/notes.md"; } >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: improve-report
+          path: ${{ runner.temp }}/report
+          retention-days: 30
+
+      # Issues only, scoped to this repository: the report shows as the factory App.
+      - uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        if: ${{ !inputs.dry_run }}
+        id: app
+        with:
+          client-id: ${{ vars.FACTORY_APP_CLIENT_ID }}
+          private-key: ${{ secrets.FACTORY_APP_PRIVATE_KEY }}
+          permission-issues: write
+
+      - name: Post the report
+        if: ${{ !inputs.dry_run }}
+        env:
+          GH_TOKEN: ${{ steps.app.outputs.token }}
+          GH_REPO: ${{ github.repository }}
+          WEEK: ${{ needs.harvest.outputs.week }}
+        run: |
+          set -euo pipefail
+          [[ $WEEK =~ ^[0-9]{4}-W[0-9]{2}$ ]] || { echo "::error::bad week '$WEEK'"; exit 1; }
+          # One report a week: a re-run (or a manual run over a past window) never posts a second one. The App's
+          # marker names the week; the title doesn't count.
+          existing=$(gh api --paginate "repos/$GH_REPO/issues?state=all&per_page=100" \
+            --jq '.[] | select(.user.id == %{app.user_id} and (.pull_request | not)) | "\(.number) \((.body // "") | split("\n")[0])"' \
+            | grep -E '^[0-9]+ <!-- factory-improve: ' | grep -F "\"week\":\"$WEEK\"" | head -1 | cut -d' ' -f1 || true)
+          if [ -n "$existing" ]; then
+            echo "The $WEEK report is already #$existing; nothing posted." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          url=$(gh issue create --title "$(cat "$RUNNER_TEMP/report/title")" --body-file "$RUNNER_TEMP/report/body.md")
+          echo "Posted: $url" >> "$GITHUB_STEP_SUMMARY"

@@ -1,0 +1,468 @@
+#!/usr/bin/env python3
+"""The GitHub half of a repository's factory setup (z-sdlc process/factory.md, Enablement steps 2 to 8).
+
+    python3 .github/factory/bootstrap.py            report what is missing; change nothing
+    python3 .github/factory/bootstrap.py --apply    also create what it can, then report
+
+It applies only the factory's labels, its environments (deployable from the default branch only, with
+production's required reviewer) and this repository's entries in the runner groups. It reports and never sets
+secrets and variables (their values are CD's), the App's install and permissions, CODEOWNERS and the default
+branch's rules (security configuration stays CD's). It writes only what differs, so it is safe to run again.
+It runs as the gh login: the runner groups and the App check need an organization admin's token (admin:org),
+and without one they are reported as unchecked. The runner groups are factory.json's runners.groups, by default
+the shared pool factory-pool (strict and planning) and, with a production tier (production/ops.json), the
+project's own factory-pool-<repository>-prod.
+
+Exit 0 when nothing is missing, 1 when something is (or a write failed), 2 on a usage or settings error.
+"""
+import argparse
+import json
+import pathlib
+import re
+import subprocess
+import sys
+import urllib.parse
+
+# Every factory label (process/factory.md, Labels): name, colour, description.
+LABELS = [
+    ("factory:triage", "1d76db", "Opt-in: run factory triage on this issue (removed when triage applies)"),
+    ("factory:ready-for-dispatch", "0e8a16",
+     "Triage: small and clear; dispatch unattended to implement, review and open a draft PR"),
+    ("factory:ready-to-plan", "5319e7", "Triage: needs a plan; tier (lite or full) named in the triage comment"),
+    ("factory:needs-input", "fbca04", "Waiting on CD; the question comment names the stage to restart"),
+    ("factory:wait", "c5def5", "Triage: blocked by other work or a dependency; comment says what would change that"),
+    ("factory:review-capped", "d93f0b", "Review cap hit; draft PR parked with open findings"),
+    ("factory:escalated", "b60205", "Revision limit hit; no more automatic runs, CD decides"),
+    ("factory:advisor", "8e44ad", "Planning uses a Fable advisor (set by triage or CD; a property, not a state)"),
+    ("factory:follow-up", "1d76db",
+     "Filed by the factory from a merged plan's PR; triaged, then held until factory:go (a property)"),
+    ("factory:go", "0e8a16", "Release a held follow-up: start its triaged stage once (removed after)"),
+    ("factory:revise", "fbca04", "On a factory PR: revise it from the latest review comments (drafts)"),
+    ("factory:gate", "e99695",
+     "Execution stopped before a production gate; its gate run waits for CD's approval (D4)"),
+    ("factory:gate-retry", "fbca04", "On an execution PR: build a fresh gate request and start its gate run (D4)"),
+]
+APP_PERMISSIONS = {"contents": "write", "issues": "write", "pull_requests": "write", "metadata": "read"}
+SHARED_GROUP = "factory-pool"
+RUNS_ON = re.compile(r"^\s*runs-on:\s*\[\s*self-hosted\s*,\s*([A-Za-z0-9_.-]+)\s*\]", re.M)
+CODEOWNERS_PATHS = (".github/CODEOWNERS", "CODEOWNERS", "docs/CODEOWNERS")
+
+
+class Settings(Exception):
+    pass
+
+
+def gh(method, path, body=None):
+    """gh api as the logged-in user: (HTTP status, parsed body or None). Status 0 when gh itself failed."""
+    args = ["gh", "api", "-i", "-X", method, path, "-H", "Accept: application/vnd.github+json"]
+    if body is not None:
+        args += ["--input", "-"]
+    r = subprocess.run(args, input=None if body is None else json.dumps(body), capture_output=True, text=True)
+    head, rest = (re.split(r"\r?\n\r?\n", r.stdout, maxsplit=1) + [""])[:2]
+    m = re.match(r"HTTP/\S+\s+(\d{3})", head)
+    if not m:
+        return 0, {"message": (r.stderr or r.stdout).strip()}
+    try:
+        data = json.loads(rest) if rest.strip() else None
+    except json.JSONDecodeError:
+        data = None
+    return int(m.group(1)), data
+
+
+class Bootstrap:
+    def __init__(self, api, root, repo, apply, reviewer=None):
+        self.api, self.root, self.repo, self.apply, self.reviewer = api, pathlib.Path(root), repo, apply, reviewer
+        self.owner, self.name = repo.split("/", 1)
+        self.rows, self.failed = [], 0
+        factory = self.root / ".github" / "factory"
+        try:
+            self.cfg = json.loads((factory / "factory.json").read_text())
+            self.planning = json.loads((factory / "planning.json").read_text()) \
+                if (factory / "planning.json").exists() else {}
+            self.services = json.loads((factory / "services.json").read_text()) \
+                if (factory / "services.json").exists() else {}
+            runners, envs = self.cfg["runners"], self.cfg["environments"]
+            self.labels = {k: runners[k] for k in ("strict", "planning", "production")}
+            self.envs = {k: envs[k] for k in ("writer", "planning", "production")}
+            self.app_slug = self.cfg["app"]["login"].removesuffix("[bot]")
+        except (OSError, ValueError, KeyError, TypeError) as e:
+            raise Settings(f"can't read .github/factory/factory.json's runners, environments and app: {e}") from e
+        groups = runners.get("groups") or {}
+        self.groups = {"shared": groups.get("shared") or SHARED_GROUP,
+                       "production": groups.get("production") or f"factory-pool-{self.name}-prod"}
+        # A production tier is the project's own operations catalog (D4); without it there is no gate to run.
+        self.production = (factory / "production" / "ops.json").exists()
+
+    # ---- reporting
+    def note(self, state, section, text):
+        self.rows.append((state, section, text))
+        if state in ("missing", "problem", "failed"):
+            self.failed += 1
+
+    def write(self, section, what, method, path, body=None):
+        """One write: True when GitHub accepted it; a failure is reported."""
+        status, data = self.api(method, path, body)
+        if 200 <= status < 300:
+            return True
+        self.note("failed", section, f"{what}: HTTP {status} {(data or {}).get('message', '')}".strip())
+        return False
+
+    def list_all(self, path, key):
+        """Every item of a paged list, or None when the token can't read it."""
+        items, page = [], 1
+        while True:
+            sep = "&" if "?" in path else "?"
+            status, data = self.api("GET", f"{path}{sep}per_page=100&page={page}")
+            if status != 200:
+                return None
+            batch = data if key is None else (data or {}).get(key, [])
+            items += batch
+            if len(batch) < 100:
+                return items
+            page += 1
+
+    # ---- the repository
+    def run(self):
+        status, info = self.api("GET", f"repos/{self.repo}")
+        if status != 200:
+            raise Settings(f"can't read {self.repo} (HTTP {status}): check the name and gh's login")
+        self.repo_id, self.default = info["id"], info["default_branch"]
+        self.org = (info.get("owner") or {}).get("type") == "Organization"
+        self.check_labels()
+        self.check_environments()
+        self.check_secrets()
+        self.check_runner_groups()
+        self.check_app()
+        self.check_codeowners()
+        self.check_branch_rules()
+        return self.failed
+
+    def check_labels(self):
+        have = {l["name"]: l for l in self.list_all(f"repos/{self.repo}/labels", None) or []}
+        ok = 0
+        for name, color, description in LABELS:
+            cur = have.get(name)
+            if cur is None:
+                if self.apply and self.write("labels", f"create {name}", "POST", f"repos/{self.repo}/labels",
+                                             {"name": name, "color": color, "description": description}):
+                    self.note("created", "labels", name)
+                elif not self.apply:
+                    self.note("missing", "labels", name)
+            elif cur.get("color", "").lower() != color or (cur.get("description") or "") != description:
+                if self.apply and self.write("labels", f"update {name}", "PATCH",
+                                             f"repos/{self.repo}/labels/{urllib.parse.quote(name, safe='')}",
+                                             {"color": color, "description": description}):
+                    self.note("updated", "labels", f"{name} (colour and description)")
+                elif not self.apply:
+                    self.note("missing", "labels", f"{name}: colour or description differs from the factory's")
+            else:
+                ok += 1
+        if ok:
+            self.note("ok", "labels", f"{ok} of {len(LABELS)} as the factory defines them")
+
+    # ---- environments
+    def wanted_environments(self):
+        envs = [(self.envs["writer"], False), (self.envs["planning"], False)]
+        return envs + [(self.envs["production"], True)] if self.production else envs
+
+    def check_environments(self):
+        have = {e["name"]: e for e in self.list_all(f"repos/{self.repo}/environments", "environments") or []}
+        for env, reviewed in self.wanted_environments():
+            base = f"repos/{self.repo}/environments/{urllib.parse.quote(env, safe='')}"
+            if env not in have:
+                if not self.apply:
+                    self.note("missing", "environments", f"{env} (deployable from {self.default} only"
+                              + (", CD as required reviewer)" if reviewed else ")"))
+                    continue
+                body = {"deployment_branch_policy": {"protected_branches": False, "custom_branch_policies": True}}
+                if reviewed:
+                    reviewer = self.reviewer_id()
+                    if reviewer is None:
+                        continue
+                    body["reviewers"] = [{"type": "User", "id": reviewer}]
+                if self.write("environments", f"create {env}", "PUT", base, body) and self.write(
+                        "environments", f"{env}: allow {self.default}", "POST", f"{base}/deployment-branch-policies",
+                        {"name": self.default, "type": "branch"}):
+                    self.note("created", "environments", f"{env}, deployable from {self.default} only"
+                              + (" (required reviewer set)" if reviewed else ""))
+                continue
+            self.check_environment(env, have[env], base, reviewed)
+
+    def check_environment(self, env, cur, base, reviewed):
+        policy = cur.get("deployment_branch_policy") or {}
+        if not policy.get("custom_branch_policies"):
+            # Changing an existing environment's protection is CD's: a PUT replaces all of it.
+            self.note("problem", "environments", f"{env} is deployable from any branch: limit it to {self.default}")
+            return
+        names = {p.get("name") for p in self.list_all(f"{base}/deployment-branch-policies", "branch_policies") or []}
+        if self.default not in names:
+            if self.apply and self.write("environments", f"{env}: allow {self.default}", "POST",
+                                         f"{base}/deployment-branch-policies",
+                                         {"name": self.default, "type": "branch"}):
+                self.note("updated", "environments", f"{env}: deployable from {self.default}")
+                names.add(self.default)
+            elif not self.apply:
+                self.note("missing", "environments", f"{env}: {self.default} isn't an allowed branch")
+        extra = sorted(n for n in names if n != self.default)
+        if extra:
+            self.note("problem", "environments", f"{env} also deploys from {', '.join(extra)}: {self.default} only")
+        reviewers = [r for rule in cur.get("protection_rules") or [] if rule.get("type") == "required_reviewers"
+                     for r in rule.get("reviewers") or []]
+        if reviewed and not reviewers:
+            self.note("problem", "environments", f"{env} has no required reviewer: CD approves every gate run")
+        if self.default in names and not extra and (reviewers or not reviewed):
+            self.note("ok", "environments", f"{env}: deployable from {self.default} only"
+                      + (", with a required reviewer" if reviewed else ""))
+
+    def reviewer_id(self):
+        path = f"users/{self.reviewer}" if self.reviewer else "user"
+        status, data = self.api("GET", path)
+        if status != 200:
+            self.note("failed", "environments", f"can't find the reviewer ({path}): HTTP {status}")
+            return None
+        return data["id"]
+
+    # ---- secrets and variables: names only, never values
+    def check_secrets(self):
+        names = lambda path, key: {s["name"] for s in self.list_all(path, key) or []}  # noqa: E731
+        repo_secrets = names(f"repos/{self.repo}/actions/secrets", "secrets")
+        org_secrets = names(f"repos/{self.repo}/actions/organization-secrets", "secrets") if self.org else set()
+        self.secret("repository secret", "CLAUDE_CODE_OAUTH_TOKEN", repo_secrets, "from `claude setup-token`")
+        if "CLAUDE_CODE_OAUTH_TOKEN" in org_secrets:
+            self.note("problem", "secrets", "CLAUDE_CODE_OAUTH_TOKEN is also an organization secret: never share it")
+        if "CONTEXT7_API_KEY" not in repo_secrets:
+            self.note("optional", "secrets", "repository secret CONTEXT7_API_KEY (Context7's higher rate limit)")
+        wanted = {self.envs["writer"]: ([("FACTORY_APP_PRIVATE_KEY", "the App's private key")],
+                                        [("FACTORY_APP_CLIENT_ID", "the App's client ID")])}
+        planning = []
+        if ((self.planning.get("database") or {}).get("host") or "").strip():
+            planning.append(("FACTORY_DB_READER_PASSWORD", "the planning database's read-only password"))
+        for s in self.services.get("services") or []:
+            if s.get("slot"):
+                planning.append((s["slot"], f"service {s.get('name', '?')}'s credential"))
+        wanted[self.envs["planning"]] = (planning, [])
+        for env, (secrets, variables) in wanted.items():
+            base = f"repos/{self.repo}/environments/{urllib.parse.quote(env, safe='')}"
+            have_s = names(f"{base}/secrets", "secrets")
+            have_v = names(f"{base}/variables", "variables")
+            for name, what in secrets:
+                self.secret(f"{env} secret", name, have_s, what)
+            for name, what in variables:
+                self.secret(f"{env} variable", name, have_v, what)
+
+    def secret(self, where, name, have, what):
+        if name in have:
+            self.note("ok", "secrets", f"{where} {name}")
+        else:
+            self.note("missing", "secrets", f"{where} {name} ({what}): set it by hand")
+
+    # ---- runner groups
+    def workflow_refs(self):
+        """The rendered workflows per tier: the shared pool's (strict and planning) and production's."""
+        shared, production = [], []
+        for f in sorted((self.root / ".github" / "workflows").glob("*.yml")):
+            labels = set(RUNS_ON.findall(f.read_text()))
+            ref = f"{self.repo}/.github/workflows/{f.name}@refs/heads/{self.default}"
+            if labels & {self.labels["strict"], self.labels["planning"]}:
+                shared.append(ref)
+            if self.labels["production"] in labels:
+                production.append(ref)
+        return shared, production
+
+    def check_runner_groups(self):
+        if not self.org:
+            self.note("problem", "runner groups", f"{self.owner} isn't an organization: the runners are org-level")
+            return
+        groups = self.list_all(f"orgs/{self.owner}/actions/runner-groups", "runner_groups")
+        if groups is None:
+            self.note("unchecked", "runner groups", "needs an organization admin's token (admin:org)")
+            return
+        shared, production = self.workflow_refs()
+        by_name = {g["name"]: g for g in groups}
+        self.check_group(by_name.get(self.groups["shared"]), self.groups["shared"], shared, "host/setup.sh")
+        if self.production:
+            self.check_group(by_name.get(self.groups["production"]), self.groups["production"], production,
+                             "host/setup-production.sh")
+
+    def check_group(self, group, name, refs, setup):
+        section = f"runner group {name}"
+        base = f"orgs/{self.owner}/actions/runner-groups"
+        if group is None:
+            if not self.apply:
+                self.note("missing", section, f"the group itself (selected repositories, {len(refs)} workflows)")
+                return
+            status, group = self.api("POST", base, {"name": name, "visibility": "selected",
+                                                    "selected_repository_ids": [self.repo_id],
+                                                    "restricted_to_workflows": True, "selected_workflows": refs})
+            if status != 201:
+                self.note("failed", section, f"create the group: HTTP {status} {(group or {}).get('message', '')}")
+                return
+            self.note("created", section, f"for {self.name}, with {len(refs)} workflows; register its runners "
+                      f"with {setup}")
+            return
+        gid = group["id"]
+        if group.get("visibility") != "selected":
+            self.note("problem", section, f"visibility is {group.get('visibility')}: every repository can use it")
+            return
+        repos = self.list_all(f"{base}/{gid}/repositories", "repositories")
+        if repos is None:
+            self.note("unchecked", section, "can't read its repositories")
+            return
+        repo_ids = [r["id"] for r in repos]
+        if self.repo_id not in repo_ids:
+            if self.apply and self.write(section, f"add {self.name}", "PUT", f"{base}/{gid}/repositories/{self.repo_id}"):
+                self.note("added", section, f"repository {self.name}")
+                repo_ids.append(self.repo_id)
+            elif not self.apply:
+                self.note("missing", section, f"repository {self.name}")
+        if not group.get("restricted_to_workflows"):
+            # Restricting it now would stop every other project's workflows that aren't listed: CD's call.
+            self.note("problem", section, "isn't restricted to selected workflows")
+        else:
+            self.check_group_workflows(group, section, base, repo_ids, refs)
+        runners = self.list_all(f"{base}/{gid}/runners", "runners")
+        if runners is not None and not runners:
+            self.note("problem", section, f"has no runners: register them with {setup}")
+
+    def check_group_workflows(self, group, section, base, repo_ids, refs):
+        gid, have = group["id"], list(group.get("selected_workflows") or [])
+        prefix = f"{self.repo}/.github/workflows/"
+        stale = sorted(w for w in have if w.startswith(prefix) and w not in refs)
+        if stale:
+            self.note("problem", section, f"lists workflows {self.name} no longer renders: {', '.join(stale)}")
+        missing = [r for r in refs if r not in have]
+        if not missing:
+            self.note("ok", section, f"{self.name} and its {len(refs)} workflow{'s' if len(refs) != 1 else ''}")
+            return
+        if not self.apply:
+            for r in missing:
+                self.note("missing", section, f"workflow {r.removeprefix(prefix)}")
+            return
+        # A PATCH replaces the workflow list with what it sends (an omitted list empties it) and, if it sends
+        # visibility, empties the repository list: send the whole list, never visibility, then check both.
+        wanted = have + missing
+        if not self.write(section, "add workflows", "PATCH", f"{base}/{gid}",
+                          {"name": group["name"], "restricted_to_workflows": True, "selected_workflows": wanted}):
+            return
+        status, now = self.api("GET", f"{base}/{gid}")
+        after = {r["id"] for r in self.list_all(f"{base}/{gid}/repositories", "repositories") or []}
+        lost = [i for i in repo_ids if i not in after]
+        if lost:
+            self.write(section, "restore its repositories", "PUT", f"{base}/{gid}/repositories",
+                       {"selected_repository_ids": repo_ids})
+            self.note("problem", section, f"the update dropped {len(lost)} repositories; restored, check it")
+        if status != 200 or not set(wanted) <= set(now.get("selected_workflows") or []):
+            self.note("failed", section, "the workflow list didn't take: check it in the org settings")
+            return
+        self.note("added", section, f"{len(missing)} workflows: "
+                  + ", ".join(r.removeprefix(prefix) for r in missing))
+
+    # ---- the App
+    def check_app(self):
+        if not self.org:
+            return
+        installs = self.list_all(f"orgs/{self.owner}/installations", "installations")
+        if installs is None:
+            self.note("unchecked", "app", "needs an organization admin's token (admin:org)")
+            return
+        inst = next((i for i in installs if i.get("app_slug") == self.app_slug), None)
+        if inst is None:
+            self.note("problem", "app", f"{self.app_slug} isn't installed in {self.owner}: install it on {self.name}")
+            return
+        if inst.get("repository_selection") != "all":
+            repos = self.list_all(f"user/installations/{inst['id']}/repositories", "repositories")
+            if repos is None:
+                self.note("unchecked", "app", f"can't list {self.app_slug}'s repositories")
+            elif not any(r.get("full_name") == self.repo for r in repos):
+                self.note("problem", "app", f"{self.app_slug} isn't installed on {self.name}")
+                return
+        perms = inst.get("permissions") or {}
+        if perms != APP_PERMISSIONS:
+            diff = sorted(f"{k}: {perms.get(k, 'none')}" for k in set(perms) | set(APP_PERMISSIONS)
+                          if perms.get(k) != APP_PERMISSIONS.get(k))
+            self.note("problem", "app", f"{self.app_slug}'s permissions differ from contents, issues and pull "
+                      f"requests write, metadata read (and nothing else): {', '.join(diff)}")
+        else:
+            self.note("ok", "app", f"{self.app_slug} installed, with exactly the factory's permissions")
+
+    # ---- CODEOWNERS and the default branch's rules: report only
+    def check_codeowners(self):
+        path = next((p for p in CODEOWNERS_PATHS if (self.root / p).exists()), None)
+        if path is None:
+            self.note("problem", "codeowners", "no CODEOWNERS: .github/, .claude/ and the agent configuration "
+                      "must be code-owned (D2 rule 6)")
+            return
+        owned = {line.split()[0] for line in (self.root / path).read_text().splitlines()
+                 if line.strip() and not line.lstrip().startswith("#") and len(line.split()) > 1}
+        for p in ("/.github/", "/.claude/"):
+            if not owned & {p, p.rstrip("/"), p + "**", p.lstrip("/")}:
+                self.note("problem", "codeowners", f"{path} doesn't own {p}")
+                return
+        self.note("ok", "codeowners", f"{path} owns /.github/ and /.claude/ (the seeded tests check the rest)")
+
+    def check_branch_rules(self):
+        owner_review, checks = False, set()
+        for rs in self.list_all(f"repos/{self.repo}/rulesets?includes_parents=true", None) or []:
+            status, full = self.api("GET", f"repos/{self.repo}/rulesets/{rs['id']}")
+            if status != 200 or full.get("enforcement") != "active" or full.get("target") != "branch":
+                continue
+            include = ((full.get("conditions") or {}).get("ref_name") or {}).get("include") or []
+            if not {"~DEFAULT_BRANCH", "~ALL", f"refs/heads/{self.default}"} & set(include):
+                continue
+            for rule in full.get("rules") or []:
+                params = rule.get("parameters") or {}
+                if rule.get("type") == "pull_request" and params.get("require_code_owner_review"):
+                    owner_review = True
+                if rule.get("type") == "required_status_checks":
+                    checks |= {c.get("context") for c in params.get("required_status_checks") or []}
+        status, prot = self.api("GET", f"repos/{self.repo}/branches/{self.default}/protection")
+        if status == 200:
+            owner_review |= bool((prot.get("required_pull_request_reviews") or {}).get("require_code_owner_reviews"))
+            checks |= set(((prot.get("required_status_checks") or {}).get("contexts")) or [])
+        if owner_review:
+            self.note("ok", "branch rules", f"{self.default} requires code-owner review")
+        else:
+            self.note("problem", "branch rules", f"{self.default} doesn't require code-owner review (D2 rule 6)")
+        if checks:
+            self.note("ok", "branch rules", f"{self.default} requires {', '.join(sorted(c for c in checks if c))}: "
+                      "it must run render.py --check, workflow_policy.py and the factory's tests")
+        else:
+            self.note("problem", "branch rules", f"{self.default} has no required status check: CI must run "
+                      "render.py --check, workflow_policy.py and the factory's tests")
+
+
+def main(argv=None, api=gh):
+    ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
+    ap.add_argument("--apply", action="store_true", help="create the labels, environments and runner-group entries")
+    ap.add_argument("--repo", help="owner/name (default: gh's repository for the checkout)")
+    ap.add_argument("--reviewer", help="production's required reviewer (default: the gh login)")
+    ap.add_argument("--root", default=str(pathlib.Path(__file__).resolve().parents[2]), help=argparse.SUPPRESS)
+    args = ap.parse_args(argv)
+    repo = args.repo
+    if not repo:
+        r = subprocess.run(["gh", "repo", "view", "--json", "nameWithOwner", "-q", ".nameWithOwner"],
+                           cwd=args.root, capture_output=True, text=True)
+        repo = r.stdout.strip()
+    if not re.fullmatch(r"[\w.-]+/[\w.-]+", repo or ""):
+        print("bootstrap: can't tell the repository; pass --repo owner/name", file=sys.stderr)
+        return 2
+    try:
+        b = Bootstrap(api, args.root, repo, args.apply, args.reviewer)
+        failed = b.run()
+    except Settings as e:
+        print(f"bootstrap: {e}", file=sys.stderr)
+        return 2
+    width = max((len(s) for s, _, _ in b.rows), default=0)
+    section = None
+    for state, sec, text in b.rows:
+        if sec != section:
+            print(sec)
+            section = sec
+        print(f"  {state:<{width}}  {text}")
+    print(f"\n{repo}: " + ("nothing missing" if not failed else f"{failed} to fix")
+          + ("" if args.apply else " (report only; --apply creates labels, environments and runner-group entries)"))
+    return 1 if failed else 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

@@ -37,6 +37,28 @@ Each entry contains:
 
 ---
 
+## 2026-10-12: Debut the factory bundle: the software factory, promoted from quantile
+
+**Origin:** the factory's rollout (`docs/current_work/ideas/software-factory_rollout-design.md`). The software factory incubated in quantile (F13): issue-driven agent stages from triage to a draft PR, on self-hosted runners, with CD approving every plan, merge and production step. Steps 1-3 made it installable: shared scripts, workflows rendered from a per-repository `factory.json`, and the `python-node` stack profile. Step 4 moves it into z-sdlc as an opt-in bundle, with its design rules promoted to a process doc (F22); step 5 adds the GitHub setup. CD decided (2026-10-12) that quantile keeps incubating it and z-sdlc imports it, and that a fix found in a project that installed the bundle goes straight into z-sdlc.
+
+**What happened:** before the release, the bundle met quantile's live runs. D17, the first live rollback gate, found that the deploy check refused the factory's own job image under `.github/`. Moving the guard tests upstream found that a project without a production tier could publish no plan. Renaming the org's runner groups showed that a runner-group API update can empty a group's repository list. Smoke's stand-in service, httpbin.org, failed it for an afternoon. Each is fixed here.
+
+**Changes made:**
+
+1. **`bundles/factory/tree/`** — the factory's code as quantile has it (83 files): the scripts, guards, schemas, tool policies, sandbox settings, workflow templates, `render.py`, `workflow_policy.py`, the `python-node` profile, `bootstrap.py` and the tests. Installed at `.github/factory/` and refreshed on every migration. The guard tests use a sample CODEOWNERS and operations catalog, so they ship upstream; the publish guards treat a missing catalog as no production tier. `bootstrap.py` checks a repository's GitHub setup against Enablement and, with `--apply`, creates the labels, environments and runner-group entries (secrets, the App, CODEOWNERS and the ruleset stay report-only). Smoke's injection probes call `factory.json`'s `smoke.echo_host` instead of httpbin.org.
+2. **`bundles/factory/seed/`** — what becomes the project's, written once where absent: `factory.json` (Endless Galaxy's shared defaults, including `smoke.echo_host`; the `stack` block is set per project), `planning.json`, `services.json`, `triage-policy.md`, a short `README.md`, and `tests/test_codeowners.py` (the project's CODEOWNERS against the guard). Not in the bundle: quantile's production tier (the broker, its operations and their tests), its host setup and its Django-specific database access list.
+3. **`skills/sdlc-triage`, `skills/sdlc-implement`, `skills/sdlc-revise`** — the stage skills, made generic. Project specifics moved to the project's `.github/factory/triage-policy.md`; the App's login comes from `factory.json`, and commands and test services from the stack profile. An `sdlc-reviewer` pass found 7 major and 15 minor findings; two minors are left as follow-ups (the thread-reading rules repeated across the three skills, and where the sandbox paragraphs sit).
+4. **`process/factory.md`** — D1-D5's rules, forbids, costs and revisit-when, the label set and Enablement. D4 rule 13: no infrastructure pattern applies under `.github/`, whatever a file there is called. D4 rule 16: without a production tier a plan has no gates, CD's included. Enablement names the shared runner group `factory-pool` and the per-project `factory-pool-<project>-prod`, gives the runner-group API's rule, and points steps 2 to 8 at `bootstrap.py`.
+5. **`skeleton/manifest.json`** — `bundles.factory`; bundles may now carry `tree`, `seed`, `render` and `requires` (`skeleton/contract_changes.yaml` 0019; the debut is 0020). `sdlc-initialize` and `sdlc-migrate` install trees and absent seeds, run the render, hash tree files (never seeds) and offer an adopt path to a project that already has the tree. `process/path-mappings.md`, `process/commands.md`, `review-fix-loop.md`'s mirror table and `headless-mode.md`'s gate sites cover them.
+
+**Proof:** installed into quantile, the bundle changes nothing and the workflow policy passes. Installed into an empty project with an Enablement-shaped CODEOWNERS, all 17 workflows render, the policy passes and every test passes (`zsdlc-import-factory --prove`). Quantile's live runs exercised the rest: smoke (all eight jobs, on the new echo host), a rollback gate that ended `rolled-back` as designed, and the generic triage and implement skills on a throwaway issue.
+
+**Adapter action:** none; the bundle's files are code and settings, not knowledge-layer references (treat `bundles/factory/` like scripts).
+
+**Rationale:** the factory is meant for every project (F22). Steps 1-3 left its project-specific values in a settings file and a stack profile, so the rest ships as one upstream copy. Release type: minor on its own (an opt-in bundle debut and additive manifest fields).
+
+---
+
 ## 2026-10-12: Adapter fields and the improve route take the z-sdlc name [contract-change]
 
 **Origin:** the rename to z-sdlc (entry below) left three names that other repositories store: two adapter fields and the improve loop's route value.

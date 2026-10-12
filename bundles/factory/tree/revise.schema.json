@@ -1,0 +1,159 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "status",
+    "reason",
+    "summary",
+    "responses",
+    "verification",
+    "findings",
+    "follow_ups",
+    "orchestrator"
+  ],
+  "properties": {
+    "status": {
+      "type": "string",
+      "enum": [
+        "done",
+        "escalated",
+        "failed"
+      ],
+      "description": "done: every request answered and committed; escalated: committed with open critical or major findings; failed: nothing usable"
+    },
+    "reason": {
+      "type": "string",
+      "maxLength": 400,
+      "description": "Why, for escalated and failed; empty for done"
+    },
+    "summary": {
+      "type": "string",
+      "maxLength": 600,
+      "description": "What this revision changed, in plain sentences for CD"
+    },
+    "responses": {
+      "type": "array",
+      "maxItems": 15,
+      "description": "One per request in the review, in order",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "request",
+          "action",
+          "note"
+        ],
+        "properties": {
+          "request": {
+            "type": "string",
+            "maxLength": 200,
+            "description": "The request, briefly, in the words of the reviewer"
+          },
+          "action": {
+            "type": "string",
+            "enum": [
+              "done",
+              "declined",
+              "needs-your-call"
+            ]
+          },
+          "note": {
+            "type": "string",
+            "maxLength": 300,
+            "description": "What was done, or why not, or the question for CD"
+          }
+        }
+      }
+    },
+    "verification": {
+      "type": "array",
+      "maxItems": 5,
+      "items": {
+        "type": "string",
+        "maxLength": 200
+      },
+      "description": "Commands run for this revision and their results"
+    },
+    "findings": {
+      "description": "Open findings: critical/major when escalated, open minors otherwise",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "severity",
+          "location",
+          "summary"
+        ],
+        "properties": {
+          "severity": {
+            "type": "string",
+            "enum": [
+              "critical",
+              "major",
+              "minor"
+            ]
+          },
+          "location": {
+            "type": "string",
+            "description": "Where: a file and line, or a document section",
+            "maxLength": 200
+          },
+          "summary": {
+            "type": "string",
+            "description": "One line: what is wrong and why it matters. Posted for CD: plain language per ops/sdlc/process/writing-for-cd.md.",
+            "maxLength": 400
+          }
+        }
+      }
+    },
+    "follow_ups": {
+      "type": "array",
+      "maxItems": 5,
+      "description": "New work for later that the review surfaced; listed for CD to file by hand",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "title",
+          "summary"
+        ],
+        "properties": {
+          "title": {
+            "type": "string",
+            "maxLength": 80
+          },
+          "summary": {
+            "type": "string",
+            "maxLength": 300
+          }
+        }
+      }
+    },
+    "orchestrator": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "self_edits",
+        "review_rounds",
+        "agents"
+      ],
+      "properties": {
+        "self_edits": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "review_rounds": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "agents": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

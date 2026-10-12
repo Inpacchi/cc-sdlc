@@ -1,0 +1,135 @@
+# Factory advance (phase 3). CD approves a document by merging its PR (F17); this starts the next stage.
+# A merged spec (full tier) dispatches factory-plan, which writes the plan from it. A merged plan
+# dispatches factory-implement with it, which runs /sdlc-lite-execute or /sdlc-execute on the strict tier
+# and opens the draft code PR. A merged split (factory/<n>-split) dispatches factory-split, which files the
+# parts. Dispatch advances (D1 rule 2): these jobs write nothing but the dispatch.
+name: factory-advance
+run-name: "factory-advance: ${{ github.event.pull_request.head.ref }}"
+
+on:
+  pull_request:
+    types: [closed]
+
+permissions: {}
+
+jobs:
+  execute:
+    # A merged factory plan PR: head branch factory/<issue>-plan, from this repository.
+    if: >-
+      github.event.pull_request.merged == true &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      startsWith(github.event.pull_request.head.ref, 'factory/') &&
+      endsWith(github.event.pull_request.head.ref, '-plan')
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    # Comments as github-actions, the one factory surface that does: a pull_request event's ref is
+    # refs/pull/<n>/merge, which the main-only %{environments.writer} environment (the App key) refuses.
+    permissions:
+      actions: write
+      contents: read
+      pull-requests: read
+      issues: write
+    steps:
+      - name: Start execution of the approved plan
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          PR: ${{ github.event.pull_request.number }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          [[ $HEAD_REF =~ ^factory/([0-9]+)-plan$ ]] || { echo "::error::not a factory plan branch: $HEAD_REF"; exit 1; }
+          issue=${BASH_REMATCH[1]}
+          # The plan the PR added (the plan stage may only change docs/): lite or full tier.
+          plan=$(gh api "repos/$GH_REPO/pulls/$PR/files" --paginate \
+                 --jq '.[] | select(.status == "added") | .filename
+                       | select(test("^docs/current_work/(sdlc-lite|planning)/d[0-9]+[a-z]?_[a-z0-9_]+_plan\\.md$"))' | head -1)
+          [ -n "$plan" ] || { echo "::error::PR #$PR added no plan"; exit 1; }
+          gh workflow run factory-implement.yml --ref "$DEFAULT_BRANCH" -f issue_number="$issue" -f plan="$plan"
+          gh issue comment "$issue" --body "Plan approved (#$PR merged): execution started. <sub>factory advance · [run]($RUN_URL)</sub>"
+          echo "Started execution of $plan for #$issue" >> "$GITHUB_STEP_SUMMARY"
+
+  plan-from-spec:
+    # A merged factory spec PR (full tier): factory-plan finds the approved spec and writes the plan.
+    if: >-
+      github.event.pull_request.merged == true &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      startsWith(github.event.pull_request.head.ref, 'factory/') &&
+      endsWith(github.event.pull_request.head.ref, '-spec')
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      actions: write
+      issues: write
+    steps:
+      - name: Start planning from the approved spec
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          PR: ${{ github.event.pull_request.number }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          [[ $HEAD_REF =~ ^factory/([0-9]+)-spec$ ]] || { echo "::error::not a factory spec branch: $HEAD_REF"; exit 1; }
+          issue=${BASH_REMATCH[1]}
+          gh workflow run factory-plan.yml --ref "$DEFAULT_BRANCH" -f issue_number="$issue"
+          gh issue comment "$issue" --body "Spec approved (#$PR merged): planning started. <sub>factory advance · [run]($RUN_URL)</sub>"
+
+  split:
+    # A merged factory split PR: factory-split.yml files the parts as the factory App (this pull_request
+    # event can't use %{environments.writer}, whose key only default-branch runs may use).
+    if: >-
+      github.event.pull_request.merged == true &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      startsWith(github.event.pull_request.head.ref, 'factory/') &&
+      endsWith(github.event.pull_request.head.ref, '-split')
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      actions: write
+    steps:
+      - name: File the parts of the approved split
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          PR: ${{ github.event.pull_request.number }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          set -euo pipefail
+          [[ $HEAD_REF =~ ^factory/([0-9]+)-split$ ]] || { echo "::error::not a factory split branch: $HEAD_REF"; exit 1; }
+          gh workflow run factory-split.yml --ref "$DEFAULT_BRANCH" -f pr="$PR"
+          echo "Filing the parts of #${BASH_REMATCH[1]}'s split (PR #$PR)" >> "$GITHUB_STEP_SUMMARY"
+
+  follow-ups:
+    # A merged factory code PR (factory/<issue>-impl, this repository). factory-follow-ups.yml decides
+    # whether it files anything (execute PRs only) from the PR body as it was at merge, passed here.
+    if: >-
+      github.event.pull_request.merged == true &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      startsWith(github.event.pull_request.head.ref, 'factory/') &&
+      endsWith(github.event.pull_request.head.ref, '-impl')
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      actions: write
+    steps:
+      - name: Dispatch follow-up filing
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          PR: ${{ github.event.pull_request.number }}
+          BODY: ${{ github.event.pull_request.body }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          set -euo pipefail
+          grep -qF '<!-- factory-follow-ups v1 -->' <<< "$BODY" || { echo "No follow-up checklist in PR #$PR."; exit 0; }
+          b64=$(printf '%s' "$BODY" | base64 -w0)
+          # workflow_dispatch inputs carry at most 65,535 characters in total.
+          [ "${#b64}" -lt 60000 ] || { echo "::error::PR #$PR's body is too large to pass; file its follow-ups by hand"; exit 1; }
+          gh workflow run factory-follow-ups.yml --ref "$DEFAULT_BRANCH" -f pr="$PR" -f body_b64="$b64"
+

@@ -1,0 +1,344 @@
+# Factory triage (phase 1). CD adds `factory:triage` to an issue; a read-only agent on the
+# factory runner classifies it with /sdlc-triage; a separate job applies the `factory:<state>`
+# label and posts the comment as the factory App. factory-resume.yml re-dispatches this
+# workflow when CD answers a `factory:needs-input` question. Stage contract: README.md.
+name: factory-triage
+run-name: "factory-triage #${{ github.event.issue.number || inputs.issue_number }}"
+
+on:
+  issues:
+    types: [labeled]
+  workflow_dispatch:
+    inputs:
+      issue_number:
+        description: Issue to triage (factory-resume dispatches this)
+        type: number
+        required: true
+      model:
+        description: Model for triage (full IDs; aliases move when new models ship)
+        type: choice
+        options: [%{models.triage.options}]
+        default: %{models.triage.default}
+
+permissions: {}
+
+# One factory run per issue at a time; unrelated label events, and labels set by a bot (the
+# factory App's own label changes start workflows), get their own group so they can never
+# displace a pending triage.
+concurrency:
+  group: >-
+    ${{ (github.event_name == 'workflow_dispatch' ||
+         (github.event.label.name == 'factory:triage' && github.event.sender.type != 'Bot'))
+        && format('factory-issue-{0}', github.event.issue.number || inputs.issue_number)
+        || github.run_id }}
+
+env:
+  ISSUE_NUMBER: ${{ github.event.issue.number || inputs.issue_number }}
+  RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+jobs:
+  triage:
+    # A label starts triage only when a person adds it: resume's claim label is set by the
+    # factory App, which (unlike GITHUB_TOKEN) starts workflows, and resume dispatches anyway.
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.label.name == 'factory:triage' && github.event.issue.state == 'open' &&
+       github.event.sender.type != 'Bot')
+    runs-on: [self-hosted, %{runners.strict}]
+    # Backstop only (room for an image re-pull); the Triage step's own timeout is the real bound.
+    timeout-minutes: 40
+    # Read-only: the agent job can read the repo and the issue, and write nothing.
+    permissions:
+      contents: read
+      issues: read
+      packages: read
+    container:
+      # Pinned by digest; bump together with a factory-smoke re-run.
+      image: %{image.repository}@%{image.digest}
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    outputs:
+      result: ${{ steps.claude.outputs.structured_output }}
+    env:
+      # A headless run ends with the orchestrator's turn: agents run in the foreground.
+      CLAUDE_CODE_DISABLE_BACKGROUND_TASKS: "1"
+      CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS: "3600000"
+      CONTEXT7_API_KEY: ${{ secrets.CONTEXT7_API_KEY }}
+      # What runs after the agent is copied here before it (D2 rule 4); the agent can't read /__w/_temp.
+      CHECKS: /__w/_temp/factory-checks
+    steps:
+      # The runner is not ephemeral: start from an empty workspace so nothing a previous
+      # job left in .git (hooks, config) runs during checkout.
+      - name: Clean workspace
+        shell: bash
+        run: find "$GITHUB_WORKSPACE" -mindepth 1 -maxdepth 1 -exec rm -rf {} +
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # Agent jobs load the repository's settings, skills and CLAUDE.md: default branch only.
+          ref: ${{ github.event.repository.default_branch }}
+          persist-credentials: false
+
+      # The action would write the job token into origin's URL, where the agent can read it.
+      - name: Remove the git remote
+        shell: bash
+        run: git remote remove origin
+
+      # The agent gets the issue as a file, so it needs no GitHub access of its own.
+      - name: Fetch issue context
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          .github/factory/agent_job.sh freeze
+          # In the workspace: the agent may not read runner temp dirs (see triage-tools.args).
+          mkdir -p "$GITHUB_WORKSPACE/.factory"
+          gh issue view "$ISSUE_NUMBER" -R "$GITHUB_REPOSITORY" \
+            --json number,title,body,author,labels,state,url,comments > "$RUNNER_TEMP/issue.json"
+          gh issue list -R "$GITHUB_REPOSITORY" --state open --limit 100 \
+            --json number,title,labels > "$RUNNER_TEMP/open.json"
+          jq -n --slurpfile i "$RUNNER_TEMP/issue.json" --slurpfile o "$RUNNER_TEMP/open.json" '
+            ($i[0]) as $x | {
+              repo: env.GITHUB_REPOSITORY,
+              issue: {number: $x.number, title: $x.title, body: $x.body, author: $x.author.login,
+                      labels: [$x.labels[].name], state: $x.state, url: $x.url},
+              comments: [$x.comments[] | {author: .author.login, author_association: .authorAssociation,
+                                          created_at: .createdAt, body: .body}],
+              related_open_issues: [$o[0][] | select(.number != $x.number)
+                                    | {number, title, labels: [.labels[].name]}]
+            }' > "$GITHUB_WORKSPACE/.factory/issue-context.json"
+          "$CHECKS/agent_job.sh" schema triage
+          {
+            echo "FACTORY_ISSUE_CONTEXT=$GITHUB_WORKSPACE/.factory/issue-context.json"
+            echo "FACTORY_TOOL_ARGS=$(tr '\n' ' ' < .github/factory/triage-tools.args)"
+          } >> "$GITHUB_ENV"
+
+      - name: Write MCP config
+        shell: bash
+        run: |
+          "$CHECKS/agent_job.sh" mcp
+
+      - name: Triage
+        id: claude
+        # Step timeout fails the job (report-failure fires); a job timeout only cancels it.
+        timeout-minutes: 25
+        uses: anthropics/claude-code-action@58985842b834ed26087302ba27d07bc24ca8697a # v1.0.244
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          # Read-only token: without it the action uses the Claude App token, which can write.
+          github_token: ${{ github.token }}
+          # factory-resume dispatches this workflow as github-actions[bot].
+          allowed_bots: github-actions
+          prompt: "/sdlc-triage ${{ env.FACTORY_ISSUE_CONTEXT }}"
+          # Tool policy: .github/factory/triage-tools.args (shared with factory-smoke's probe).
+          # Read-only built-ins, WebSearch and Context7; no Bash, write or WebFetch tools, so the
+          # agent can't read the environment (where the OAuth token lives) or send data to a URL
+          # it picks. Read denies (they also bind Grep and Glob) cover /proc, /dev, .git and the
+          # runner's mounts. Apply also refuses token-shaped output.
+          claude_args: >-
+            --model ${{ inputs.model || '%{models.triage.default}' }}
+            ${{ env.FACTORY_TOOL_ARGS }}
+            --setting-sources user,project
+            --json-schema '${{ env.FACTORY_TRIAGE_SCHEMA }}'
+            --mcp-config ${{ env.FACTORY_MCP_CONFIG }} --strict-mcp-config
+            --permission-mode auto --permission-prompts none
+            --max-turns 40
+
+      - name: Report result and cost
+        if: always() && steps.claude.outputs.execution_file != ''
+        shell: bash
+        run: |
+          jq -r '[.[] | select(.type == "result")] | last
+                 | "### Triage #\(env.ISSUE_NUMBER)\n\n| Turns | Cost (API-rate equivalent) |\n|---|---|\n| \(.num_turns) | $\(.total_cost_usd) |\n\n```json\n\(.structured_output | tojson)\n```"' \
+            "${{ steps.claude.outputs.execution_file }}" >> "$GITHUB_STEP_SUMMARY"
+
+      # The run's metrics record for the weekly improve loop (run_metrics.py, 35 days): numbers and enums only,
+      # never agent text. Missing values are recorded as unknown.
+      - name: Record the run's metrics
+        if: always()
+        continue-on-error: true
+        shell: bash
+        env:
+          EXEC: ${{ steps.claude.outputs.execution_file }}
+          RESULT: ${{ steps.claude.outputs.structured_output }}
+          INPUTS: ${{ toJSON(inputs) }}
+          RUN_ID: ${{ github.run_id }}
+          RUN_ATTEMPT: ${{ github.run_attempt }}
+          WORKFLOW: factory-triage
+          METRICS_STAGE: triage
+        run: |
+          "$CHECKS/agent_job.sh" metrics "$METRICS_STAGE"
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        continue-on-error: true
+        with:
+          name: factory-metrics
+          path: ${{ runner.temp }}/metrics/metrics.json
+          retention-days: 35
+
+  apply:
+    needs: triage
+    runs-on: ubuntu-latest
+    # The App key is in this environment, which only the default branch may use.
+    environment: %{environments.writer}
+    timeout-minutes: 5
+    permissions:
+      # Starts the implement stage for ready-for-dispatch (D1 rule 2: dispatch advances).
+      actions: write
+      # Checks out the posting checks (report.sh), from the default branch.
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          persist-credentials: false
+
+      - name: Validate the result
+        env:
+          RESULT: ${{ needs.triage.outputs.result }}
+        run: |
+          set -euo pipefail
+          printf '%s' "$RESULT" > result.json
+          jq -e '
+            (.questions | type == "array") and all(.questions[]; type == "string")
+            and (.estimate | type == "object") and (.comment | type == "string")
+            and (.estimate.validity | IN("low", "medium", "high"))
+            and (.estimate.correctness | IN("low", "medium", "high"))
+            and (.estimate.effort | IN("light", "moderate", "heavy"))
+            and (.state as $s | .tier as $t |
+              ($s == "ready-for-dispatch" and $t == "direct") or
+              ($s == "ready-to-plan" and ($t == "lite" or $t == "full")) or
+              (($s == "needs-input" or $s == "wait") and $t == null))
+            and ((.questions | length) as $n |
+              if .state == "needs-input" then $n >= 1 and $n <= 3 else $n == 0 end)
+            and (.advisor | IN("fable", "none")) and (.advisor_reason | type == "string")
+            and (if .state != "ready-to-plan" then .advisor == "none" else true end)
+            and (if .state == "ready-for-dispatch" then
+                   .estimate == {"validity":"high","correctness":"high","effort":"light"}
+                 else true end)
+          ' result.json > /dev/null || { echo "::error::triage result breaks the output rules"; jq . result.json; exit 1; }
+          # The skill's sentinel for "could not triage" (it must still return schema-valid JSON).
+          if jq -e '.comment | startswith("**Triage blocked:**")' result.json > /dev/null; then
+            echo "::error::triage reported it was blocked: $(jq -r '.comment' result.json | head -c 300)"; exit 1
+          fi
+          # Never post anything token-shaped, or images/embeds (GitHub fetches them on view).
+          .github/factory/report.sh check triage result.json '[.comment, .advisor_reason, .questions[]]'
+
+      # Issues only, scoped to this repository: comments and labels show as the factory App.
+      - uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        id: app
+        with:
+          client-id: ${{ vars.FACTORY_APP_CLIENT_ID }}
+          private-key: ${{ secrets.FACTORY_APP_PRIVATE_KEY }}
+          permission-issues: write
+
+      - name: Apply label and comment
+        id: apply
+        env:
+          GH_TOKEN: ${{ steps.app.outputs.token }}
+          GH_REPO: ${{ github.repository }}
+          RESULT: ${{ needs.triage.outputs.result }}
+        run: |
+          set -euo pipefail
+          printf '%s' "$RESULT" > result.json
+          q() { jq -L .github/factory -r "include \"report\"; $1" result.json; }
+          state=$(jq -r '.state' result.json)
+          advisor=$(jq -r '.advisor' result.json)
+          # A follow-up the factory filed (its App-written provenance marker, not the label) is triaged,
+          # then held: no stage starts until CD adds factory:go (factory-release.yml).
+          gh api "repos/$GH_REPO/issues/$ISSUE_NUMBER" > issue.json
+          held=$(jq -r '.user.id == %{app.user_id} and ((.body // "") | test("<!-- factory-follow-up: \\{[^<>]*\\} -->"))' issue.json)
+          source_pr=$(jq -r '(.body // "") | capture("<!-- factory-follow-up: (?<m>\\{[^<>]*\\}) -->").m | fromjson | .pr // empty' issue.json 2> /dev/null || true)
+          {
+            # The marker block opens the comment (stage marker first); see README § Stage contract.
+            if [ "$state" = needs-input ]; then echo "<!-- factory-stage: triage -->"; fi
+            echo "<!-- factory-triage: $(jq -c '{state, tier, estimate, advisor}' result.json) -->"
+            # Agent text can't add markers (report.jq; triage names related issues, so only unmarked).
+            q '.comment | unmark'
+            if [ "$state" = ready-to-plan ]; then
+              printf '\n**Planning advisor:** %s. %s\n' "$advisor" "$(q '.advisor_reason | unmark')"
+              printf '_Add or remove `factory:advisor` before a plan run to override._\n'
+            fi
+            if [ "$held" = true ] && { [ "$state" = ready-for-dispatch ] || [ "$state" = ready-to-plan ]; }; then
+              printf '\n**Held for you:** this is a follow-up the factory filed%s. Add `factory:go` to start the next stage.\n' \
+                "${source_pr:+ from PR #$source_pr}"
+            fi
+            if [ "$state" = needs-input ]; then
+              printf '\n### Questions\n\n'
+              q '.questions | to_entries[] | "\(.key + 1). \(.value | unmark | gsub("\n"; "\n   "))"'
+              printf '\n_Reply on this issue to restart triage._\n'
+            fi
+            printf '\n<sub>factory triage · [run](%s)</sub>\n' "$RUN_URL"
+          } > comment.md
+
+          # Comment first: a needs-input label must never exist without its stage marker.
+          gh issue comment "$ISSUE_NUMBER" -F comment.md
+          # Then labels in one call: add the new state, drop every other factory:* state label
+          # (including review-capped/escalated: only CD starts triage). factory:advisor is a property,
+          # not a state: it follows this run's advisor decision. factory:follow-up and factory:go are
+          # properties too, and stay.
+          .github/factory/report.sh labels "factory:$state" "$advisor"
+          echo "Triage #$ISSUE_NUMBER: factory:$state (tier $(jq -r '.tier' result.json), advisor $advisor)" >> "$GITHUB_STEP_SUMMARY"
+          echo "state=$state" >> "$GITHUB_OUTPUT"
+          echo "tier=$(jq -r '.tier' result.json)" >> "$GITHUB_OUTPUT"
+          echo "held=$held" >> "$GITHUB_OUTPUT"
+
+      # F6: ready-for-dispatch runs on to a draft PR; ready-to-plan to a plan PR (lite) or a spec PR
+      # (full; factory-plan picks the mode). Stage workflows ignore labels set by a bot, so dispatch
+      # the stage (with GITHUB_TOKEN: the App has no actions permission). It queues behind this run
+      # (same per-issue concurrency group). A held follow-up waits for factory:go.
+      - name: Start the next stage
+        if: >-
+          steps.apply.outputs.held != 'true' &&
+          (steps.apply.outputs.state == 'ready-for-dispatch' || steps.apply.outputs.state == 'ready-to-plan')
+        env:
+          GH_TOKEN: ${{ github.token }}
+          APP_TOKEN: ${{ steps.app.outputs.token }}
+          GH_REPO: ${{ github.repository }}
+          # gh would otherwise look the default branch up via GraphQL, which needs contents access.
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+          STATE: ${{ steps.apply.outputs.state }}
+        run: |
+          workflow=$([ "$STATE" = ready-for-dispatch ] && echo factory-implement.yml || echo factory-plan.yml)
+          if gh workflow run "$workflow" --ref "$DEFAULT_BRANCH" -f issue_number="$ISSUE_NUMBER"; then
+            echo "Started $workflow for #$ISSUE_NUMBER" >> "$GITHUB_STEP_SUMMARY"
+          else
+            GH_TOKEN="$APP_TOKEN" gh issue comment "$ISSUE_NUMBER" --body "Factory triage could not start the next stage ([run]($RUN_URL)). Dispatch \`$workflow\` for this issue by hand."
+            exit 1
+          fi
+
+  report-failure:
+    needs: [triage, apply]
+    if: failure()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    environment: %{environments.writer}
+    permissions:
+      issues: write
+    steps:
+      # Issues only, scoped to this repository: comments and labels show as the factory App.
+      - uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        id: app
+        # A broken App key must not silence the failure report: fall back to GITHUB_TOKEN.
+        continue-on-error: true
+        with:
+          client-id: ${{ vars.FACTORY_APP_CLIENT_ID }}
+          private-key: ${{ secrets.FACTORY_APP_PRIVATE_KEY }}
+          permission-issues: write
+
+      - name: Comment on the issue
+        env:
+          GH_TOKEN: ${{ steps.app.outputs.token || github.token }}
+          GH_REPO: ${{ github.repository }}
+          TRIAGE: ${{ needs.triage.result }}
+          APPLY: ${{ needs.apply.result }}
+        run: |
+          if [ "$TRIAGE" = failure ]; then
+            why="The triage agent failed: it may have run out of plan usage, hit its time or turn limit, or returned no result."
+          else
+            why="The triage result could not be applied: it broke the output rules, or a label or comment call failed."
+          fi
+          gh issue comment "$ISSUE_NUMBER" --body "Factory triage failed ([run]($RUN_URL)). $why Check the labels, then use **Re-run all jobs** on the run page."

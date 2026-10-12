@@ -333,6 +333,9 @@ Before any file copying, compute the **effective install set** for this project 
 - Bundle skill paths are **exempt from §2.1a "Remove Deleted and Moved Files"** — they are not considered upstream-deleted even though they live outside `source_files.skills`. Bundle `process` paths get the same exemption.
 - Bundle skills are **eligible for §2.1 direct-copy updates**: if the bundle is installed, its skill files propagate upstream changes the same way `source_files` skills do. Bundle `process` files likewise.
 - Bundle `fragments` are **refreshed, not preserved**: §2.1's marker step discards any existing `BUNDLE-SECTION` blocks in a target file and injects the current fragment content from the z-sdlc source (step 7 of the marker-preservation flow below). Hand-edits inside `BUNDLE-SECTION` markers are lost by design — see `[sdlc-root]/process/project-section-markers.md` § BUNDLE-SECTION Markers.
+- Bundle `tree` files (contract 0019) are **eligible for §2.1 direct-copy updates** like `source_files`: copy every file under `tree.from` at `[target_tag]` to the same path under `tree.to`, keeping executable bits, with the usual drift check against `installed_files`. When upstream deletes one, §2.1a removes it from the project. Files under `tree.to` that the bundle doesn't list (a project's own additions, such as a production tier) are never touched.
+- Bundle `seed` files are **never touched by migration**: written once at install, they are the project's. A seed file upstream adds later is written only where the project has nothing at that path.
+- **Render after the copy.** When §2.1 is done, run each installed bundle's `render` command from the project root (for the factory, `python3 .github/factory/render.py`), so its generated files follow the new templates. A render failure is a migration finding (usually a setting the project must add), not a reason to stop: report it with the command's output.
 - Bundles not installed in the project are **not** copied during §2.1 — they are offered at the end of migration (§4.7).
 
 ### 2.1 Direct Copy Files
@@ -948,7 +951,7 @@ After migration, update `.sdlc-manifest.json`:
 1a. **Point `source_repo` at the framework's current home.** The repository moved from `Inpacchi/cc-sdlc` to `endless-galaxy-studios/z-sdlc` (2026-10-12); GitHub redirects the old URL, but only until something takes the old name. If `source_repo` names `github.com/Inpacchi/cc-sdlc` (HTTPS or SSH, with or without `.git`), rewrite it to the same form at the new home: `https://github.com/endless-galaxy-studios/z-sdlc.git` or `git@github.com:endless-galaxy-studios/z-sdlc.git`. Leave any other value alone (a fork or a local path is deliberate).
 2. **Add missing fields** if the manifest predates this migration:
    - `sdlc_root`: set to `[sdlc-root]` detected in pre-flight
-   - `installed_files`: back-fill if absent (hash every file in `skeleton/manifest.json` source_files **plus every installed bundle's `skills` and `process` files** at its installed path, except the never-overwrite files; mark `installed_at: "backfilled-{CURRENT_VERSION}"`)
+   - `installed_files`: back-fill if absent (hash every file in `skeleton/manifest.json` source_files **plus every installed bundle's `skills`, `process` and `tree` files** at its installed path (never its seeds), except the never-overwrite files; mark `installed_at: "backfilled-{CURRENT_VERSION}"`)
    - `installed_bundles`: back-fill from the §2.0a detection result (empty array if no bundles detected)
    - `last_applied_contract_id`: if absent, back-fill to `"0000"` before consuming pending_changes; if already set, leave untouched until step 5 below
    - **Any field added by a `manifest_field_added` contract entry in pending_changes** — apply its `default` value
@@ -1108,12 +1111,16 @@ For each such bundle:
 > Skills it would add: [list bundle.skills]
 > Process docs it would add: [list bundle.process — omit line if none]
 > Framework files it would hook into: [list distinct bundle.fragments targets — omit line if none]
+> Project files it would install: [bundle.tree.to and bundle.seed.to, with a count of each — omit line if neither]
+> Requires: [bundle.requires — omit line if none]
 >
 > Install it now?
 
 **Predecessor detection (before the offer, for bundles carrying `process` files):** check whether any of the bundle's `process` file paths already exist in the project. A hit means the project hand-rolled an equivalent of this bundle before it existed upstream (or received one from another project). Do **not** blind-overwrite. Say what was found and ask CD: **adopt** (preserve the existing file's `PROJECT-SECTION` blocks — including any configuration block — into the bundle's version, replace the body, then flag any project-local `PROJECT-SECTION` blocks in *other* framework files that duplicate what the bundle's fragments now provide, so CD can retire them) or **skip** (leave the hand-rolled version alone; the bundle is not installed and the debut entry is consumed as declined).
 
-If CD accepts: copy the bundle's skills and `process` files into the project (same direct-copy flow as §2.1), inject its `fragments` into their target files per `[sdlc-root]/process/project-section-markers.md` § BUNDLE-SECTION Markers, **then** append the bundle name to `installed_bundles` and its fragments to `bundle_fragments` (§4.5 steps 4/4a), and log the install in the migration report. If the bundle's process doc carries an **Enablement** section, tell CD it exists and offer to run it now — installing without configuring is valid and leaves the bundle inert.
+**Predecessor detection for bundles carrying a `tree`:** if the project already has files under `tree.to` (it incubated the bundle, or copied it), offer **adopt**: list every tree file whose content differs from the project's copy, with the diff, and on CD's yes replace them; leave the files at seed paths and any files the bundle doesn't list as they are; then render. **Skip** leaves everything alone and declines the bundle. A bundle whose `requires` the project doesn't meet (an `sdlc_root` other than the one required) is not offered; log why.
+
+If CD accepts: copy the bundle's skills and `process` files into the project (same direct-copy flow as §2.1), its `tree` files and any absent `seed` files (§2.0a), run its `render` command, inject its `fragments` into their target files per `[sdlc-root]/process/project-section-markers.md` § BUNDLE-SECTION Markers, **then** append the bundle name to `installed_bundles` and its fragments to `bundle_fragments` (§4.5 steps 4/4a), and log the install in the migration report. If the bundle's process doc carries an **Enablement** section, tell CD it exists and offer to run it now — installing without configuring is valid and leaves the bundle inert.
 
 If CD declines: do nothing. The debut entry will be marked consumed when §4.5 advances `last_applied_contract_id`, so this bundle won't be offered again automatically. CD can still opt in later by editing `.sdlc-manifest.json` → `installed_bundles` manually, which §2.0a will honor on the next migration.
 

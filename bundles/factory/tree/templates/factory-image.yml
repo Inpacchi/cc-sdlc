@@ -1,0 +1,48 @@
+# Builds the factory job image and pushes it to GHCR. Runs on a GitHub-hosted
+# runner so the factory runner only ever executes containerized agent jobs.
+name: factory-image
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: [".github/factory/profiles/%{stack.profile}/Dockerfile"]
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: factory-image
+
+env:
+  IMAGE: %{image.repository}
+
+jobs:
+  build:
+    # Only main publishes: every factory job pulls this image onto the production host.
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Log in to GHCR
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+
+      - name: Build and push
+        run: |
+          short_sha="${GITHUB_SHA::12}"
+          # The source label links the package to this repo, so its GITHUB_TOKEN can pull it.
+          docker build \
+            --label "org.opencontainers.image.source=https://github.com/${{ github.repository }}" \
+            --label "org.opencontainers.image.revision=${GITHUB_SHA}" \
+            -t "$IMAGE:sha-$short_sha" -t "$IMAGE:latest" \
+            .github/factory/profiles/%{stack.profile}
+          docker push "$IMAGE:sha-$short_sha"
+          docker push "$IMAGE:latest"
+          {
+            echo "### factory-job image"
+            echo "- \`$IMAGE:sha-$short_sha\`"
+            echo "- digest: \`$(docker inspect --format '{{index .RepoDigests 0}}' "$IMAGE:latest")\`"
+          } >> "$GITHUB_STEP_SUMMARY"

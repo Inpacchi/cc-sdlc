@@ -1,0 +1,68 @@
+# Factory release (CD, 2026-10-09). A follow-up the factory filed is triaged, then held. CD adding
+# factory:go releases it: this checks the triage decision, starts the matching stage once, and removes
+# the label. Removing a label starts nothing on GitHub, so release is an add, not a removal.
+name: factory-release
+run-name: "factory-release #${{ github.event.issue.number }}"
+
+on:
+  issues:
+    types: [labeled]
+
+permissions: {}
+
+concurrency:
+  group: >-
+    ${{ (github.event.label.name == 'factory:go' && github.event.sender.type != 'Bot')
+        && format('factory-release-{0}', github.event.issue.number) || github.run_id }}
+
+jobs:
+  release:
+    # A person, never a bot (the App's own label changes start workflows too).
+    if: >-
+      github.event.label.name == 'factory:go' && github.event.sender.type != 'Bot' &&
+      github.event.issue.state == 'open'
+    runs-on: ubuntu-latest
+    environment: %{environments.writer}
+    timeout-minutes: 5
+    permissions:
+      issues: read
+      # Starts the released stage (D1 rule 2: dispatch advances).
+      actions: write
+    steps:
+      - uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        id: app
+        with:
+          client-id: ${{ vars.FACTORY_APP_CLIENT_ID }}
+          private-key: ${{ secrets.FACTORY_APP_PRIVATE_KEY }}
+          permission-issues: write
+
+      - name: Start the triaged stage
+        env:
+          GH_TOKEN: ${{ github.token }}
+          APP_TOKEN: ${{ steps.app.outputs.token }}
+          GH_REPO: ${{ github.repository }}
+          ISSUE: ${{ github.event.issue.number }}
+          SENDER: ${{ github.event.sender.login }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          say() { GH_TOKEN="$APP_TOKEN" gh issue comment "$ISSUE" --body "$1 <sub>factory release · [run]($RUN_URL)</sub>"; }
+          done_() { GH_TOKEN="$APP_TOKEN" gh issue edit "$ISSUE" --remove-label factory:go > /dev/null || true; }
+          # Only someone who can push may spend the factory's runs.
+          perm=$(gh api "repos/$GH_REPO/collaborators/$SENDER/permission" --jq .permission 2> /dev/null || echo none)
+          case "$perm" in admin|maintain|write) ;; *) done_; say "factory:go needs write access to the repository."; exit 0 ;; esac
+          labels=$(gh api "repos/$GH_REPO/issues/$ISSUE" --jq '[.labels[].name]')
+          state=$(jq -r 'map(select(IN("factory:ready-for-dispatch", "factory:ready-to-plan", "factory:needs-input", "factory:wait"))) | first // "none"' <<< "$labels")
+          # The tier from the latest triage decision the App posted.
+          tier=$(gh api "repos/$GH_REPO/issues/$ISSUE/comments" --paginate \
+                 --jq '.[] | select(.user.type == "Bot" and .user.id == %{app.user_id}) | .body
+                       | capture("<!-- factory-triage: (?<m>\\{[^<>]*\\}) -->")? | .m | fromjson | .tier // empty' | tail -1)
+          case "$state:$tier" in
+            factory:ready-for-dispatch:*) workflow=factory-implement.yml ;;
+            factory:ready-to-plan:lite|factory:ready-to-plan:full) workflow=factory-plan.yml ;;
+            *) done_; say "Not started: there's no triaged stage to start (state ${state#factory:}). Re-triage with \`factory:triage\` first."; exit 0 ;;
+          esac
+          gh workflow run "$workflow" --ref "$DEFAULT_BRANCH" -f issue_number="$ISSUE"
+          done_
+          say "Released by @$SENDER: started \`$workflow\`."

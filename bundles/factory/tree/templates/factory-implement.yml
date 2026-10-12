@@ -1,0 +1,666 @@
+# Factory implement (phase 2). An issue triaged ready-for-dispatch is implemented by an agent with
+# sandboxed Bash on the factory runner (/sdlc-implement), which commits locally. A publish job on a
+# GitHub-hosted runner checks those commits (CODEOWNERS paths, symlinks, size, tokens) and pushes them
+# as a draft PR with the factory's App token; a report job comments and labels as the App too.
+# CD starts it by adding `factory:ready-for-dispatch` (or by dispatch); factory-resume.yml restarts it
+# after a needs-input answer. Stage contract: .github/factory/README.md.
+# Production gates (design rule D4): an executed plan stops before each gate (awaiting-approval). The first
+# segment opens the draft PR; the report job posts the gate tracker and asks factory-gate-request.yml for
+# the gate run CD approves. When the gate is done, factory-gate.yml dispatches this again with continue_pr:
+# the next segment starts from the PR's head (agent configuration from main, as revise does) and adds its
+# commits to the same PR, fast-forward only.
+name: factory-implement
+run-name: "factory-implement #${{ github.event.issue.number || inputs.issue_number }}"
+
+on:
+  issues:
+    types: [labeled]
+  workflow_dispatch:
+    inputs:
+      issue_number:
+        description: Issue to implement (factory-resume dispatches this)
+        type: number
+        required: true
+      model:
+        description: Orchestrator model (the agents it dispatches keep their own models)
+        type: choice
+        options: [%{models.implement.options}]
+        default: %{models.implement.default}
+      advisor:
+        description: Advisor model the orchestrator and agents may consult (none for the baseline)
+        type: choice
+        options: [none, opus, fable]
+        default: none
+      plan:
+        description: >-
+          An approved plan to execute, lite or full tier (factory-advance passes it when CD merges the
+          plan PR); empty for a direct fix
+        type: string
+        default: ""
+      compare:
+        description: >-
+          Comparison run: its own branch (factory/<n>-impl-<advisor>) and queue, so one run per
+          advisor can work the same issue; it comments but leaves the labels alone
+        type: boolean
+        default: false
+      continue_pr:
+        description: >-
+          The execution PR to continue after a production gate (factory-gate.yml passes it); empty to
+          start from the default branch
+        type: string
+        default: ""
+
+permissions: {}
+
+# One factory run per issue at a time (one per advisor for comparison runs); unrelated label
+# events, and labels set by a bot (the factory App's start workflows), get their own group.
+concurrency:
+  group: >-
+    ${{ (github.event_name == 'workflow_dispatch' ||
+         (github.event.label.name == 'factory:ready-for-dispatch' && github.event.sender.type != 'Bot'))
+        && format('factory-issue-{0}{1}', github.event.issue.number || inputs.issue_number,
+                  inputs.compare && format('-{0}', inputs.advisor) || '')
+        || github.run_id }}
+
+env:
+  ISSUE_NUMBER: ${{ github.event.issue.number || inputs.issue_number }}
+  # Comparison runs push factory/<n>-impl-<advisor>; normal runs factory/<n>-impl.
+  BRANCH: >-
+    ${{ format('factory/{0}-impl{1}', github.event.issue.number || inputs.issue_number,
+               inputs.compare && format('-{0}', inputs.advisor) || '') }}
+  COMPARE: ${{ inputs.compare && inputs.advisor || '' }}
+  CONTINUE_PR: ${{ inputs.continue_pr }}
+  RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+  # The Implement step's time limit (CD, 2026-10-11). The job's timeout-minutes can't read env: keep
+  # it above this.
+  AGENT_MINUTES: "%{limits.agent_minutes}"
+
+jobs:
+  implement:
+    # A label starts implement only when a person adds it: triage and resume set it as the
+    # factory App, which (unlike GITHUB_TOKEN) starts workflows, and they dispatch anyway.
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.label.name == 'factory:ready-for-dispatch' && github.event.issue.state == 'open' &&
+       github.event.sender.type != 'Bot')
+    runs-on: [self-hosted, %{runners.strict}]
+    # Backstop only; the Implement step's own timeout (AGENT_MINUTES) is the real bound.
+    timeout-minutes: %{limits.agent_minutes+30}
+    # Read-only: the agent job can read the repo and the issue, and write nothing.
+    permissions:
+      contents: read
+      issues: read
+      # A continued execution reads its PR (head, author, state) before the agent starts.
+      pull-requests: read
+      packages: read
+    container:
+      # Pinned by digest; bump together with a factory-smoke re-run.
+      image: %{image.repository}@%{image.digest}
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+      # The Bash sandbox setup factory-smoke's bash-sandbox job proves (README § Operating notes).
+      options: >-
+        --security-opt seccomp=/etc/factory-runner/seccomp-bwrap.json
+        --security-opt systempaths=unconfined
+    outputs:
+      result: ${{ steps.claude.outputs.structured_output }}
+      base: ${{ steps.prepare.outputs.base }}
+      # Which step failed, for the failure comment.
+      prepared: ${{ steps.prepare.outcome }}
+      ran: ${{ steps.claude.outcome }}
+      packaged: ${{ steps.package.outcome }}
+      incomplete: ${{ steps.package.outputs.incomplete }}
+      status: ${{ steps.package.outputs.status }}
+      bundle: ${{ steps.package.outputs.bundle }}
+      # Cost, turns and models for the PR's agent record.
+      stats: ${{ steps.stats.outputs.stats }}
+      # Why the agent step ended with no result, and whether its transcripts were kept.
+      lost: ${{ steps.lost.outputs.why }}
+      lost-log: ${{ steps.lost.outputs.saved }}
+    env:
+      CLAUDE_CODE_SUBPROCESS_ENV_SCRUB: "1"
+      # -p stops waiting on background subagents after 10 idle minutes by default.
+      # A headless run ends with the orchestrator's turn: agents run in the foreground.
+      CLAUDE_CODE_DISABLE_BACKGROUND_TASKS: "1"
+      CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS: "3600000"
+      CONTEXT7_API_KEY: ${{ secrets.CONTEXT7_API_KEY }}
+      # Copied out of the workspace before the agent runs; the sandbox can't read /__w/_temp.
+      CHECKS: /__w/_temp/factory-checks
+    steps:
+      # The runner is not ephemeral: start from an empty workspace.
+      - name: Clean workspace
+        shell: bash
+        run: find "$GITHUB_WORKSPACE" -mindepth 1 -maxdepth 1 -exec rm -rf {} +
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # Agent jobs load the repository's settings, skills and CLAUDE.md: default branch only. A continued
+          # execution switches to the PR's head below, with main's agent configuration laid over it.
+          ref: ${{ github.event.repository.default_branch }}
+          fetch-depth: ${{ inputs.continue_pr && '0' || '1' }}
+          persist-credentials: false
+
+      - name: Prepare the workspace, test services and issue context
+        id: prepare
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ADVISOR: ${{ inputs.advisor || 'none' }}
+          PLAN: ${{ inputs.plan }}
+        run: |
+          set -euo pipefail
+          # The run is killed at AGENT_MINUTES; stopping before then keeps the work (headless-mode.md).
+          budget="Time budget: this run is stopped after $AGENT_MINUTES minutes (ops/sdlc/process/headless-mode.md, Stop before a time limit). Run date now and between steps. With 20 minutes left, start nothing new: commit what is done, and stop with status escalated, one major finding whose summary starts Unfinished and says what is left, and the brief for the work so far."
+          # An approved plan runs the execution skill; otherwise this is a direct fix.
+          if [ -n "$PLAN" ]; then
+            [[ $PLAN =~ ^docs/current_work/(sdlc-lite|planning)/d[0-9]+[a-z]?_[a-z0-9_]+_plan\.md$ ]] && [ -f "$PLAN" ] \
+              || { echo "::error::no approved plan at $PLAN on the default branch"; exit 1; }
+            # A lite plan (docs/current_work/sdlc-lite/) or a full-tier plan (docs/current_work/planning/).
+            skill=$([ "${BASH_REMATCH[1]}" = planning ] && echo sdlc-execute || echo sdlc-lite-execute)
+            gates="If the plan has production gates (ops/sdlc/process/production-gates.md), stop before the next one as the skill says: review and commit the work since the last gate, then return status awaiting-approval with that gate's ID in gate. Never do a gate's steps: the factory's production runner does them after CD approves. "
+            if [ -n "$CONTINUE_PR" ]; then
+              gates="Headless restart after a production gate: this deliverable's draft PR is #$CONTINUE_PR and you start from its head. Every gate result so far is in $GITHUB_WORKSPACE/.factory/gate-results.json (the latest done one is the gate just passed; cd_comments holds CD's report-back for CD gates). Record them in the result doc's Gates section, then continue with the phase after that gate. $gates The brief describes the whole PR, every segment so far; add_ons lists only this segment's add-ons. "
+            fi
+            echo "FACTORY_PROMPT=/$skill $PLAN (GitHub issue #$ISSUE_NUMBER; its context is in $GITHUB_WORKSPACE/.factory/issue-context.json). ${gates}Run the project's checks with /opt/factory/verify (--print lists its commands); tests that need Postgres or Redis run through /opt/factory/with-test-services, as verify's do, and the services are reachable that way and not directly. Commit the work locally; open no PR and push nothing. SDLC hygiene is part of the work: commit discipline parking-lot entries (ops/sdlc/disciplines/) and correct any knowledge YAML (ops/sdlc/knowledge/) the change makes wrong; never change agent-context-map.yaml, the other ops/sdlc/ files still in .github/CODEOWNERS, .claude/ or anything else there (the publish job refuses it). Finish small follow-ups in this PR as add-ons (small, no new decision, inside the area the plan touched; tested like planned work) and declare each in add_ons. Everything else for later goes in follow_ups (ids F1 to F10 in order, issue-ready titles), including the plan's deferred items and the result doc's follow-ups: the checked ones become issues when CD merges. Never silently drop one: if there are more than 10, merge related ones. The result's brief is the PR description CD reads: write it per ops/sdlc/templates/pr_description_template.md (code variant), in plain language, from the diff and the result doc. $budget" >> "$GITHUB_ENV"
+          else
+            echo "FACTORY_PROMPT=/sdlc-implement $GITHUB_WORKSPACE/.factory/issue-context.json $budget" >> "$GITHUB_ENV"
+          fi
+          # main's scripts and settings, frozen before anything else: a continued execution switches to the
+          # PR's head below, and every later step runs the frozen copies.
+          .github/factory/agent_job.sh freeze implement-sandbox.settings.json
+          echo "FACTORY_TOOL_ARGS=$(tr '\n' ' ' < .github/factory/implement-tools.args)" >> "$GITHUB_ENV"
+          echo "FACTORY_ISSUE_CONTEXT=$GITHUB_WORKSPACE/.factory/issue-context.json" >> "$GITHUB_ENV"
+          "$CHECKS/agent_job.sh" schema implement
+          "$CHECKS/agent_job.sh" advisor "$ADVISOR"
+          if [ -n "$CONTINUE_PR" ]; then
+            # Continue the execution PR after a gate: its head, with main's agent configuration (as revise does).
+            [[ $CONTINUE_PR =~ ^[0-9]+$ ]] && [ -n "$PLAN" ] || { echo "::error::continue_pr needs a PR number and the plan"; exit 1; }
+            gh api "repos/$GITHUB_REPOSITORY/pulls/$CONTINUE_PR" > "$RUNNER_TEMP/pr.json"
+            jq -e --arg b "$BRANCH" '.state == "open" and .head.ref == $b and .user.id == %{app.user_id}
+                                     and .head.repo.full_name == env.GITHUB_REPOSITORY' "$RUNNER_TEMP/pr.json" > /dev/null \
+              || { echo "::error::PR #$CONTINUE_PR isn't this issue's open factory execution PR"; exit 1; }
+            base=$(jq -r .head.sha "$RUNNER_TEMP/pr.json")
+            # The branch must still be at the PR's head, and change no owned path (the installs below run
+            # its dependency manifests).
+            READ_TOKEN="$GH_TOKEN" "$CHECKS/factory_branch.sh" check "$BRANCH" "$base" code
+            # The gate results (signed receipts verified with production/receipt.pub), from main's gates.py.
+            install -d -m 755 "$CHECKS/production" && install -m 644 .github/factory/production/ops.json \
+              .github/factory/production/receipt.pub "$CHECKS/production/"
+            gh api "repos/$GITHUB_REPOSITORY/issues/$CONTINUE_PR/comments" --paginate --jq '.[]' > "$RUNNER_TEMP/comments.ndjson"
+            python3 -I "$CHECKS/gates.py" results --repo "$GITHUB_REPOSITORY" --app-id %{app.user_id} --factory-dir "$CHECKS" \
+                --pr-json "$RUNNER_TEMP/pr.json" --comments "$RUNNER_TEMP/comments.ndjson" --out "$RUNNER_TEMP/gates.json" \
+              || { echo "::error::can't read the gate results on PR #$CONTINUE_PR"; exit 1; }
+            # Continue only from the code the last gate ran on: a push since then wasn't part of what CD approved.
+            approved_head=$(jq -r '[.gates[] | select(.status == "done")] | last | .head // ""' "$RUNNER_TEMP/gates.json")
+            [ "$approved_head" = "$base" ] \
+              || { echo "::error::PR #$CONTINUE_PR is at $base, not $approved_head where its last gate ran; not continuing"; exit 1; }
+            "$CHECKS/factory_branch.sh" switch "$base"
+            install -d .factory
+            # CD's report-back for CD gates: maintainers' comments on the PR (never bots), oldest first.
+            jq -s '[.[] | select(.user.type != "Bot" and (.author_association | IN("OWNER", "MEMBER", "COLLABORATOR")))
+                    | {author: .user.login, created_at, body}]' "$RUNNER_TEMP/comments.ndjson" > "$RUNNER_TEMP/cd.json"
+            jq --slurpfile cd "$RUNNER_TEMP/cd.json" '. + {cd_comments: $cd[0]}' "$RUNNER_TEMP/gates.json" > .factory/gate-results.json
+          else
+            base=$(git rev-parse HEAD)
+            # Fail before the agent runs, not after: publish never overwrites a factory branch.
+            if gh api "repos/$GITHUB_REPOSITORY/branches/${BRANCH//\//%2F}" > /dev/null 2>&1; then
+              echo "::error::$BRANCH already exists (an open factory PR?); close it and delete the branch first"; exit 1
+            fi
+          fi
+          echo "base=$base" >> "$GITHUB_OUTPUT"
+
+          # The stack profile's test services (Postgres and Redis) on the container's loopback; sandboxed Bash
+          # reaches them through /opt/factory/with-test-services. Their settings go in the project's env file.
+          "$CHECKS/agent_job.sh" services
+          "$CHECKS/agent_job.sh" workspace
+          # No remote: the action would otherwise write the job token into origin's URL, where the
+          # agent can read it. The agent never fetches or pushes.
+          git remote remove origin
+          "$CHECKS/agent_job.sh" issue-context "$base"
+
+      - name: Write MCP config
+        shell: bash
+        run: |
+          "$CHECKS/agent_job.sh" mcp
+
+      # Tool policy: .github/factory/implement-tools.args. Bash runs in the sandbox (the settings file,
+      # loaded with --settings so the repository can't loosen it). Read and Edit run in this process,
+      # which holds the OAuth token, so their deny rules cover /proc, the runner mounts, system
+      # directories and the agents' own configuration.
+      # What the agent writes from here on is its own; a step that ends with no result keeps it (session_log.sh).
+      - name: Mark the agent's start
+        shell: bash
+        run: touch "$RUNNER_TEMP/agent-start"
+
+      - name: Implement
+        id: claude
+        timeout-minutes: ${{ fromJSON(env.AGENT_MINUTES) }}
+        uses: anthropics/claude-code-action@58985842b834ed26087302ba27d07bc24ca8697a # v1.0.244
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          # Read-only token: without it the action uses the Claude App token, which can write.
+          github_token: ${{ github.token }}
+          # factory-resume dispatches this workflow as github-actions[bot].
+          allowed_bots: github-actions
+          # Post nothing from the agent's /tmp after it ends (the token is read-only anyway).
+          classify_inline_comments: "false"
+          # The action sets git's user to this; commits carry the factory's identity, not claude[bot].
+          bot_name: %{app.login}
+          bot_id: "%{app.user_id}"
+          settings: ${{ env.CHECKS }}/implement-sandbox.settings.json
+          prompt: ${{ env.FACTORY_PROMPT }}
+          claude_args: >-
+            --model ${{ inputs.model || '%{models.implement.default}' }}
+            --advisor ${{ env.FACTORY_ADVISOR }}
+            --effort medium
+            --settings ${{ env.CHECKS }}/implement-sandbox.settings.json
+            ${{ env.FACTORY_TOOL_ARGS }}
+            --setting-sources user,project
+            --append-system-prompt "SDLC headless mode: no person is present."
+            --json-schema '${{ env.FACTORY_IMPLEMENT_SCHEMA }}'
+            --mcp-config ${{ env.FACTORY_MCP_CONFIG }} --strict-mcp-config
+            --permission-mode auto --permission-prompts none
+            --max-turns 300
+
+      # Everything in the workspace may be the agent's now. git runs here only after checking the
+      # repository wasn't redirected and holds no nested repository (git status would descend into a
+      # submodule and run its config's filters); hooks and fsmonitor are off and the sandbox can't
+      # write .git/config. The publish job judges the commits on a clean runner.
+      - name: Package the commits
+        id: package
+        if: steps.claude.outcome == 'success'
+        shell: bash
+        env:
+          BASE: ${{ steps.prepare.outputs.base }}
+          RESULT: ${{ steps.claude.outputs.structured_output }}
+          PLAN: ${{ inputs.plan }}
+        run: |
+          set -euo pipefail
+          # Nothing the agent started may outlive its step (the sandbox's own flags should ensure it), and
+          # git runs only on a repository the agent couldn't have booby-trapped (git_guard.sh).
+          "$CHECKS/agent_job.sh" quiesce
+          # The output rules, checked once here, before anything is pushed.
+          printf '%s' "$RESULT" | jq -e '
+            (.status | IN("done", "escalated", "needs-input", "rescope", "failed", "awaiting-approval"))
+            and (.gate | type == "string") and ((.status == "awaiting-approval") == (.gate | test("^G[1-9][0-9]?$")))
+            and (.status != "awaiting-approval" or (env.PLAN != ""))
+            and ([.reason, .title] | all(type == "string")) and (.brief | type == "object")
+            and (.add_ons | type == "array") and (.follow_ups | type == "array")
+            and (.questions | type == "array") and all(.questions[]; type == "string")
+            and ((.questions | length) as $n | if .status == "needs-input" then $n >= 1 and $n <= 3 else $n == 0 end)
+          ' > /dev/null || { echo "::error::the agent's result breaks the output rules"; exit 1; }
+          status=$(printf '%s' "$RESULT" | jq -r .status)
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+          # These statuses publish: they need commits, bundled for the publish job, and nothing uncommitted.
+          "$CHECKS/agent_job.sh" bundle "$BASE" "$RUNNER_TEMP/implement/implement.bundle" "$status" \
+            done escalated awaiting-approval
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always() && steps.package.outputs.bundle == 'yes'
+        with:
+          name: implement-bundle
+          path: ${{ runner.temp }}/implement/implement.bundle
+          retention-days: 7
+          if-no-files-found: error
+
+      - name: Report result, cost and advisor use
+        if: always() && steps.claude.outputs.execution_file != ''
+        # Reporting only: a failure here must not stop a good bundle from being published.
+        continue-on-error: true
+        shell: bash
+        env:
+          EXEC: ${{ steps.claude.outputs.execution_file }}
+          ADVISOR: ${{ inputs.advisor || 'none' }}
+        run: |
+          # Orchestrator edits come from the runtime's record (main-thread Edit/Write calls), not its report.
+          jq -r --arg advisor "$ADVISOR" '
+            # Any content block that names the advisor (its exact event shape is not documented).
+            ([.[] | .message?.content? | select(type == "array") | .[]
+              | select(((.type // "") | tostring | test("advisor"; "i")) or ((.name // "") | tostring | test("advisor"; "i")))]
+             | length) as $calls
+            | ([.[] | select(.type == "assistant" and .parent_tool_use_id == null) | .message.content
+                | select(type == "array") | .[] | select(.type == "tool_use" and (.name | IN("Edit", "Write", "NotebookEdit")))]
+               | length) as $self
+            | ([.[] | select(.type == "result")] | last) as $r
+            # The advisor model shows up here even when the block count misses it.
+            | ($r.modelUsage // {} | keys | join(", ")) as $models
+            | "### Implement #\(env.ISSUE_NUMBER)\n\n| Status | Turns | Cost (API-rate equivalent) | Advisor | Advisor blocks | Orchestrator edits |\n|---|---|---|---|---|---|\n| \($r.structured_output.status // "none" | tostring | .[0:20]) | \($r.num_turns) | $\($r.total_cost_usd) | \($advisor) | \($calls) | \($self) |\n\nModels used: \($models)\n\nThe result is in the PR or the issue comment."' \
+            "$EXEC" >> "$GITHUB_STEP_SUMMARY"
+
+      # The same record's cost, turns and models, for the PR's agent record (the guard checks the shape).
+      - name: Record cost and models for the PR
+        id: stats
+        if: always() && steps.claude.outputs.execution_file != ''
+        continue-on-error: true
+        shell: bash
+        env:
+          EXEC: ${{ steps.claude.outputs.execution_file }}
+        run: |
+          "$CHECKS/agent_job.sh" stats
+
+      # The runtime's record of the run, for comparing configurations (7 days, repo readers only).
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always() && steps.claude.outputs.execution_file != ''
+        continue-on-error: true
+        with:
+          name: implement-transcript
+          path: ${{ steps.claude.outputs.execution_file }}
+          retention-days: 7
+
+      # An agent step that ends with no result (the time limit, the turn limit, a crash) leaves no
+      # transcript above: keep the session files it wrote, and say why it stopped.
+      - name: Keep the log of an agent that returned nothing
+        id: lost
+        if: always() && steps.claude.outcome == 'failure'
+        continue-on-error: true
+        shell: bash
+        env:
+          EXEC: ${{ steps.claude.outputs.execution_file }}
+          OAUTH: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          GHTOKEN: ${{ github.token }}
+        run: |
+          "$CHECKS/agent_job.sh" lost implement
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always() && steps.lost.outputs.saved == 'yes'
+        continue-on-error: true
+        with:
+          name: implement-session-log
+          path: ${{ runner.temp }}/session-log
+          retention-days: 7
+
+      # The run's metrics record for the weekly improve loop (run_metrics.py, 35 days): numbers and enums only,
+      # never agent text. Missing values are recorded as unknown.
+      - name: Record the run's metrics
+        if: always()
+        continue-on-error: true
+        shell: bash
+        env:
+          EXEC: ${{ steps.claude.outputs.execution_file }}
+          RESULT: ${{ steps.claude.outputs.structured_output }}
+          LOST: ${{ steps.lost.outputs.why }}
+          INPUTS: ${{ toJSON(inputs) }}
+          RUN_ID: ${{ github.run_id }}
+          RUN_ATTEMPT: ${{ github.run_attempt }}
+          WORKFLOW: factory-implement
+          METRICS_STAGE: ${{ inputs.plan && 'execute' || 'implement' }}
+        run: |
+          "$CHECKS/agent_job.sh" metrics "$METRICS_STAGE"
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        continue-on-error: true
+        with:
+          name: factory-metrics
+          path: ${{ runner.temp }}/metrics/metrics.json
+          retention-days: 35
+
+      # Checkout's post step runs git in this workspace after everything else; the agent could have
+      # left files in .git for it. Nothing needs the repository any more.
+      - name: Remove the agent's repository
+        if: always()
+        shell: bash
+        run: rm -rf "$GITHUB_WORKSPACE/.git"
+
+  publish:
+    needs: implement
+    if: needs.implement.outputs.bundle == 'yes'
+    runs-on: ubuntu-latest
+    # The App key is in this environment, which only the default branch may use.
+    environment: %{environments.writer}
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    outputs:
+      url: ${{ steps.pr.outputs.url }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # The guard and CODEOWNERS come from the default branch: at the agent's base, or for a continued
+          # execution (whose base is the PR's head) from the default branch now, with the PR's branch fetched.
+          ref: ${{ inputs.continue_pr && github.event.repository.default_branch || needs.implement.outputs.base }}
+          fetch-depth: ${{ inputs.continue_pr && '0' || '1' }}
+          persist-credentials: false
+
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: implement-bundle
+          path: ${{ runner.temp }}/in
+
+      - name: Check the commits and the result
+        env:
+          BASE: ${{ needs.implement.outputs.base }}
+          RESULT: ${{ needs.implement.outputs.result }}
+          STATS: ${{ needs.implement.outputs.stats }}
+          READ_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          if [ -n "$CONTINUE_PR" ]; then
+            .github/factory/factory_branch.sh fetch "$BRANCH" > /dev/null
+          fi
+          printf '%s' "$RESULT" > "$RUNNER_TEMP/result.json"
+          printf '%s' "$STATS" > "$RUNNER_TEMP/stats.json"
+          python3 -I .github/factory/implement_guard.py "$RUNNER_TEMP/in/implement.bundle" "$BASE" \
+            "$RUNNER_TEMP/result.json" "$ISSUE_NUMBER" "$RUN_URL" "$RUNNER_TEMP/out" \
+            "${{ inputs.plan && 'execute' || 'implement' }}" "$RUNNER_TEMP/stats.json"
+
+      # Scoped to this repository, contents and pull requests only (the App has no workflows permission).
+      - uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        id: app
+        with:
+          client-id: ${{ vars.FACTORY_APP_CLIENT_ID }}
+          private-key: ${{ secrets.FACTORY_APP_PRIVATE_KEY }}
+          permission-contents: write
+          permission-pull-requests: write
+
+      # This token only pushes and opens the PR; comments and labels are the report job's (its own
+      # issues-only token).
+      - name: Push the branch and open the draft PR
+        id: pr
+        env:
+          GH_TOKEN: ${{ steps.app.outputs.token }}
+          GH_REPO: ${{ github.repository }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+          BASE: ${{ needs.implement.outputs.base }}
+          STATUS: ${{ needs.implement.outputs.status }}
+        run: |
+          set -euo pipefail
+          branch="$BRANCH"
+          remote="https://x-access-token:${GH_TOKEN}@github.com/${GH_REPO}.git"
+          if [ -n "$CONTINUE_PR" ]; then
+            # A continued execution: fast-forward only, from where the agent started. The PR's description
+            # is rewritten only when the deliverable is done (the brief covers every segment).
+            .github/factory/factory_branch.sh push "$branch" "$BASE"
+            if [ "$STATUS" = done ]; then
+              gh api -X PATCH "repos/$GH_REPO/pulls/$CONTINUE_PR" -F body=@"$RUNNER_TEMP/out/pr-body.md" > /dev/null
+            fi
+            echo "url=$GITHUB_SERVER_URL/$GH_REPO/pull/$CONTINUE_PR" >> "$GITHUB_OUTPUT"
+            echo "Pushed to $branch (PR #$CONTINUE_PR)" >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          if git ls-remote --exit-code --heads "$remote" "$branch" > /dev/null; then
+            echo "::error::$branch already exists (an open factory PR?); close it and delete the branch, then re-run"; exit 1
+          fi
+          git -c core.hooksPath=/dev/null push --quiet "$remote" "$(cat "$RUNNER_TEMP/out/head"):refs/heads/$branch"
+          if ! url=$(gh pr create --draft --base "$DEFAULT_BRANCH" --head "$branch" \
+                       --title "${COMPARE:+[advisor: $COMPARE] }$(cat "$RUNNER_TEMP/out/title")" \
+                       --body-file "$RUNNER_TEMP/out/pr-body.md"); then
+            # No PR, no branch: a re-run must not trip over the leftover.
+            git -c core.hooksPath=/dev/null push --quiet "$remote" --delete "$branch" || true
+            echo "::error::opening the PR failed; the branch was deleted"; exit 1
+          fi
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+          echo "Draft PR: $url" >> "$GITHUB_STEP_SUMMARY"
+
+  report:
+    needs: [implement, publish]
+    if: >-
+      always() && needs.implement.result == 'success' &&
+      (needs.publish.result == 'success' || needs.publish.result == 'skipped')
+    runs-on: ubuntu-latest
+    environment: %{environments.writer}
+    timeout-minutes: 5
+    # actions: write only to ask factory-gate-request.yml for a gate run (dispatch advances, D1 rule 2).
+    permissions:
+      actions: write
+      contents: read
+      issues: read
+      pull-requests: read
+    steps:
+      # The gate tracker's renderer (gates.py) comes from the default branch.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          persist-credentials: false
+
+      # Issues (and PR comments, for the gate tracker), scoped to this repository: they show as the factory App.
+      - uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        id: app
+        with:
+          client-id: ${{ vars.FACTORY_APP_CLIENT_ID }}
+          private-key: ${{ secrets.FACTORY_APP_PRIVATE_KEY }}
+          permission-issues: write
+          permission-pull-requests: write
+
+      - name: Comment and label
+        env:
+          GH_TOKEN: ${{ steps.app.outputs.token }}
+          READ_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RESULT: ${{ needs.implement.outputs.result }}
+          PR_URL: ${{ needs.publish.outputs.url }}
+          PLAN: ${{ inputs.plan }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          set -euo pipefail
+          printf '%s' "$RESULT" > result.json
+          # The implement job checked the output rules; these are the posting checks.
+          .github/factory/report.sh check implement result.json '[.reason, .questions[]]'
+          status=$(jq -r .status result.json)
+          # No markers, @mentions or #refs from agent text (README § Stage contract; report.jq).
+          q() { jq -L .github/factory -r "include \"report\"; $1" result.json; }
+          reason=$(q '.reason | clean')
+          case "$status" in
+            done|escalated|awaiting-approval)
+              [ -n "$PR_URL" ] || { echo "::error::status $status but no PR was opened (no commits?)"; exit 1; } ;;
+          esac
+          gate=$(jq -r '.gate // ""' result.json)
+          pr_number=${PR_URL##*/}
+          if [ "$status" = awaiting-approval ]; then
+            # The gate tracker on the PR (created on the first stop, updated after), then the gate run.
+            GH_TOKEN="$READ_TOKEN" gh api "repos/$GH_REPO/pulls/$pr_number" > pr.json
+            GH_TOKEN="$READ_TOKEN" gh api "repos/$GH_REPO/issues/$pr_number/comments" --paginate --jq '.[]' > comments.ndjson
+            GH_TOKEN="$READ_TOKEN" gh api "repos/$GH_REPO/contents/$PLAN?ref=$DEFAULT_BRANCH" > plan.json
+            python3 -I .github/factory/gates.py tracker --repo "$GH_REPO" --app-id %{app.user_id} --factory-dir .github/factory \
+              --pr-json pr.json --comments comments.ndjson --plan-meta plan.json --plan "$PLAN" --stopped-at "$gate" --out tracker.md
+            tracker=$(jq -r 'select(.user.id == %{app.user_id} and (.body | startswith("<!-- factory-gate-tracker: "))) | .id' comments.ndjson | head -1)
+            if [ -n "$tracker" ]; then
+              gh api -X PATCH "repos/$GH_REPO/issues/comments/$tracker" -F body=@tracker.md > /dev/null
+            else
+              gh api "repos/$GH_REPO/issues/$pr_number/comments" -F body=@tracker.md > /dev/null
+            fi
+          fi
+          {
+            # Stage marker first (README § Stage contract); agent text can't add markers. A rescope
+            # hands the issue back to triage: CD's reply restarts triage, with this comment in the thread.
+            case "$status" in
+              # An executed plan resumes as execution, with its plan (and its PR, if a gate was passed).
+              needs-input) if [ -n "$PLAN" ]; then echo "<!-- factory-stage: execute plan=$PLAN${CONTINUE_PR:+ pr=$CONTINUE_PR} -->"
+                           else echo "<!-- factory-stage: implement -->"; fi ;;
+              rescope) echo "<!-- factory-stage: triage from=implement -->" ;;
+            esac
+            case "$status" in
+              done)
+                if [ -n "$CONTINUE_PR" ]; then printf '**Execution finished on** %s: every production gate is done. Review it, then merge it with a merge commit (production may already run its code).\n' "$PR_URL"
+                else printf '**Draft PR opened%s:** %s\n' "${COMPARE:+ (comparison run, advisor: $COMPARE)}" "$PR_URL"; fi ;;
+              awaiting-approval) printf '**Stopped before production gate %s** on %s. The gate tracker there shows the request; approve its gate run in the `%{environments.production}` environment when you want it to run.\n' "$gate" "$PR_URL" ;;
+              escalated) printf '**Draft PR opened with open findings:** %s\n\nImplement stopped with open findings or a decision for you; they are listed in the PR. %s\n' "$PR_URL" "$reason" ;;
+              needs-input)
+                printf '**Implement stopped for your input.** %s\n\n### Questions\n\n' "$reason"
+                # A multi-line question stays inside its numbered item.
+                q '.questions | to_entries[] | "\(.key + 1). \(.value | clean | gsub("\n"; "\n   "))"'
+                printf '\n_Reply on this issue to restart implement._\n' ;;
+              rescope) printf '**This is more than a direct fix.** %s\n\n_Reply on this issue (for example, to confirm or narrow the scope) to re-run triage with this in mind._\n' "$reason" ;;
+              failed) printf '**Implement could not run.** %s\n\nFix the cause, then re-run the workflow, or remove and re-add `factory:ready-for-dispatch`.\n' "$reason" ;;
+            esac
+            printf '\n<sub>factory implement · [run](%s)</sub>\n' "$RUN_URL"
+          } > comment.md
+          # Comment first: a needs-input label must never exist without its stage marker.
+          gh issue comment "$ISSUE_NUMBER" -F comment.md
+          # A comparison run reports but doesn't move the issue's state; its siblings are still running.
+          if [ -n "$COMPARE" ]; then echo "Comparison run ($COMPARE): $status" >> "$GITHUB_STEP_SUMMARY"; exit 0; fi
+          if [ "$status" = awaiting-approval ]; then
+            GH_TOKEN="$READ_TOKEN" gh workflow run factory-gate-request.yml --ref "$DEFAULT_BRANCH" -f pr="$pr_number"
+          fi
+          case "$status" in
+            done) new="" ;;
+            awaiting-approval) new=factory:gate ;;
+            escalated) new=factory:review-capped ;;
+            needs-input|rescope) new=factory:needs-input ;;
+            failed) exit 0 ;;
+          esac
+          # The PR carries the state from here; drop every other factory:* state label
+          # (factory:advisor is a property, not a state).
+          .github/factory/report.sh labels "$new"
+          echo "Implement #$ISSUE_NUMBER: $status ${new:-(no factory label)}" >> "$GITHUB_STEP_SUMMARY"
+
+  report-failure:
+    needs: [implement, publish, report]
+    if: failure()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    environment: %{environments.writer}
+    permissions:
+      issues: write
+    steps:
+      # Issues only, scoped to this repository: comments and labels show as the factory App.
+      - uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        id: app
+        # A broken App key must not silence the failure report: fall back to GITHUB_TOKEN.
+        continue-on-error: true
+        with:
+          client-id: ${{ vars.FACTORY_APP_CLIENT_ID }}
+          private-key: ${{ secrets.FACTORY_APP_PRIVATE_KEY }}
+          permission-issues: write
+
+      - name: Comment on the issue
+        env:
+          GH_TOKEN: ${{ steps.app.outputs.token || github.token }}
+          GH_REPO: ${{ github.repository }}
+          IMPLEMENT: ${{ needs.implement.result }}
+          PREPARED: ${{ needs.implement.outputs.prepared }}
+          RAN: ${{ needs.implement.outputs.ran }}
+          PACKAGED: ${{ needs.implement.outputs.packaged }}
+          INCOMPLETE: ${{ needs.implement.outputs.incomplete }}
+          LOST: ${{ needs.implement.outputs.lost }}
+          LOST_LOG: ${{ needs.implement.outputs.lost-log }}
+          PUBLISH: ${{ needs.publish.result }}
+          PR_URL: ${{ needs.publish.outputs.url }}
+        run: |
+          next="Check the labels, then re-run the workflow."
+          if [ "$IMPLEMENT" = failure ] && [ "$PREPARED" != success ]; then
+            why="The job failed before the agent started (an existing factory branch, the test services, or installing dependencies)."
+          elif [ "$IMPLEMENT" = failure ] && [ "$RAN" = skipped ]; then
+            why="The job failed after preparing and before the agent started (the MCP config step)."
+          elif [ "$IMPLEMENT" = failure ] && [ "$RAN" != success ] && [ -n "$LOST" ]; then
+            why="The implement agent $LOST."
+            if [ "$LOST_LOG" = yes ]; then why="$why Its session log is on the run page (implement-session-log)."; fi
+          elif [ "$IMPLEMENT" = failure ] && [ "$RAN" != success ]; then
+            why="The implement agent failed: it may have run out of plan usage, hit its time or turn limit, or returned no result."
+          elif [ "$IMPLEMENT" = failure ] && [ "$INCOMPLETE" = yes ]; then
+            why="The agent committed work but left uncommitted changes, so nothing was pushed. Its commits are in the run's implement-bundle artifact."
+          elif [ "$IMPLEMENT" = failure ] && [ "$PACKAGED" = failure ]; then
+            why="The agent's result was refused (sandbox processes outlived the agent, the result broke the output rules, no commit was made, or .git was altered); the run page says which."
+          elif [ "$IMPLEMENT" = failure ]; then
+            why="Uploading the agent's commits failed; the run page says why."
+          elif [ "$PUBLISH" = failure ]; then
+            why="The commits were refused or could not be pushed (a protected path, a symlink, a size cap, a token-like string); the run page says which."
+            next="A re-run will be refused the same way unless the cause is gone; if the fix needs a protected file, re-triage the issue for a plan."
+          else
+            why="The result could not be reported: a comment or label call failed."
+          fi
+          if [ -n "$PR_URL" ]; then
+            next="The draft PR was opened ($PR_URL); don't re-run, review it and fix the labels by hand."
+          fi
+          gh issue comment "$ISSUE_NUMBER" --body "Factory implement failed ([run]($RUN_URL)). $why $next"

@@ -1,0 +1,868 @@
+# Factory plan and spec (phase 3). An issue triaged ready-to-plan gets a reviewed document for CD to
+# approve by merging. The claim job reserves the deliverable ID and picks the mode:
+#   lite       -> /sdlc-lite-plan writes the plan             (branch factory/<n>-plan, stage plan)
+#   full, new  -> /sdlc-plan runs discovery, writes the spec  (branch factory/<n>-spec, stage spec)
+#   full, spec merged -> /sdlc-plan writes the plan from it   (branch factory/<n>-plan, stage plan)
+#   full, part of a split reusing an approved spec -> the plan from that spec, for the part's scope
+# A spec or plan run that finds the deliverable must split writes a split record and the parts' catalog
+# rows instead and returns status split (branch factory/<n>-split, stage split). Merging that PR files the
+# parts (factory-advance.yml -> factory-split.yml).
+# The agent runs on the planning tier (design rule D3: read-only production data, open internet); a
+# publish job opens the PR; a report job comments and labels. Merging a spec PR starts the plan run,
+# and merging a plan PR starts execution (factory-advance.yml). A question for CD stops the run; the
+# reply restarts this stage, which resumes the saved session (discovery keeps its context).
+# Stage contract: .github/factory/README.md.
+name: factory-plan
+run-name: "factory-plan #${{ github.event.issue.number || inputs.issue_number }}"
+
+on:
+  issues:
+    types: [labeled]
+  workflow_dispatch:
+    inputs:
+      issue_number:
+        description: Issue to plan (triage and factory-resume dispatch this)
+        type: number
+        required: true
+      model:
+        description: Orchestrator model (the agents it dispatches keep their own models)
+        type: choice
+        options: [%{models.plan.options}]
+        default: %{models.plan.default}
+      tier:
+        description: >-
+          auto follows the latest triage decision; lite or full overrides it (a manual dispatch when
+          triage hasn't run or CD disagrees with its tier)
+        type: choice
+        options: [auto, lite, full]
+        default: auto
+      advisor:
+        description: >-
+          Advisor model the orchestrator and agents may consult; auto follows the issue's
+          factory:advisor label (set by triage or CD): fable with it, none without
+        type: choice
+        options: [auto, fable, opus, none]
+        default: auto
+
+permissions: {}
+
+# One factory run per issue at a time; unrelated label events, and labels set by a bot (the
+# factory App's start workflows), get their own group.
+concurrency:
+  group: >-
+    ${{ (github.event_name == 'workflow_dispatch' ||
+         (github.event.label.name == 'factory:ready-to-plan' && github.event.sender.type != 'Bot'))
+        && format('factory-issue-{0}', github.event.issue.number || inputs.issue_number)
+        || github.run_id }}
+
+env:
+  ISSUE_NUMBER: ${{ github.event.issue.number || inputs.issue_number }}
+  RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+  # The agent steps' time limit (CD, 2026-10-11: a full-tier plan ran past 2 hours). The plan job's
+  # timeout-minutes can't read env: keep it above this plus the brief rewrite.
+  AGENT_MINUTES: "%{limits.agent_minutes}"
+
+jobs:
+  # The deliverable ID, reserved by a bot comment on the issue (no push to main): the highest of the
+  # catalog's Next ID, its rows, and every earlier reservation, plus one. One claim at a time across
+  # the repository. A restart reuses the issue's existing reservation.
+  claim:
+    # A label starts planning only when a person adds it: triage and resume set it as the factory
+    # App, which (unlike GITHUB_TOKEN) starts workflows, and they dispatch anyway.
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.label.name == 'factory:ready-to-plan' && github.event.issue.state == 'open' &&
+       github.event.sender.type != 'Bot')
+    runs-on: ubuntu-latest
+    # The App key is in this environment, which only the default branch may use.
+    environment: %{environments.writer}
+    timeout-minutes: 5
+    concurrency:
+      group: factory-id-claim
+    permissions:
+      contents: read
+      # Choosing the mode reads the triage decision and any merged spec PR.
+      issues: read
+      pull-requests: read
+    outputs:
+      id: ${{ steps.claim.outputs.id }}
+      mode: ${{ steps.mode.outputs.mode }}
+      stage: ${{ steps.mode.outputs.stage }}
+      branch: ${{ steps.mode.outputs.branch }}
+      spec: ${{ steps.mode.outputs.spec }}
+    steps:
+      # Issues only, scoped to this repository: comments and labels show as the factory App.
+      - uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        id: app
+        with:
+          client-id: ${{ vars.FACTORY_APP_CLIENT_ID }}
+          private-key: ${{ secrets.FACTORY_APP_PRIVATE_KEY }}
+          permission-issues: write
+
+      - name: Reserve the deliverable ID
+        id: claim
+        env:
+          GH_TOKEN: ${{ steps.app.outputs.token }}
+          # The catalog read needs contents access, which the App token doesn't carry.
+          READ_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          # A split part's reservation carries its letter (D34a); the next-ID maximum counts numbers only.
+          mine_marker='capture("\\A<!-- factory-id: (?<id>D[0-9]+[a-z]?) -->")? | .id'
+          marker='capture("\\A<!-- factory-id: D(?<n>[0-9]+)[a-z]? -->")? | .n'
+          # Reservations by the App (its bot user ID) or, before 2026-10-09, by github-actions.
+          bot='select(.user.type == "Bot" and (.user.id == %{app.user_id} or .user.login == "github-actions[bot]"))'
+          mine=$(gh api "repos/$GH_REPO/issues/$ISSUE_NUMBER/comments" --paginate \
+                 --jq ".[] | $bot | .body | $mine_marker" | tail -1)
+          if [ -n "$mine" ]; then
+            echo "id=$mine" >> "$GITHUB_OUTPUT"; echo "Reusing $mine" >> "$GITHUB_STEP_SUMMARY"; exit 0
+          fi
+          catalog=$(GH_TOKEN="$READ_TOKEN" gh api "repos/$GH_REPO/contents/docs/_index.md" -H "Accept: application/vnd.github.raw")
+          next=$(grep -oE '\*\*Next ID:\*\* *D[0-9]+' <<< "$catalog" | grep -oE '[0-9]+$' | head -1)
+          rows=$(grep -oE '^\| *\[?D[0-9]+' <<< "$catalog" | grep -oE '[0-9]+' | sort -n | tail -1)
+          claimed=$(gh api "repos/$GH_REPO/issues/comments?per_page=100" --paginate \
+                    --jq ".[] | $bot | .body | $marker" | sort -n | tail -1)
+          n=${next:-1}
+          for v in "${rows:-0}" "${claimed:-0}"; do [ $((v + 1)) -gt "$n" ] && n=$((v + 1)); done
+          gh issue comment "$ISSUE_NUMBER" --body "$(printf '<!-- factory-id: D%s -->\nReserved **D%s** for this issue'"'"'s plan. <sub>factory plan · [run](%s)</sub>' "$n" "$n" "$RUN_URL")"
+          echo "id=D$n" >> "$GITHUB_OUTPUT"
+          echo "Reserved D$n" >> "$GITHUB_STEP_SUMMARY"
+
+      # The tier from the latest triage decision; for full tier, whether CD has merged the spec PR.
+      - name: Choose the mode
+        id: mode
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TIER: ${{ inputs.tier || 'auto' }}
+        run: |
+          set -euo pipefail
+          bot='select(.user.type == "Bot" and (.user.id == %{app.user_id} or .user.login == "github-actions[bot]"))'
+          tier=$(gh api "repos/$GH_REPO/issues/$ISSUE_NUMBER/comments" --paginate \
+                 --jq ".[] | $bot | .body | capture(\"<!-- factory-triage: (?<m>\\\\{[^<>]*\\\\}) -->\")? | .m | fromjson | .tier // empty" | tail -1)
+          [ "$TIER" = auto ] || tier=$TIER
+          spec=""
+          case "$tier" in
+            lite) mode=lite; stage=plan ;;
+            full)
+              pr=$(gh api "repos/$GH_REPO/pulls?state=closed&head=${GH_REPO%%/*}:factory/$ISSUE_NUMBER-spec&per_page=20" \
+                   --jq '[.[] | select(.merged_at != null)] | sort_by(.merged_at) | last | .number // empty')
+              if [ -n "$pr" ]; then
+                spec=$(gh api "repos/$GH_REPO/pulls/$pr/files" --paginate --jq '.[] | select(.status == "added") | .filename
+                       | select(test("^docs/current_work/specs/d[0-9]+[a-z]?_[a-z0-9_]+_spec\\.md$"))' | head -1)
+                [ -n "$spec" ] || { echo "::error::spec PR #$pr added no spec"; exit 1; }
+                mode=full-plan; stage=plan
+              else
+                # A split part whose split CD approved names the spec it reuses (factory-split.yml posts it).
+                spec=$(gh api "repos/$GH_REPO/issues/$ISSUE_NUMBER/comments" --paginate \
+                       --jq ".[] | select(.user.type == \"Bot\" and .user.id == %{app.user_id}) | .body
+                             | capture(\"\\\\A(?:<!-- [^\\\\n]* -->\\\\n)*<!-- factory-spec: (?<s>docs/current_work/specs/d[0-9]+[a-z]?_[a-z0-9_]+_spec\\\\.md) -->\")? | .s" | tail -1)
+                if [ -n "$spec" ]; then mode=full-plan; stage=plan; else mode=spec; stage=spec; fi
+              fi ;;
+            *) echo "::error::#$ISSUE_NUMBER has no lite or full triage decision (tier '$tier')"; exit 1 ;;
+          esac
+          { echo "mode=$mode"; echo "stage=$stage"; echo "branch=factory/$ISSUE_NUMBER-$stage"; echo "spec=$spec"; } >> "$GITHUB_OUTPUT"
+          echo "Mode: $mode${spec:+ (approved spec $spec)}" >> "$GITHUB_STEP_SUMMARY"
+
+  plan:
+    needs: claim
+    # The planning tier (design rule D3): its own runners, user and firewall exception.
+    runs-on: [self-hosted, %{runners.planning}]
+    # The read-only database password; only the default branch may use this environment.
+    environment: %{environments.planning}
+    # Above AGENT_MINUTES plus the brief rewrite (20) and the steps around them.
+    timeout-minutes: %{limits.agent_minutes+45}
+    # Read-only: the agent job can read the repo, the issue and earlier runs' artifacts, and write nothing.
+    permissions:
+      contents: read
+      issues: read
+      packages: read
+      actions: read
+    container:
+      # Pinned by digest; bump together with a factory-smoke re-run.
+      image: %{image.repository}@%{image.digest}
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+      options: >-
+        --security-opt seccomp=/etc/factory-runner/seccomp-bwrap.json
+        --security-opt systempaths=unconfined
+    outputs:
+      result: ${{ steps.shorten.outputs.structured_output || steps.resumed.outputs.structured_output || steps.fresh.outputs.structured_output }}
+      base: ${{ steps.prepare.outputs.base }}
+      prepared: ${{ steps.prepare.outcome }}
+      packaged: ${{ steps.package.outcome }}
+      status: ${{ steps.package.outputs.status }}
+      bundle: ${{ steps.package.outputs.bundle }}
+      # Cost, turns and models for the PR's agent record.
+      stats: ${{ steps.stats.outputs.stats }}
+      # Why an agent step ended with no result, and whether its transcripts were kept.
+      lost: ${{ steps.lost.outputs.why }}
+      lost-log: ${{ steps.lost.outputs.saved }}
+      # A run that ended with no result but kept its session (and work tree): resumable like a question.
+      resumable: ${{ steps.lost.outputs.resumable }}
+    env:
+      CLAUDE_CODE_SUBPROCESS_ENV_SCRUB: "1"
+      # A headless run ends with the orchestrator's turn: agents run in the foreground.
+      CLAUDE_CODE_DISABLE_BACKGROUND_TASKS: "1"
+      CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS: "3600000"
+      CONTEXT7_API_KEY: ${{ secrets.CONTEXT7_API_KEY }}
+      CHECKS: /__w/_temp/factory-checks
+      DELIVERABLE: ${{ needs.claim.outputs.id }}
+      BRANCH: ${{ needs.claim.outputs.branch }}
+      MODE: ${{ needs.claim.outputs.mode }}
+      STAGE: ${{ needs.claim.outputs.stage }}
+      SPEC: ${{ needs.claim.outputs.spec }}
+    steps:
+      - name: Clean workspace
+        shell: bash
+        run: find "$GITHUB_WORKSPACE" -mindepth 1 -maxdepth 1 -exec rm -rf {} +
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # Agent jobs load the repository's settings, skills and CLAUDE.md: default branch only.
+          ref: ${{ github.event.repository.default_branch }}
+          # Full history: discovery and planning read how the code got here (CD, 2026-10-10).
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Prepare the workspace, data access and issue context
+        id: prepare
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ADVISOR: ${{ inputs.advisor || 'auto' }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+          # This step's env only: pgbouncer holds it; the agent's process never has it.
+          FACTORY_DB_READER_PASSWORD: ${{ secrets.FACTORY_DB_READER_PASSWORD }}
+        run: |
+          set -euo pipefail
+          # Name the failing command: several commands here fail with no output of their own.
+          trap 'echo "::error::prepare failed (exit $?) at line $LINENO: $BASH_COMMAND"' ERR
+          [[ $DELIVERABLE =~ ^D[0-9]+[a-z]?$ ]] || { echo "::error::no deliverable ID reserved"; exit 1; }
+          # The scripts, the guard, the modules it imports and the schemas, frozen before the agent runs (and
+          # before a restore can check out an older base). The sandbox settings are built in the MCP step,
+          # from the frozen base plus services.json.
+          .github/factory/agent_job.sh freeze
+          main=$(git rev-parse HEAD)
+          base=$main
+          if gh api "repos/$GITHUB_REPOSITORY/branches/${BRANCH//\//%2F}" > /dev/null 2>&1; then
+            echo "::error::$BRANCH already exists (an open $STAGE PR?); close it and delete the branch first"; exit 1
+          fi
+
+          # Test services (for proofs of concept and tests) and the production database, read-only,
+          # through pgbouncer on loopback; sandboxed Bash reaches both through with-test-services.
+          "$CHECKS/agent_job.sh" services
+          "$CHECKS/planning-services.sh" .github/factory/planning.json "$RUNNER_TEMP/factory-db"
+          # Before anything runs the dependency manifests.
+          unset FACTORY_DB_READER_PASSWORD
+          "$CHECKS/agent_job.sh" workspace
+          git remote remove origin
+
+          # Read before a restore can check out an older base: the tool policy, and the sandbox's base settings.
+          echo "FACTORY_TOOL_ARGS=$(tr '\n' ' ' < .github/factory/plan-tools.args)" >> "$GITHUB_ENV"
+          install -m 644 .github/factory/planning-sandbox.settings.json "$CHECKS/planning-sandbox.base.json"
+          # A restart resumes the previous run's session (saved when it stopped for a question or its time
+          # budget, or was killed at the time limit) and restores its work tree when every path checks out
+          # (resume_state.py). Only this workflow's own artifact counts, from a run on the default branch,
+          # and only its named files are taken from it.
+          resume=no
+          restored=no
+          tree="This is a fresh container: the working tree is back at main, and nothing from the earlier run survives in it, committed or not, so re-create what you need."
+          art=$(gh api "repos/$GITHUB_REPOSITORY/actions/artifacts?name=factory-session-$ISSUE_NUMBER-$STAGE&per_page=1" \
+                --jq '.artifacts[0] | select(.expired == false) | "\(.id) \(.workflow_run.id)"' 2> /dev/null || true)
+          if [ -n "$art" ]; then
+            read -r art_id art_run <<< "$art"
+            origin=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$art_run" --jq '"\(.path) \(.head_branch)"' 2> /dev/null || true)
+            if [ "$origin" = ".github/workflows/factory-plan.yml $DEFAULT_BRANCH" ]; then
+              gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/$art_id/zip" > "$RUNNER_TEMP/session.zip"
+              install -d -m 700 "$CHECKS/work"
+              unzip -q -o "$RUNNER_TEMP/session.zip" session.jsonl -d "$CHECKS" 2> /dev/null || true
+              unzip -q -o "$RUNNER_TEMP/session.zip" 'work.*' -d "$CHECKS/work" 2> /dev/null || true
+              [ -s "$CHECKS/session.jsonl" ] && resume=yes
+            else
+              echo "::warning::ignored session artifact $art_id: it isn't from factory-plan.yml on $DEFAULT_BRANCH ($origin)"
+            fi
+          fi
+          if [ "$resume" = yes ]; then
+            state=$(python3 -I "$CHECKS/resume_state.py" restore "$CHECKS/work" "$STAGE" "$main")
+            restored=$(sed -n 's/^restored=//p' <<< "$state")
+            base=$(sed -n 's/^base=//p' <<< "$state")
+            [[ $base =~ ^[0-9a-f]{40}$ ]] || base=$main
+            if [ "$restored" = yes ]; then
+              commits=$(sed -n 's/^commits=//p' <<< "$state")
+              changes=$([ "$(sed -n 's/^patch=//p' <<< "$state")" = yes ] && echo "its uncommitted changes" || echo "no uncommitted changes")
+              tree="Your working tree is restored as the earlier run left it: its commits ($commits) and $changes, on $base. main may have moved past that base; .claude/, CLAUDE.md and CODEOWNERS are main's."
+            fi
+            echo "Resume the previous session: yes; work tree restored: $restored $(sed -n 's/^why=//p' <<< "$state")" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "Resume the previous session: no" >> "$GITHUB_STEP_SUMMARY"
+          fi
+          echo "base=$base" >> "$GITHUB_OUTPUT"
+
+          "$CHECKS/agent_job.sh" issue-context "$base" "$DELIVERABLE"
+
+          if [ "$ADVISOR" = auto ]; then
+            ADVISOR=$(jq -r 'if [.labels[].name] | index("factory:advisor") then "fable" else "none" end' "$RUNNER_TEMP/issue.json")
+          fi
+          echo "Advisor: $ADVISOR" >> "$GITHUB_STEP_SUMMARY"
+          "$CHECKS/agent_job.sh" advisor "$ADVISOR"
+          "$CHECKS/agent_job.sh" schema plan
+
+          ctx="$GITHUB_WORKSPACE/.factory/issue-context.json"
+          data="Real data: the production database is readable at 127.0.0.1:%{planning.database.local_port} (database %{planning.database.name}, user %{planning.database.user}, read-only, no personal or secret data) through /opt/factory/with-test-services, for example: /opt/factory/with-test-services psql -h 127.0.0.1 -p %{planning.database.local_port} -U %{planning.database.user} %{planning.database.name}. Use it, and the open internet, to ground the work in facts. Put facts and aggregates in documents, never rows of data. External services you may use, if any, are listed in .factory/services-context.json, with the variable that carries each one's credential (a placeholder in your sandbox; the factory swaps in the real value only on requests to that service)."
+          hygiene="Commit the document, the catalog and any SDLC hygiene (discipline parking-lot entries in ops/sdlc/disciplines/, knowledge YAML corrections in ops/sdlc/knowledge/, the changelog ops/sdlc/process/sdlc_changelog.md) locally when it is ready for approval; this stage may change nothing else. agent-context-map.yaml, the rest of ops/sdlc/ in .github/CODEOWNERS, .claude/ and everything else there are CD's (the publish job refuses them): put those notes in the result's deferred or notes fields."
+          budget="Time budget: this run is stopped after $AGENT_MINUTES minutes (ops/sdlc/process/headless-mode.md, Stop before a time limit). Run date now and between steps. With 20 minutes left, start nothing new: commit what is done and stop with status needs-input and one question saying what is done and what is left. The factory keeps your session and your work tree, and CD's reply resumes both."
+          brief="The result's brief is the PR description CD approves: fill it from the document's Approval Brief (written per ops/sdlc/process/writing-for-cd.md and the plan variant of ops/sdlc/templates/pr_description_template.md), never from the document body, which stays the agents' contract. Put the FACTS scores in orchestrator.facts when the skill produces them."
+          idline="Deliverable ID: $DELIVERABLE, reserved by the factory. Use it in step 0 instead of reading Next ID, and set the catalog's Next ID past it if it is lower. Link the catalog row to issue #$ISSUE_NUMBER."
+          if [[ $DELIVERABLE =~ ^D[0-9]+[a-z]$ ]]; then
+            # A part of a split: its row exists; it never splits again.
+            idline="$idline This deliverable is a part of a split: its catalog row already exists, and its row and the split record in docs/current_work/planning/ give its scope. Plan only that scope. A part can't split again: if it is still too big, stop with status needs-input and say so."
+            splitline=""
+          else
+            splitline="If the deliverable must split (the Feasibility Gate shows it is several deliverables, or the plan would need an eighth phase), follow sdlc-plan § Splitting a Deliverable instead of writing the plan: write the split record and the parts' catalog rows (IDs ${DELIVERABLE}a, ${DELIVERABLE}b, ..., with Depends on, and the parent row depending on its parts), commit them, and stop with status split, the split record as the document and the parts in parts exactly as its table lists them. A full-tier part reuses an approved spec only if one covers its scope. Never return rescope for a split; leave parts empty for every other status."
+          fi
+          case "$MODE" in
+            lite) prompt="/sdlc-lite-plan Plan GitHub issue #$ISSUE_NUMBER for the factory. The issue, its comments and the triage decision are in $ctx.
+          $idline" ;;
+            spec) prompt="/sdlc-plan Plan GitHub issue #$ISSUE_NUMBER for the factory: full tier. The issue, its comments and the triage decision are in $ctx.
+          $idline
+          This stage is discovery and the spec. Ask CD what blocks discovery, one question per stop, and before writing the spec give CD a discovery check-in (sdlc-plan, Discovery check-in), in about 300 words as a markdown list: one line for what carries over from what CD already approved, one line per assumption CD has not decided with its source, and one line per open choice with your recommendation and what the alternative would cost. Facts and detail go in notes. Questions and the check-in stop the run with status needs-input, the factory posts them on the issue, and CD's reply resumes this session. Once CD has answered the check-in, write the spec at docs/current_work/specs/, review it, and stop at the spec approval gate with status awaiting-approval and the spec's path as the document. CD approves the spec by merging its PR; the plan is a later run. Put what discovery established, whether the check-in was asked and what CD answered, and the spec's content hash, in notes.
+          $splitline" ;;
+            full-plan) [ -f "$SPEC" ] || { echo "::error::the approved spec $SPEC isn't on the default branch"; exit 1; }
+              prompt="/sdlc-plan Headless restart for GitHub issue #$ISSUE_NUMBER (full tier), deliverable $DELIVERABLE. CD approved the spec at $SPEC by merging its PR: set its Status to Ready and start at step 3d (the approach decision). Write the plan at docs/current_work/planning/, review it, and stop with status awaiting-approval and the plan's path as the document. Never re-run discovery or rewrite the approved spec. The issue, its comments and the triage decision are in $ctx.
+          $idline
+          $splitline" ;;
+            *) echo "::error::unknown mode $MODE"; exit 1 ;;
+          esac
+          {
+            echo "FACTORY_PROMPT<<FACTORY_PROMPT_END"
+            printf '%s\n%s\n%s\n%s\n%s\n' "$prompt" "$data" "$hygiene" "$brief" "$budget"
+            echo "FACTORY_PROMPT_END"
+          } >> "$GITHUB_ENV"
+          {
+            echo "FACTORY_RESUME=$resume"
+            echo "FACTORY_RESUME_TREE=$tree"
+            echo "FACTORY_BUDGET=$budget"
+            echo "FACTORY_ISSUE_CONTEXT=$GITHUB_WORKSPACE/.factory/issue-context.json"
+          } >> "$GITHUB_ENV"
+
+      - name: Write MCP config
+        shell: bash
+        run: |
+          cfg=$("$CHECKS/agent_job.sh" mcp)
+          # External services this stage may use (README § Services): the sandbox settings (every
+          # credential slot masked; a service's slot injected only on its domains), the MCP servers,
+          # and a non-secret list for the agent.
+          python3 -I .github/factory/services.py .github/factory/services.json "$STAGE" \
+            "$CHECKS/planning-sandbox.base.json" "$CHECKS/planning-sandbox.settings.json" \
+            "$GITHUB_WORKSPACE/.factory/services-context.json" "$cfg"
+
+      # What the agent writes from here on is its own; a step that ends with no result keeps it (session_log.sh).
+      - name: Mark the agent's start
+        shell: bash
+        run: touch "$RUNNER_TEMP/agent-start"
+
+      # A first run plans the issue; a restart resumes the saved session with CD's answer. Same
+      # tool policy, settings, schema and flags either way.
+      - name: Plan
+        id: fresh
+        if: env.FACTORY_RESUME != 'yes'
+        timeout-minutes: ${{ fromJSON(env.AGENT_MINUTES) }}
+        # Service credential slots (services.py masks all four in the sandbox; unused slots are empty).
+        env:
+          FACTORY_SVC_1: ${{ secrets.FACTORY_SVC_1 }}
+          FACTORY_SVC_2: ${{ secrets.FACTORY_SVC_2 }}
+          FACTORY_SVC_3: ${{ secrets.FACTORY_SVC_3 }}
+          FACTORY_SVC_4: ${{ secrets.FACTORY_SVC_4 }}
+        uses: anthropics/claude-code-action@58985842b834ed26087302ba27d07bc24ca8697a # v1.0.244
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          github_token: ${{ github.token }}
+          allowed_bots: github-actions
+          classify_inline_comments: "false"
+          bot_name: %{app.login}
+          bot_id: "%{app.user_id}"
+          settings: ${{ env.CHECKS }}/planning-sandbox.settings.json
+          prompt: ${{ env.FACTORY_PROMPT }}
+          claude_args: >-
+            --model ${{ inputs.model || '%{models.plan.default}' }}
+            --advisor ${{ env.FACTORY_ADVISOR }}
+            --effort high
+            --settings ${{ env.CHECKS }}/planning-sandbox.settings.json
+            ${{ env.FACTORY_TOOL_ARGS }}
+            --setting-sources user,project
+            --append-system-prompt "SDLC headless mode: no person is present."
+            --json-schema '${{ env.FACTORY_PLAN_SCHEMA }}'
+            --mcp-config ${{ env.FACTORY_MCP_CONFIG }} --strict-mcp-config
+            --permission-mode auto --permission-prompts none
+            --max-turns 300
+
+      - name: Resume planning
+        id: resumed
+        if: env.FACTORY_RESUME == 'yes'
+        timeout-minutes: ${{ fromJSON(env.AGENT_MINUTES) }}
+        # Service credential slots (services.py masks all four in the sandbox; unused slots are empty).
+        env:
+          FACTORY_SVC_1: ${{ secrets.FACTORY_SVC_1 }}
+          FACTORY_SVC_2: ${{ secrets.FACTORY_SVC_2 }}
+          FACTORY_SVC_3: ${{ secrets.FACTORY_SVC_3 }}
+          FACTORY_SVC_4: ${{ secrets.FACTORY_SVC_4 }}
+        uses: anthropics/claude-code-action@58985842b834ed26087302ba27d07bc24ca8697a # v1.0.244
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          github_token: ${{ github.token }}
+          allowed_bots: github-actions
+          classify_inline_comments: "false"
+          bot_name: %{app.login}
+          bot_id: "%{app.user_id}"
+          settings: ${{ env.CHECKS }}/planning-sandbox.settings.json
+          prompt: |
+            CD has replied on issue #${{ env.ISSUE_NUMBER }}. The updated thread is in ${{ env.FACTORY_ISSUE_CONTEXT }}. ${{ env.FACTORY_RESUME_TREE }} Read the new comments, then continue the ${{ env.STAGE }} from where you stopped, with the same deliverable ID (${{ env.DELIVERABLE }}). Commit only the document, the catalog and SDLC hygiene (parking lots, knowledge YAMLs, the SDLC changelog); other framework notes go in deferred or notes. Fill the result's brief from the document's Approval Brief, per ops/sdlc/templates/pr_description_template.md (plan variant).
+            ${{ env.FACTORY_BUDGET }}
+          claude_args: >-
+            --model ${{ inputs.model || '%{models.plan.default}' }}
+            --resume ${{ env.CHECKS }}/session.jsonl
+            --advisor ${{ env.FACTORY_ADVISOR }}
+            --effort high
+            --settings ${{ env.CHECKS }}/planning-sandbox.settings.json
+            ${{ env.FACTORY_TOOL_ARGS }}
+            --setting-sources user,project
+            --append-system-prompt "SDLC headless mode: no person is present."
+            --json-schema '${{ env.FACTORY_PLAN_SCHEMA }}'
+            --mcp-config ${{ env.FACTORY_MCP_CONFIG }} --strict-mcp-config
+            --permission-mode auto --permission-prompts none
+            --max-turns 300
+
+      # The publish guard refuses a brief over its word limit (CD wants reviewable PRs). Check it here,
+      # with the guard copied before the agent ran, and if it's over, resume the session to rewrite only
+      # the brief, instead of losing the run. This check and the rewrite only help: if either fails, the
+      # agent's own result is packaged and the publish guard, which is authoritative, decides.
+      - name: Check the brief against the publish limits
+        id: briefcheck
+        if: steps.fresh.outcome == 'success' || steps.resumed.outcome == 'success'
+        continue-on-error: true
+        shell: bash
+        env:
+          RESULT: ${{ steps.resumed.outputs.structured_output || steps.fresh.outputs.structured_output }}
+          SESSION: ${{ steps.resumed.outputs.session_id || steps.fresh.outputs.session_id }}
+        run: |
+          set -euo pipefail
+          printf '%s' "$RESULT" > "$RUNNER_TEMP/brief-check.json"
+          reason=$(python3 -I -c '
+          import json, sys
+          sys.path.insert(0, sys.argv[1])
+          import implement_guard as g
+          r = json.load(open(sys.argv[2]))
+          if r.get("status") not in ("awaiting-approval", "escalated") or sys.argv[3] not in g.DOC_STAGES:
+              sys.exit(0)
+          try:
+              g.check_brief(r.get("brief"), sys.argv[3])
+          except g.Refused as e:
+              print(e)
+          ' "$CHECKS" "$RUNNER_TEMP/brief-check.json" "$STAGE")
+          if [ -n "$reason" ] && [ -n "$SESSION" ]; then
+            # A resumed session continues beside the file it resumed from; a fresh one is under HOME.
+            f="$CHECKS/$SESSION.jsonl"
+            [ -s "$f" ] || f=$(find /github/home -name "$SESSION.jsonl" -path '*/projects/*' 2> /dev/null | head -1)
+            if [ -n "$f" ]; then
+              # Its own directory: the rewrite's session continues there, apart from the planning session.
+              install -d -m 700 "$CHECKS/brief"
+              cp "$f" "$CHECKS/brief/session.jsonl"
+              { echo "fix=yes"; echo "reason=$reason"; } >> "$GITHUB_OUTPUT"
+              echo "Brief over the limit, rewriting: $reason" >> "$GITHUB_STEP_SUMMARY"
+            fi
+          fi
+
+      - name: Shorten the brief
+        id: shorten
+        if: steps.briefcheck.outputs.fix == 'yes'
+        continue-on-error: true
+        timeout-minutes: 20
+        uses: anthropics/claude-code-action@58985842b834ed26087302ba27d07bc24ca8697a # v1.0.244
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          github_token: ${{ github.token }}
+          allowed_bots: github-actions
+          classify_inline_comments: "false"
+          bot_name: %{app.login}
+          bot_id: "%{app.user_id}"
+          settings: ${{ env.CHECKS }}/planning-sandbox.settings.json
+          prompt: |
+            The factory's publish check refused your result: ${{ steps.briefcheck.outputs.reason }}. Return the same result again, unchanged except for the brief: rewrite the brief to fit ops/sdlc/templates/pr_description_template.md (plan variant), about 450 words, never more than 900, in plain language, keeping every decision, risk and review-focus point CD needs. Change no files and make no commits.
+          claude_args: >-
+            --model ${{ inputs.model || '%{models.plan.default}' }}
+            --resume ${{ env.CHECKS }}/brief/session.jsonl
+            --effort medium
+            --settings ${{ env.CHECKS }}/planning-sandbox.settings.json
+            ${{ env.FACTORY_TOOL_ARGS }}
+            --setting-sources user,project
+            --append-system-prompt "SDLC headless mode: no person is present."
+            --json-schema '${{ env.FACTORY_PLAN_SCHEMA }}'
+            --mcp-config ${{ env.FACTORY_MCP_CONFIG }} --strict-mcp-config
+            --permission-mode auto --permission-prompts none
+            --max-turns 20
+
+      - name: Package the plan
+        id: package
+        if: steps.fresh.outcome == 'success' || steps.resumed.outcome == 'success'
+        shell: bash
+        env:
+          BASE: ${{ steps.prepare.outputs.base }}
+          RESULT: ${{ steps.shorten.outputs.structured_output || steps.resumed.outputs.structured_output || steps.fresh.outputs.structured_output }}
+          SESSION: ${{ steps.resumed.outputs.session_id || steps.fresh.outputs.session_id }}
+        run: |
+          set -euo pipefail
+          # Nothing the agent started may outlive its step, and git runs only on a repository that checks out.
+          "$CHECKS/agent_job.sh" quiesce
+          printf '%s' "$RESULT" | jq -e '
+            (.status | IN("awaiting-approval", "split", "escalated", "needs-input", "rescope", "failed"))
+            and ([.reason, .title, .document, .deliverable, .notes] | all(type == "string")) and (.brief | type == "object")
+            and (.parts | type == "array") and (if .status == "split" then (.parts | length) >= 2 else (.parts | length) == 0 end)
+            and (.questions | type == "array") and all(.questions[]; type == "string")
+            and ((.questions | length) as $n | if .status == "needs-input" then $n >= 1 and $n <= 3 else $n == 0 end)
+          ' > /dev/null || { echo "::error::the agent's result breaks the output rules"; exit 1; }
+          status=$(printf '%s' "$RESULT" | jq -r .status)
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+          # Keep the session for the restart that a question leads to (the file lives in HOME, which
+          # the agent can neither read nor write).
+          install -d -m 700 "$RUNNER_TEMP/session"
+          if [ "$status" = needs-input ] && [ -n "$SESSION" ]; then
+            # A resumed session continues beside the file it resumed from; a fresh one is under HOME.
+            f="$CHECKS/$SESSION.jsonl"
+            [ -s "$f" ] || f=$(find /github/home -name "$SESSION.jsonl" -path '*/projects/*' 2> /dev/null | head -1)
+            if [ -n "$f" ]; then
+              cp "$f" "$RUNNER_TEMP/session/session.jsonl"
+              echo "session=yes" >> "$GITHUB_OUTPUT"
+              # The work tree too (commits since base, uncommitted changes); the restart checks it before restoring.
+              /usr/local/bin/python3 -I "$CHECKS/resume_state.py" save "$RUNNER_TEMP/session" "$BASE" >> "$GITHUB_STEP_SUMMARY" || true
+            fi
+          fi
+          # These statuses open a PR: they need the committed document, and nothing uncommitted.
+          "$CHECKS/agent_job.sh" bundle "$BASE" "$RUNNER_TEMP/plan/plan.bundle" "$status" awaiting-approval escalated split
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always() && steps.package.outputs.bundle == 'yes'
+        with:
+          name: plan-bundle
+          path: ${{ runner.temp }}/plan/plan.bundle
+          retention-days: 7
+          if-no-files-found: error
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always() && steps.package.outputs.session == 'yes'
+        with:
+          name: factory-session-${{ env.ISSUE_NUMBER }}-${{ env.STAGE }}
+          # session.jsonl, and work.json, work.bundle and work.patch when there was work (resume_state.py).
+          path: ${{ runner.temp }}/session
+          retention-days: 30
+          overwrite: true
+
+      # Cost, turns and models from the runtime's record, for the PR's agent record (the guard checks the shape).
+      - name: Record cost and models for the PR
+        id: stats
+        if: always() && (steps.resumed.outputs.execution_file != '' || steps.fresh.outputs.execution_file != '')
+        continue-on-error: true
+        shell: bash
+        env:
+          EXEC: ${{ steps.resumed.outputs.execution_file || steps.fresh.outputs.execution_file }}
+        run: |
+          "$CHECKS/agent_job.sh" stats
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always() && (steps.resumed.outputs.execution_file != '' || steps.fresh.outputs.execution_file != '')
+        continue-on-error: true
+        with:
+          name: plan-transcript
+          path: ${{ steps.resumed.outputs.execution_file || steps.fresh.outputs.execution_file }}
+          retention-days: 7
+
+      # An agent step that ends with no result (the time limit, the turn limit, a crash) leaves no
+      # transcript above: keep the session files it wrote, and say why it stopped.
+      - name: Keep the log of an agent that returned nothing
+        id: lost
+        if: always() && (steps.fresh.outcome == 'failure' || steps.resumed.outcome == 'failure')
+        continue-on-error: true
+        shell: bash
+        env:
+          EXEC: ${{ steps.resumed.outputs.execution_file || steps.fresh.outputs.execution_file }}
+          OAUTH: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          GHTOKEN: ${{ github.token }}
+          BASE: ${{ steps.prepare.outputs.base }}
+        run: |
+          "$CHECKS/agent_job.sh" lost planning
+          # The run is still resumable, like a stop for a question: keep its session and, once the repository
+          # checks out (git_guard.sh), its work tree. The failure report then asks CD to reply to continue.
+          pkill -9 -x bwrap || true
+          sleep 1
+          session=$(/usr/local/bin/python3 -I "$CHECKS/resume_state.py" find-session "$RUNNER_TEMP/agent-start" "$CHECKS" /github/home/.claude/projects)
+          if [ -n "$session" ] && { [ -z "$OAUTH" ] || ! grep -qF -- "$OAUTH" "$session"; } \
+             && { [ -z "$GHTOKEN" ] || ! grep -qF -- "$GHTOKEN" "$session"; }; then
+            install -d -m 700 "$RUNNER_TEMP/session"
+            cp "$session" "$RUNNER_TEMP/session/session.jsonl"
+            if "$CHECKS/git_guard.sh" "$CHECKS/git-hooks.sha256" > /dev/null 2>&1; then
+              /usr/local/bin/python3 -I "$CHECKS/resume_state.py" save "$RUNNER_TEMP/session" "$BASE" >> "$GITHUB_STEP_SUMMARY" || true
+            fi
+            echo "resumable=yes" >> "$GITHUB_OUTPUT"
+            echo "Resumable: its session is kept for a restart." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always() && steps.lost.outputs.saved == 'yes'
+        continue-on-error: true
+        with:
+          name: plan-session-log
+          path: ${{ runner.temp }}/session-log
+          retention-days: 7
+
+      # A run that ended with no result: its session and work, for the restart CD's reply starts.
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always() && steps.lost.outputs.resumable == 'yes'
+        continue-on-error: true
+        with:
+          name: factory-session-${{ env.ISSUE_NUMBER }}-${{ env.STAGE }}
+          path: ${{ runner.temp }}/session
+          retention-days: 30
+          overwrite: true
+
+      # The run's metrics record for the weekly improve loop (run_metrics.py, 35 days): numbers and enums only,
+      # never agent text. Missing values are recorded as unknown.
+      - name: Record the run's metrics
+        if: always()
+        continue-on-error: true
+        shell: bash
+        env:
+          EXEC: ${{ steps.resumed.outputs.execution_file || steps.fresh.outputs.execution_file }}
+          RESULT: ${{ steps.shorten.outputs.structured_output || steps.resumed.outputs.structured_output || steps.fresh.outputs.structured_output }}
+          LOST: ${{ steps.lost.outputs.why }}
+          INPUTS: ${{ toJSON(inputs) }}
+          RUN_ID: ${{ github.run_id }}
+          RUN_ATTEMPT: ${{ github.run_attempt }}
+          WORKFLOW: factory-plan
+          METRICS_STAGE: ${{ needs.claim.outputs.stage }}
+        run: |
+          # The advisor the run actually had (auto resolves from the factory:advisor label).
+          advisor=$([ "${CLAUDE_CODE_DISABLE_ADVISOR_TOOL:-}" = 1 ] && echo none || echo "${FACTORY_ADVISOR:-}")
+          inputs=$(jq -cn --argjson i "${INPUTS:-null}" --arg a "$advisor" '($i // {}) + {advisor: $a}' 2> /dev/null || echo '{}')
+          INPUTS="$inputs" "$CHECKS/agent_job.sh" metrics "$METRICS_STAGE"
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        continue-on-error: true
+        with:
+          name: factory-metrics
+          path: ${{ runner.temp }}/metrics/metrics.json
+          retention-days: 35
+
+      - name: Remove the agent's repository
+        if: always()
+        shell: bash
+        run: rm -rf "$GITHUB_WORKSPACE/.git"
+
+  publish:
+    needs: [claim, plan]
+    if: needs.plan.outputs.bundle == 'yes'
+    env:
+      BRANCH: ${{ needs.claim.outputs.branch }}
+      STAGE: ${{ needs.claim.outputs.stage }}
+    runs-on: ubuntu-latest
+    environment: %{environments.writer}
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    outputs:
+      url: ${{ steps.pr.outputs.url }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ needs.plan.outputs.base }}
+          persist-credentials: false
+
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: plan-bundle
+          path: ${{ runner.temp }}/in
+
+      - name: Check the plan and the result
+        id: check
+        env:
+          BASE: ${{ needs.plan.outputs.base }}
+          RESULT: ${{ needs.plan.outputs.result }}
+          STATS: ${{ needs.plan.outputs.stats }}
+        run: |
+          printf '%s' "$RESULT" > "$RUNNER_TEMP/result.json"
+          # A split publishes the split record on its own branch (factory-advance.yml files the parts on merge).
+          if [ "$(jq -r .status "$RUNNER_TEMP/result.json")" = split ]; then
+            STAGE=split; BRANCH="factory/$ISSUE_NUMBER-split"
+          fi
+          { echo "stage=$STAGE"; echo "branch=$BRANCH"; } >> "$GITHUB_OUTPUT"
+          printf '%s' "$STATS" > "$RUNNER_TEMP/stats.json"
+          python3 -I .github/factory/implement_guard.py "$RUNNER_TEMP/in/plan.bundle" "$BASE" \
+            "$RUNNER_TEMP/result.json" "$ISSUE_NUMBER" "$RUN_URL" "$RUNNER_TEMP/out" "$STAGE" "$RUNNER_TEMP/stats.json"
+
+      - uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        id: app
+        with:
+          client-id: ${{ vars.FACTORY_APP_CLIENT_ID }}
+          private-key: ${{ secrets.FACTORY_APP_PRIVATE_KEY }}
+          permission-contents: write
+          permission-pull-requests: write
+
+      # Doc PRs open ready for review (F17): CD approves the plan by merging it.
+      - name: Push the branch and open the plan PR
+        id: pr
+        env:
+          # The split's own branch when the run returned a split (the check step decides).
+          BRANCH: ${{ steps.check.outputs.branch }}
+          GH_TOKEN: ${{ steps.app.outputs.token }}
+          GH_REPO: ${{ github.repository }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          set -euo pipefail
+          remote="https://x-access-token:${GH_TOKEN}@github.com/${GH_REPO}.git"
+          if git ls-remote --exit-code --heads "$remote" "$BRANCH" > /dev/null; then
+            echo "::error::$BRANCH already exists; close it and delete the branch, then re-run"; exit 1
+          fi
+          git -c core.hooksPath=/dev/null push --quiet "$remote" "$(cat "$RUNNER_TEMP/out/head"):refs/heads/$BRANCH"
+          if ! url=$(gh pr create --base "$DEFAULT_BRANCH" --head "$BRANCH" \
+                       --title "$(cat "$RUNNER_TEMP/out/title")" --body-file "$RUNNER_TEMP/out/pr-body.md"); then
+            git -c core.hooksPath=/dev/null push --quiet "$remote" --delete "$BRANCH" || true
+            echo "::error::opening the PR failed; the branch was deleted"; exit 1
+          fi
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+          echo "${STAGE^} PR: $url" >> "$GITHUB_STEP_SUMMARY"
+
+  report:
+    needs: [claim, plan, publish]
+    if: >-
+      always() && needs.plan.result == 'success' &&
+      (needs.publish.result == 'success' || needs.publish.result == 'skipped')
+    runs-on: ubuntu-latest
+    environment: %{environments.writer}
+    timeout-minutes: 5
+    # Only to check out the posting checks (report.sh), from the default branch.
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          persist-credentials: false
+
+      # Issues only, scoped to this repository: comments and labels show as the factory App.
+      - uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        id: app
+        with:
+          client-id: ${{ vars.FACTORY_APP_CLIENT_ID }}
+          private-key: ${{ secrets.FACTORY_APP_PRIVATE_KEY }}
+          permission-issues: write
+
+      - name: Comment and label
+        env:
+          STAGE: ${{ needs.claim.outputs.stage }}
+          GH_TOKEN: ${{ steps.app.outputs.token }}
+          GH_REPO: ${{ github.repository }}
+          RESULT: ${{ needs.plan.outputs.result }}
+          PR_URL: ${{ needs.publish.outputs.url }}
+        run: |
+          set -euo pipefail
+          printf '%s' "$RESULT" > result.json
+          .github/factory/report.sh check plan result.json '[.reason, .notes, .questions[]]'
+          status=$(jq -r .status result.json)
+          # No markers, @mentions or #refs from agent text (README § Stage contract; report.jq).
+          q() { jq -L .github/factory -r "include \"report\"; $1" result.json; }
+          reason=$(q '.reason | clean')
+          notes=$(q '.notes | clean')
+          case "$status" in
+            awaiting-approval|escalated|split)
+              [ -n "$PR_URL" ] || { echo "::error::status $status but no PR was opened"; exit 1; } ;;
+          esac
+          {
+            case "$status" in
+              needs-input) echo "<!-- factory-stage: plan -->" ;;
+              rescope) echo "<!-- factory-stage: triage from=plan -->" ;;
+            esac
+            case "$status" in
+              awaiting-approval)
+                if [ "$STAGE" = spec ]; then next="approve the spec and start the plan"; else next="approve the plan and start execution"; fi
+                printf '**%s ready for your approval:** %s\n\nMerge the PR to %s; request changes or close it otherwise.\n' "${STAGE^}" "$PR_URL" "$next" ;;
+              escalated) printf '**%s PR opened with open review findings:** %s\n\nThe review hit its cap with findings still open; they are listed in the PR. %s\n' "${STAGE^}" "$PR_URL" "$reason" ;;
+              split)
+                printf '**This splits into %s parts, for your approval:** %s\n\n' "$(jq '.parts | length' result.json)" "$PR_URL"
+                q '.parts[] | "- **\(.part)** (\(.tier)): \(.name | clean)"'
+                printf '\nMerge the PR to approve the split: the factory files an issue per part, linked under this one, each held until you add `factory:go`. Edit the parts table and catalog rows on the branch first to change it. Close this issue by hand once the parts are done.\n' ;;
+              needs-input)
+                printf '**Planning stopped for your input.** %s\n\n### Questions\n\n' "$reason"
+                # A multi-line question (a discovery check-in's list) stays inside its numbered item.
+                q '.questions | to_entries[] | "\(.key + 1). \(.value | clean | gsub("\n"; "\n   "))"'
+                printf '\n_Reply on this issue to continue planning._\n' ;;
+              rescope) printf '**This needs a different tier.** %s\n\n_Reply on this issue to re-run triage with this in mind._\n' "$reason" ;;
+              failed) printf '**Planning could not run.** %s\n\nFix the cause, then re-run the workflow.\n' "$reason" ;;
+            esac
+            if [ -n "$notes" ] && [ "$status" != awaiting-approval ]; then
+              printf '\n<details><summary>Discovery notes</summary>\n\n%s\n\n</details>\n' "$notes"
+            fi
+            printf '\n<sub>factory plan · [run](%s)</sub>\n' "$RUN_URL"
+          } > comment.md
+          gh issue comment "$ISSUE_NUMBER" -F comment.md
+          case "$status" in
+            awaiting-approval|escalated|split) new="" ;;
+            needs-input|rescope) new=factory:needs-input ;;
+            failed) exit 0 ;;
+          esac
+          .github/factory/report.sh labels "$new"
+
+  report-failure:
+    needs: [claim, plan, publish, report]
+    if: failure()
+    runs-on: ubuntu-latest
+    environment: %{environments.writer}
+    timeout-minutes: 5
+    permissions:
+      issues: write
+    steps:
+      # Issues only, scoped to this repository: comments and labels show as the factory App.
+      - uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        id: app
+        # A broken App key must not silence the failure report: fall back to GITHUB_TOKEN.
+        continue-on-error: true
+        with:
+          client-id: ${{ vars.FACTORY_APP_CLIENT_ID }}
+          private-key: ${{ secrets.FACTORY_APP_PRIVATE_KEY }}
+          permission-issues: write
+
+      - name: Comment on the issue
+        env:
+          GH_TOKEN: ${{ steps.app.outputs.token || github.token }}
+          GH_REPO: ${{ github.repository }}
+          CLAIM: ${{ needs.claim.result }}
+          PLAN: ${{ needs.plan.result }}
+          PREPARED: ${{ needs.plan.outputs.prepared }}
+          PACKAGED: ${{ needs.plan.outputs.packaged }}
+          LOST: ${{ needs.plan.outputs.lost }}
+          LOST_LOG: ${{ needs.plan.outputs.lost-log }}
+          RESUMABLE: ${{ needs.plan.outputs.resumable }}
+          APP_TOKEN: ${{ steps.app.outputs.token }}
+          PUBLISH: ${{ needs.publish.result }}
+        run: |
+          # An agent that ended with no result but kept its session and work: a resumable stop, posted as the
+          # App with the stage marker (D1), so CD's reply continues it instead of starting over.
+          if [ "$PLAN" = failure ] && [ -n "$LOST" ] && [ "$RESUMABLE" = yes ] && [ -n "$APP_TOKEN" ]; then
+            body=$(printf '<!-- factory-stage: plan -->\n**Planning stopped before it finished:** the agent %s. Its session and its work so far are saved.\n\n_Reply on this issue to continue from where it stopped._\n\n<sub>factory plan · [run](%s)</sub>\n' "$LOST" "$RUN_URL")
+            GH_TOKEN="$APP_TOKEN" gh issue comment "$ISSUE_NUMBER" --body "$body"
+            old=$(GH_TOKEN="$APP_TOKEN" gh issue view "$ISSUE_NUMBER" --json labels \
+                  -q '[.labels[].name | select(startswith("factory:") and . != "factory:needs-input" and (IN("factory:advisor", "factory:follow-up", "factory:go") | not))] | join(",")')
+            GH_TOKEN="$APP_TOKEN" gh issue edit "$ISSUE_NUMBER" --add-label factory:needs-input ${old:+--remove-label "$old"}
+            exit 0
+          fi
+          if [ "$CLAIM" = failure ]; then why="Reserving the deliverable ID failed."
+          elif [ "$PLAN" = failure ] && [ "$PREPARED" != success ]; then why="The job failed before the agent started (an existing plan branch, the database proxy, or installing dependencies)."
+          elif [ "$PLAN" = failure ] && [ "$PACKAGED" = failure ]; then why="The agent's result was refused (the output rules, no commit, or the repository checks); the run page says which."
+          elif [ "$PLAN" = failure ] && [ -n "$LOST" ]; then
+            why="The planning agent $LOST."
+            if [ "$LOST_LOG" = yes ]; then why="$why Its session log is on the run page (plan-session-log)."; fi
+          elif [ "$PLAN" = failure ]; then why="The planning agent failed: it may have run out of plan usage, hit its time or turn limit, or returned no result."
+          elif [ "$PUBLISH" = failure ]; then why="The plan was refused or could not be pushed (only docs/ may change; the run page says which)."
+          else why="The result could not be reported."; fi
+          gh issue comment "$ISSUE_NUMBER" --body "Factory plan failed ([run]($RUN_URL)). $why Check the labels, then re-run the workflow."

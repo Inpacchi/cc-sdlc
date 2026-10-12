@@ -249,7 +249,7 @@ Skills that run a review loop must not reduce their loop steps to a bare "read a
 
 | Block | Source section id | Mirrored in |
 |-------|-------------------|-------------|
-| Code-review mechanics | `code-review-mechanics` | `sdlc-execute`, `sdlc-lite-execute`, `sdlc-review-code`, `sdlc-create-reference-doc` |
+| Code-review mechanics | `code-review-mechanics` | `sdlc-execute`, `sdlc-lite-execute`, `sdlc-review-code`, `sdlc-create-reference-doc`, `sdlc-implement` and `sdlc-revise` (the `factory` bundle) |
 | Plan-review mechanics | `plan-review-mechanics` | `sdlc-plan`, `sdlc-lite-plan` |
 
 **Markers.** The source block below is wrapped in `<!-- MIRROR-SOURCE-START: {id} -->` / `<!-- MIRROR-SOURCE-END: {id} -->`. Each copy in a skill is wrapped in `<!-- MIRROR-START: review-fix-loop.md#{id} -->` / `<!-- MIRROR-END: review-fix-loop.md#{id} -->`. The lines between the markers must be **identical** — any difference is a drift finding (`sdlc-reviewer` § Cross-skill DRY; the framework audit's cross-skill DRY dimension). To change a block, edit it here and re-copy it into every skill that mirrors it. Context-specific behavior goes in the skill text outside the markers or in § Skill-Specific Variations, never inside a copy. Marker conventions: `[sdlc-root]/process/project-section-markers.md` § MIRROR Markers.

@@ -1,0 +1,3 @@
+--tools Bash
+--allowedTools Bash
+--disallowedTools 'Read(//__w/_temp/**)' 'Read(//__w/_actions/**)' 'Read(//__e/**)' 'Read(//github/**)'

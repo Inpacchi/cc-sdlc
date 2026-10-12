@@ -1,0 +1,100 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "state",
+    "tier",
+    "estimate",
+    "comment",
+    "questions",
+    "advisor",
+    "advisor_reason"
+  ],
+  "properties": {
+    "state": {
+      "type": "string",
+      "enum": [
+        "ready-for-dispatch",
+        "ready-to-plan",
+        "needs-input",
+        "wait"
+      ]
+    },
+    "tier": {
+      "description": "direct with ready-for-dispatch; lite or full with ready-to-plan; null otherwise",
+      "type": [
+        "string",
+        "null"
+      ],
+      "enum": [
+        "direct",
+        "lite",
+        "full",
+        null
+      ]
+    },
+    "estimate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "validity",
+        "correctness",
+        "effort"
+      ],
+      "properties": {
+        "validity": {
+          "type": "string",
+          "enum": [
+            "low",
+            "medium",
+            "high"
+          ]
+        },
+        "correctness": {
+          "type": "string",
+          "enum": [
+            "low",
+            "medium",
+            "high"
+          ]
+        },
+        "effort": {
+          "type": "string",
+          "enum": [
+            "light",
+            "moderate",
+            "heavy"
+          ]
+        }
+      }
+    },
+    "comment": {
+      "description": "Reporter-facing markdown: decision, evidence, next step, under about 200 words (sdlc-triage step 8). Posted for CD: plain language per ops/sdlc/process/writing-for-cd.md.",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 3000
+    },
+    "questions": {
+      "description": "1-3 for needs-input, each answerable in a sentence, none the thread already answers. Posted for CD: plain language per ops/sdlc/process/writing-for-cd.md.",
+      "type": "array",
+      "items": {
+        "type": "string",
+        "maxLength": 400
+      },
+      "maxItems": 3
+    },
+    "advisor": {
+      "description": "fable only with ready-to-plan, for judgment-heavy planning (sdlc-triage step 7); none otherwise",
+      "type": "string",
+      "enum": [
+        "fable",
+        "none"
+      ]
+    },
+    "advisor_reason": {
+      "description": "One sentence: why the plan does or does not need an advisor; empty unless ready-to-plan. Posted for CD: plain language per ops/sdlc/process/writing-for-cd.md.",
+      "type": "string",
+      "maxLength": 300
+    }
+  }
+}

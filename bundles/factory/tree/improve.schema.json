@@ -1,0 +1,129 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "status",
+    "reason",
+    "summary",
+    "proposals",
+    "notes"
+  ],
+  "properties": {
+    "status": {
+      "type": "string",
+      "enum": [
+        "awaiting-approval",
+        "failed"
+      ],
+      "description": "awaiting-approval: the proposals (possibly none) are ready for CD; failed: the digest could not be analyzed"
+    },
+    "reason": {
+      "type": "string",
+      "maxLength": 600,
+      "description": "Why, for failed; empty otherwise"
+    },
+    "summary": {
+      "type": "string",
+      "maxLength": 600,
+      "description": "One or two plain sentences for CD: the most important thing this week, or that nothing needs action"
+    },
+    "proposals": {
+      "type": "array",
+      "maxItems": 12,
+      "description": "Actionable changes, most important first. Merge proposals that share a fix",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "section",
+          "route",
+          "severity",
+          "title",
+          "target",
+          "change",
+          "why",
+          "effect",
+          "evidence",
+          "matches"
+        ],
+        "properties": {
+          "section": {
+            "type": "string",
+            "enum": [
+              "factory-process",
+              "sdlc-content",
+              "z-sdlc",
+              "cc-sdlc",
+              "factory-infrastructure",
+              "project"
+            ]
+          },
+          "route": {
+            "type": "string",
+            "enum": [
+              "hygiene",
+              "cd",
+              "z-sdlc",
+              "cc-sdlc",
+              "issue"
+            ],
+            "description": "hygiene: SDLC hygiene an agent may write; cd: skills, agents, process docs, workflows and other code-owned files CD applies; z-sdlc: a framework fix CD carries upstream (cc-sdlc, its name before 2026-10-12, means the same); issue: project work for CD to file"
+          },
+          "severity": {
+            "type": "string",
+            "enum": [
+              "high",
+              "medium",
+              "low"
+            ]
+          },
+          "title": {
+            "type": "string",
+            "maxLength": 120,
+            "description": "The change in a few words"
+          },
+          "target": {
+            "type": "string",
+            "maxLength": 200,
+            "description": "Where: a repository path, or a workflow, setting or skill by name"
+          },
+          "change": {
+            "type": "string",
+            "maxLength": 500,
+            "description": "What to change, concretely"
+          },
+          "why": {
+            "type": "string",
+            "maxLength": 400,
+            "description": "The problem the evidence shows, in plain words"
+          },
+          "effect": {
+            "type": "string",
+            "maxLength": 300,
+            "description": "What should change for CD or the factory once applied"
+          },
+          "evidence": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 12,
+            "items": {
+              "type": "string",
+              "maxLength": 60
+            },
+            "description": "Signal ids from the digest, at least one; never invented"
+          },
+          "matches": {
+            "type": "string",
+            "maxLength": 20,
+            "description": "The fingerprint of the ledger entry this is the same problem as; empty for a new proposal"
+          }
+        }
+      }
+    },
+    "notes": {
+      "type": "string",
+      "maxLength": 3000,
+      "description": "For the run record, not for CD: patterns checked and ruled out, problems already fixed by a commit in the window, proposals that did not make the cap"
+    }
+  }
+}

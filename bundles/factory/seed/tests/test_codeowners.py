@@ -1,0 +1,115 @@
+"""This project's CODEOWNERS against the factory's publish guard (z-sdlc process/factory.md, Enablement step 7):
+what agents may never change, what they may write, and the SDLC changelog's real publish path. The path lists
+are this project's; edit them with its CODEOWNERS. Run by CI: python -m unittest discover -s .github/factory/tests"""
+
+import os
+import pathlib
+import re
+import subprocess
+import sys
+import tempfile
+import unittest
+
+FACTORY = pathlib.Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(FACTORY))
+import implement_guard as guard  # noqa: E402
+
+PATH = FACTORY.parent / "CODEOWNERS"
+CODEOWNERS = PATH.read_text() if PATH.exists() else ""
+
+
+def run(*args, cwd):
+    subprocess.run(args, cwd=cwd, check=True, capture_output=True)
+
+
+class CodeownersPaths(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        # The guard refuses an empty file (it fails closed), so these fail until .github/CODEOWNERS exists.
+        cls.patterns = guard.codeowners_patterns(CODEOWNERS)
+
+    def test_protected(self):
+        # Enablement's minimum. Add this project's test and build configuration (what CI's checks load).
+        for path in [".github/workflows/ci.yml", ".github/CODEOWNERS", ".github/factory/implement_guard.py",
+                     ".claude/settings.json", ".claude/skills/sdlc-implement/SKILL.md", "CLAUDE.md", "docs/CLAUDE.md",
+                     ".mcp.json", "ops/sdlc/process/review-fix-loop.md"]:
+            self.assertIsNotNone(guard.protected(path, self.patterns), path)
+
+    def test_not_protected(self):
+        # Add this project's source paths: agents must be able to change them.
+        for path in ["README.md", "docs/_index.md", "notCLAUDE.md", "docs/CLAUDE.md.txt",
+                     "ops/sdlc/disciplines/testing.md"]:
+            self.assertIsNone(guard.protected(path, self.patterns), path)
+
+    def test_owner_less_lines_unown_only_the_files_they_name(self):
+        for path in ["ops/sdlc/disciplines/x.md/CLAUDE.md", "ops/sdlc/disciplines/x.md/notes.txt",
+                     "ops/sdlc/disciplines/x.md/.claude/settings.json"]:
+            self.assertIsNotNone(guard.protected(path, self.patterns), path)
+
+    def test_disciplines_only_in_the_real_file(self):
+        for path in ["ops/sdlc/disciplines/README.txt", "ops/sdlc/disciplines/x/y.md", "ops/sdlc/knowledge/README.md",
+                     "ops/sdlc/knowledge/provenance_log.md", "ops/sdlc/process/review-fix-loop.md"]:
+            self.assertIsNotNone(guard.protected(path, self.patterns), path)
+
+    def test_knowledge_writable_except_what_governs_agents(self):
+        self.assertIsNone(guard.protected("ops/sdlc/knowledge/x.yaml", self.patterns))
+        # Add the knowledge files that route or govern agents in this project.
+        for name in ["agent-context-map.yaml"]:
+            self.assertIsNotNone(guard.protected("ops/sdlc/knowledge/" + name, self.patterns), name)
+
+    def test_the_changelog_and_only_it_is_writable(self):
+        self.assertIsNone(guard.protected("ops/sdlc/process/sdlc_changelog.md", self.patterns))
+        self.assertIsNotNone(guard.protected("ops/sdlc/process/sdlc_changelog.md.bak", self.patterns))
+        self.assertIsNotNone(guard.protected("ops/sdlc/process/review-fix-loop.md", self.patterns))
+
+
+class RealChangelog(unittest.TestCase):
+    """The publish path a stage takes to commit to the SDLC changelog, on the real file: a shallow clone of
+    this repository (publish checks out the base at depth 1), an entry added the way an agent adds one, the
+    bundle, and the guard's commit check with the real CODEOWNERS and each stage's path rules. Nothing is
+    pushed. It holds whether or not the changelog is over the blob cap."""
+
+    LOG = "ops/sdlc/process/sdlc_changelog.md"
+
+    def setUp(self):
+        root = FACTORY.parents[1]
+        if not (root / ".git").exists() or not (root / self.LOG).exists():
+            self.skipTest("not in a checkout of this repository")
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.dst = pathlib.Path(self.tmp.name) / "dst"
+        run("git", "clone", "-q", "--depth", "1", "--no-local", f"file://{root}", str(self.dst), cwd=self.tmp.name)
+        run("git", "config", "user.email", "t@example.com", cwd=self.dst)
+        run("git", "config", "user.name", "t", cwd=self.dst)
+        self.base = self.git("rev-parse", "HEAD")
+        log = self.dst / self.LOG
+        text = log.read_text()
+        first = re.search(r"^## \d{4}-\d{2}-\d{2}:", text, re.M)
+        at = first.start() if first else len(text)
+        entry = "## 2026-10-11: Smoke entry\n\n**Changes made:**\n\n1. A line.\n\n---\n\n"
+        log.write_text(text[:at] + entry + text[at:])
+        run("git", "commit", "-q", "-am", "log", cwd=self.dst)
+        self.bundle = pathlib.Path(self.tmp.name) / "stage.bundle"
+        run("git", "bundle", "create", "-q", str(self.bundle), f"{self.base}..HEAD", cwd=self.dst)
+        run("git", "checkout", "-q", "--detach", self.base, cwd=self.dst)
+
+    def git(self, *args):
+        return subprocess.run(["git", *args], cwd=self.dst, check=True, capture_output=True, text=True).stdout.strip()
+
+    def check(self, allowed):
+        cwd = os.getcwd()
+        os.chdir(self.dst)
+        try:
+            return guard.check_commits(str(self.bundle), self.base, guard.codeowners_patterns(CODEOWNERS), allowed)
+        finally:
+            os.chdir(cwd)
+
+    def test_code_and_document_stages_may_commit_to_it(self):
+        for stage, allowed in (("implement", None), ("plan", guard.DOC_STAGE_PATHS)):
+            with self.subTest(stage=stage):
+                head, paths = self.check(allowed)
+                self.assertEqual(paths, [self.LOG])
+
+
+if __name__ == "__main__":
+    unittest.main()

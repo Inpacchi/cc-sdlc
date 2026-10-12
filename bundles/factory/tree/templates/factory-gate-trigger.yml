@@ -1,0 +1,36 @@
+# Factory gate trigger (design rule D4). CD adds factory:gate-retry to a factory execution PR to ask for
+# a fresh gate run: after a failed, rejected or refused gate, or when the request went stale. This job
+# only dispatches factory-gate-request.yml on the default branch, which checks who asked and builds the
+# request. pull_request_target runs this file from the default branch; it checks out nothing.
+name: factory-gate-trigger
+run-name: "factory-gate-trigger: PR #${{ github.event.pull_request.number }}"
+
+on:
+  pull_request_target:
+    types: [labeled]
+
+permissions: {}
+
+jobs:
+  dispatch:
+    # A person (never a bot) on an open factory execution PR from this repository.
+    if: >-
+      github.event.label.name == 'factory:gate-retry' &&
+      github.event.sender.type != 'Bot' &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      startsWith(github.event.pull_request.head.ref, 'factory/') &&
+      endsWith(github.event.pull_request.head.ref, '-impl') &&
+      github.event.pull_request.state == 'open'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      actions: write
+    steps:
+      - name: Ask for a fresh gate run
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          PR: ${{ github.event.pull_request.number }}
+          SENDER: ${{ github.event.sender.login }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: gh workflow run factory-gate-request.yml --ref "$DEFAULT_BRANCH" -f pr="$PR" -f requester="$SENDER"

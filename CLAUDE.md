@@ -100,6 +100,7 @@ python3 -c "import json; json.load(open('skeleton/manifest.json'))"
 ```
 - Glob `skills/*/SKILL.md`, `skills/*/references/*.md`, `skills/*/scripts/*.py`, `agents/*.md`, `knowledge/**/*.yaml`, `knowledge/**/*.d2`, `process/*.md`, `templates/*.md`, `disciplines/*.md`, `plugins/*.md`, `playbooks/*.md`, `bundles/*/fragments/*.md`
 - Compare against manifest `source_files` entries **and `bundles` entries** (bundle skills/process/fragments are listed under `manifest.bundles`, not `source_files`). Report any file on disk not in manifest, or manifest entry without a file.
+- A bundle's `tree.from` and `seed.from` directories (`bundles/*/tree/`, `bundles/*/seed/`) are listed as directories, not file by file: check each one named exists and has files, and that nothing under `bundles/<name>/` sits outside `fragments/`, `tree/` and `seed/`. `sdlc-initialize` is the installer (`BOOTSTRAP.md` copies it) and is deliberately not in the manifest.
 
 **2. Stale reference scan** — Grep for old/removed names across the codebase:
 - Any recently renamed/removed skills, agents, plugins, or concepts

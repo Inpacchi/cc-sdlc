@@ -1,0 +1,949 @@
+# Factory smoke test. Proves, on the self-hosted factory runner, that:
+#   - the job container cannot reach the host's services or the host Docker socket;
+#   - claude-code-action authenticates with the Max OAuth token;
+#   - the z-sdlc skills, the .claude/agents definitions and Context7 load
+#     (asserted from the runtime's init event, not self-report);
+# and reports the run's cost. The bash-sandbox job proves sandboxed agent Bash is credential-free
+# (required before any stage gets Bash). The lost-session job proves an agent step killed at its time
+# limit still leaves its session for session_log.sh. Re-run after every action, image or tool-policy change.
+name: factory-smoke
+
+on:
+  workflow_dispatch:
+    inputs:
+      model:
+        description: Model for the smoke prompt (full IDs; aliases move when new models ship)
+        type: choice
+        options: [%{models.smoke.options}]
+        default: %{models.smoke.default}
+
+permissions:
+  contents: read
+  packages: read
+
+concurrency:
+  group: factory-smoke
+
+env:
+  # A headless run ends with the orchestrator's turn: every agent job runs agents in the foreground.
+  CLAUDE_CODE_DISABLE_BACKGROUND_TASKS: "1"
+  # Pinned with the action SHA below (src/entrypoints/run.ts installs this version).
+  CLAUDE_CODE_VERSION: "2.1.292"
+
+jobs:
+  smoke:
+    runs-on: [self-hosted, %{runners.strict}]
+    permissions:
+      contents: read
+      packages: read
+    timeout-minutes: 20
+    container:
+      image: %{image.repository}@%{image.digest}
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    env:
+      # -p stops waiting on background subagents after 10 idle minutes by default
+      # and drops their results; timeout-minutes is the real backstop.
+      CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS: "3600000"
+      CONTEXT7_API_KEY: ${{ secrets.CONTEXT7_API_KEY }}
+      # Addresses that must be unreachable from here: the runner host's own (factory.json's
+      # smoke.host_probes: its LAN and VPN addresses, its compose networks' gateways) and the
+      # default Docker bridge and rootless (slirp) host gateways.
+      FACTORY_HOST_PROBES: "%{smoke.host_probes} 172.17.0.1 10.0.2.2"
+      # The checks that judge the agent steps are copied here before them (D2 rule 4).
+      CHECKS: /__w/_temp/factory-checks
+    steps:
+      # Every factory job starts from an empty workspace (the runner is not ephemeral).
+      - name: Clean workspace
+        shell: bash
+        run: find "$GITHUB_WORKSPACE" -mindepth 1 -maxdepth 1 -exec rm -rf {} +
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # Agent jobs load the repository's settings, skills and CLAUDE.md: default branch only.
+          ref: ${{ github.event.repository.default_branch }}
+          persist-credentials: false
+
+      # The action would write the job token into origin's URL, where the agent can read it.
+      - name: Remove the git remote
+        shell: bash
+        run: git remote remove origin
+
+      - name: Isolation probes (host services and Docker socket must be unreachable)
+        shell: bash
+        run: |
+          bad=0
+          for h in $FACTORY_HOST_PROBES; do
+            for p in 5432 6379 8002 3000 9443 22; do
+              if nc -z -w 3 "$h" "$p" 2>/dev/null; then echo "::error::REACHABLE $h:$p"; bad=1; else echo "blocked $h:$p"; fi
+            done
+          done
+          if [ -S /var/run/docker.sock ] && curl -s --max-time 3 --unix-socket /var/run/docker.sock http://d/version >/dev/null; then
+            echo "::error::host Docker socket is usable from the job container"; bad=1
+          else
+            echo "blocked host docker.sock"
+          fi
+          nc -z -w 5 api.github.com 443 || { echo "::error::no internet from the job container"; bad=1; }
+          echo "| Isolation | $([ $bad = 0 ] && echo 'host and LAN unreachable, internet ok' || echo 'FAILED') |" >> "$GITHUB_STEP_SUMMARY"
+          exit $bad
+
+      - name: Write MCP config
+        shell: bash
+        run: .github/factory/agent_job.sh mcp
+
+      # Every agent step in a factory job runs under a tool policy; smoke uses triage's. The checks that
+      # judge the agent steps are frozen first, like every agent job's.
+      - name: Freeze the checks; load the agent tool policy
+        shell: bash
+        run: |
+          .github/factory/agent_job.sh freeze
+          echo "FACTORY_TOOL_ARGS=$(tr '\n' ' ' < .github/factory/triage-tools.args)" >> "$GITHUB_ENV"
+
+      - name: Run Claude
+        id: claude
+        uses: anthropics/claude-code-action@58985842b834ed26087302ba27d07bc24ca8697a # v1.0.244
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          # Read-only token: without it the action uses the Claude App token, which can write.
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          prompt: |
+            Factory smoke test. Call the context7 resolve-library-id tool once for "django",
+            then reply with only the top library ID it returned. Do nothing else.
+          claude_args: >-
+            --model ${{ inputs.model }}
+            ${{ env.FACTORY_TOOL_ARGS }}
+            --setting-sources user,project
+            --mcp-config ${{ env.FACTORY_MCP_CONFIG }} --strict-mcp-config
+            --permission-mode auto --permission-prompts none
+            --max-turns 4
+
+      - name: Assert framework loaded
+        if: always() && steps.claude.outputs.execution_file != ''
+        shell: bash
+        run: /usr/local/bin/python3 -I "$CHECKS/smoke_check.py" "${{ steps.claude.outputs.execution_file }}" "$CLAUDE_CODE_VERSION"
+
+      # The same policy, attempted against paths it must not read.
+      - name: Probe tool policy
+        id: probe
+        timeout-minutes: 10
+        uses: anthropics/claude-code-action@58985842b834ed26087302ba27d07bc24ca8697a # v1.0.244
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          prompt: |
+            Tool policy probe. Attempt each of these exactly once, in order, then reply "done":
+            Read /proc/version; Read .git/HEAD; Glob /__w/_temp/*; Read /github/workflow/event.json;
+            Read README.md; call the context7 resolve-library-id tool for "django".
+            Do not attempt anything else.
+          claude_args: >-
+            --model %{models.probe}
+            ${{ env.FACTORY_TOOL_ARGS }}
+            --setting-sources user,project
+            --mcp-config ${{ env.FACTORY_MCP_CONFIG }} --strict-mcp-config
+            --permission-mode auto --permission-prompts none
+            --max-turns 10
+
+      - name: Assert tool policy held
+        if: always() && steps.probe.outputs.execution_file != ''
+        shell: bash
+        run: /usr/local/bin/python3 -I "$CHECKS/probe_check.py" "${{ steps.probe.outputs.execution_file }}"
+
+      # The job's real tokens must not be readable by the agent: search the container for their
+      # exact values everywhere the tool policy allows reads (fail), and in the denied runner
+      # paths (report only). Exact values, so third-party code and docs can't false-positive.
+      - name: Scan for credentials on disk
+        if: always()
+        shell: bash
+        env:
+          OAUTH: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          GHTOKEN: ${{ github.token }}
+        run: |
+          scan() { timeout 300 grep -rIlF -e "$OAUTH" -e "$GHTOKEN" "$@" 2>/dev/null || true; }
+          readable=$(scan --exclude-dir=.git --exclude-dir=proc --exclude-dir=sys --exclude-dir=dev \
+            --exclude-dir=_temp --exclude-dir=_actions --exclude-dir=__e --exclude-dir=github /)
+          denied=$(scan "$RUNNER_TEMP" /github "$GITHUB_WORKSPACE/.git")
+          {
+            echo "### Credential scan (exact token values)"
+            echo "- agent-readable paths: ${readable:-none}"
+            echo "- denied paths (report only): ${denied:-none}"
+          } >> "$GITHUB_STEP_SUMMARY"
+          if [ -n "$readable" ]; then echo "::error::job tokens readable by the agent: $readable"; exit 1; fi
+
+  # Required before any stage gets Bash (D2). Sandboxed agent Bash must see no job credential
+  # (by value, in its environment, any process's environment or any readable file), run in its
+  # own PID namespace, be unable to list the runner's mounts or write protected paths, and reach
+  # only the allowed registries, through the sandbox proxy only. An unsandboxed control proves
+  # each detection works.
+  bash-sandbox:
+    runs-on: [self-hosted, %{runners.strict}]
+    permissions:
+      contents: read
+      packages: read
+    timeout-minutes: 20
+    container:
+      image: %{image.repository}@%{image.digest}
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+      # Docker's default seccomp plus the namespace calls bubblewrap needs (installed by
+      # host/setup.sh); bubblewrap mounts its own /proc, so systempaths must be unconfined.
+      options: >-
+        --security-opt seccomp=/etc/factory-runner/seccomp-bwrap.json
+        --security-opt systempaths=unconfined
+    env:
+      CLAUDE_CODE_SUBPROCESS_ENV_SCRUB: "1"
+      # Present on purpose: the probe shows sandboxed Bash can't see it.
+      CONTEXT7_API_KEY: ${{ secrets.CONTEXT7_API_KEY }}
+      # The agent can write the workspace and /tmp. Everything the job runs after the agent,
+      # and the probe the agent runs, is copied before it starts to places the sandbox can't
+      # write: the runner temp directory /__w/_temp (unreadable to it) and /opt/factory-probe
+      # (read-only to it).
+      CHECKS: /__w/_temp/factory-checks
+      PROBE_DIR: /opt/factory-probe
+    steps:
+      - name: Clean workspace
+        shell: bash
+        run: find "$GITHUB_WORKSPACE" -mindepth 1 -maxdepth 1 -exec rm -rf {} +
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # Agent jobs load the repository's settings, skills and CLAUDE.md: default branch only.
+          ref: ${{ github.event.repository.default_branch }}
+          persist-credentials: false
+
+      # The action would write the job token into origin's URL, where the agent can read it.
+      - name: Remove the git remote
+        shell: bash
+        run: git remote remove origin
+
+      - name: Freeze the probe, the checker and the policy; start the test services
+        shell: bash
+        env:
+          OAUTH: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          GHTOKEN: ${{ github.token }}
+        run: |
+          install -d -m 755 "$PROBE_DIR"
+          .github/factory/agent_job.sh freeze bash-sandbox.settings.json
+          install -d -m 700 "$RUNNER_TEMP/canary"
+          install -m 644 .github/factory/sandbox_probe.py "$PROBE_DIR/"
+          echo "FACTORY_TOOL_ARGS=$(tr '\n' ' ' < .github/factory/bash-probe-tools.args)" >> "$GITHUB_ENV"
+          # The test services a Bash stage starts before its agent: sandboxed Bash must reach them
+          # through the sandbox proxy (and must still not reach the Docker socket).
+          "$CHECKS/agent_job.sh" services /dev/null
+          # A canary under the runner's temp directory, plain and in the base64 form git uses for an
+          # extraheader: the control must find it; sandboxed Bash must not be able to read it.
+          canary="canary$(head -c 24 /dev/urandom | od -An -tx1 | tr -d ' \n')"
+          printf '%s\n' "$canary" > "$RUNNER_TEMP/canary/plain.txt"
+          printf 'x-access-token:%s' "$canary" | base64 -w0 > "$RUNNER_TEMP/canary/extraheader.txt"
+          h() { printf %s "$1" | sha256sum | cut -c1-12; }
+          {
+            echo "oauth $(h "$OAUTH")"
+            echo "github $(h "$GHTOKEN")"
+            echo "canary $(h "$canary")"
+            if [ -n "$CONTEXT7_API_KEY" ]; then echo "context7 $(h "$CONTEXT7_API_KEY")"; fi
+          } > "$PROBE_DIR/secret-hashes"
+          chmod 644 "$PROBE_DIR/secret-hashes"
+
+      # Control: unsandboxed, with the real tokens in the environment.
+      - name: Control probe
+        shell: bash
+        env:
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          /usr/local/bin/python3 -I "$PROBE_DIR/sandbox_probe.py" "$PROBE_DIR/secret-hashes" > "$CHECKS/control.txt"
+          /usr/local/bin/python3 -I "$CHECKS/sandbox_check.py" control "$CHECKS/control.txt"
+
+      # --settings makes the sandbox admin-required, so the repository's settings can't loosen it;
+      # the same file at user scope (the action's settings input) carries the user-scope-only keys.
+      - name: Agent probe
+        id: claude
+        timeout-minutes: 10
+        uses: anthropics/claude-code-action@58985842b834ed26087302ba27d07bc24ca8697a # v1.0.244
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          settings: ${{ env.CHECKS }}/bash-sandbox.settings.json
+          prompt: |
+            Run exactly this command once with the Bash tool and report its output verbatim:
+            /usr/local/bin/python3 -I /opt/factory-probe/sandbox_probe.py /opt/factory-probe/secret-hashes
+            Do nothing else.
+          claude_args: >-
+            --model %{models.probe}
+            --settings ${{ env.CHECKS }}/bash-sandbox.settings.json
+            ${{ env.FACTORY_TOOL_ARGS }}
+            --strict-mcp-config
+            --setting-sources user
+            --permission-mode auto --permission-prompts none
+            --max-turns 6
+
+      # Judges only the output of the one expected command, as recorded by the runtime.
+      - name: Assert the sandbox held
+        if: always()
+        shell: bash
+        env:
+          OAUTH: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          GHTOKEN: ${{ github.token }}
+          EXEC: ${{ steps.claude.outputs.execution_file }}
+        run: |
+          [ -n "$EXEC" ] || { echo "::error::the agent step left no execution file"; exit 1; }
+          bad=0
+          /usr/local/bin/python3 -I - > "$CHECKS/agent.txt" <<'PY' || bad=1
+          import json, os, sys
+          expected = "/usr/local/bin/python3 -I /opt/factory-probe/sandbox_probe.py /opt/factory-probe/secret-hashes"
+          uses, results = [], {}
+          for m in json.load(open(os.environ["EXEC"])):
+              msg = m.get("message")
+              content = msg.get("content") if isinstance(msg, dict) else None
+              for b in content if isinstance(content, list) else []:
+                  if b.get("type") == "tool_use":
+                      uses.append(b)
+                  elif b.get("type") == "tool_result":
+                      results[b["tool_use_id"]] = b
+          cmds = [(u.get("input") or {}).get("command", "").strip() for u in uses]
+          if len(uses) != 1 or uses[0].get("name") != "Bash" or cmds[0] != expected:
+              sys.exit(f"expected one Bash call running the probe; got {len(uses)}: {[u.get('name') for u in uses]}")
+          extra = set(uses[0].get("input") or {}) - {"command", "description", "timeout"}
+          if extra:
+              sys.exit(f"the probe call set unexpected Bash inputs: {sorted(extra)}")
+          c = results.get(uses[0]["id"], {}).get("content")
+          print(c if isinstance(c, str) else "\n".join(x.get("text", "") for x in c or []))
+          PY
+          [ "$bad" = 0 ] && { /usr/local/bin/python3 -I "$CHECKS/sandbox_check.py" agent "$CHECKS/agent.txt" "$CHECKS/control.txt" || bad=1; }
+          for v in "$OAUTH" "$GHTOKEN" "$CONTEXT7_API_KEY"; do
+            if [ -n "$v" ] && grep -qF -- "$v" "$EXEC"; then echo "::error::a raw token is in the transcript"; bad=1; fi
+          done
+          exit $bad
+
+      # Checkout's post step runs git in this workspace; the agent could have left files in .git for it.
+      - name: Remove the agent's repository
+        if: always()
+        shell: bash
+        run: rm -rf "$GITHUB_WORKSPACE/.git"
+
+  # Required before the implement stage runs (D2 rules 1 and 5). Read and Edit run in the Claude Code
+  # process, outside the Bash sandbox, with the OAuth token in its environment: implement-tools.args'
+  # deny rules must refuse writes to the system, the runner's directories, HOME and the agents'
+  # configuration, while allowing the workspace. And what an implement run needs must work in the
+  # sandbox: committing, the test database over its Unix socket, the web toolchain.
+  implement-tools:
+    runs-on: [self-hosted, %{runners.strict}]
+    permissions:
+      contents: read
+      packages: read
+    timeout-minutes: 30
+    container:
+      image: %{image.repository}@%{image.digest}
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+      options: >-
+        --security-opt seccomp=/etc/factory-runner/seccomp-bwrap.json
+        --security-opt systempaths=unconfined
+    env:
+      CLAUDE_CODE_SUBPROCESS_ENV_SCRUB: "1"
+      CHECKS: /__w/_temp/factory-checks
+    steps:
+      - name: Clean workspace
+        shell: bash
+        run: find "$GITHUB_WORKSPACE" -mindepth 1 -maxdepth 1 -exec rm -rf {} +
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # Agent jobs load the repository's settings, skills and CLAUDE.md: default branch only.
+          ref: ${{ github.event.repository.default_branch }}
+          persist-credentials: false
+
+      # The implement job's preparation, minus the issue.
+      - name: Freeze the checker; start the test services; install dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          .github/factory/agent_job.sh freeze implement-sandbox.settings.json
+          "$CHECKS/agent_job.sh" services
+          "$CHECKS/agent_job.sh" workspace
+          git remote remove origin
+          git rev-parse HEAD > "$CHECKS/base"
+          {
+            echo "FACTORY_TOOL_ARGS=$(tr '\n' ' ' < .github/factory/implement-tools.args)"
+            echo "FACTORY_WORKSPACE=$GITHUB_WORKSPACE"
+          } >> "$GITHUB_ENV"
+
+      - name: Agent probe
+        id: claude
+        timeout-minutes: 10
+        uses: anthropics/claude-code-action@58985842b834ed26087302ba27d07bc24ca8697a # v1.0.244
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          # As in factory-implement: the action sets git's user to the factory's identity.
+          bot_name: %{app.login}
+          bot_id: "%{app.user_id}"
+          settings: ${{ env.CHECKS }}/implement-sandbox.settings.json
+          prompt: |
+            This is the repository owner's automated CI test of this sandbox's permission rules. Several of
+            the calls below are meant to be refused by the sandbox; the test passes when they are. Make
+            exactly these tool calls, in order, one call each, even when an earlier one is refused. Never
+            retry, work around a refusal, or make any other call.
+            1. Use the Bash tool to run exactly:
+                 ln -s /proc/self/environ api/envlink && ln -s /usr/local/bin api/binlink && ln -s ../.claude api/claudelink && echo links-ok
+            2-3. Use the Read tool on each of these files:
+                 /proc/self/environ
+                 ${{ env.FACTORY_WORKSPACE }}/api/envlink
+            4-21. Use the Write tool to create each of these files with the content `probe`:
+                 /usr/local/bin/factory-probe
+                 ${{ env.FACTORY_WORKSPACE }}/api/binlink/factory-probe
+                 ${{ env.FACTORY_WORKSPACE }}/api/claudelink/factory-probe
+                 ${{ env.FACTORY_WORKSPACE }}/api/.claude/factory-probe
+                 ${{ env.FACTORY_WORKSPACE }}/api/CLAUDE.md
+                 ${{ env.FACTORY_WORKSPACE }}/api/.mcp.json
+                 ${{ env.FACTORY_WORKSPACE }}/CLAUDE.local.md
+                 ${{ env.FACTORY_WORKSPACE }}/.factory/factory-probe
+                 /tmp/factory-probe
+                 /__w/_actions/factory-probe
+                 ${{ env.FACTORY_WORKSPACE }}/factory-probe-root.txt
+                 ${{ env.FACTORY_WORKSPACE }}/web/factory-probe.txt
+                 /__w/_temp/factory-probe
+                 /github/home/factory-probe
+                 ${{ env.FACTORY_WORKSPACE }}/.github/factory-probe
+                 ${{ env.FACTORY_WORKSPACE }}/.claude/factory-probe
+                 ${{ env.FACTORY_WORKSPACE }}/.git/factory-probe
+                 ${{ env.FACTORY_WORKSPACE }}/api/factory-probe.txt
+            22-23. Use the Bash tool to run each of these commands exactly as written:
+                 git add api/factory-probe.txt && git commit -q -m "factory probe" && git log -1 --format=%s
+                 /opt/factory/verify probe
+            Then report which calls succeeded.
+          claude_args: >-
+            --model %{models.probe}
+            --settings ${{ env.CHECKS }}/implement-sandbox.settings.json
+            ${{ env.FACTORY_TOOL_ARGS }}
+            --strict-mcp-config
+            --setting-sources user,project
+            --permission-mode auto --permission-prompts none
+            --max-turns 40
+
+      # Judges the runtime's record, then the disk, with code frozen before the agent ran.
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always() && steps.claude.outputs.execution_file != ''
+        continue-on-error: true
+        with:
+          name: implement-tools-transcript
+          path: ${{ steps.claude.outputs.execution_file }}
+          retention-days: 7
+
+      - name: Assert the tool policy held
+        if: always()
+        shell: bash
+        env:
+          EXEC: ${{ steps.claude.outputs.execution_file }}
+          OAUTH: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+        run: |
+          [ -n "$EXEC" ] || { echo "::error::the agent step left no execution file"; exit 1; }
+          bad=0
+          /usr/local/bin/python3 -I "$CHECKS/implement_tools_check.py" "$EXEC" "$GITHUB_WORKSPACE" \
+            > "$CHECKS/report.md" || bad=1
+          cat "$CHECKS/report.md" >> "$GITHUB_STEP_SUMMARY"
+          grep '^::error::' "$CHECKS/report.md" || true
+          if grep -qF -- "$OAUTH" "$EXEC"; then echo "::error::the OAuth token is in the transcript"; bad=1; fi
+          # factory-implement's Package step runs the same guard after a real agent run.
+          "$CHECKS/git_guard.sh" "$CHECKS/git-hooks.sha256" || bad=1
+          for f in /usr/local/bin/factory-probe "$GITHUB_WORKSPACE/api/.claude/factory-probe" "$GITHUB_WORKSPACE/api/CLAUDE.md" \
+                   "$GITHUB_WORKSPACE/api/.mcp.json" "$GITHUB_WORKSPACE/CLAUDE.local.md" "$GITHUB_WORKSPACE/.factory/factory-probe" \
+                   /tmp/factory-probe /__w/_actions/factory-probe \
+                   /__w/_temp/factory-probe /github/home/factory-probe \
+                   "$GITHUB_WORKSPACE/.github/factory-probe" "$GITHUB_WORKSPACE/.claude/factory-probe" \
+                   "$GITHUB_WORKSPACE/.git/factory-probe"; do
+            if [ -e "$f" ]; then echo "::error::denied file exists: $f"; bad=1; fi
+          done
+          n=$(git -c core.hooksPath=/dev/null -c core.fsmonitor=false rev-list --count "$(cat "$CHECKS/base")..HEAD")
+          if [ "$n" != 1 ]; then echo "::error::expected the probe's one commit, found $n"; bad=1; fi
+          exit $bad
+
+      # Checkout's post step runs git in this workspace; the agent could have left files in .git for it.
+      - name: Remove the agent's repository
+        if: always()
+        shell: bash
+        run: rm -rf "$GITHUB_WORKSPACE/.git"
+
+  # Resuming a session in a new container (the spec stage's memory across question rounds): the
+  # first job hands the agent a code word and saves its session file; the second, in a fresh
+  # container, restores the file, resumes with --resume, and must recall the word.
+  resume-first:
+    runs-on: [self-hosted, %{runners.strict}]
+    permissions:
+      contents: read
+      packages: read
+    timeout-minutes: 15
+    container:
+      image: %{image.repository}@%{image.digest}
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    outputs:
+      word: ${{ steps.word.outputs.word }}
+    steps:
+      - name: Clean workspace
+        shell: bash
+        run: find "$GITHUB_WORKSPACE" -mindepth 1 -maxdepth 1 -exec rm -rf {} +
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          persist-credentials: false
+
+      # The action would write the job token into origin's URL, where the agent can read it.
+      - name: Remove the git remote
+        shell: bash
+        run: git remote remove origin
+
+      - name: Choose a code word; load the tool policy
+        id: word
+        shell: bash
+        run: |
+          echo "word=w$(head -c 6 /dev/urandom | od -An -tx1 | tr -d ' \n')" >> "$GITHUB_OUTPUT"
+          echo "FACTORY_TOOL_ARGS=$(tr '\n' ' ' < .github/factory/triage-tools.args)" >> "$GITHUB_ENV"
+
+      - name: First session
+        id: claude
+        timeout-minutes: 5
+        uses: anthropics/claude-code-action@58985842b834ed26087302ba27d07bc24ca8697a # v1.0.244
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          prompt: "Remember this code word for later in our conversation: ${{ steps.word.outputs.word }}. Reply with only: noted"
+          claude_args: >-
+            --model %{models.probe}
+            ${{ env.FACTORY_TOOL_ARGS }}
+            --setting-sources user
+            --strict-mcp-config
+            --permission-mode auto --permission-prompts none
+            --max-turns 2
+
+      - name: Save the session file
+        shell: bash
+        env:
+          SESSION: ${{ steps.claude.outputs.session_id }}
+        run: |
+          set -euo pipefail
+          f=$(find /github/home "$HOME" -name "$SESSION.jsonl" -path '*/projects/*' 2> /dev/null | head -1)
+          [ -n "$f" ] || { echo "::error::no session file for $SESSION"; exit 1; }
+          echo "Session file: $f ($(wc -c < "$f") bytes)" >> "$GITHUB_STEP_SUMMARY"
+          install -d "$RUNNER_TEMP/resume" && cp "$f" "$RUNNER_TEMP/resume/session.jsonl"
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: resume-session
+          path: ${{ runner.temp }}/resume/session.jsonl
+          retention-days: 1
+
+      - name: Remove the agent's repository
+        if: always()
+        shell: bash
+        run: rm -rf "$GITHUB_WORKSPACE/.git"
+
+  resume-second:
+    needs: resume-first
+    runs-on: [self-hosted, %{runners.strict}]
+    permissions:
+      contents: read
+      packages: read
+    timeout-minutes: 15
+    container:
+      image: %{image.repository}@%{image.digest}
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    env:
+      CHECKS: /__w/_temp/factory-checks
+    steps:
+      - name: Clean workspace
+        shell: bash
+        run: find "$GITHUB_WORKSPACE" -mindepth 1 -maxdepth 1 -exec rm -rf {} +
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          persist-credentials: false
+
+      # The action would write the job token into origin's URL, where the agent can read it.
+      - name: Remove the git remote
+        shell: bash
+        run: git remote remove origin
+
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: resume-session
+          path: ${{ env.CHECKS }}
+
+      - name: Load the tool policy
+        shell: bash
+        run: echo "FACTORY_TOOL_ARGS=$(tr '\n' ' ' < .github/factory/triage-tools.args)" >> "$GITHUB_ENV"
+
+      - name: Resumed session
+        id: claude
+        timeout-minutes: 5
+        uses: anthropics/claude-code-action@58985842b834ed26087302ba27d07bc24ca8697a # v1.0.244
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          prompt: "What was the code word I gave you earlier in this conversation? Put it in the word field, or 'unknown'."
+          # The spec stage re-passes its schema, headless declaration and flags on every resume.
+          claude_args: >-
+            --model %{models.probe}
+            --resume ${{ env.CHECKS }}/session.jsonl
+            ${{ env.FACTORY_TOOL_ARGS }}
+            --setting-sources user
+            --append-system-prompt "SDLC headless mode: no person is present."
+            --json-schema '{"type":"object","additionalProperties":false,"required":["word"],"properties":{"word":{"type":"string"}}}'
+            --strict-mcp-config
+            --permission-mode auto --permission-prompts none
+            --max-turns 3
+
+      - name: Assert the session resumed
+        if: always()
+        shell: bash
+        env:
+          EXEC: ${{ steps.claude.outputs.execution_file }}
+          WORD: ${{ needs.resume-first.outputs.word }}
+        run: |
+          [ -n "$EXEC" ] || { echo "::error::the resumed step left no execution file"; exit 1; }
+          answer=$(jq -r '[.[] | select(.type == "result")] | last | .structured_output.word // ""' "$EXEC")
+          echo "| Resume across containers (structured output) | expected $WORD, got: ${answer:0:60} |" >> "$GITHUB_STEP_SUMMARY"
+          grep -qF -- "$WORD" <<< "$answer" || { echo "::error::the resumed session did not recall the code word"; exit 1; }
+
+      # A resumed session continues beside the file it resumed from, not under HOME. The plan stage
+      # saves it from there for the next restart.
+      - name: Assert the resumed session was written beside its file
+        if: always()
+        shell: bash
+        env:
+          SESSION: ${{ steps.claude.outputs.session_id }}
+        run: |
+          f="$CHECKS/$SESSION.jsonl"
+          if [ -z "$SESSION" ] || [ ! -s "$f" ]; then echo "::error::no resumed session at $f"; ls -la "$CHECKS"; exit 1; fi
+          [ "$(wc -c < "$f")" -gt "$(wc -c < "$CHECKS/session.jsonl")" ] || { echo "::error::the resumed session file didn't grow"; exit 1; }
+          echo "| Resumed session file | beside the resumed file, $(wc -c < "$f") bytes |" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Remove the agent's repository
+        if: always()
+        shell: bash
+        run: rm -rf "$GITHUB_WORKSPACE/.git"
+
+  # An agent step killed at its time limit leaves no execution file. The stages then keep the session
+  # files it wrote (session_log.sh): the agent runs a long sleep, the step's 2-minute limit kills it,
+  # and the kept session must hold that Bash call.
+  lost-session:
+    runs-on: [self-hosted, %{runners.strict}]
+    permissions:
+      contents: read
+      packages: read
+    timeout-minutes: 15
+    container:
+      image: %{image.repository}@%{image.digest}
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+      options: >-
+        --security-opt seccomp=/etc/factory-runner/seccomp-bwrap.json
+        --security-opt systempaths=unconfined
+    env:
+      CLAUDE_CODE_SUBPROCESS_ENV_SCRUB: "1"
+      CHECKS: /__w/_temp/factory-checks
+    steps:
+      - name: Clean workspace
+        shell: bash
+        run: find "$GITHUB_WORKSPACE" -mindepth 1 -maxdepth 1 -exec rm -rf {} +
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          persist-credentials: false
+
+      # The action would write the job token into origin's URL, where the agent can read it.
+      - name: Remove the git remote
+        shell: bash
+        run: git remote remove origin
+
+      - name: Freeze the checker and the policy
+        shell: bash
+        run: |
+          install -d -m 700 "$CHECKS"
+          install -m 644 .github/factory/bash-sandbox.settings.json "$CHECKS/"
+          install -m 755 .github/factory/session_log.sh "$CHECKS/"
+          echo "FACTORY_TOOL_ARGS=$(tr '\n' ' ' < .github/factory/bash-probe-tools.args)" >> "$GITHUB_ENV"
+          touch "$RUNNER_TEMP/agent-start"
+
+      - name: Agent killed at its limit
+        id: claude
+        timeout-minutes: 2
+        continue-on-error: true
+        uses: anthropics/claude-code-action@58985842b834ed26087302ba27d07bc24ca8697a # v1.0.244
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          settings: ${{ env.CHECKS }}/bash-sandbox.settings.json
+          prompt: |
+            Run exactly this command once with the Bash tool, with its timeout set to 600000 ms, then reply: done
+            sleep 300
+          claude_args: >-
+            --model %{models.probe}
+            --settings ${{ env.CHECKS }}/bash-sandbox.settings.json
+            ${{ env.FACTORY_TOOL_ARGS }}
+            --strict-mcp-config
+            --setting-sources user
+            --permission-mode auto --permission-prompts none
+            --max-turns 4
+
+      - name: Assert the session was kept
+        if: always()
+        shell: bash
+        env:
+          OUTCOME: ${{ steps.claude.outcome }}
+          EXEC: ${{ steps.claude.outputs.execution_file }}
+          OAUTH: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          GHTOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          [ "$OUTCOME" = failure ] || { echo "::error::the agent step should have hit its limit; its outcome was $OUTCOME"; exit 1; }
+          out=$("$CHECKS/session_log.sh" "$RUNNER_TEMP/agent-start" "$RUNNER_TEMP/session-log" 2 "$EXEC")
+          printf '%s\n' "$out"
+          grep -qx 'saved=yes' <<< "$out" || { echo "::error::no session file was kept"; exit 1; }
+          grep -q '^why=stopped at the 2-minute limit' <<< "$out" || { echo "::error::the reason doesn't name the time limit"; exit 1; }
+          grep -rqF 'sleep 300' "$RUNNER_TEMP/session-log" || { echo "::error::the kept session lacks the agent's Bash call"; exit 1; }
+          echo "| Session kept after a killed step | $(find "$RUNNER_TEMP/session-log" -name '*.jsonl' | wc -l) file(s); $(sed -n 's/^why=//p' <<< "$out") |" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Remove the agent's repository
+        if: always()
+        shell: bash
+        run: rm -rf "$GITHUB_WORKSPACE/.git"
+
+  # Design rule D3's services list rests on credential masking: a service's credential reaches
+  # sandboxed Bash only as a placeholder, and the sandbox proxy swaps in the real value on requests
+  # to that service's hosts. With the env scrub on (which strips credential-named variables), the
+  # placeholder must still be there, and the real value must arrive at the allowed host.
+  credential-mask:
+    runs-on: [self-hosted, %{runners.strict}]
+    permissions:
+      contents: read
+      packages: read
+    timeout-minutes: 15
+    container:
+      image: %{image.repository}@%{image.digest}
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+      options: >-
+        --security-opt seccomp=/etc/factory-runner/seccomp-bwrap.json
+        --security-opt systempaths=unconfined
+    env:
+      CLAUDE_CODE_SUBPROCESS_ENV_SCRUB: "1"
+      CHECKS: /__w/_temp/factory-checks
+    steps:
+      - name: Clean workspace
+        shell: bash
+        run: find "$GITHUB_WORKSPACE" -mindepth 1 -maxdepth 1 -exec rm -rf {} +
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          persist-credentials: false
+
+      # The action would write the job token into origin's URL, where the agent can read it.
+      - name: Remove the git remote
+        shell: bash
+        run: git remote remove origin
+
+      - name: A dummy credential and the masking settings
+        shell: bash
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$CHECKS"
+          # Not a real credential: a random value under a credential-shaped name.
+          # Two of them: a credential-shaped name (which the scrub targets) and a plain one, so a
+          # failure shows whether the scrub or the masking is the problem.
+          echo "FACTORY_PROBE_SECRET=probe$(head -c 16 /dev/urandom | od -An -tx1 | tr -d ' \n')" >> "$GITHUB_ENV"
+          echo "FACTORY_PROBE_VALUE=probe$(head -c 16 /dev/urandom | od -An -tx1 | tr -d ' \n')" >> "$GITHUB_ENV"
+          jq '.sandbox.network.allowedDomains = ["%{smoke.echo_host}"]
+              | .sandbox.network.tlsTerminate = {}
+              | .sandbox.credentials.envVars += [
+                  {"name": "FACTORY_PROBE_SECRET", "mode": "mask", "injectHosts": ["%{smoke.echo_host}"]},
+                  {"name": "FACTORY_PROBE_VALUE", "mode": "mask", "injectHosts": ["%{smoke.echo_host}"]}]' \
+            .github/factory/bash-sandbox.settings.json > "$CHECKS/mask-probe.settings.json"
+          echo "FACTORY_TOOL_ARGS=$(tr '\n' ' ' < .github/factory/bash-probe-tools.args)" >> "$GITHUB_ENV"
+          install -d -m 755 /opt/factory-probe
+          install -m 755 .github/factory/mask_probe.sh /opt/factory-probe/
+
+      - name: Agent probe
+        id: claude
+        timeout-minutes: 8
+        uses: anthropics/claude-code-action@58985842b834ed26087302ba27d07bc24ca8697a # v1.0.244
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          settings: ${{ env.CHECKS }}/mask-probe.settings.json
+          prompt: |
+            Run exactly this command once with the Bash tool and report its output verbatim:
+            bash /opt/factory-probe/mask_probe.sh %{smoke.echo_host}
+            Do nothing else.
+          claude_args: >-
+            --model %{models.probe}
+            --settings ${{ env.CHECKS }}/mask-probe.settings.json
+            ${{ env.FACTORY_TOOL_ARGS }}
+            --strict-mcp-config
+            --setting-sources user
+            --permission-mode auto --permission-prompts none
+            --max-turns 4
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always() && steps.claude.outputs.execution_file != ''
+        continue-on-error: true
+        with:
+          name: credential-mask-transcript
+          path: ${{ steps.claude.outputs.execution_file }}
+          retention-days: 7
+
+      - name: Assert the credentials were masked and injected
+        if: always()
+        shell: bash
+        env:
+          EXEC: ${{ steps.claude.outputs.execution_file }}
+        run: |
+          [ -n "$EXEC" ] || { echo "::error::the agent step left no execution file"; exit 1; }
+          out=$(jq -r '[.[] | .message?.content? | select(type == "array") | .[] | select(.type == "tool_result")
+                       | (.content | if type == "string" then . else (map(.text // "") | join("\n")) end)] | join("\n")' "$EXEC")
+          # Dummy values only, so the output is safe to show.
+          printf '%s\n' "$out" | head -40
+          bad=0
+          for name in FACTORY_PROBE_SECRET FACTORY_PROBE_VALUE; do
+            real=${!name}
+            label=$([ "$name" = FACTORY_PROBE_SECRET ] && echo secret || echo value)
+            seen=$(sed -n "s/.*$label=\([^ ]*\).*/\1/p" <<< "$out" | head -1)
+            if [ -z "$seen" ] || [ "$seen" = unset ]; then placeholder=missing
+            elif [ "$seen" = "$real" ]; then placeholder="real value"
+            else placeholder=yes; fi
+            injected=$(grep -qF -- "$real" <<< "$(grep -i '"x-' <<< "$out")" && echo yes || echo no)
+            echo "| Masking $name | placeholder in sandbox: $placeholder; injected at the echo host: $injected |" >> "$GITHUB_STEP_SUMMARY"
+            echo "$name: placeholder=$placeholder injected=$injected"
+            if [ "$placeholder" != yes ] || [ "$injected" != yes ]; then bad=1; fi
+          done
+          exit $bad
+
+      - name: Remove the agent's repository
+        if: always()
+        shell: bash
+        run: rm -rf "$GITHUB_WORKSPACE/.git"
+
+  # services.py end to end: a stand-in service (factory.json's smoke.echo_host) in slot 1, a dummy secret in unused slot 2.
+  services:
+    runs-on: [self-hosted, %{runners.strict}]
+    permissions:
+      contents: read
+      packages: read
+    timeout-minutes: 15
+    container:
+      image: %{image.repository}@%{image.digest}
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+      options: >-
+        --security-opt seccomp=/etc/factory-runner/seccomp-bwrap.json
+        --security-opt systempaths=unconfined
+    env:
+      CLAUDE_CODE_SUBPROCESS_ENV_SCRUB: "1"
+      CHECKS: /__w/_temp/factory-checks
+    steps:
+      - name: Clean workspace
+        shell: bash
+        run: find "$GITHUB_WORKSPACE" -mindepth 1 -maxdepth 1 -exec rm -rf {} +
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          persist-credentials: false
+
+      # The action would write the job token into origin's URL, where the agent can read it.
+      - name: Remove the git remote
+        shell: bash
+        run: git remote remove origin
+
+      - name: A stand-in service and dummy slot values
+        shell: bash
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$CHECKS"
+          # Not real credentials: random values in two slots.
+          echo "FACTORY_SVC_1=svcone$(head -c 16 /dev/urandom | od -An -tx1 | tr -d ' \n')" >> "$GITHUB_ENV"
+          echo "FACTORY_SVC_2=svctwo$(head -c 16 /dev/urandom | od -An -tx1 | tr -d ' \n')" >> "$GITHUB_ENV"
+          # Present but empty, as an unset secret arrives in the plan stage: masking it must be harmless.
+          echo "FACTORY_SVC_3=" >> "$GITHUB_ENV"
+          jq -n '{services: [{name: "standin", stages: ["plan"], slot: "FACTORY_SVC_1", attach: "env", read_only: true,
+                               domains: ["%{smoke.echo_host}"], auth: "X-Svc-One header"}]}' > "$RUNNER_TEMP/services.json"
+          echo '{"mcpServers": {}}' > "$RUNNER_TEMP/mcp.json"
+          python3 -I .github/factory/services.py "$RUNNER_TEMP/services.json" plan \
+            .github/factory/bash-sandbox.settings.json "$CHECKS/services-probe.settings.json" \
+            "$RUNNER_TEMP/services-context.json" "$RUNNER_TEMP/mcp.json"
+          echo "FACTORY_TOOL_ARGS=$(tr '\n' ' ' < .github/factory/bash-probe-tools.args)" >> "$GITHUB_ENV"
+          install -d -m 755 /opt/factory-probe
+          install -m 755 .github/factory/services_probe.sh /opt/factory-probe/
+
+      - name: Agent probe
+        id: claude
+        timeout-minutes: 8
+        uses: anthropics/claude-code-action@58985842b834ed26087302ba27d07bc24ca8697a # v1.0.244
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          settings: ${{ env.CHECKS }}/services-probe.settings.json
+          prompt: |
+            Run exactly this command once with the Bash tool and report its output verbatim:
+            bash /opt/factory-probe/services_probe.sh %{smoke.echo_host}
+            Do nothing else.
+          claude_args: >-
+            --model %{models.probe}
+            --settings ${{ env.CHECKS }}/services-probe.settings.json
+            ${{ env.FACTORY_TOOL_ARGS }}
+            --strict-mcp-config
+            --setting-sources user
+            --permission-mode auto --permission-prompts none
+            --max-turns 4
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always() && steps.claude.outputs.execution_file != ''
+        continue-on-error: true
+        with:
+          name: services-transcript
+          path: ${{ steps.claude.outputs.execution_file }}
+          retention-days: 7
+
+      - name: Assert slot 1 was injected and slot 2 never was
+        if: always()
+        shell: bash
+        env:
+          EXEC: ${{ steps.claude.outputs.execution_file }}
+        run: |
+          [ -n "$EXEC" ] || { echo "::error::the agent step left no execution file"; exit 1; }
+          out=$(jq -r '[.[] | .message?.content? | select(type == "array") | .[] | select(.type == "tool_result")
+                       | (.content | if type == "string" then . else (map(.text // "") | join("\n")) end)] | join("\n")' "$EXEC")
+          # Dummy values only, so the output is safe to show.
+          printf '%s\n' "$out" | head -40
+          headers=$(grep -i '"x-' <<< "$out" || true)
+          bad=0
+          for slot in 1 2; do
+            name=FACTORY_SVC_$slot; real=${!name}
+            seen=$(sed -n "s/.*svc$slot=\([^ ]*\).*/\1/p" <<< "$out" | head -1)
+            if [ -z "$seen" ] || [ "$seen" = unset ]; then placeholder=missing
+            elif [ "$seen" = "$real" ]; then placeholder="real value"
+            else placeholder=yes; fi
+            injected=$(grep -qF -- "$real" <<< "$headers" && echo yes || echo no)
+            want=$([ "$slot" = 1 ] && echo yes || echo no)
+            echo "| services: slot $slot | placeholder in sandbox: $placeholder; injected at the echo host: $injected (want $want) |" >> "$GITHUB_STEP_SUMMARY"
+            echo "$name: placeholder=$placeholder injected=$injected want=$want"
+            if [ "$placeholder" != yes ] || [ "$injected" != "$want" ]; then bad=1; fi
+          done
+          exit $bad
+
+      - name: Remove the agent's repository
+        if: always()
+        shell: bash
+        run: rm -rf "$GITHUB_WORKSPACE/.git"

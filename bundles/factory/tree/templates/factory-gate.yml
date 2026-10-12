@@ -1,0 +1,261 @@
+# Factory gate (design rule D4): one production gate of an executing plan, approved by CD.
+# factory-gate-request.yml dispatches it with the request; the title carries the request's digest.
+#   prepare  (hosted) rebuilds the request from the plan on the default branch, the PR head and the
+#            earlier signed results, refuses a mismatch, shows the request in the run summary and on
+#            the PR.
+#   execute  (production runner) waits for CD's approval in environment %{environments.production}, then hands
+#            the run to the root broker (factory-op) over its socket. The broker re-checks everything with
+#            GitHub itself, runs an operation gate's steps (a CD gate has none: CD's approval is the gate),
+#            and returns a signed receipt either way.
+#   report   (hosted) verifies the receipt with production/receipt.pub, posts it, updates the tracker, and
+#            on success starts the next execution segment on the same PR.
+# The production runner group takes only this workflow, from the default branch.
+name: factory-gate
+run-name: "factory-gate #${{ inputs.pr }} ${{ inputs.gate }} a${{ inputs.attempt }} ${{ inputs.kind }} ${{ inputs.digest }}"
+
+on:
+  workflow_dispatch:
+    inputs:
+      pr:
+        description: The factory execution PR
+        type: number
+        required: true
+      gate:
+        description: The gate (G1, G2, ...)
+        type: string
+        required: true
+      attempt:
+        description: Attempt number for this gate
+        type: number
+        required: true
+      kind:
+        description: ops (the production runner runs it) or cd (CD runs the runbook)
+        type: choice
+        options: [ops, cd]
+      digest:
+        description: The request's digest (sha256)
+        type: string
+        required: true
+      request:
+        description: The request, base64 JSON (factory-gate-request.yml builds it)
+        type: string
+        required: true
+
+permissions: {}
+
+# One gate run per PR at a time; the broker also serializes every gate on the host.
+concurrency:
+  group: factory-gate-${{ inputs.pr }}
+  cancel-in-progress: false
+
+env:
+  PR: ${{ inputs.pr }}
+  APP_ID: "%{app.user_id}"
+  RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    environment: %{environments.writer}
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      issues: read
+      pull-requests: read
+    outputs:
+      kind: ${{ steps.check.outputs.kind }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          persist-credentials: false
+
+      - name: Check the request against the plan, the PR and the earlier results
+        id: check
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          REQUEST: ${{ inputs.request }}
+          GATE: ${{ inputs.gate }}
+          ATTEMPT: ${{ inputs.attempt }}
+          KIND: ${{ inputs.kind }}
+          DIGEST: ${{ inputs.digest }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          set -euo pipefail
+          gh api "repos/$GH_REPO/pulls/$PR" > pr.json
+          gh api "repos/$GH_REPO/issues/$PR/comments" --paginate --jq '.[]' > comments.ndjson
+          plan=$(python3 -I .github/factory/gates.py plan-path --comments comments.ndjson --app-id "$APP_ID")
+          gh api "repos/$GH_REPO/contents/$plan?ref=$DEFAULT_BRANCH" > plan.json
+          python3 -I .github/factory/gates.py verify-request --repo "$GH_REPO" --app-id "$APP_ID" --factory-dir .github/factory \
+            --pr-json pr.json --comments comments.ndjson --plan-meta plan.json --request-b64 "$REQUEST" \
+            --run-url "$RUN_URL" --out request-comment.md
+          printf '%s' "$REQUEST" | base64 -d > request.json
+          jq -e --argjson pr "$PR" --arg gate "$GATE" --argjson attempt "$ATTEMPT" --arg kind "$KIND" --arg digest "$DIGEST" \
+            '.pr == $pr and .gate == $gate and .attempt == $attempt and .kind == $kind and .digest == $digest' request.json > /dev/null \
+            || { echo "::error::the run's title doesn't match its request"; exit 1; }
+          echo "kind=$KIND" >> "$GITHUB_OUTPUT"
+          {
+            echo "## Gate $GATE (attempt $ATTEMPT), PR #$PR"
+            echo
+            echo "Approve this run in **%{environments.production}** only if this is what you want to happen now."
+            echo
+            tail -n +2 request-comment.md
+            echo
+            echo "<details><summary>The request (its sha256 is the digest in this run's title)</summary>"
+            echo
+            echo '```json'
+            jq . request.json
+            echo '```'
+            echo "</details>"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      # Comments as the factory App; display only (the broker re-derives everything).
+      - uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        id: app
+        with:
+          client-id: ${{ vars.FACTORY_APP_CLIENT_ID }}
+          private-key: ${{ secrets.FACTORY_APP_PRIVATE_KEY }}
+          permission-issues: write
+          permission-pull-requests: write
+
+      - name: Show the request on the PR and update the tracker
+        env:
+          GH_TOKEN: ${{ steps.app.outputs.token }}
+          READ_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          gh api "repos/$GH_REPO/issues/$PR/comments" -F body=@request-comment.md > /dev/null
+          GH_TOKEN="$READ_TOKEN" gh api "repos/$GH_REPO/issues/$PR/comments" --paginate --jq '.[]' > comments.ndjson
+          python3 -I .github/factory/gates.py tracker --repo "$GH_REPO" --app-id "$APP_ID" --factory-dir .github/factory \
+            --pr-json pr.json --comments comments.ndjson --plan-meta plan.json --out tracker.md
+          tracker=$(jq -r "select(.user.id == $APP_ID and (.body | startswith(\"<!-- factory-gate-tracker: \"))) | .id" comments.ndjson | head -1)
+          gh api -X PATCH "repos/$GH_REPO/issues/comments/$tracker" -F body=@tracker.md > /dev/null
+
+  prepare-failure:
+    # The request didn't check out (the PR or the plan moved, or the inputs are wrong): say so on the PR.
+    needs: prepare
+    if: always() && needs.prepare.result == 'failure'
+    runs-on: ubuntu-latest
+    environment: %{environments.writer}
+    timeout-minutes: 5
+    permissions: {}
+    steps:
+      - uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        id: app
+        with:
+          client-id: ${{ vars.FACTORY_APP_CLIENT_ID }}
+          private-key: ${{ secrets.FACTORY_APP_PRIVATE_KEY }}
+          permission-issues: write
+          permission-pull-requests: write
+
+      - name: Say why on the PR
+        env:
+          GH_TOKEN: ${{ steps.app.outputs.token }}
+          GH_REPO: ${{ github.repository }}
+          GATE: ${{ inputs.gate }}
+        run: |
+          gh api "repos/$GH_REPO/issues/$PR/comments" -f body="**Gate $GATE: this gate run stopped before asking for approval.** Its request no longer matches the plan on main, this PR's head or the earlier results (something changed since it was built), or it couldn't be shown here; the run says which. Add \`factory:gate-retry\` for a fresh request. <sub>factory gate · [run]($RUN_URL)</sub>" > /dev/null
+
+  execute:
+    needs: prepare
+    runs-on: [self-hosted, %{runners.production}]
+    # CD approves here (required reviewer; only the default branch may deploy to it).
+    environment: %{environments.production}
+    # The broker bounds each operation; this bounds waiting for its locks too.
+    timeout-minutes: 300
+    permissions:
+      actions: read
+      contents: read
+      issues: read
+      pull-requests: read
+    outputs:
+      receipt: ${{ steps.broker.outputs.receipt }}
+    steps:
+      # No checkout, no actions: the run's read-only token goes to the broker, which checks the run, CD's
+      # approval and the request with GitHub itself. printf is a shell builtin: the token is never an argument.
+      - name: Run the gate through the production broker
+        id: broker
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          receipt=$(printf '{"run_id":%s,"pr":%s,"token":"%s"}\n' "$GITHUB_RUN_ID" "$PR" "$GH_TOKEN" | /usr/local/bin/factory-op-request)
+          echo "receipt=$(printf '%s' "$receipt" | base64 -w0)" >> "$GITHUB_OUTPUT"
+
+  report:
+    needs: [prepare, execute]
+    if: always() && needs.prepare.result == 'success'
+    runs-on: ubuntu-latest
+    environment: %{environments.writer}
+    timeout-minutes: 10
+    permissions:
+      actions: write
+      contents: read
+      issues: read
+      pull-requests: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          persist-credentials: false
+
+      - uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        id: app
+        with:
+          client-id: ${{ vars.FACTORY_APP_CLIENT_ID }}
+          private-key: ${{ secrets.FACTORY_APP_PRIVATE_KEY }}
+          permission-issues: write
+          permission-pull-requests: write
+
+      - name: Verify the result, post it, and continue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          APP_TOKEN: ${{ steps.app.outputs.token }}
+          GH_REPO: ${{ github.repository }}
+          REQUEST: ${{ inputs.request }}
+          GATE: ${{ inputs.gate }}
+          RECEIPT: ${{ needs.execute.outputs.receipt }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          set -euo pipefail
+          # Rejected in the deployment review, approved, or neither (cancelled, timed out, runner failure).
+          rejected=$(gh api "repos/$GH_REPO/actions/runs/$GITHUB_RUN_ID/approvals" --jq '[.[] | select(.state == "rejected")] | length')
+          args=()
+          if [ "$rejected" != 0 ]; then
+            args=(--cd-approved rejected)
+          elif [ -n "$RECEIPT" ]; then
+            printf '%s' "$RECEIPT" | base64 -d > receipt.json
+            args=(--receipt receipt.json)
+          else
+            args=(--cd-approved error)
+          fi
+          gh api "repos/$GH_REPO/pulls/$PR" > pr.json
+          gh api "repos/$GH_REPO/issues/$PR/comments" --paginate --jq '.[]' > comments.ndjson
+          plan=$(python3 -I .github/factory/gates.py plan-path --comments comments.ndjson --app-id "$APP_ID")
+          gh api "repos/$GH_REPO/contents/$plan?ref=$DEFAULT_BRANCH" > plan.json
+          common=(--repo "$GH_REPO" --app-id "$APP_ID" --factory-dir .github/factory --pr-json pr.json --plan-meta plan.json)
+          if ! status=$(python3 -I .github/factory/gates.py report "${common[@]}" --comments comments.ndjson \
+                          --request-b64 "$REQUEST" --run-url "$RUN_URL" --out result.md "${args[@]}"); then
+            GH_TOKEN="$APP_TOKEN" gh api "repos/$GH_REPO/issues/$PR/comments" \
+              -f body="**Gate $GATE: the runner's result didn't verify**, so nothing was posted as its result and execution doesn't continue. Check the run and the host ledger. <sub>factory gate · [run]($RUN_URL)</sub>" > /dev/null
+            exit 1
+          fi
+          GH_TOKEN="$APP_TOKEN" gh api "repos/$GH_REPO/issues/$PR/comments" -F body=@result.md > /dev/null
+          echo "Gate $GATE: $status" >> "$GITHUB_STEP_SUMMARY"
+          # The tracker: a done gate clears the stop, so the next segment can run. Only once, and only for the
+          # gate execution is stopped at: a re-run of an older report must not restart anything.
+          gh api "repos/$GH_REPO/issues/$PR/comments" --paginate --jq '.[]' > comments.ndjson
+          now_stopped=$(python3 -I .github/factory/gates.py stopped-at --comments comments.ndjson --app-id "$APP_ID")
+          continue_=no
+          stopped=()
+          if [ "$status" = done ] && [ "$now_stopped" = "$GATE" ]; then stopped=(--stopped-at ""); continue_=yes; fi
+          python3 -I .github/factory/gates.py tracker "${common[@]}" --comments comments.ndjson --out tracker.md "${stopped[@]}"
+          tracker=$(jq -r "select(.user.id == $APP_ID and (.body | startswith(\"<!-- factory-gate-tracker: \"))) | .id" comments.ndjson | head -1)
+          GH_TOKEN="$APP_TOKEN" gh api -X PATCH "repos/$GH_REPO/issues/comments/$tracker" -F body=@tracker.md > /dev/null
+          [ "$continue_" = yes ] || exit 0
+          issue=$(jq -r '.head.ref | capture("^factory/(?<n>[0-9]+)-impl$").n' pr.json)
+          GH_TOKEN="$APP_TOKEN" gh issue edit "$issue" --remove-label factory:gate > /dev/null 2>&1 || true
+          gh workflow run factory-implement.yml --ref "$DEFAULT_BRANCH" -f issue_number="$issue" -f plan="$plan" -f continue_pr="$PR"
+          GH_TOKEN="$APP_TOKEN" gh issue comment "$issue" --body "Gate $GATE done on #$PR: execution continues. <sub>factory gate · [run]($RUN_URL)</sub>" > /dev/null

@@ -1,0 +1,4 @@
+--tools Read,Grep,Glob,WebSearch
+--allowedTools mcp__context7 WebSearch
+--disallowedTools 'Read(//proc/**)' 'Read(//dev/**)' 'Read(**/.git/**)'
+--disallowedTools 'Read(//__w/_temp/**)' 'Read(//__w/_actions/**)' 'Read(//__e/**)' 'Read(//github/**)'

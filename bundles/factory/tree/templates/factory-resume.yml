@@ -1,0 +1,109 @@
+# Factory resume (phase 1b). When CD replies on an issue waiting in `factory:needs-input`,
+# restart the stage named by the latest `<!-- factory-stage: X -->` question comment, with
+# the whole thread as context (F7). Restart = workflow_dispatch of factory-X.yml with GITHUB_TOKEN
+# (dispatch is the one event it may trigger; the App has no actions permission). Labels and
+# comments go out as the factory App, like every other factory writer job.
+# Stage contract (marker grammar, who may post markers): .github/factory/README.md.
+name: factory-resume
+
+on:
+  issue_comment:
+    types: [created]
+
+permissions: {}
+
+jobs:
+  resume:
+    # Issues only (issue_comment also fires on PRs); waiting on CD; a human with repo
+    # access (the same roles sdlc-triage treats as CD), never a bot.
+    if: >-
+      !github.event.issue.pull_request &&
+      github.event.issue.state == 'open' &&
+      contains(github.event.issue.labels.*.name, 'factory:needs-input') &&
+      github.event.comment.user.type != 'Bot' &&
+      contains(fromJSON('["OWNER", "MEMBER", "COLLABORATOR"]'), github.event.comment.author_association)
+    runs-on: ubuntu-latest
+    # The App key is in this environment, which only the default branch may use.
+    environment: %{environments.writer}
+    timeout-minutes: 5
+    concurrency:
+      group: factory-resume-${{ github.event.issue.number }}
+    permissions:
+      actions: write
+      # Only the failure report's fallback, if the App token can't be made.
+      issues: write
+    steps:
+      # Issues only, scoped to this repository: comments and labels show as the factory App.
+      - uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        id: app
+        # If this fails, nothing is touched (the label stays); the failure report falls back to
+        # GITHUB_TOKEN to say so.
+        with:
+          client-id: ${{ vars.FACTORY_APP_CLIENT_ID }}
+          private-key: ${{ secrets.FACTORY_APP_PRIVATE_KEY }}
+          permission-issues: write
+
+      - name: Restart the waiting stage
+        id: restart
+        env:
+          GH_TOKEN: ${{ steps.app.outputs.token }}
+          DISPATCH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          # gh would otherwise look the default branch up via GraphQL, which needs contents access.
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          set -euo pipefail
+          # The event's label snapshot can be stale (two quick replies): re-check live,
+          # then claim by removing the label before dispatching.
+          waiting=$(gh issue view "$ISSUE_NUMBER" --json labels,state \
+            -q '.state == "OPEN" and any(.labels[]; .name == "factory:needs-input")')
+          if [ "$waiting" != true ]; then
+            echo "#$ISSUE_NUMBER is closed or no longer waiting; nothing to do" >> "$GITHUB_STEP_SUMMARY"; exit 0
+          fi
+          # Markers count only on line 1 of a comment posted by a factory writer job: the App's bot
+          # user, by ID (its login's case varies between API responses), whose key only
+          # default-branch jobs in %{environments.writer} can use.
+          marker=$(gh api "repos/$GH_REPO/issues/$ISSUE_NUMBER/comments" --paginate \
+            --jq '.[] | select(.user.type == "Bot" and .user.id == %{app.user_id}) | .body
+                  | capture("\\A<!-- factory-stage: (?<s>[a-z-]+)(?<kv>( [^>]*)?) -->")? | "\(.s)\t\(.kv)"' | tail -n 1)
+          stage=${marker%%$'\t'*}
+          extra=()
+          # Each stage: the workflow that runs it, and the label that shows it in flight.
+          case "$stage" in
+            triage) workflow=factory-triage.yml; label=factory:triage ;;
+            implement) workflow=factory-implement.yml; label=factory:ready-for-dispatch ;;
+            # An executed plan (production gates, design rule D4): its plan, and its PR once a gate was passed.
+            execute)
+              workflow=factory-implement.yml; label=factory:ready-for-dispatch
+              kv=${marker#*$'\t'}
+              plan=$(grep -oE '(^| )plan=docs/current_work/(sdlc-lite|planning)/d[0-9]+[a-z]?_[a-z0-9_]+_plan\.md( |$)' <<< "$kv" | tr -d ' ' | cut -d= -f2 || true)
+              pr=$(grep -oE '(^| )pr=[0-9]+( |$)' <<< "$kv" | tr -d ' ' | cut -d= -f2 || true)
+              [ -n "$plan" ] || { echo "::error::the execute marker on #$ISSUE_NUMBER names no plan"; exit 1; }
+              extra=(-f plan="$plan")
+              if [ -n "$pr" ]; then extra+=(-f continue_pr="$pr"); fi ;;
+            plan) workflow=factory-plan.yml; label=factory:ready-to-plan ;;
+            "") echo "::error::no factory-stage marker on #$ISSUE_NUMBER"; exit 1 ;;
+            *) echo "::error::no workflow handles stage '$stage' yet"; exit 1 ;;
+          esac
+          echo "label=$label" >> "$GITHUB_OUTPUT"
+          # Claim: swap to the stage's label so the issue always shows it's in flight (stage
+          # workflows ignore labels set by a bot; the stage's writer job replaces it).
+          gh issue edit "$ISSUE_NUMBER" --add-label "$label" --remove-label factory:needs-input
+          if ! GH_TOKEN="$DISPATCH_TOKEN" gh workflow run "$workflow" --ref "$DEFAULT_BRANCH" -f issue_number="$ISSUE_NUMBER" "${extra[@]}"; then
+            gh issue edit "$ISSUE_NUMBER" --add-label factory:needs-input --remove-label "$label"
+            echo "::error::dispatch of $workflow failed; label restored"; exit 1
+          fi
+          echo "Restarted $stage for #$ISSUE_NUMBER" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Report failure
+        if: failure()
+        env:
+          GH_TOKEN: ${{ steps.app.outputs.token || github.token }}
+          GH_REPO: ${{ github.repository }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          STAGE_LABEL: ${{ steps.restart.outputs.label }}
+        run: |
+          if [ -n "$STAGE_LABEL" ]; then retry="reply again or re-add \`$STAGE_LABEL\`"; else retry="reply again once it's fixed"; fi
+          gh issue comment "$ISSUE_NUMBER" --body "Factory resume failed ([run]($RUN_URL)), so your reply did not restart anything. Check the run, then $retry."

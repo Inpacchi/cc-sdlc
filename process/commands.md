@@ -78,6 +78,16 @@ Installed only when CD opts into the `design` bundle during `/sdlc-initialize`.
 |---------|--------|
 | `/sdlc-design-consult` | Consult domain design agents on UX, visual design, or interaction patterns |
 
+## Software Factory (optional bundle)
+
+Installed only when CD opts into the `factory` bundle (`[sdlc-root]/process/factory.md`). Its skills run headless inside the factory's GitHub Actions stages, started by labels and dispatches rather than commands; CD drives the factory from GitHub (`factory:triage` on an issue, reviews and replies on its PRs).
+
+| Skill | Run by |
+|-------|--------|
+| `sdlc-triage` | `factory-triage.yml`: routes an issue to direct, plan, needs-input or wait. Can also run interactively on an issue number, read-only |
+| `sdlc-implement` | `factory-implement.yml`: a direct-tier fix, unattended, to a draft PR |
+| `sdlc-revise` | `factory-revise.yml`: a revision of a factory code PR from CD's review |
+
 ## Cross-Platform
 
 | Command | Action |

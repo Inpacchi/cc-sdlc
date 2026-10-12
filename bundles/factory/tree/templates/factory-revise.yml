@@ -1,0 +1,440 @@
+# Factory revise (F15/F16). CD asked for changes on a factory code PR (factory-revise-trigger.yml
+# dispatches this on the default branch). A gate job counts earlier revisions (3 per code PR) and
+# collects nothing it can't trust; an agent on the strict tier runs /sdlc-revise on the PR's branch and
+# commits locally; publish checks the commits (implement_guard.py, stage revise) and adds them to the
+# branch, fast-forward only; report posts the revision comment with its factory-revise marker. At the
+# limit the issue gets factory:escalated and nothing runs. Stage contract: .github/factory/README.md.
+name: factory-revise
+run-name: "factory-revise: PR #${{ inputs.pr }}"
+
+on:
+  workflow_dispatch:
+    inputs:
+      pr:
+        description: The factory code PR to revise
+        type: number
+        required: true
+      requester:
+        description: Who asked (the reviewer or labeller); needs write access
+        type: string
+        required: true
+
+permissions: {}
+
+# One revision per PR at a time; a second review while one runs queues behind it.
+concurrency:
+  group: factory-revise-${{ inputs.pr }}
+
+env:
+  PR: ${{ inputs.pr }}
+  RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+  REVISION_LIMIT: "%{limits.code_revisions}"
+  # The Revise step's time limit (CD, 2026-10-11). The job's timeout-minutes can't read env: keep it
+  # above this.
+  AGENT_MINUTES: "%{limits.agent_minutes}"
+
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    environment: %{environments.writer}
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: read
+      issues: read
+    outputs:
+      proceed: ${{ steps.gate.outputs.proceed }}
+      issue: ${{ steps.gate.outputs.issue }}
+      branch: ${{ steps.gate.outputs.branch }}
+      base: ${{ steps.gate.outputs.base }}
+      revision: ${{ steps.gate.outputs.revision }}
+    steps:
+      # The gate check comes from the default branch.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          persist-credentials: false
+
+      - uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        id: app
+        with:
+          client-id: ${{ vars.FACTORY_APP_CLIENT_ID }}
+          private-key: ${{ secrets.FACTORY_APP_PRIVATE_KEY }}
+          permission-issues: write
+          # Comments and labels on a PR need the pull-requests permission too.
+          permission-pull-requests: write
+
+      - name: Check the PR, the requester and the revision count
+        id: gate
+        env:
+          GH_TOKEN: ${{ github.token }}
+          APP_TOKEN: ${{ steps.app.outputs.token }}
+          GH_REPO: ${{ github.repository }}
+          REQUESTER: ${{ inputs.requester }}
+        run: .github/factory/revise_gate.sh code
+
+  revise:
+    needs: gate
+    if: needs.gate.outputs.proceed == 'true'
+    runs-on: [self-hosted, %{runners.strict}]
+    # Backstop only; the Revise step's own timeout (AGENT_MINUTES) is the real bound.
+    timeout-minutes: %{limits.agent_minutes+30}
+    permissions:
+      contents: read
+      issues: read
+      pull-requests: read
+      packages: read
+    container:
+      # Pinned by digest; bump together with a factory-smoke re-run.
+      image: %{image.repository}@%{image.digest}
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+      # The Bash sandbox setup factory-smoke's bash-sandbox job proves (README § Operating notes).
+      options: >-
+        --security-opt seccomp=/etc/factory-runner/seccomp-bwrap.json
+        --security-opt systempaths=unconfined
+    outputs:
+      result: ${{ steps.claude.outputs.structured_output }}
+      prepared: ${{ steps.prepare.outcome }}
+      ran: ${{ steps.claude.outcome }}
+      packaged: ${{ steps.package.outcome }}
+      status: ${{ steps.package.outputs.status }}
+      bundle: ${{ steps.package.outputs.bundle }}
+      stats: ${{ steps.stats.outputs.stats }}
+      # Why the agent step ended with no result, and whether its transcripts were kept.
+      lost: ${{ steps.lost.outputs.why }}
+      lost-log: ${{ steps.lost.outputs.saved }}
+    env:
+      CLAUDE_CODE_SUBPROCESS_ENV_SCRUB: "1"
+      # A headless run ends with the orchestrator's turn: agents run in the foreground.
+      CLAUDE_CODE_DISABLE_BACKGROUND_TASKS: "1"
+      CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS: "3600000"
+      CONTEXT7_API_KEY: ${{ secrets.CONTEXT7_API_KEY }}
+      CHECKS: /__w/_temp/factory-checks
+      ISSUE_NUMBER: ${{ needs.gate.outputs.issue }}
+      BRANCH: ${{ needs.gate.outputs.branch }}
+      BASE: ${{ needs.gate.outputs.base }}
+      REVISION: ${{ needs.gate.outputs.revision }}
+    steps:
+      - name: Clean workspace
+        shell: bash
+        run: find "$GITHUB_WORKSPACE" -mindepth 1 -maxdepth 1 -exec rm -rf {} +
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # Agent jobs load the repository's settings, skills and CLAUDE.md: default branch only. The
+          # PR's branch is switched to below, after checking it changes none of them.
+          ref: ${{ github.event.repository.default_branch }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Switch to the PR, collect the review, prepare the workspace
+        id: prepare
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          # Everything this job runs comes from main, frozen before the switch: the PR's branch has main's
+          # files as of when it was opened.
+          .github/factory/agent_job.sh freeze implement-sandbox.settings.json
+          echo "FACTORY_TOOL_ARGS=$(tr '\n' ' ' < .github/factory/implement-tools.args)" >> "$GITHUB_ENV"
+          # The gate recorded the PR's head; a push since then means CD's review was of other code. The
+          # branch must change no owned path: this job loads its agent configuration and runs its dependency
+          # manifests (pip install, npm ci below).
+          READ_TOKEN="$GH_TOKEN" "$CHECKS/factory_branch.sh" check "$BRANCH" "$BASE" code
+          merge_base=$(git merge-base HEAD "$BASE")
+          # main's agent configuration (sdlc-revise among it) and CODEOWNERS laid over the PR's older copy.
+          "$CHECKS/factory_branch.sh" switch "$BASE"
+          echo "merge_base=$merge_base" >> "$GITHUB_OUTPUT"
+
+          # CD's review since the last revision, for the agent.
+          "$CHECKS/agent_job.sh" revise-context "$merge_base"
+          gh issue view "$ISSUE_NUMBER" -R "$GITHUB_REPOSITORY" --json number,title,body,url > "$GITHUB_WORKSPACE/.factory/issue-context.json"
+
+          # The stack profile's test services (Postgres and Redis) on the container's loopback; sandboxed Bash
+          # reaches them through /opt/factory/with-test-services. Their settings go in the project's env file.
+          "$CHECKS/agent_job.sh" services
+          "$CHECKS/agent_job.sh" workspace
+          # No remote: the action would otherwise write the job token into origin's URL, where the
+          # agent can read it. The agent never fetches or pushes.
+          git remote remove origin
+
+          "$CHECKS/agent_job.sh" schema revise
+          {
+            echo "FACTORY_REVISE_CONTEXT=$GITHUB_WORKSPACE/.factory/revise-context.json"
+            # No advisor for code stages (the comparison runs on #14, #18 and #19).
+            echo "CLAUDE_CODE_DISABLE_ADVISOR_TOOL=1"
+            # The run is killed at AGENT_MINUTES; stopping before then keeps the work (headless-mode.md).
+            echo "FACTORY_BUDGET=Time budget: this run is stopped after $AGENT_MINUTES minutes (ops/sdlc/process/headless-mode.md, Stop before a time limit). Run date now and between steps. With 20 minutes left, start nothing new: commit what is done, answer each request not reached as needs-your-call, and stop with status escalated and one major finding whose summary starts Unfinished and says what is left."
+          } >> "$GITHUB_ENV"
+
+      - name: Write MCP config
+        shell: bash
+        run: |
+          "$CHECKS/agent_job.sh" mcp
+
+      # What the agent writes from here on is its own; a step that ends with no result keeps it (session_log.sh).
+      - name: Mark the agent's start
+        shell: bash
+        run: touch "$RUNNER_TEMP/agent-start"
+
+      - name: Revise
+        id: claude
+        timeout-minutes: ${{ fromJSON(env.AGENT_MINUTES) }}
+        uses: anthropics/claude-code-action@58985842b834ed26087302ba27d07bc24ca8697a # v1.0.244
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          github_token: ${{ github.token }}
+          allowed_bots: github-actions
+          classify_inline_comments: "false"
+          bot_name: %{app.login}
+          bot_id: "%{app.user_id}"
+          settings: ${{ env.CHECKS }}/implement-sandbox.settings.json
+          prompt: "/sdlc-revise ${{ env.FACTORY_REVISE_CONTEXT }} ${{ env.FACTORY_BUDGET }}"
+          claude_args: >-
+            --model %{models.revise}
+            --advisor opus
+            --effort medium
+            --settings ${{ env.CHECKS }}/implement-sandbox.settings.json
+            ${{ env.FACTORY_TOOL_ARGS }}
+            --setting-sources user,project
+            --append-system-prompt "SDLC headless mode: no person is present."
+            --json-schema '${{ env.FACTORY_REVISE_SCHEMA }}'
+            --mcp-config ${{ env.FACTORY_MCP_CONFIG }} --strict-mcp-config
+            --permission-mode auto --permission-prompts none
+            --max-turns 300
+
+      - name: Package the commits
+        id: package
+        if: steps.claude.outcome == 'success'
+        shell: bash
+        env:
+          RESULT: ${{ steps.claude.outputs.structured_output }}
+        run: |
+          set -euo pipefail
+          # Nothing the agent started may outlive its step, and git runs only on a repository that checks out.
+          "$CHECKS/agent_job.sh" quiesce
+          printf '%s' "$RESULT" | jq -e '(.status | IN("done", "escalated", "failed")) and (.responses | type == "array")' > /dev/null \
+            || { echo "::error::the agent's result breaks the output rules"; exit 1; }
+          status=$(printf '%s' "$RESULT" | jq -r .status)
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+          # A revision that changed something needs commits on the PR's head, and nothing uncommitted.
+          "$CHECKS/agent_job.sh" bundle "$BASE" "$RUNNER_TEMP/revise/revise.bundle" "$status" done escalated
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always() && steps.package.outputs.bundle == 'yes'
+        with:
+          name: revise-bundle
+          path: ${{ runner.temp }}/revise/revise.bundle
+          retention-days: 7
+          if-no-files-found: error
+
+      - name: Record cost and models for the PR
+        id: stats
+        if: always() && steps.claude.outputs.execution_file != ''
+        continue-on-error: true
+        shell: bash
+        env:
+          EXEC: ${{ steps.claude.outputs.execution_file }}
+        run: |
+          "$CHECKS/agent_job.sh" stats
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always() && steps.claude.outputs.execution_file != ''
+        continue-on-error: true
+        with:
+          name: revise-transcript
+          path: ${{ steps.claude.outputs.execution_file }}
+          retention-days: 7
+
+      # An agent step that ends with no result (the time limit, the turn limit, a crash) leaves no
+      # transcript above: keep the session files it wrote, and say why it stopped.
+      - name: Keep the log of an agent that returned nothing
+        id: lost
+        if: always() && steps.claude.outcome == 'failure'
+        continue-on-error: true
+        shell: bash
+        env:
+          EXEC: ${{ steps.claude.outputs.execution_file }}
+          OAUTH: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          GHTOKEN: ${{ github.token }}
+        run: |
+          "$CHECKS/agent_job.sh" lost revise
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always() && steps.lost.outputs.saved == 'yes'
+        continue-on-error: true
+        with:
+          name: revise-session-log
+          path: ${{ runner.temp }}/session-log
+          retention-days: 7
+
+      # The run's metrics record for the weekly improve loop (run_metrics.py, 35 days): numbers and enums only,
+      # never agent text. Missing values are recorded as unknown.
+      - name: Record the run's metrics
+        if: always()
+        continue-on-error: true
+        shell: bash
+        env:
+          EXEC: ${{ steps.claude.outputs.execution_file }}
+          RESULT: ${{ steps.claude.outputs.structured_output }}
+          LOST: ${{ steps.lost.outputs.why }}
+          INPUTS: ${{ toJSON(inputs) }}
+          RUN_ID: ${{ github.run_id }}
+          RUN_ATTEMPT: ${{ github.run_attempt }}
+          WORKFLOW: factory-revise
+          METRICS_STAGE: revise
+        run: |
+          "$CHECKS/agent_job.sh" metrics "$METRICS_STAGE"
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        continue-on-error: true
+        with:
+          name: factory-metrics
+          path: ${{ runner.temp }}/metrics/metrics.json
+          retention-days: 35
+
+      - name: Remove the agent's repository
+        if: always()
+        shell: bash
+        run: rm -rf "$GITHUB_WORKSPACE/.git"
+
+  publish:
+    needs: [gate, revise]
+    if: needs.revise.outputs.bundle == 'yes'
+    runs-on: ubuntu-latest
+    environment: %{environments.writer}
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    outputs:
+      comment: ${{ steps.check.outputs.comment }}
+    env:
+      BRANCH: ${{ needs.gate.outputs.branch }}
+      BASE: ${{ needs.gate.outputs.base }}
+    steps:
+      # The guard and CODEOWNERS come from the default branch; the PR's head is fetched beside it.
+      # No stored credentials: checkout's saved auth header would override the App token on push.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: revise-bundle
+          path: ${{ runner.temp }}/in
+
+      - name: Check the commits and the result
+        id: check
+        env:
+          RESULT: ${{ needs.revise.outputs.result }}
+          STATS: ${{ needs.revise.outputs.stats }}
+          ISSUE: ${{ needs.gate.outputs.issue }}
+          REVISION: ${{ needs.gate.outputs.revision }}
+          READ_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          .github/factory/factory_branch.sh fetch "$BRANCH" > /dev/null
+          printf '%s' "$RESULT" > "$RUNNER_TEMP/result.json"
+          printf '%s' "${STATS:-null}" > "$RUNNER_TEMP/stats.json"
+          python3 -I .github/factory/implement_guard.py "$RUNNER_TEMP/in/revise.bundle" "$BASE" \
+            "$RUNNER_TEMP/result.json" "$ISSUE" "$RUN_URL" "$RUNNER_TEMP/out" revise "$RUNNER_TEMP/stats.json"
+          echo "comment=$(base64 -w0 "$RUNNER_TEMP/out/comment.md")" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        id: app
+        with:
+          client-id: ${{ vars.FACTORY_APP_CLIENT_ID }}
+          private-key: ${{ secrets.FACTORY_APP_PRIVATE_KEY }}
+          permission-contents: write
+
+      # Fast-forward only: the branch must still be where the agent started.
+      - name: Add the commits to the PR's branch
+        env:
+          GH_TOKEN: ${{ steps.app.outputs.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          .github/factory/factory_branch.sh push "$BRANCH" "$BASE"
+          echo "Pushed revision to $BRANCH" >> "$GITHUB_STEP_SUMMARY"
+
+  report:
+    needs: [gate, revise, publish]
+    if: >-
+      always() && needs.gate.outputs.proceed == 'true' && needs.revise.result == 'success' &&
+      (needs.publish.result == 'success' || needs.publish.result == 'skipped')
+    runs-on: ubuntu-latest
+    environment: %{environments.writer}
+    timeout-minutes: 5
+    steps:
+      - uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        id: app
+        with:
+          client-id: ${{ vars.FACTORY_APP_CLIENT_ID }}
+          private-key: ${{ secrets.FACTORY_APP_PRIVATE_KEY }}
+          permission-issues: write
+          # Comments and labels on a PR need the pull-requests permission too.
+          permission-pull-requests: write
+
+      - name: Post the revision comment
+        env:
+          GH_TOKEN: ${{ steps.app.outputs.token }}
+          GH_REPO: ${{ github.repository }}
+          COMMENT: ${{ needs.publish.outputs.comment }}
+          STATUS: ${{ needs.revise.outputs.status }}
+          RESULT: ${{ needs.revise.outputs.result }}
+        run: |
+          set -euo pipefail
+          if [ "$STATUS" = failed ]; then
+            reason=$(printf '%s' "$RESULT" | jq -r '.reason | gsub("<!--"; "&lt;!--") | gsub("@(?=[A-Za-z0-9])"; "@\u200b") | gsub("#(?=[0-9])"; "#\u200b")')
+            gh api "repos/$GH_REPO/issues/$PR/comments" -f body="**The revision made no change.** $reason <sub>factory revise · [run]($RUN_URL)</sub>" > /dev/null
+          else
+            printf '%s' "$COMMENT" | base64 -d > comment.md
+            gh api "repos/$GH_REPO/issues/$PR/comments" -F body=@comment.md > /dev/null
+          fi
+          gh api -X DELETE "repos/$GH_REPO/issues/$PR/labels/factory:revise" > /dev/null 2>&1 || true
+
+  report-failure:
+    needs: [gate, revise, publish, report]
+    if: failure()
+    runs-on: ubuntu-latest
+    environment: %{environments.writer}
+    timeout-minutes: 5
+    steps:
+      - uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        id: app
+        continue-on-error: true
+        with:
+          client-id: ${{ vars.FACTORY_APP_CLIENT_ID }}
+          private-key: ${{ secrets.FACTORY_APP_PRIVATE_KEY }}
+          permission-issues: write
+          # Comments and labels on a PR need the pull-requests permission too.
+          permission-pull-requests: write
+
+      - name: Comment on the PR
+        env:
+          GH_TOKEN: ${{ steps.app.outputs.token || github.token }}
+          GH_REPO: ${{ github.repository }}
+          GATE: ${{ needs.gate.result }}
+          PREPARED: ${{ needs.revise.outputs.prepared }}
+          RAN: ${{ needs.revise.outputs.ran }}
+          PACKAGED: ${{ needs.revise.outputs.packaged }}
+          LOST: ${{ needs.revise.outputs.lost }}
+          LOST_LOG: ${{ needs.revise.outputs.lost-log }}
+          PUBLISH: ${{ needs.publish.result }}
+        run: |
+          if [ "$GATE" = failure ]; then why="This PR can't be revised by the factory."
+          elif [ "$PREPARED" != success ]; then why="Preparing failed: no review comments since the last revision, the branch changes agent configuration, or the test services."
+          elif [ "$RAN" != success ] && [ -n "$LOST" ]; then
+            why="The revise agent $LOST."
+            if [ "$LOST_LOG" = yes ]; then why="$why Its session log is on the run page (revise-session-log)."; fi
+          elif [ "$RAN" != success ]; then why="The revise agent failed (usage, time or turn limit, or no result)."
+          elif [ "$PACKAGED" = failure ]; then why="The agent's result was refused (output rules, no commit, uncommitted changes, or the repository checks)."
+          elif [ "$PUBLISH" = failure ]; then why="The commits were refused or couldn't be pushed (a protected path, a size cap, a token-like string, or the branch moved)."
+          else why="The revision comment couldn't be posted."; fi
+          gh api "repos/$GH_REPO/issues/$PR/comments" -f body="Factory revise failed ([run]($RUN_URL)). $why This attempt doesn't count toward the revision limit; request changes again to retry." > /dev/null
+          gh api -X DELETE "repos/$GH_REPO/issues/$PR/labels/factory:revise" > /dev/null 2>&1 || true

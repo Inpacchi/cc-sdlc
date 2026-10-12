@@ -14,6 +14,8 @@ Throughout this migration, apply these transformations when copying or merging c
 | `examples/` | `[sdlc-root]/examples/` |
 | `agents/` | `.claude/agents/` (always — Claude Code requires this location) |
 | `skills/` | `.claude/skills/` (always — Claude Code requires this location), including a skill's `references/` and `scripts/` |
+| `bundles/<bundle>/tree/` (an installed bundle's `tree.from`) | the bundle's `tree.to` (the factory: `.github/factory/`), same relative paths, executable bits kept |
+| `bundles/<bundle>/seed/` (`seed.from`) | the bundle's `seed.to`, only where nothing is there yet (see below) |
 
 **Not installed to child projects:**
 - `templates/optional/` — Conditional CLAUDE.md appendices (e.g., `data-pipeline-integrity.md`). Read from z-sdlc source during initialization when needed, not installed.
@@ -32,6 +34,7 @@ Some files in the z-sdlc source are **templates** that become project-specific a
 | `knowledge/provenance_log.md` | Project's knowledge provenance records — append-only log of ingestions and research handoffs |
 | `process/sdlc_changelog.md` | Project's record of process changes — its own entries and the migrations it applied. Migration prepends an entry for itself (`sdlc-migrate` §4.5b) and never copies z-sdlc's file over it; framework history is read from the source repo (§1.2) |
 | `process/changelog-archive/` | The project's archived changelog entries, one file per quarter, moved unedited from its changelog by `changelog_archive.py` (`sdlc-archive`, and `sdlc-migrate` §4.5c). Never copied from z-sdlc, never transformed by an adapter |
+| A bundle's `seed` files (the factory: `.github/factory/factory.json`, `planning.json`, `services.json`, `triage-policy.md`, `README.md`, and the tests of the project's CODEOWNERS) | The project's settings, policy and notes. Written once at install where absent, never overwritten, hashed or removed (contract 0019) |
 
 Framework files may contain canonical agent names (e.g., `frontend-developer`) in examples. These are illustrative — they don't affect dispatch behavior. The project's actual agents in `.claude/agents/` and `agent-context-map.yaml` define what gets dispatched.
 

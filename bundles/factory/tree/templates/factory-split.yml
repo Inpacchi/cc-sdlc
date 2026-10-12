@@ -1,0 +1,53 @@
+# Factory split (CD, 2026-10-09). When CD merges a split PR (factory/<issue>-split), factory-advance
+# dispatches this. split_parts.py reads the split record and the catalog as merged, files each part as
+# an issue linked under the parent (as the factory App), and holds it: CD adds factory:go to plan a part.
+# README § Splits; z-sdlc ops/sdlc/process/deliverable_lifecycle.md § Splitting a Deliverable.
+name: factory-split
+run-name: "factory-split: PR #${{ inputs.pr }}"
+
+on:
+  workflow_dispatch:
+    inputs:
+      pr:
+        description: The merged split PR
+        type: number
+        required: true
+
+permissions: {}
+
+# One run per PR at a time; re-running is safe (split_parts.py never files a part twice).
+concurrency:
+  group: factory-split-${{ inputs.pr }}
+
+jobs:
+  file:
+    runs-on: ubuntu-latest
+    # The App key is in this environment, which only the default branch may use.
+    environment: %{environments.writer}
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      issues: read
+      pull-requests: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # Issues only, scoped to this repository: filed issues, links and comments show as the factory App.
+      - uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        id: app
+        with:
+          client-id: ${{ vars.FACTORY_APP_CLIENT_ID }}
+          private-key: ${{ secrets.FACTORY_APP_PRIVATE_KEY }}
+          permission-issues: write
+
+      - name: File the parts
+        env:
+          GH_TOKEN: ${{ github.token }}
+          APP_TOKEN: ${{ steps.app.outputs.token }}
+          REPO: ${{ github.repository }}
+          PR: ${{ inputs.pr }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: python3 -I .github/factory/split_parts.py

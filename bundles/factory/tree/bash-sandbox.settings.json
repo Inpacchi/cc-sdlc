@@ -1,0 +1,68 @@
+{
+  "disableAllHooks": true,
+  "disableSkillShellExecution": true,
+  "sandbox": {
+    "enabled": true,
+    "failIfUnavailable": true,
+    "allowUnsandboxedCommands": false,
+    "enableWeakerNestedSandbox": false,
+    "enableWeakerNetworkIsolation": false,
+    "network": {
+      "strictAllowlist": true,
+      "allowedDomains": [
+        "pypi.org",
+        "files.pythonhosted.org",
+        "registry.npmjs.org",
+        "localhost"
+      ]
+    },
+    "filesystem": {
+      "denyRead": [
+        "/__w/_temp",
+        "/__w/_actions",
+        "/__e",
+        "/github"
+      ]
+    },
+    "credentials": {
+      "envVars": [
+        {
+          "name": "CLAUDE_CODE_OAUTH_TOKEN",
+          "mode": "deny"
+        },
+        {
+          "name": "ANTHROPIC_API_KEY",
+          "mode": "deny"
+        },
+        {
+          "name": "GH_TOKEN",
+          "mode": "deny"
+        },
+        {
+          "name": "GITHUB_TOKEN",
+          "mode": "deny"
+        },
+        {
+          "name": "OVERRIDE_GITHUB_TOKEN",
+          "mode": "deny"
+        },
+        {
+          "name": "DEFAULT_WORKFLOW_TOKEN",
+          "mode": "deny"
+        },
+        {
+          "name": "CONTEXT7_API_KEY",
+          "mode": "deny"
+        },
+        {
+          "name": "ACTIONS_RUNTIME_TOKEN",
+          "mode": "deny"
+        },
+        {
+          "name": "ACTIONS_ID_TOKEN_REQUEST_TOKEN",
+          "mode": "deny"
+        }
+      ]
+    }
+  }
+}

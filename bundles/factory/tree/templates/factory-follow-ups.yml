@@ -1,0 +1,60 @@
+# Factory follow-ups (CD, 2026-10-09). When CD merges an execute PR (an executed plan), factory-advance
+# dispatches this with the PR body as it was at merge. follow_ups.py files each checked follow-up as an
+# issue (as the factory App) and starts triage on it; triage then holds it until CD adds factory:go.
+# Direct fixes and a follow-up's own follow-ups are never filed. README § Follow-ups.
+name: factory-follow-ups
+run-name: "factory-follow-ups: PR #${{ inputs.pr }}"
+
+on:
+  workflow_dispatch:
+    inputs:
+      pr:
+        description: The merged execute PR
+        type: number
+        required: true
+      body_b64:
+        description: The PR body at merge, base64 (factory-advance takes it from the merge event)
+        type: string
+        required: true
+
+permissions: {}
+
+# One run per PR at a time; re-running a run is safe (follow_ups.py never files an item twice).
+concurrency:
+  group: factory-follow-ups-${{ inputs.pr }}
+
+jobs:
+  file:
+    runs-on: ubuntu-latest
+    # The App key is in this environment, which only the default branch may use.
+    environment: %{environments.writer}
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      issues: read
+      pull-requests: read
+      # Starts triage on each filed follow-up (D1 rule 2: dispatch advances).
+      actions: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # Issues only, scoped to this repository: filed issues and comments show as the factory App.
+      - uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        id: app
+        with:
+          client-id: ${{ vars.FACTORY_APP_CLIENT_ID }}
+          private-key: ${{ secrets.FACTORY_APP_PRIVATE_KEY }}
+          permission-issues: write
+
+      - name: File the follow-ups and start triage
+        env:
+          GH_TOKEN: ${{ github.token }}
+          APP_TOKEN: ${{ steps.app.outputs.token }}
+          REPO: ${{ github.repository }}
+          PR: ${{ inputs.pr }}
+          BODY_B64: ${{ inputs.body_b64 }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: python3 -I .github/factory/follow_ups.py
