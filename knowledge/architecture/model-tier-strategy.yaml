@@ -15,7 +15,7 @@ pattern: rules
 category: architecture
 spec_relevant: false
 project_applicability:
-  relevant_when: "Always relevant — governs how the cc-sdlc agent system spends model capability and token budget"
+  relevant_when: "Always relevant — governs how the z-sdlc agent system spends model capability and token budget"
   action_if_irrelevant: keep
 last_updated: 2026-07-08
 
@@ -98,7 +98,7 @@ rules:
       multiple orchestration setups (haiku searching, sonnet executing,
       opus verifying, top tier coordinating) and reported both lower token
       usage and equal-or-better output versus running everything on one
-      premium model. It matches the existing cc-sdlc frontmatter guidance
+      premium model. It matches the existing z-sdlc frontmatter guidance
       (sonnet default, opus for design decisions, haiku for retrieval) and
       extends it with the delegated-review role for opus.
     checklist:
@@ -286,7 +286,7 @@ rules:
     rationale: |
       The tier gap the community achieves with per-dispatch model selection
       (sonnet writes, opus reviews) is achievable in interactive Claude Code
-      without that mechanism, because cc-sdlc already separates the reviewer
+      without that mechanism, because z-sdlc already separates the reviewer
       agents from the writer agents. Assigning the reviewers a higher
       frontmatter tier is equivalent in effect and deterministic — it does
       not depend on whether interactive Task dispatch exposes a per-

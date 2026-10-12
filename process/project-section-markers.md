@@ -109,7 +109,7 @@ A bundle declares fragments in `skeleton/manifest.json` → `bundles.<name>.frag
 }
 ```
 
-The fragment file in the cc-sdlc source IS the content; the injected block in the target file is a projection of it. To change what installed projects see, change the fragment file upstream — the next migration propagates it. Installers record every injected fragment in `.sdlc-manifest.json` → `bundle_fragments` (label → target path) so the compliance auditor can verify presence without reaching the cc-sdlc source.
+The fragment file in the z-sdlc source IS the content; the injected block in the target file is a projection of it. To change what installed projects see, change the fragment file upstream — the next migration propagates it. Installers record every injected fragment in `.sdlc-manifest.json` → `bundle_fragments` (label → target path) so the compliance auditor can verify presence without reaching the z-sdlc source.
 
 ### Rules
 
@@ -168,7 +168,7 @@ The label names its source: `{process-file}#{section-id}`, where `{process-file}
 3. Copy the upstream file (overwriting the project's version)
 4. Re-inject each block at its original heading position (unless user chose to update/remove)
 5. If the heading no longer exists upstream, append at end with a warning comment
-6. Inject `BUNDLE-SECTION` fragments for installed bundles targeting this file (strip-then-append from the cc-sdlc source at the target release — no content review; these blocks are upstream-owned)
+6. Inject `BUNDLE-SECTION` fragments for installed bundles targeting this file (strip-then-append from the z-sdlc source at the target release — no content review; these blocks are upstream-owned)
 
 ### Content-Merge Files (§2.2–2.4)
 

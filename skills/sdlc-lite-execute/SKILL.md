@@ -447,7 +447,7 @@ If no triggers fired, emit `CLAUDE.md refresh: no changes needed` and proceed. D
    - CLAUDE.md updates from step 3e (root and any module-level files)
    - Plan and result archive move (item 3 above)
    - Any other SDLC artifacts modified during execution
-5. Commit using the cc-sdlc commit format:
+5. Commit using the z-sdlc commit format:
    ```
    {type}[{deliverable_id}]({scope}): {description}
 

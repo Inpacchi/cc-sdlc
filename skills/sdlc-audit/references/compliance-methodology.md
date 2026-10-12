@@ -354,8 +354,8 @@ Guard findings route into the standard severity-classified findings table. Modif
 
 ## Dimension 7: Migration Integrity
 
-- **7a. Manifest version:** Read `.sdlc-manifest.json`, compare `source_version` against current cc-sdlc. If >10 commits or >30 days behind, recommend migration.
-- **7b. File completeness:** Fetch `skeleton/manifest.json` from cc-sdlc source (use the repo URL from `.sdlc-manifest.json`), compare installed files against its `source_files` lists.
+- **7a. Manifest version:** Read `.sdlc-manifest.json`, compare `source_version` against current z-sdlc. If >10 commits or >30 days behind, recommend migration.
+- **7b. File completeness:** Fetch `skeleton/manifest.json` from z-sdlc source (use the repo URL from `.sdlc-manifest.json`), compare installed files against its `source_files` lists.
 - **7c. Content-merge:** Verify framework sections current while project customizations preserved (skill gates, discipline entries, agent context map names).
 - **7d. Removed features:** Search skills/agents for references to deprecated/removed framework features.
 

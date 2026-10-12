@@ -153,7 +153,7 @@ VERDICT: [COMPLIANT | NEEDS ATTENTION | NON-COMPLIANT]
 
 As part of migration integrity (Dimension 7), verify that skills, agents, and process docs use the canonical phrasings from `[sdlc-root]/process/knowledge-routing.md` § "Standard Phrases" and avoid the forms listed in § "Forbidden Phrasings". These exact phrases enable adapter plugins (e.g., `neuroloom-sdlc-plugin`) to transform knowledge references reliably at install/migration time.
 
-1. **Scan cc-sdlc source files:**
+1. **Scan z-sdlc source files:**
    - `skills/*/SKILL.md` and `skills/*/references/*.md`
    - `agents/*.md`
    - `process/*.md` (except `sdlc_changelog.md` and `knowledge-routing.md` — exempt per metadata exception)
@@ -170,14 +170,14 @@ As part of migration integrity (Dimension 7), verify that skills, agents, and pr
    - `(skip for Neuroloom`
    - `(Neuroloom projects use`
 
-4. **Adapter-specific tools in cc-sdlc source (grep each; any hit is a finding):**
-   - `memory_search(` — adapter concern, not cc-sdlc
+4. **Adapter-specific tools in z-sdlc source (grep each; any hit is a finding):**
+   - `memory_search(` — adapter concern, not z-sdlc
    - `memory_store(`
 
 5. **Flag deviations:**
    - Forbidden phrasing → severity: **major** (breaks adapter Pattern Mapping transformers)
    - Inline adapter conditionals → severity: **major** (should be handled by adapter, not core)
-   - Adapter-specific tools → severity: **critical** (wrong layer — cc-sdlc must stay adapter-agnostic)
+   - Adapter-specific tools → severity: **critical** (wrong layer — z-sdlc must stay adapter-agnostic)
 
 6. **Exceptions (hits in these files are NOT findings):**
    - `process/knowledge-routing.md` — the phrasing contract itself; lists canonical and forbidden phrases as documentation

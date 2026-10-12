@@ -10,7 +10,7 @@ Session conversations are stored as JSONL files:
 ~/.claude/projects/<project-dir-hash>/<session-id>.jsonl
 ```
 
-The project directory hash is derived from the absolute path (e.g., `-Users-yovarniyearwood-Projects-cc-sdlc`). Each session produces one JSONL file named by its UUID.
+The project directory hash is derived from the absolute path (e.g., `-Users-yovarniyearwood-Projects-z-sdlc`). Each session produces one JSONL file named by its UUID.
 
 Some sessions also have a companion directory (`<session-id>/`) containing subagent data.
 
@@ -82,7 +82,7 @@ These patterns indicate friction — something went wrong or was missed:
 
 ## Framework-Specific Session Signals
 
-When auditing sessions in the cc-sdlc source repo, additionally look for:
+When auditing sessions in the z-sdlc source repo, additionally look for:
 
 - **Manifest forgotten:** Files added/removed without updating `skeleton/manifest.json`
 - **Changelog skipped:** Process changes made without updating `process/sdlc_changelog.md`

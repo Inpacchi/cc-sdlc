@@ -1,7 +1,7 @@
 ---
 name: sdlc-develop-skill
 description: >
-  Create or modify project skills following cc-sdlc conventions. Two modes: CREATE mode walks
+  Create or modify project skills following z-sdlc conventions. Two modes: CREATE mode walks
   through purpose definition, skill type selection (orchestration, utility, exploration,
   domain-specific), frontmatter generation with trigger phrases and anti-triggers, type-appropriate
   body scaffolding, Red Flags table, and Integration section. MODIFY mode reads an existing skill,
@@ -21,7 +21,7 @@ description: >
 
 # Skill Development
 
-Create or modify SDLC skills following cc-sdlc conventions. Scaffold new skills with convention enforcement, or safely modify existing skills with migration-aware wrapping.
+Create or modify SDLC skills following z-sdlc conventions. Scaffold new skills with convention enforcement, or safely modify existing skills with migration-aware wrapping.
 
 **Argument:** `$ARGUMENTS` (what the skill should do, or which existing skill to modify)
 
@@ -123,7 +123,7 @@ Generate the skill body based on type. All types share common requirements; each
 - **Steps** — numbered steps with `### N. Step Name` headers
 - **Red Flags** — `## Red Flags` table (see step 6)
 - **Integration** — `## Integration` section (see step 7)
-- **Headless stop rule** — the `headless-stop-rule` block from `[sdlc-root]/process/headless-mode.md` § Mirrored Stop Rule, copied verbatim inside `MIRROR-START`/`MIRROR-END` comment markers whose label joins the source file and block id as `{process-file}#{section-id}` (per `[sdlc-root]/process/project-section-markers.md` § MIRROR Markers) — never the source doc's `MIRROR-SOURCE` markers. Place it directly after the skill's `**AskUserQuestion mandate:**` paragraph if it has one, otherwise directly before its first `##` section. Every `sdlc-*` skill carries it, including skills that never ask anything, so the rule needs no per-skill judgment; add it to project skills too. The mirror table already covers both, so no table row is needed. A gate whose stop needs stating at the gate itself — the status it stops with, what the stop carries, a step it skips, or an outward action it would otherwise take — gets its own **Headless run:** line at the gate, outside the markers. A skill whose restart from step 1 would repeat a side effect or lose counted state (a D-number, completed phases, a review round) also gets a **Headless restart** paragraph in its entry step. In cc-sdlc source, add such gates to the doc's § Integration list; in a target project that list is upstream-owned, so keep the line in the skill and propose the list entry upstream.
+- **Headless stop rule** — the `headless-stop-rule` block from `[sdlc-root]/process/headless-mode.md` § Mirrored Stop Rule, copied verbatim inside `MIRROR-START`/`MIRROR-END` comment markers whose label joins the source file and block id as `{process-file}#{section-id}` (per `[sdlc-root]/process/project-section-markers.md` § MIRROR Markers) — never the source doc's `MIRROR-SOURCE` markers. Place it directly after the skill's `**AskUserQuestion mandate:**` paragraph if it has one, otherwise directly before its first `##` section. Every `sdlc-*` skill carries it, including skills that never ask anything, so the rule needs no per-skill judgment; add it to project skills too. The mirror table already covers both, so no table row is needed. A gate whose stop needs stating at the gate itself — the status it stops with, what the stop carries, a step it skips, or an outward action it would otherwise take — gets its own **Headless run:** line at the gate, outside the markers. A skill whose restart from step 1 would repeat a side effect or lose counted state (a D-number, completed phases, a review round) also gets a **Headless restart** paragraph in its entry step. In z-sdlc source, add such gates to the doc's § Integration list; in a target project that list is upstream-owned, so keep the line in the skill and propose the list entry upstream.
 
 #### Orchestration Skills (additional requirements)
 
@@ -211,7 +211,7 @@ Safely modify an existing skill with migration-aware wrapping. This mode reads t
 
 1. Read the existing skill's `SKILL.md`
 2. If the user names multiple skills (or "all the planning skills", "both X and Y"), read them all in parallel before proposing edits
-3. All skills in `.claude/skills/` are framework-installed from cc-sdlc — direct edits to framework sections will be overwritten on next `sdlc-migrate`
+3. All skills in `.claude/skills/` are framework-installed from z-sdlc — direct edits to framework sections will be overwritten on next `sdlc-migrate`
 4. Warn the user accordingly before making changes
 
 ### M1.5. DRY Audit (cross-skill drift detection)
@@ -235,7 +235,7 @@ Determine whether the user's requested change targets:
 | Framework section (gates, workflow, dispatch protocol) | **Framework change** | Warn: "This section is framework-owned and will be overwritten on next migration. Consider proposing this upstream instead." |
 | Project-specific addition (new phase, custom agent wiring, domain-specific step) | **Project addition** | Auto-wrap in `PROJECT-SECTION` markers |
 | Existing `PROJECT-SECTION` block | **Project update** | Edit within existing markers |
-| Inside a `MIRROR` block | **Source-doc change** | Do not edit the copy. A change to the block itself is an upstream change to its process doc: propose it to cc-sdlc, where the block is edited once and re-copied into every skill. Project-specific wording goes in a `PROJECT-SECTION` outside the block. |
+| Inside a `MIRROR` block | **Source-doc change** | Do not edit the copy. A change to the block itself is an upstream change to its process doc: propose it to z-sdlc, where the block is edited once and re-copied into every skill. Project-specific wording goes in a `PROJECT-SECTION` outside the block. |
 
 ### M3. Apply with Protection
 
@@ -254,7 +254,7 @@ For **project additions** to framework skills:
 4. Confirm to the user that the content is migration-protected
 
 For **framework changes**: present the warning and offer alternatives:
-- Propose the change upstream (edit the cc-sdlc source repo)
+- Propose the change upstream (edit the z-sdlc source repo)
 - Apply anyway with markers (will be preserved but may conflict with upstream changes)
 - Apply without markers (will be overwritten on next migration — user accepts this)
 

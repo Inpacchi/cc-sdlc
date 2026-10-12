@@ -16,7 +16,7 @@ Emitted as each plugin-defined gate evaluates.
 
 Gates expected in a migration run:
 - `preflight` — environment check
-- `changelog_review` — CD reviewed the cc-sdlc changelog since last version
+- `changelog_review` — CD reviewed the z-sdlc changelog since last version
 - `change_manifest_preview` — CD approved the preview of files that will change
 
 A `rejected` or `cancelled` result at any gate should halt the run. The absence of `run_complete` later in the log corroborates this.
@@ -27,7 +27,7 @@ A `rejected` or `cancelled` result at any gate should halt the run. The absence 
 {"ts": "...", "run_id": "...", "event": "contract_change_detected", "version": "vX.Y.Z", "resolution": "<description>"}
 ```
 
-Emitted when stage 2.2a spots `[contract-change]` tags in the cc-sdlc changelog between versions. `resolution` describes how the plugin handled it (e.g., `pattern_mapping_already_updated_in_plugin_0.3.5`). If `resolution` indicates the plugin didn't have rules for the new contract, expect Pattern Mapping gaps in the audit.
+Emitted when stage 2.2a spots `[contract-change]` tags in the z-sdlc changelog between versions. `resolution` describes how the plugin handled it (e.g., `pattern_mapping_already_updated_in_plugin_0.3.5`). If `resolution` indicates the plugin didn't have rules for the new contract, expect Pattern Mapping gaps in the audit.
 
 ### Checkpoint
 
@@ -107,7 +107,7 @@ One event per run. Aggregates stage 4.2's MCP-bearing file outcomes.
 - Missing event = plugin ran stage 4.2 without running its own internal audit. Major telemetry regression; the migration cannot be trusted to have evaluated its own output.
 - `audit_result: "FAIL"` means the plugin itself halted; verify the target state against the halt message
 - `regressions > 0` should have halted the run. If `run_complete` still appears after, the halt was bypassed — plugin bug.
-- `net_delta < 0` with `regressions: 0` means all drops were legitimate upstream removals — check `drops_detail` against cc-sdlc changelog for matching upstream changes
+- `net_delta < 0` with `regressions: 0` means all drops were legitimate upstream removals — check `drops_detail` against z-sdlc changelog for matching upstream changes
 
 ### Structural content-loss audit (MANDATORY per plugin 0.3.6+)
 

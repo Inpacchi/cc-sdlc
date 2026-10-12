@@ -171,9 +171,9 @@ Distinguishing signal: **if the sentence describes a Neuroloom-mode operation an
 
 **Discovered post-`migrate-6f4217` (sleeved 2026-04-26)** — a defect class neither Scan 3a (path-bearing residue) nor Scan 3b (concept-terminology residue) catches.
 
-cc-sdlc framework content names canonical agents in dispatch maps, message envelopes, and routing tables: `security-engineer`, `data-architect`, `ml-engineer`, `devops-engineer`, `data-pipeline-engineer`, etc. Projects often have a different roster (sleeved has `infosec-engineer` instead of `security-engineer`, `firebase-architect` instead of `data-architect`, no `ml-engineer` at all). The migration's existing guarded-rename machinery only fires when a `contract_changes.yaml` entry drives a rename for CLAUDE.md — it doesn't proactively walk every framework file looking for agent refs that don't resolve to the project's roster.
+z-sdlc framework content names canonical agents in dispatch maps, message envelopes, and routing tables: `security-engineer`, `data-architect`, `ml-engineer`, `devops-engineer`, `data-pipeline-engineer`, etc. Projects often have a different roster (sleeved has `infosec-engineer` instead of `security-engineer`, `firebase-architect` instead of `data-architect`, no `ml-engineer` at all). The migration's existing guarded-rename machinery only fires when a `contract_changes.yaml` entry drives a rename for CLAUDE.md — it doesn't proactively walk every framework file looking for agent refs that don't resolve to the project's roster.
 
-**Exemplar from `migrate-6f4217`:** sleeved's `process/team-communication-protocol.md:16` had pre-migration `from: "reviewer-infosec-engineer"` (project's actual agent). Migration overwrote with upstream's `from: "reviewer-security-engineer"` (cc-sdlc canonical name, an agent that doesn't exist in sleeved). The user discovered it manually weeks later; the audit before this update missed it because no `[sdlc-root]/` path appears and no concept-terminology phrase fired. ~11 sibling stale refs across sleeved at detection time: `data-architect`, `data-pipeline-engineer`, `database-architect`, `db-engineer`, `devops-engineer`, `frontend-engineer`, `ml-architect`, `ml-engineer`, `security-auditor`, `security-engineer`, `systems-engineer`.
+**Exemplar from `migrate-6f4217`:** sleeved's `process/team-communication-protocol.md:16` had pre-migration `from: "reviewer-infosec-engineer"` (project's actual agent). Migration overwrote with upstream's `from: "reviewer-security-engineer"` (z-sdlc canonical name, an agent that doesn't exist in sleeved). The user discovered it manually weeks later; the audit before this update missed it because no `[sdlc-root]/` path appears and no concept-terminology phrase fired. ~11 sibling stale refs across sleeved at detection time: `data-architect`, `data-pipeline-engineer`, `database-architect`, `db-engineer`, `devops-engineer`, `frontend-engineer`, `ml-architect`, `ml-engineer`, `security-auditor`, `security-engineer`, `systems-engineer`.
 
 **Detection grep (Scan 3c in `SKILL.md`):** build the project roster from `<target>/.claude/agents/`, then scan framework content for backtick-quoted role names and message-envelope quoted values, strip the `reviewer-`/`fixer-`/`architect-` prefix, and check whether each resolves.
 
@@ -189,7 +189,7 @@ cc-sdlc framework content names canonical agents in dispatch maps, message envel
 
 ## 3. Exempt-file violations
 
-These files must be copied verbatim from cc-sdlc source — zero transformation. A transformation-shaped hunk in any of these files is a defect.
+These files must be copied verbatim from z-sdlc source — zero transformation. A transformation-shaped hunk in any of these files is a defect.
 
 **Exempt files (Neuroloom):**
 - `process/knowledge-routing.md` — the phrasing contract itself
@@ -200,7 +200,7 @@ These files must be copied verbatim from cc-sdlc source — zero transformation.
 - `CLAUDE-SDLC.md` — framework documentation
 - `knowledge/provenance_log.md` — project append-only file (treated like changelog)
 
-**Detection:** diff each exempt file against cc-sdlc source. Any hunk = defect. Exception: `agents/sdlc-compliance-auditor.md` has a documented adapter customization around methodology path reference (see specific rules in `classification-framework.md`).
+**Detection:** diff each exempt file against z-sdlc source. Any hunk = defect. Exception: `agents/sdlc-compliance-auditor.md` has a documented adapter customization around methodology path reference (see specific rules in `classification-framework.md`).
 
 **Example from `migrate-f01a70`:** `agents/sdlc-reviewer.md:82-86` had the forbidden-phrases checklist transformed into Neuroloom forms, destroying the validation criteria the reviewer exists to enforce.
 
@@ -210,7 +210,7 @@ These files must be copied verbatim from cc-sdlc source — zero transformation.
 
 ## 4. Structural content loss
 
-These don't show in MCP counts or leak greps. They show as heading / table row / numbered step count drops between cc-sdlc source and target.
+These don't show in MCP counts or leak greps. They show as heading / table row / numbered step count drops between z-sdlc source and target.
 
 **Detection:**
 ```bash
@@ -234,9 +234,9 @@ If target count < source count without a matching project customization, it's a 
 
 Not defects — but they look like defects at first glance. Rule them out before classifying anything else.
 
-### 5.1 Target cc-sdlc version < current cc-sdlc version
+### 5.1 Target z-sdlc version < current z-sdlc version
 
-If `.sdlc-manifest.json` shows `source_version` earlier than the current cc-sdlc repo, differences against current source may just be legitimate upstream changes the target hasn't migrated to yet. A v1.1.1 target diffed against current v1.2.3 source will show all v1.2.1-v1.2.3 upstream edits as "deviations."
+If `.sdlc-manifest.json` shows `source_version` earlier than the current z-sdlc repo, differences against current source may just be legitimate upstream changes the target hasn't migrated to yet. A v1.1.1 target diffed against current v1.2.3 source will show all v1.2.1-v1.2.3 upstream edits as "deviations."
 
 **What to do:** always surface target version vs current version in the report headline. Interpret diffs in that context. If the user wants a same-version audit, have them re-migrate to current first.
 

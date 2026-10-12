@@ -1,9 +1,9 @@
 ---
 name: sdlc-migrate
 description: >
-  Migrate a project's cc-sdlc framework to the latest version — content-aware updates that preserve
+  Migrate a project's z-sdlc framework to the latest version — content-aware updates that preserve
   project-specific customizations (parking lots, agent names, build commands, maturity tracker) while
-  updating framework sections (skills, knowledge, process docs, agents) to match the current cc-sdlc.
+  updating framework sections (skills, knowledge, process docs, agents) to match the current z-sdlc.
   Triggers on "migrate my SDLC", "update the SDLC", "migrate SDLC framework", "update SDLC framework",
   "upgrade SDLC", "sync SDLC with upstream".
   Do NOT use for first-time installation — use sdlc-initialize.
@@ -12,9 +12,9 @@ description: >
 
 # SDLC Migrate
 
-Apply cc-sdlc upstream updates to a project while preserving project-specific customizations. Unlike the initial installation (which copies files and skips modified ones), this skill is **content-aware** — it understands which sections are framework-level vs project-customized and updates them independently.
+Apply z-sdlc upstream updates to a project while preserving project-specific customizations. Unlike the initial installation (which copies files and skips modified ones), this skill is **content-aware** — it understands which sections are framework-level vs project-customized and updates them independently.
 
-**Argument:** `$ARGUMENTS` (optional — local path to a cc-sdlc clone. If omitted, resolve via `.sdlc-manifest.json` → `source_repo`, or ask user.)
+**Argument:** `$ARGUMENTS` (optional — local path to a z-sdlc clone. If omitted, resolve via `.sdlc-manifest.json` → `source_repo`, or ask user.)
 
 <!-- MIRROR-START: headless-mode.md#headless-stop-rule -->
 **Headless runs (no person present).** This run is headless if the caller's prompt or appended system prompt has a line starting `SDLC headless mode:`, or if no ask-the-user tool (`AskUserQuestion`, or the harness's equivalent such as OpenCode's `question`) can be used — none is available or loadable, or a call to it is denied without an answer. A dispatched subagent is never headless itself; in a headless run the orchestrator tells each subagent so, and the limits below bind it too. In a headless run, every point in this skill that asks CD something the next step depends on, waits for CD's approval, or escalates to CD **stops the run there**: save the work so far, return the questions, the document or action plan awaiting approval, or the open-findings table as the run's result (in the caller's output schema if it passed one), and end the turn normally — a stop is a result, not an error. A missing precondition the caller must fix ends the run with status `failed` and the reason. Never guess an answer, take a default for a decision CD owns, approve your own work, or skip the gate. List questions the next step does not depend on in the result instead of stopping. Take the no path on optional offers. Cause no side effect outside the working tree — no push, post, comment, label, publish, external send, or live-system change — unless the caller's prompt names it; list those actions in the result. Reads are fine. A question the prompt or thread already answers is not a gate. Full rule and result format: `[sdlc-root]/process/headless-mode.md`.
@@ -22,9 +22,9 @@ Apply cc-sdlc upstream updates to a project while preserving project-specific cu
 
 ## Source Repo Access Rule
 
-**All reads from cc-sdlc MUST use git commands** (`git -C [cc-sdlc-path] show [target_tag]:<path>`), never filesystem reads. **Never use shell redirection** (`git show > file`) — it silently destroys targets on failure. Full rules and safe extraction patterns: see `[sdlc-root]/process/source-repo-safety.md`.
+**All reads from z-sdlc MUST use git commands** (`git -C [z-sdlc-path] show [target_tag]:<path>`), never filesystem reads. **Never use shell redirection** (`git show > file`) — it silently destroys targets on failure. Full rules and safe extraction patterns: see `[sdlc-root]/process/source-repo-safety.md`.
 
-**`[target_tag]`** is the latest semver release tag in the cc-sdlc source repo (e.g., `v1.4.0`). Resolved once during Pre-Flight and used as the git ref for every source read. Never use bare `HEAD` — it may point past the latest release if the source repo has unreleased commits.
+**`[target_tag]`** is the latest semver release tag in the z-sdlc source repo (e.g., `v1.4.0`). Resolved once during Pre-Flight and used as the git ref for every source read. Never use bare `HEAD` — it may point past the latest release if the source repo has unreleased commits.
 
 ## Transaction Log
 
@@ -53,31 +53,31 @@ Before starting, verify this is a migration (not initialization):
 
 If neither `ops/sdlc/` nor `.claude/sdlc/` exists → tell user to run `sdlc-initialize` instead and stop.
 
-**Step 1 — Resolve cc-sdlc source and target release:**
+**Step 1 — Resolve z-sdlc source and target release:**
 
 **1a. Resolve source to a local path** (in priority order):
 1. `$ARGUMENTS` — if the user passed a local clone path, verify with `git -C [path] rev-parse HEAD`
 2. `.sdlc-manifest.json` → `source_repo` field (git remote URL) — **clone it immediately:**
    ```bash
-   git clone --depth=1 [source_repo] /tmp/cc-sdlc-migrate
+   git clone --depth=1 [source_repo] /tmp/z-sdlc-migrate
    ```
-   This is safe and expected — it's a shallow clone of the user's own repo. Use `/tmp/cc-sdlc-migrate` as `[cc-sdlc-path]` for all subsequent phases. Clean up with `rm -rf /tmp/cc-sdlc-migrate` after migration completes.
+   This is safe and expected — it's a shallow clone of the user's own repo. Use `/tmp/z-sdlc-migrate` as `[z-sdlc-path]` for all subsequent phases. Clean up with `rm -rf /tmp/z-sdlc-migrate` after migration completes.
 3. If neither is available, ask the user.
 
-**1b. Resolve `[target_tag]`** — the latest semver release tag in the cc-sdlc source repo:
+**1b. Resolve `[target_tag]`** — the latest semver release tag in the z-sdlc source repo:
 
 ```bash
 # Fetch tags if shallow clone
-git -C [cc-sdlc-path] fetch --tags 2>/dev/null
+git -C [z-sdlc-path] fetch --tags 2>/dev/null
 
 # Get the latest semver tag (vN.N.N), sorted by version
-TARGET_TAG=$(git -C [cc-sdlc-path] tag -l 'v[0-9]*.[0-9]*.[0-9]*' --sort=-v:refname | head -1)
-TARGET_SHA=$(git -C [cc-sdlc-path] rev-parse "$TARGET_TAG")
+TARGET_TAG=$(git -C [z-sdlc-path] tag -l 'v[0-9]*.[0-9]*.[0-9]*' --sort=-v:refname | head -1)
+TARGET_SHA=$(git -C [z-sdlc-path] rev-parse "$TARGET_TAG")
 
 if [ -z "$TARGET_TAG" ]; then
-  echo "WARNING: No release tags found in cc-sdlc source — falling back to HEAD"
+  echo "WARNING: No release tags found in z-sdlc source — falling back to HEAD"
   TARGET_TAG="HEAD"
-  TARGET_SHA=$(git -C [cc-sdlc-path] rev-parse HEAD)
+  TARGET_SHA=$(git -C [z-sdlc-path] rev-parse HEAD)
 fi
 ```
 
@@ -85,7 +85,7 @@ Use `[target_tag]` (the resolved tag, e.g., `v1.4.0`) as the git ref for **every
 
 **Step 2 — Detect project structure:**
 
-The cc-sdlc source uses canonical paths (`knowledge/`, `disciplines/`, `process/`). Projects install these to different locations. Detect the project's structure before applying any changes.
+The z-sdlc source uses canonical paths (`knowledge/`, `disciplines/`, `process/`). Projects install these to different locations. Detect the project's structure before applying any changes.
 
 | Signal | Detection | Result |
 |--------|-----------|--------|
@@ -113,13 +113,15 @@ If manifest.adapter exists and is not null:
   Resolve handler doc: {project_root}/{adapter.plugin_root}/{adapter.phase_handlers}
   If handler doc missing or unreadable → halt with error
   Parse which H2 sections exist → these are the adapter's declared phases
-  Refresh supported_ccsdlc_version from live adapter.json (adapter may have been updated)
+  Refresh supported_zsdlc_version from live adapter.json (adapter may have been updated; an adapter written
+  before the rename declares supported_ccsdlc_version). Write it under the new key and remove a
+  supported_ccsdlc_version key from the project's adapter entry
   Log: adapter_detected event with plugin name and declared phases
 ```
 
 When an adapter is detected, this skill delegates specific phases (knowledge-update, post-file-write, post-operation) to the adapter's handler doc instructions. Non-delegated phases run identically to the non-adapter path. See `[sdlc-root]/process/adapter-lifecycle-protocol.md` for the full protocol.
 
-**Adapter version gate:** During §1.2 (Changelog Review Gate), if an adapter is detected, compare each `[contract-change]` entry's cc-sdlc version against `adapter.supported_ccsdlc_version`. If any entry's version exceeds the adapter's declared support → halt with a message identifying the uncovered entries and the adapter's current version. The adapter maintainer must update their `adapter.json` before migration can proceed.
+**Adapter version gate:** During §1.2 (Changelog Review Gate), if an adapter is detected, compare each `[contract-change]` entry's z-sdlc version against `adapter.supported_zsdlc_version`. If any entry's version exceeds the adapter's declared support → halt with a message identifying the uncovered entries and the adapter's current version. The adapter maintainer must update their `adapter.json` before migration can proceed.
 
 When `manifest.adapter` is `null` or absent, behavior is identical to before this protocol existed.
 
@@ -131,8 +133,8 @@ SDLC root: [sdlc-root] (ops/sdlc or .claude/sdlc)
 Has .sdlc-manifest.json: [yes/no]
 Has .claude/agents/: [yes/no]
 Has .claude/skills/: [yes/no]
-cc-sdlc source: [local path or "cloned from [URL] to /tmp/cc-sdlc-migrate"]
-cc-sdlc target release: [target_tag] ([TARGET_SHA short])
+z-sdlc source: [local path or "cloned from [URL] to /tmp/z-sdlc-migrate"]
+z-sdlc target release: [target_tag] ([TARGET_SHA short])
 Project installed version: [source_version] (from .sdlc-manifest.json)
 ```
 
@@ -147,7 +149,7 @@ Source-to-project path mappings (e.g., `knowledge/` → `[sdlc-root]/knowledge/`
 ### 1.1 Identify Source Version
 
 Read the project's `.sdlc-manifest.json` to get:
-- `source_repo` — the git remote URL for the cc-sdlc repo (used to clone if no local path given)
+- `source_repo` — the git remote URL for the z-sdlc repo (used to clone if no local path given)
 - `source_version` — the release tag (e.g., `v1.2.0`) from the last install/migration
 
 **Resolve `source_version` to a git ref:**
@@ -155,16 +157,16 @@ Read the project's `.sdlc-manifest.json` to get:
 | `source_version` value | Interpretation | Diff base |
 |------------------------|----------------|-----------|
 | Semver tag (e.g., `v1.2.0`) | Normal — project tracks releases | `v1.2.0` |
-| 40-char hex SHA (legacy) | Pre-tag manifest — resolve to nearest tag | `git -C [cc-sdlc-path] describe --tags --abbrev=0 [SHA]` (falls back to SHA if no tag contains it) |
+| 40-char hex SHA (legacy) | Pre-tag manifest — resolve to nearest tag | `git -C [z-sdlc-path] describe --tags --abbrev=0 [SHA]` (falls back to SHA if no tag contains it) |
 | `"unknown"` or missing | First migration after legacy install | Full migration — compare all files |
 
 **Already up to date?** If `source_version` equals `[target_tag]`, the project is already on the latest release. Report "Already on [target_tag] — nothing to migrate" and stop.
 
-Then check what changed in cc-sdlc between the project's version and the target release:
+Then check what changed in z-sdlc between the project's version and the target release:
 
 ```bash
-git -C [cc-sdlc-path] log --oneline [source_version]..[target_tag]
-git -C [cc-sdlc-path] diff --name-only [source_version]..[target_tag]
+git -C [z-sdlc-path] log --oneline [source_version]..[target_tag]
+git -C [z-sdlc-path] diff --name-only [source_version]..[target_tag]
 ```
 
 If `source_version` is `"unknown"` or missing, treat this as a **full migration** — compare all framework files against the project. Do not stop or ask the user — a full migration is the correct fallback.
@@ -173,7 +175,7 @@ If `source_version` is `"unknown"` or missing, treat this as a **full migration*
 
 **Before categorizing or applying anything**, read the changelog entries since the project's source version.
 
-Read `process/sdlc_changelog.md` from the cc-sdlc source repo (via `git -C [cc-sdlc-path] show [target_tag]:process/sdlc_changelog.md`), stopping when you reach entries older than the project's `source_version` date. When the project's version is older than the file's oldest entry, keep reading in `process/changelog-archive/` at the same tag, newest quarter first (`git -C [cc-sdlc-path] ls-tree --name-only [target_tag] process/changelog-archive/`, then `git show` each `YYYY-Qn.md`). A tag from before archiving has no archive; its changelog holds everything. This is the migration's release notes — it surfaces:
+Read `process/sdlc_changelog.md` from the z-sdlc source repo (via `git -C [z-sdlc-path] show [target_tag]:process/sdlc_changelog.md`), stopping when you reach entries older than the project's `source_version` date. When the project's version is older than the file's oldest entry, keep reading in `process/changelog-archive/` at the same tag, newest quarter first (`git -C [z-sdlc-path] ls-tree --name-only [target_tag] process/changelog-archive/`, then `git show` each `YYYY-Qn.md`). A tag from before archiving has no archive; its changelog holds everything. This is the migration's release notes — it surfaces:
 
 - **Breaking changes** — renamed concepts, moved files, added structural markers, changed conventions
 - **New capabilities** — new knowledge files, new disciplines, new agent roles the project may want
@@ -234,7 +236,7 @@ If `.sdlc-manifest.json` lacks an `installed_files` field:
 
 ### 1.3 Categorize Changes
 
-Group the changed cc-sdlc files by migration strategy:
+Group the changed z-sdlc files by migration strategy:
 
 | File Type | Location | Strategy |
 |-----------|----------|----------|
@@ -245,7 +247,7 @@ Group the changed cc-sdlc files by migration strategy:
 | **Knowledge YAMLs** | `knowledge/**/*.yaml` | Key-level merge: add new upstream keys, preserve project additions (§2.1b). Check for moved/deleted files (§2.1a) |
 | **Process docs** | `process/*.md` | Direct copy (framework-level), except the changelog (next row) |
 | **Process changelog** | `process/sdlc_changelog.md` | Never overwrite — the project's record of its own process changes. Migration prepends one entry for itself (§4.5b) |
-| **Changelog archive** | `process/changelog-archive/` | Not installed: cc-sdlc's archive is its own history (§1.2 reads it). The project's archive is never overwritten; §4.5c adds to it |
+| **Changelog archive** | `process/changelog-archive/` | Not installed: z-sdlc's archive is its own history (§1.2 reads it). The project's archive is never overwritten; §4.5c adds to it |
 | **Disciplines** | `disciplines/*.md` | Content-merge: update framework guidance, preserve project parking lot entries |
 | **Context map** | `knowledge/agent-context-map.yaml` | Never overwrite — project has its own agent names. Update paths for moved/deleted files (§3.3) |
 | **Provenance log** | `knowledge/provenance_log.md` | Never overwrite — project's append-only ingestion/research records |
@@ -280,9 +282,9 @@ This migration skill is responsible for **consuming** markers: extracting, prese
 
 ### 2.0 Load Contract Changes
 
-Read `skeleton/contract_changes.yaml` from the cc-sdlc source (via `git -C [cc-sdlc-path] show [target_tag]:skeleton/contract_changes.yaml`).
+Read `skeleton/contract_changes.yaml` from the z-sdlc source (via `git -C [z-sdlc-path] show [target_tag]:skeleton/contract_changes.yaml`).
 
-**If the file is absent** (the upstream cc-sdlc predates the contract-changes system): skip this step entirely. `pending_changes` is empty. §4.3a falls back to its inherent path-integrity and convention checks with no rename set. §4.5 does not update `last_applied_contract_id`. §4.7 is skipped. Log `CONTRACT CHANGES: not present in upstream — skipping contract-driven steps`.
+**If the file is absent** (the upstream z-sdlc predates the contract-changes system): skip this step entirely. `pending_changes` is empty. §4.3a falls back to its inherent path-integrity and convention checks with no rename set. §4.5 does not update `last_applied_contract_id`. §4.7 is skipped. Log `CONTRACT CHANGES: not present in upstream — skipping contract-driven steps`.
 
 Otherwise, read `.sdlc-manifest.json` → `last_applied_contract_id` (treat as `"0000"` if absent — this covers projects installed before contract_changes.yaml existed).
 
@@ -314,7 +316,7 @@ Before any file copying, compute the **effective install set** for this project 
 
 **Process:**
 
-1. Read `skeleton/manifest.json` from the cc-sdlc source.
+1. Read `skeleton/manifest.json` from the z-sdlc source.
 2. Read `.sdlc-manifest.json` from the project. If it has an `installed_bundles` array, treat that as the authoritative list of installed bundles.
 3. **Fallback for pre-bundles installs:** If `installed_bundles` is missing (projects installed before the bundles manifest existed), for each bundle in `manifest.bundles` check whether **any** of its listed **skill** paths exist as installed skills in the project. If yes, mark the bundle as **installed** and append it to `installed_bundles` — the migrate's §4.5 manifest update will persist this. **Bundle `process` paths are deliberately excluded from this detection:** a project can hand-roll a process doc at the same path before the bundle ever debuts (that is exactly the predecessor case §4.7 exists for), and auto-marking such a project as bundle-installed would blind-overwrite its hand-rolled version and skip the adopt/preserve-config flow.
 4. Build the effective skills list: `source_files.skills` ∪ (bundle.skills for every installed bundle). Likewise the effective process list: `source_files.process` ∪ (bundle.process for every installed bundle that declares any).
@@ -330,16 +332,16 @@ Before any file copying, compute the **effective install set** for this project 
 - **Never remove** installed bundle skills, even when a bundle is detected as only partially installed. The project chose its subset; migration preserves that choice.
 - Bundle skill paths are **exempt from §2.1a "Remove Deleted and Moved Files"** — they are not considered upstream-deleted even though they live outside `source_files.skills`. Bundle `process` paths get the same exemption.
 - Bundle skills are **eligible for §2.1 direct-copy updates**: if the bundle is installed, its skill files propagate upstream changes the same way `source_files` skills do. Bundle `process` files likewise.
-- Bundle `fragments` are **refreshed, not preserved**: §2.1's marker step discards any existing `BUNDLE-SECTION` blocks in a target file and injects the current fragment content from the cc-sdlc source (step 7 of the marker-preservation flow below). Hand-edits inside `BUNDLE-SECTION` markers are lost by design — see `[sdlc-root]/process/project-section-markers.md` § BUNDLE-SECTION Markers.
+- Bundle `fragments` are **refreshed, not preserved**: §2.1's marker step discards any existing `BUNDLE-SECTION` blocks in a target file and injects the current fragment content from the z-sdlc source (step 7 of the marker-preservation flow below). Hand-edits inside `BUNDLE-SECTION` markers are lost by design — see `[sdlc-root]/process/project-section-markers.md` § BUNDLE-SECTION Markers.
 - Bundles not installed in the project are **not** copied during §2.1 — they are offered at the end of migration (§4.7).
 
 ### 2.1 Direct Copy Files
 
 **Step 0 — Load exclusion list before any writes.** Read `[sdlc-root]/process/path-mappings.md` § "Project-Specific Files (Never Overwrite)". For every file about to be written in this phase, confirm it does NOT appear on that list. If it does, skip it — no exceptions, no "I'll just update the header" rationalizations. Current exclusions: `agent-selection.yaml`, `agent-context-map.yaml`, `provenance_log.md`, `sdlc_changelog.md`, `process/changelog-archive/`.
 
-For files with no project customizations, copy directly from cc-sdlc to the project's `[sdlc-root]/` directory:
+For files with no project customizations, copy directly from z-sdlc to the project's `[sdlc-root]/` directory:
 
-- `process/*.md`, top level only (excluding `agent-selection.yaml` and `sdlc_changelog.md` — project-specific, protected by Step 0). Never copy `process/changelog-archive/`: it's cc-sdlc's history
+- `process/*.md`, top level only (excluding `agent-selection.yaml` and `sdlc_changelog.md` — project-specific, protected by Step 0). Never copy `process/changelog-archive/`: it's z-sdlc's history
 - `skills/*/scripts/*` (manifest-listed) → `.claude/skills/*/scripts/`
 - `knowledge/**/*.yaml` (but NOT `agent-context-map.yaml`)
 - `knowledge/README.md` (to `[sdlc-root]/knowledge/`) — NOT `knowledge/provenance_log.md`; that's project-specific (see "Project-Specific Files")
@@ -351,10 +353,10 @@ For files with no project customizations, copy directly from cc-sdlc to the proj
 - `templates/*` (to `[sdlc-root]/templates/` — all manifest-listed files, including `.html` and `.sh.template`; never overwrite a project's enabled `[sdlc-root]/external-review*.sh` wrappers, which are project-authored)
 
 **Not direct-copied:**
-- `templates/optional/` — Conditional CLAUDE.md appendices. Read from cc-sdlc source during initialization when needed, not installed.
+- `templates/optional/` — Conditional CLAUDE.md appendices. Read from z-sdlc source during initialization when needed, not installed.
 - `CLAUDE-SDLC.md` — See §2.1e for CLAUDE-SDLC.md handling (merge into CLAUDE.md, not a separate file).
 
-**All reads from the cc-sdlc source repo must use git commands** (e.g., `git -C [cc-sdlc-path] show [target_tag]:path/to/file`), not filesystem reads. This ensures you're reading the target release, not unreleased working tree state.
+**All reads from the z-sdlc source repo must use git commands** (e.g., `git -C [z-sdlc-path] show [target_tag]:path/to/file`), not filesystem reads. This ensures you're reading the target release, not unreleased working tree state.
 
 **PROJECT-SECTION preservation with content review (mandatory for all direct-copy files):**
 
@@ -365,7 +367,7 @@ Before overwriting any file:
 4. After copying the upstream file, re-inject each block at its original heading position (unless user chose to update/remove during review)
 5. If the heading no longer exists in the upstream file, append the block at the end of the file with a warning comment: `<!-- MIGRATION WARNING: heading "[heading]" no longer exists in upstream — block preserved at end of file -->`
 6. Log all re-injected blocks and review decisions in the migration report
-7. **Inject bundle fragments (`BUNDLE-SECTION`).** After PROJECT-SECTION re-injection: strip any `BUNDLE-SECTION` blocks remaining in the file, then for each installed bundle whose `fragments` map targets this file (alphabetical bundle order), append the fragment content **read from the cc-sdlc source at `[target_tag]`** wrapped in `BUNDLE-SECTION-START/END: [bundle]/[fragment]` markers. No content review — these blocks are upstream-owned; hand-edits inside them are discarded by design. Injection counts as a file write for the adapter `post-file-write` callout. Log each injected fragment in the migration report.
+7. **Inject bundle fragments (`BUNDLE-SECTION`).** After PROJECT-SECTION re-injection: strip any `BUNDLE-SECTION` blocks remaining in the file, then for each installed bundle whose `fragments` map targets this file (alphabetical bundle order), append the fragment content **read from the z-sdlc source at `[target_tag]`** wrapped in `BUNDLE-SECTION-START/END: [bundle]/[fragment]` markers. No content review — these blocks are upstream-owned; hand-edits inside them are discarded by design. Injection counts as a file write for the adapter `post-file-write` callout. Log each injected fragment in the migration report.
 
 ### 2.1d PROJECT-SECTION Content Review
 
@@ -381,10 +383,10 @@ Markers preserve project content, but that content can become stale, conflicting
 2. **Detect upstream changes to the same area:**
    ```bash
    # Get the section content at old version
-   git -C [cc-sdlc-path] show [source_version]:<path> | ... extract section ...
+   git -C [z-sdlc-path] show [source_version]:<path> | ... extract section ...
    
    # Get the section content at target release
-   git -C [cc-sdlc-path] show [target_tag]:<path> | ... extract section ...
+   git -C [z-sdlc-path] show [target_tag]:<path> | ... extract section ...
    
    # Compare
    diff <(old_section) <(new_section)
@@ -433,16 +435,16 @@ When no adapter is declared, this step is skipped entirely — no overhead for n
 
 ### 2.1a Remove Deleted and Moved Files
 
-Check the cc-sdlc changelog for files that were **deleted, moved, or renamed** since the project's `source_version`. These require explicit cleanup in the downstream project — direct copy only adds files, it doesn't remove stale ones.
+Check the z-sdlc changelog for files that were **deleted, moved, or renamed** since the project's `source_version`. These require explicit cleanup in the downstream project — direct copy only adds files, it doesn't remove stale ones.
 
 **Process:**
 
 1. From the diff in Phase 1.1, identify any files that were deleted or moved:
    ```bash
-   git -C [cc-sdlc-path] diff --name-status [source_version]..[target_tag] | grep -E '^[DR]'
+   git -C [z-sdlc-path] diff --name-status [source_version]..[target_tag] | grep -E '^[DR]'
    ```
 
-   Ignore paths under `process/changelog-archive/`: cc-sdlc's archive is never installed, so nothing of it is in the project to remove or move.
+   Ignore paths under `process/changelog-archive/`: z-sdlc's archive is never installed, so nothing of it is in the project to remove or move.
 
 2. For each deleted file: remove it from the downstream project's `[sdlc-root]/` directory.
 
@@ -526,7 +528,7 @@ Before direct-copying any file, detect whether the project has made custom chang
 **Process:**
 
 1. Read the project's current version of the file
-2. Read the previous upstream version (at `source_version` commit): `git -C [cc-sdlc-path] show [source_version]:<path>`
+2. Read the previous upstream version (at `source_version` commit): `git -C [z-sdlc-path] show [source_version]:<path>`
 3. Diff the project's version against the previous upstream version
 4. Identify changes that are:
    - **Inside markers** — already protected, will be preserved automatically (§2.1 marker preservation)
@@ -564,11 +566,11 @@ Options:
 
 1. **Read the upstream CLAUDE-SDLC.md** content via git:
    ```bash
-   git -C [cc-sdlc-path] show [target_tag]:CLAUDE-SDLC.md
+   git -C [z-sdlc-path] show [target_tag]:CLAUDE-SDLC.md
    ```
 
 2. **Identify the SDLC section boundaries** in the project's `CLAUDE.md`:
-   - Look for markers like `# CC-SDLC` or the characteristic SDLC headings (`## SDLC Skills`, `## Knowledge Stores`, etc.)
+   - Look for markers like `# Z-SDLC` or the characteristic SDLC headings (`## SDLC Skills`, `## Knowledge Stores`, etc.)
    - If the project uses `<!-- SDLC-START -->` / `<!-- SDLC-END -->` markers, use those as boundaries
 
 3. **Compare and update:**
@@ -585,7 +587,7 @@ Options:
 
 ### 2.2 Content-Merge: Skills
 
-**Step 0 — Dual-audience skill detection.** Before content-merging any skill, check whether cc-sdlc source has a framework-dev counterpart at `.claude/skills/ccsdlc-{name}/` (e.g., `ccsdlc-ingest` exists alongside `skills/sdlc-ingest/`). If a `ccsdlc-*` counterpart exists, the installed skill is **dual-audience** — its source version is a generic template that projects customize heavily after installation. Dual-audience skills use **additive-only merge**: propagate genuinely new framework sections (sections that exist in upstream but not in the project at all) but never overwrite or content-merge existing sections. This prevents replacing a project's customized methodology with the generic template version.
+**Step 0 — Dual-audience skill detection.** Before content-merging any skill, check whether z-sdlc source has a framework-dev counterpart at `.claude/skills/zsdlc-{name}/` (e.g., `zsdlc-ingest` exists alongside `skills/sdlc-ingest/`). If a `zsdlc-*` counterpart exists, the installed skill is **dual-audience** — its source version is a generic template that projects customize heavily after installation. Dual-audience skills use **additive-only merge**: propagate genuinely new framework sections (sections that exist in upstream but not in the project at all) but never overwrite or content-merge existing sections. This prevents replacing a project's customized methodology with the generic template version.
 
 Current dual-audience skills: `sdlc-audit`, `sdlc-ingest`, `sdlc-develop-skill`, `sdlc-research`.
 
@@ -595,7 +597,7 @@ Skills have two layers:
 
 **Migration process for each non-dual-audience skill:**
 
-1. Read the cc-sdlc source version of the skill
+1. Read the z-sdlc source version of the skill
 2. Read the project's version of the skill
 3. Identify framework-level changes (new sections, updated dispatch logic, added/removed gates)
 4. Apply those changes while preserving:
@@ -605,13 +607,13 @@ Skills have two layers:
    - Project-specific health check URLs and test commands
    - `[PLUGIN: ...]` guards that have been resolved to direct invocations
 
-**Verbatim rule:** Framework content must be copied verbatim from the cc-sdlc source — do not summarize, rephrase, condense, or rewrite in your own words. The source text is the canonical version. When merging, replace the project's framework sections with the exact cc-sdlc text, then re-apply project-specific values (build commands, agent names, etc.) into the appropriate placeholders. If a framework section contains `[build command]` or similar placeholders, substitute the project's actual values — but do not rephrase the surrounding framework text.
+**Verbatim rule:** Framework content must be copied verbatim from the z-sdlc source — do not summarize, rephrase, condense, or rewrite in your own words. The source text is the canonical version. When merging, replace the project's framework sections with the exact z-sdlc text, then re-apply project-specific values (build commands, agent names, etc.) into the appropriate placeholders. If a framework section contains `[build command]` or similar placeholders, substitute the project's actual values — but do not rephrase the surrounding framework text.
 
-**Key rule:** If a section exists in cc-sdlc but not in the project, add it. If a section was removed from cc-sdlc, remove it from the project. If a section was modified in cc-sdlc, update the framework logic while keeping project-specific values.
+**Key rule:** If a section exists in z-sdlc but not in the project, add it. If a section was removed from z-sdlc, remove it from the project. If a section was modified in z-sdlc, update the framework logic while keeping project-specific values.
 
 **PROJECT-SECTION preservation with review:** If `PROJECT-SECTION` blocks exist within a skill being content-merged, apply the §2.1d content review process. Present findings to user before re-injection. These blocks contain project-specific content (e.g., dispatcher table entries added by `sdlc-develop-agent`, custom modifications from `sdlc-develop-skill`) that survive migration — but may need updating if upstream changed the surrounding framework patterns.
 
-**BUNDLE-SECTION fragment injection (applies to every content-merged framework file, §2.2–§2.4 alike):** after the merge (and any PROJECT-SECTION re-injection) completes for a file, run the same fragment pass as §2.1 step 7 — strip any remaining `BUNDLE-SECTION` blocks, then for each installed bundle whose `fragments` map targets this file, append the current fragment from the cc-sdlc source at `[target_tag]`. Most fragment targets are content-merged skills, so skipping this pass here would leave their bundle hooks stale or stripped while only direct-copied targets refresh.
+**BUNDLE-SECTION fragment injection (applies to every content-merged framework file, §2.2–§2.4 alike):** after the merge (and any PROJECT-SECTION re-injection) completes for a file, run the same fragment pass as §2.1 step 7 — strip any remaining `BUNDLE-SECTION` blocks, then for each installed bundle whose `fragments` map targets this file, append the current fragment from the z-sdlc source at `[target_tag]`. Most fragment targets are content-merged skills, so skipping this pass here would leave their bundle hooks stale or stripped while only direct-copied targets refresh.
 
 ### 2.3 Content-Merge: Disciplines
 
@@ -621,21 +623,21 @@ Discipline files have:
 3. **Project-assessed data** — the Process Maturity Tracker in `process-improvement.md` (levels reflect the downstream project's state, not the source repo's)
 
 **Migration process:**
-1. Update framework sections to match cc-sdlc — **verbatim, not rephrased**
+1. Update framework sections to match z-sdlc — **verbatim, not rephrased**
 2. Preserve all parking lot entries with their triage markers (these are project-specific knowledge)
 3. Preserve active questions
 4. Preserve project context sections (added by `sdlc-initialize` Phase 7)
-5. Add any new seeded insights from cc-sdlc that the project doesn't have — but do NOT overwrite triage markers on existing entries (the project may have triaged differently than the source repo)
+5. Add any new seeded insights from z-sdlc that the project doesn't have — but do NOT overwrite triage markers on existing entries (the project may have triaged differently than the source repo)
 6. **Preserve project parking lot entries.** Discipline parking lot entries are project-specific — they don't have PROJECT-SECTION markers because discipline files are not overwritten during migration. Simply preserve all entries with their triage markers.
-7. **Preserve the Process Maturity Tracker table as-is.** The tracker is delimited by `<!-- PROJECT-TRACKER-START -->` and `<!-- PROJECT-TRACKER-END -->` markers. Everything between these markers (including the table and last-updated note) reflects the project's assessed levels — never overwrite it. Update the framework sections *outside* the markers (level definitions, assessment procedure) to match cc-sdlc. If the downstream file lacks these markers, treat the entire `### Process Maturity Tracker` section through the next heading as project data and preserve it.
+7. **Preserve the Process Maturity Tracker table as-is.** The tracker is delimited by `<!-- PROJECT-TRACKER-START -->` and `<!-- PROJECT-TRACKER-END -->` markers. Everything between these markers (including the table and last-updated note) reflects the project's assessed levels — never overwrite it. Update the framework sections *outside* the markers (level definitions, assessment procedure) to match z-sdlc. If the downstream file lacks these markers, treat the entire `### Process Maturity Tracker` section through the next heading as project data and preserve it.
 
 ### 2.4 Content-Merge: Audit Skill
 
-`sdlc-audit` is a **dual-audience skill** (see §2.2 Step 0). Its reference docs (`compliance-methodology.md`, `improvement-methodology.md`) are heavily customized by projects to match their audit scope (deliverable catalogs, artifact chains, project-specific dimensions). The cc-sdlc source version audits the framework source repo itself — a fundamentally different audience.
+`sdlc-audit` is a **dual-audience skill** (see §2.2 Step 0). Its reference docs (`compliance-methodology.md`, `improvement-methodology.md`) are heavily customized by projects to match their audit scope (deliverable catalogs, artifact chains, project-specific dimensions). The z-sdlc source version audits the framework source repo itself — a fundamentally different audience.
 
 **Additive-only merge for dual-audience reference docs:**
 
-1. Read the cc-sdlc source versions of all audit skill files
+1. Read the z-sdlc source versions of all audit skill files
 2. Read the project's versions
 3. For `SKILL.md`: update only the skill's frontmatter (description, triggers) and add any genuinely new sections not present in the project. Do NOT overwrite existing workflow, modes, or dispatch logic that the project has customized.
 4. For `references/*.md`: add new reference files that don't exist in the project. For existing reference files, add only new sections (identified by H2/H3 headings not present in the project version). Never overwrite existing sections — the project's audit dimensions and methodology reflect its own structure.
@@ -651,17 +653,17 @@ Discipline files have:
 
 1. **Tracker integrity** — read `[sdlc-root]/disciplines/process-improvement.md` and verify:
    - `<!-- PROJECT-TRACKER-START -->` / `<!-- PROJECT-TRACKER-END -->` markers are present
-   - The table between markers contains the project's levels (not the cc-sdlc source repo's levels)
-   - Level definitions outside the markers were updated to match cc-sdlc
+   - The table between markers contains the project's levels (not the z-sdlc source repo's levels)
+   - Level definitions outside the markers were updated to match z-sdlc
 
 2. **Parking lot preservation** — spot-check 2 discipline files:
    - Project-specific entries (dates, deliverable references) are still present
    - Triage markers (`[NEEDS VALIDATION]`, `[DEFERRED]`, `Promoted →`) were not overwritten
-   - New seeded insights from cc-sdlc were added without disturbing existing entries
+   - New seeded insights from z-sdlc were added without disturbing existing entries
 
 3. **Skill customization preservation** — spot-check 1 skill:
    - Project-specific build commands, agent names, and examples are intact
-   - Framework sections were updated (compare against cc-sdlc source)
+   - Framework sections were updated (compare against z-sdlc source)
 
 4. **Audit skill** — verify all reference files were updated and any project-specific audit dimensions preserved
 
@@ -697,29 +699,29 @@ For each agent in `.claude/agents/`:
 
 The agent-context-map is **never overwritten** because projects have their own agent names. But it must be updated for four scenarios:
 
-**New knowledge files added to existing roles:** If cc-sdlc added new YAML files that are relevant to existing agents:
+**New knowledge files added to existing roles:** If z-sdlc added new YAML files that are relevant to existing agents:
 1. Read the project's `agent-context-map.yaml`
-2. Read the cc-sdlc source's `agent-context-map.yaml` for the new mappings
+2. Read the z-sdlc source's `agent-context-map.yaml` for the new mappings
 3. Add new file paths to the project's existing agent entries (matching by role, not by exact name)
 
-**New role entries:** If cc-sdlc added an entirely new role section to the agent-context-map (e.g., `business-analyst`):
+**New role entries:** If z-sdlc added an entirely new role section to the agent-context-map (e.g., `business-analyst`):
 1. Read the project's `agent-context-map.yaml`
 2. Check if the project has an agent that matches the new role (by role name or responsibility — e.g., the project may use `ba-agent` instead of `business-analyst`)
-3. If a matching agent exists: add the new role section using the project's agent name, with the cc-sdlc knowledge file paths
+3. If a matching agent exists: add the new role section using the project's agent name, with the z-sdlc knowledge file paths
 4. If no matching agent exists: add the role section as-is (the project can customize or remove it later)
 5. Note the addition in the migration report so the project team can review the wiring
 
-**Moved/renamed knowledge files:** If cc-sdlc moved a file from one directory to another (identified in §2.1a):
+**Moved/renamed knowledge files:** If z-sdlc moved a file from one directory to another (identified in §2.1a):
 1. Search the project's `agent-context-map.yaml` for the old path
 2. Replace with the new path
 3. Verify the new path exists on disk
 
-**Removed knowledge files:** If cc-sdlc deleted a knowledge file:
+**Removed knowledge files:** If z-sdlc deleted a knowledge file:
 1. Search the project's `agent-context-map.yaml` for references to the deleted file
 2. Remove those references
 3. Note the removal in the migration report
 
-Never remove project-specific mappings that aren't in the cc-sdlc source — those were added during initialization or by the project team.
+Never remove project-specific mappings that aren't in the z-sdlc source — those were added during initialization or by the project team.
 
 ### 3.4 Downstream Impact Analysis
 
@@ -883,7 +885,7 @@ The project's `CLAUDE.md` contains CLAUDE-SDLC.md content — skill names, proce
 **Dispatch prompt for the subagent:**
 
 > Run a compliance audit focused on migration integrity. Check all 9 dimensions, with special attention to:
-> - Dimension 7 (Migration Integrity): All framework files match the cc-sdlc source at [target_tag]
+> - Dimension 7 (Migration Integrity): All framework files match the z-sdlc source at [target_tag]
 > - No orphaned files from previous versions remain
 > - Agent-context-map paths all resolve
 > - Content-merge preserved project data (tracker levels, parking lot entries, skill customizations)
@@ -943,6 +945,7 @@ Log the results for the migration report (§4.6).
 After migration, update `.sdlc-manifest.json`:
 
 1. **Update `source_version`** to the target release tag (e.g., `v1.4.0`). Also set `source_version_sha` to the tag's commit hash for precise diff resolution.
+1a. **Point `source_repo` at the framework's current home.** The repository moved from `Inpacchi/cc-sdlc` to `endless-galaxy-studios/z-sdlc` (2026-10-12); GitHub redirects the old URL, but only until something takes the old name. If `source_repo` names `github.com/Inpacchi/cc-sdlc` (HTTPS or SSH, with or without `.git`), rewrite it to the same form at the new home: `https://github.com/endless-galaxy-studios/z-sdlc.git` or `git@github.com:endless-galaxy-studios/z-sdlc.git`. Leave any other value alone (a fork or a local path is deliberate).
 2. **Add missing fields** if the manifest predates this migration:
    - `sdlc_root`: set to `[sdlc-root]` detected in pre-flight
    - `installed_files`: back-fill if absent (hash every file in `skeleton/manifest.json` source_files **plus every installed bundle's `skills` and `process` files** at its installed path, except the never-overwrite files; mark `installed_at: "backfilled-{CURRENT_VERSION}"`)
@@ -985,7 +988,7 @@ For each `catalog_column_added` entry in pending_changes, update the project's `
 
 The project's changelog is its own record (§1.3, never overwritten), so the migration records itself there. Prepend one entry above the newest one, in the file's format:
 
-- **Title:** `## YYYY-MM-DD: Migrated to cc-sdlc vX.Y.Z (from vA.B.C)`
+- **Title:** `## YYYY-MM-DD: Migrated to z-sdlc vX.Y.Z (from vA.B.C)`
 - **Origin:** the migration, and who ran it.
 - **What happened:** one or two sentences: what kind of release it was (fixes, new capabilities, contract changes).
 - **Changes made:** the titles of the upstream changelog entries applied (from §1.2), each one line, and what the project decided: drift resolutions, bundles accepted or declined, PROJECT-SECTION reviews, files removed.
@@ -995,18 +998,18 @@ Never copy upstream entries into the project's changelog: the source repo's chan
 
 ### 4.5c Archive the Project Changelog
 
-After §4.5b's entry is in, run the archive script the migration just installed (§2.1), giving it cc-sdlc's changelog and archive files at the target tag:
+After §4.5b's entry is in, run the archive script the migration just installed (§2.1), giving it z-sdlc's changelog and archive files at the target tag:
 
 ```bash
-{ git -C [cc-sdlc-path] show [target_tag]:process/sdlc_changelog.md
-  for f in $(git -C [cc-sdlc-path] ls-tree --name-only [target_tag] process/changelog-archive/); do
-    git -C [cc-sdlc-path] show "[target_tag]:$f"
+{ git -C [z-sdlc-path] show [target_tag]:process/sdlc_changelog.md
+  for f in $(git -C [z-sdlc-path] ls-tree --name-only [target_tag] process/changelog-archive/); do
+    git -C [z-sdlc-path] show "[target_tag]:$f"
   done
 } | python3 .claude/skills/sdlc-archive/scripts/changelog_archive.py archive [sdlc-root]/process/sdlc_changelog.md --upstream -
 ```
 
 Two kinds of entry move, unedited and in their order, to `[sdlc-root]/process/changelog-archive/YYYY-Qn.md`, and the changelog gets one pointer line:
-- **Entries copied from cc-sdlc** (older installs and migrations copied them; a `## YYYY-MM-DD: Title` line that matches one upstream), whatever their date and the file's size: the project's changelog holds only its own entries (CD, 2026-10-11).
+- **Entries copied from z-sdlc** (older installs and migrations copied them; a `## YYYY-MM-DD: Title` line that matches one upstream), whatever their date and the file's size: the project's changelog holds only its own entries (CD, 2026-10-11).
 - **The project's own entries** dated before the previous calendar quarter, once the file is over about 150 KB.
 
 This is automatic (contract 0017): don't ask CD. Exit 2 means the files didn't parse or an entry appears twice, and nothing was written: report it and leave the changelog as it is. Put the counts it prints in §4.6's report. If an adapter declares `post-file-write`, don't run it on the archive files (hard exclusions).
@@ -1091,7 +1094,7 @@ This is automatic (contract 0017): don't ask CD. Exit 2 means the files didn't p
 - Post-migration audit: passed/findings fixed (auditor dispatched automatically in §4.4)
 
 ### Next Steps
-1. Commit the migration with: `sdlc(migrate): upgrade cc-sdlc from [source_version] to [target_tag]`
+1. Commit the migration with: `sdlc(migrate): upgrade z-sdlc from [source_version] to [target_tag]`
 ```
 
 ### 4.7 Offer Newly Debuted Bundles
@@ -1131,7 +1134,7 @@ Common anti-patterns and their corrections (20 entries covering direct-copy temp
 ## Integration
 
 - **Feeds into:** `sdlc-audit` skill (post-migration compliance audit)
-- **Depends on:** cc-sdlc source repo (reads via git), `.sdlc-manifest.json` (version tracking)
+- **Depends on:** z-sdlc source repo (reads via git), `.sdlc-manifest.json` (version tracking)
 - **Uses:** `AskUserQuestion` (changelog review gate, user confirmation), `[sdlc-root]/process/adapter-lifecycle-protocol.md` (when adapter declared), `.claude/skills/sdlc-archive/scripts/changelog_archive.py` (§4.5c)
 - **Related:** `sdlc-initialize` (first-time setup — use that, not this, for new projects)
 
@@ -1141,7 +1144,7 @@ Common anti-patterns and their corrections (20 entries covering direct-copy temp
 |---------|-------------------------------------|----------------------------|
 | When | First install | Framework update |
 | Agent creation | Creates new agents from scratch | Updates template-derived sections in existing agents |
-| Skills | Copies from cc-sdlc | Merges framework changes into project-customized skills |
+| Skills | Copies from z-sdlc | Merges framework changes into project-customized skills |
 | Context map | Wires generic roles to project agents | Adds new knowledge file mappings only |
 | Disciplines | Copies templates | Preserves parking lot entries, updates framework sections |
 | Destructive? | No (creates new) | No (merges, never overwrites project content) |

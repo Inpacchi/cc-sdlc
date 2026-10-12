@@ -1,12 +1,12 @@
 # Classification Framework
 
-For each differing hunk between target installation and cc-sdlc source, assign one verdict. This framework exists so two auditors running the skill on the same installation reach the same classification.
+For each differing hunk between target installation and z-sdlc source, assign one verdict. This framework exists so two auditors running the skill on the same installation reach the same classification.
 
 ## The four verdicts
 
 | Verdict | Meaning | Fix destination |
 |---|---|---|
-| **upstream** | cc-sdlc source has a bug the adapter-installed version corrected, OR cc-sdlc source uses non-canonical phrasing | `~/Projects/cc-sdlc/` — edit the source file, add changelog entry |
+| **upstream** | z-sdlc source has a bug the adapter-installed version corrected, OR z-sdlc source uses non-canonical phrasing | `~/Projects/z-sdlc/` — edit the source file, add changelog entry |
 | **plugin** | Adapter transformation is wrong (bug, gap, or exemption violation) | `~/Projects/neuroloom/neuroloom-sdlc-plugin/` — edit Pattern Mapping, add guard, or fix transformer rule |
 | **both** | A single finding requires coordinated fixes in both repos | Both |
 | **neither** | Correct as-is: legitimate transformation, legitimate customization, or no-op | No action |
@@ -61,34 +61,34 @@ All three collapse to **plugin** for fix routing, but in the findings detail not
 
 ### 6. Does the hunk show structural content loss?
 
-Compare heading counts / table row counts / numbered step counts between sleeved and cc-sdlc source.
+Compare heading counts / table row counts / numbered step counts between sleeved and z-sdlc source.
 
 If sleeved has fewer of any structural element than source, and the delta doesn't match a PROJECT-SECTION or documented customization → **plugin** (content-merge content-loss).
 
-### 7. Does cc-sdlc source have a bug sleeved corrected?
+### 7. Does z-sdlc source have a bug sleeved corrected?
 
 If sleeved's version is MORE correct than source — e.g., a path reference in source points at a non-existent location and sleeved's version points at the real one — → **upstream**.
 
 Verify by checking the file system: does the path in the source version resolve? If not and sleeved's does, source is buggy.
 
-Canonical example: `agents/sdlc-compliance-auditor.md:13` — cc-sdlc source had `[sdlc-root]/knowledge/compliance-methodology.md` (broken path); sleeved had `.claude/skills/sdlc-audit/references/compliance-methodology.md` (correct path). Upstream finding.
+Canonical example: `agents/sdlc-compliance-auditor.md:13` — z-sdlc source had `[sdlc-root]/knowledge/compliance-methodology.md` (broken path); sleeved had `.claude/skills/sdlc-audit/references/compliance-methodology.md` (correct path). Upstream finding.
 
-### 8. Does cc-sdlc source use non-canonical phrasing?
+### 8. Does z-sdlc source use non-canonical phrasing?
 
-If source uses a phrasing the plugin's Pattern Mapping wouldn't recognize (per the plugin's reviewer checklist), and the adapter had to emit a TRANSFORMATION_WARNING or leave it untransformed → **upstream** (cc-sdlc needs to use canonical phrasing).
+If source uses a phrasing the plugin's Pattern Mapping wouldn't recognize (per the plugin's reviewer checklist), and the adapter had to emit a TRANSFORMATION_WARNING or leave it untransformed → **upstream** (z-sdlc needs to use canonical phrasing).
 
-These findings are rare — the cc-sdlc `sdlc-reviewer` agent should have caught them at authoring time. Any that slip through indicate the reviewer's canonical-phrase list is out of sync with the phrasing contract.
+These findings are rare — the z-sdlc `sdlc-reviewer` agent should have caught them at authoring time. Any that slip through indicate the reviewer's canonical-phrase list is out of sync with the phrasing contract.
 
 ### 9. Does the hunk indicate a defect that needs BOTH fixes?
 
 Rare. Typically:
-- A cc-sdlc source phrase uses non-canonical wording (upstream fix) AND the plugin would silently mis-transform if upstream used the canonical form (plugin fix).
+- A z-sdlc source phrase uses non-canonical wording (upstream fix) AND the plugin would silently mis-transform if upstream used the canonical form (plugin fix).
 
 Default to picking one primary classification and note the secondary in the findings detail.
 
 ### 10. Everything else
 
-If the hunk is a clean canonical transformation (cc-sdlc source uses a canonical phrase and the sleeved side shows the expected Pattern Mapping output) → **neither**.
+If the hunk is a clean canonical transformation (z-sdlc source uses a canonical phrase and the sleeved side shows the expected Pattern Mapping output) → **neither**.
 
 If the hunk represents a no-op migration (files identical) → **neither**.
 
@@ -109,4 +109,4 @@ To calibrate your intuition, these are real findings from the 2026-04-22 audit:
 
 ## Bias check
 
-When in doubt between two verdicts, bias toward **plugin**. The adapter's job is to produce correct output; if the output is wrong, the adapter owns it until proven otherwise. Upstream findings should have evidence that cc-sdlc source is itself broken (verify the path doesn't exist, the phrasing is on the forbidden list, etc.) — not just "the adapter transformation produced something unexpected."
+When in doubt between two verdicts, bias toward **plugin**. The adapter's job is to produce correct output; if the output is wrong, the adapter owns it until proven otherwise. Upstream findings should have evidence that z-sdlc source is itself broken (verify the path doesn't exist, the phrasing is on the forbidden list, etc.) — not just "the adapter transformation produced something unexpected."

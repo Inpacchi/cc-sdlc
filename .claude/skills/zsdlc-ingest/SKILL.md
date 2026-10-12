@@ -1,7 +1,7 @@
 ---
-name: ccsdlc-ingest
+name: zsdlc-ingest
 description: >
-  Bulk-import external knowledge into the cc-sdlc framework — skills, agent suggestions,
+  Bulk-import external knowledge into the z-sdlc framework — skills, agent suggestions,
   playbooks, process docs, disciplines, knowledge stores, and templates. Analyzes curated
   content collections (transcripts, articles, documentation, design guides, architecture
   papers, postmortems, workflow recordings, tool documentation) and routes extracted
@@ -11,8 +11,8 @@ description: >
   projects on next migration. Triggers on "ingest these", "analyze these transcripts",
   "import knowledge from", "extract patterns from", "bulk import", "learn from these",
   "what can we adopt from", "process these for the framework", "add to framework from",
-  "enrich the framework", "add to cc-sdlc from", "distill these into the framework",
-  "what should we add from these", "absorb these into cc-sdlc".
+  "enrich the framework", "add to z-sdlc from", "distill these into the framework",
+  "what should we add from these", "absorb these into z-sdlc".
   Do NOT use for single-file reads or ad-hoc research — use direct reads or WebSearch.
   Do NOT use for exploring ideas — use sdlc-idea.
   Do NOT use for creating specs or plans — use sdlc-plan or sdlc-lite-plan.
@@ -21,7 +21,7 @@ description: >
 
 # Framework Ingestion
 
-Structured bulk import of external content into the cc-sdlc framework. The goal is to extract actionable insights from curated source material and route them to the correct framework artifact — not just knowledge stores, but skills, agent suggestions, playbooks, process docs, and templates too.
+Structured bulk import of external content into the z-sdlc framework. The goal is to extract actionable insights from curated source material and route them to the correct framework artifact — not just knowledge stores, but skills, agent suggestions, playbooks, process docs, and templates too.
 
 **This skill produces framework artifacts that ship to all child projects on migration. It does NOT produce specs, plans, or implementations.**
 
@@ -29,7 +29,7 @@ Structured bulk import of external content into the cc-sdlc framework. The goal 
 
 ## When This Applies
 
-Use this when you have a collection of curated external content to absorb into the framework. The hallmark is bulk external material that could improve how cc-sdlc serves child projects.
+Use this when you have a collection of curated external content to absorb into the framework. The hallmark is bulk external material that could improve how z-sdlc serves child projects.
 
 Signs this skill is appropriate:
 - A directory of transcripts, articles, or documentation files
@@ -72,7 +72,7 @@ Ingested content can land in any of these framework artifacts:
 
 **Source attribution is mandatory.** Every extracted insight must trace back to its source file.
 
-**Filter aggressively.** Not everything in external content belongs in the framework. The test: would this make cc-sdlc measurably more useful to child projects?
+**Filter aggressively.** Not everything in external content belongs in the framework. The test: would this make z-sdlc measurably more useful to child projects?
 
 **Deduplicate against existing artifacts.** Before creating new entries, read existing artifacts in the target area. If an insight already exists, skip it or merge source attribution.
 
@@ -385,5 +385,5 @@ After writing artifacts:
 - **Uses:** file reading, existing framework artifacts (for deduplication and convention-matching)
 - **Complements:** discipline capture protocol (organic, per-session in child projects) — this skill handles bulk external import into the framework
 - **Does NOT replace:** organic discipline capture in child projects, or targeted enrichment of individual agents (use `enrich-agent` for that)
-- **Downstream:** after ingestion, `/ccsdlc-audit` can assess freshness and coverage. Child projects receive new artifacts via `setup.sh` migration.
-- **DRY notes:** This is the framework-level ingest skill (`.claude/skills/ccsdlc-ingest/`). The child-project version (`skills/sdlc-ingest/`) imports into `ops/sdlc/` paths only. The boundary: this version enriches the framework itself across all artifact types; the child version enriches a specific project's discipline/knowledge layer.
+- **Downstream:** after ingestion, `/zsdlc-audit` can assess freshness and coverage. Child projects receive new artifacts via `setup.sh` migration.
+- **DRY notes:** This is the framework-level ingest skill (`.claude/skills/zsdlc-ingest/`). The child-project version (`skills/sdlc-ingest/`) imports into `ops/sdlc/` paths only. The boundary: this version enriches the framework itself across all artifact types; the child version enriches a specific project's discipline/knowledge layer.

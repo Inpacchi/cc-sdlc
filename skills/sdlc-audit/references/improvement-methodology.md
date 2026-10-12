@@ -138,7 +138,7 @@ A factory digest (SKILL.md § Improvement with a Factory Digest) is the record o
 
 - **Recurrence decides weight.** The same correction on two issues outweighs a long comment on one. A one-off is a low-severity proposal at most, unless it caused a failure CD had to clean up.
 - **Look for the stage that let it through,** not only the file that was wrong. A missing test the review loop didn't flag is a review-checklist gap as much as a code gap.
-- **Separate the factory from the framework.** A problem in a project's own workflows or guards stays with the project. A problem any project running the same skill would hit goes to the framework (route `cc-sdlc`).
+- **Separate the factory from the framework.** A problem in a project's own workflows or guards stays with the project. A problem any project running the same skill would hit goes to the framework (route `z-sdlc`).
 - **Cost is a fact, not a verdict.** Flag a stage whose cost or turns jump against its own earlier runs, and say what changed. Don't propose cutting cost where the run did what it should.
 
 ### What CD Needs from Each Proposal

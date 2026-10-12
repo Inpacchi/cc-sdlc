@@ -1,7 +1,7 @@
 ---
 name: sdlc-develop-agent
 description: >
-  Create or enrich domain agents following cc-sdlc conventions. CREATE mode walks through
+  Create or enrich domain agents following z-sdlc conventions. CREATE mode walks through
   domain definition, frontmatter, body scaffolding, context-map wiring, and registration.
   ENRICH mode extracts patterns from external sources (articles, agent definitions, docs)
   using a 6-dimension analytical framework and integrates them into an existing agent.
@@ -47,7 +47,7 @@ Create new domain agents or enrich existing ones with patterns from external sou
 
 ## CREATE Mode
 
-Create a new domain agent that follows cc-sdlc conventions. Scaffold the complete agent file, validate conventions, wire up knowledge context, register, and quality-gate with the reviewer subagent.
+Create a new domain agent that follows z-sdlc conventions. Scaffold the complete agent file, validate conventions, wire up knowledge context, register, and quality-gate with the reviewer subagent.
 
 ### Reference
 

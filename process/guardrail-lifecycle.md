@@ -17,7 +17,7 @@ LOG → THRESHOLD → PROMOTE → ENFORCE → RE-EVALUATE → MODIFY or RETIRE
 
 ## Division of Labor
 
-The framework defines the loop, the schema, and the audit checks. **The project supplies the guards themselves** — the actual lint rules, drift tests, and CI wiring. cc-sdlc never ships project-specific rules; it ships the contract that makes their absence, staleness, or ineffectiveness visible.
+The framework defines the loop, the schema, and the audit checks. **The project supplies the guards themselves** — the actual lint rules, drift tests, and CI wiring. z-sdlc never ships project-specific rules; it ships the contract that makes their absence, staleness, or ineffectiveness visible.
 
 ## The `mechanized_guard` Field
 

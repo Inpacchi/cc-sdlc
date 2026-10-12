@@ -11,7 +11,7 @@ pattern: methodology
 category: architecture
 spec_relevant: false
 project_applicability:
-  relevant_when: "Always relevant — governs the cc-sdlc knowledge system itself"
+  relevant_when: "Always relevant — governs the z-sdlc knowledge system itself"
   action_if_irrelevant: keep
 last_updated: 2026-03-22
 

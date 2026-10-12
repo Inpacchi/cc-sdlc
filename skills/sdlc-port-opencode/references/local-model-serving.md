@@ -6,7 +6,7 @@ Operational reference for running a local LLM behind OpenCode so the SDLC works 
 
 ## Why this matters for the SDLC
 
-cc-sdlc is **instruction-following- and tool-calling-heavy**: long multi-step skills, subagent dispatch, structured gates. The dominant risk on a local model is **not** raw coding ability — it's **tool-call reliability under long prompts**. Most of this doc is about making tool calls survive that load. Treat the local model as a capable fallback for the cheaper tier of work, not a drop-in for Opus-class orchestration.
+z-sdlc is **instruction-following- and tool-calling-heavy**: long multi-step skills, subagent dispatch, structured gates. The dominant risk on a local model is **not** raw coding ability — it's **tool-call reliability under long prompts**. Most of this doc is about making tool calls survive that load. Treat the local model as a capable fallback for the cheaper tier of work, not a drop-in for Opus-class orchestration.
 
 ## Recommended models (Qwen3.6 family)
 
@@ -17,7 +17,7 @@ Both fit 48 GB and have community validation on dual 3090s + OpenCode. Official 
 | **Qwen3.6-35B-A3B** | MoE, 35B total / ~3B active | 262,144 (→~1M YaRN) | 73.4 | 80.4 | Agentic-coding tuned; fast (3B active); natively multimodal; Apache-2.0 |
 | **Qwen3.6-27B** | Dense, 27B | 262,144 (→~1M YaRN) | 77.2 | 83.9 | "Flagship-level coding"; vision; Terminal-Bench 2.0 59.3; dense → steadier long-prompt instruction-following |
 
-**Default for cc-sdlc:** **Qwen3.6-35B-A3B** at Q8 — agentic-coding-tuned, fast, fits fully in VRAM.
+**Default for z-sdlc:** **Qwen3.6-35B-A3B** at Q8 — agentic-coding-tuned, fast, fits fully in VRAM.
 **Reliability fallback:** **Qwen3.6-27B dense** at Q8 — if you see tool-call drift on long skill prompts, dense models track complex multi-step instructions more steadily than sparse MoE, and it has slightly higher coding scores.
 
 *(BFCL and Aider polyglot scores were not on the cards fetched — unverified. GLM-4.5-Air remains excluded: 106B total does not fit 48 GB at any practical quant.)*
@@ -102,7 +102,7 @@ Default `llama-server` endpoint is `http://127.0.0.1:8080/v1`. Point OpenCode at
 
 Flag notes: `-fa` (flash attention) is required to quantize the V cache — build with `-DGGML_CUDA_FA_ALL_QUANTS=ON`. `--cache-type-* q8_0` is the safe KV quality point; `q4_0` only for extreme context. For the MoE, expert offload (`--n-cpu-moe` / `-ot`) is **not** needed at Q8 on 48 GB — reserve it for very large context. Confirm Qwen3.6's recommended **sampling params** against the model card's "Best Practices" *(the Qwen3-Coder values — temp 0.7 / top-p 0.8 / top-k 20 / repeat-penalty 1.05 — are a reasonable start but unverified for 3.6)*.
 
-## Reliability checklist for long agentic (cc-sdlc) prompts
+## Reliability checklist for long agentic (z-sdlc) prompts
 
 1. **Fixed chat template** loaded via `--chat-template-file` (froggeric or Unsloth). Non-negotiable.
 2. **Disable thinking** for tool-heavy skill runs if you see calls buried in `<think>`.

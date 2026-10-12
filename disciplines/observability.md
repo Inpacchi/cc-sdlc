@@ -8,7 +8,7 @@
      Resolve AI, "Top 5 Benefits of Agentic AI in On-call Engineering" (resolve.ai/blog/Top-5-Benefits):
        - Specialized agents collaborating: one for logs, another for metrics
        - Dynamic knowledge retention over static runbooks
-     Extended from existing cc-sdlc deployment-patterns.yaml and debugging-methodology.yaml. -->
+     Extended from existing z-sdlc deployment-patterns.yaml and debugging-methodology.yaml. -->
 
 **Status**: Active — foundational patterns established
 

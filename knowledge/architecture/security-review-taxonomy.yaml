@@ -621,7 +621,7 @@ review_process:
 #     - Agents writing to .vscode/settings.json enabled auto-approve of all tools
 #     - Invisible Unicode characters bypass visual detection
 #     IMPLICATION: Agents must never modify their own permission/security settings.
-#   Extended from existing cc-sdlc Domain 4/5 patterns.
+#   Extended from existing z-sdlc Domain 4/5 patterns.
 #
 # Agent-based security review identifies design flaws and contextual risks
 # that tools cannot catch. Tool-based scanning identifies known vulnerability

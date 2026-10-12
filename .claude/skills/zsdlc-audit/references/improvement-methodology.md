@@ -1,6 +1,6 @@
 # Framework Improvement Audit Methodology
 
-Detailed patterns for extracting cc-sdlc framework improvements from sessions and commits. The goal is to identify how the framework itself should evolve — not whether conventions were followed (that's compliance), but whether the framework is good enough.
+Detailed patterns for extracting z-sdlc framework improvements from sessions and commits. The goal is to identify how the framework itself should evolve — not whether conventions were followed (that's compliance), but whether the framework is good enough.
 
 ## The Self-Improvement Loop
 

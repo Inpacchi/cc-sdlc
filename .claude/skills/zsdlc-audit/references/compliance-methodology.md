@@ -1,6 +1,6 @@
 # Framework Compliance Audit Methodology
 
-Full methodology for cc-sdlc framework source repo compliance auditing. Covers all 9 audit dimensions, report format, severity levels, and guiding principles.
+Full methodology for z-sdlc framework source repo compliance auditing. Covers all 9 audit dimensions, report format, severity levels, and guiding principles.
 
 ## Audit Methodology Sequence
 

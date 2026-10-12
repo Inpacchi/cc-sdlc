@@ -2,7 +2,7 @@
 
 ## Skill Name References (Guarded Renames)
 
-Driven by `skeleton/contract_changes.yaml`. Read that file from the cc-sdlc source. Select entries with `type: rename_skill` and `id` > the project's `last_applied_contract_id` (stored in `.sdlc-manifest.json`; treat as `"0000"` if absent). Process selected entries in id order; each entry contributes `from → to` pairs to the rename set. If the project's `last_applied_contract_id` is absent, apply the full rename set — this covers projects installed before contract_changes.yaml existed.
+Driven by `skeleton/contract_changes.yaml`. Read that file from the z-sdlc source. Select entries with `type: rename_skill` and `id` > the project's `last_applied_contract_id` (stored in `.sdlc-manifest.json`; treat as `"0000"` if absent). Process selected entries in id order; each entry contributes `from → to` pairs to the rename set. If the project's `last_applied_contract_id` is absent, apply the full rename set — this covers projects installed before contract_changes.yaml existed.
 
 For every accumulated rename pair, sweep CLAUDE.md and other project references.
 
@@ -21,7 +21,7 @@ This prevents renaming references to skills that don't exist in the project, whi
 
 ## Agent Name References in Dispatching Skills (Guarded Renames)
 
-Skills that dispatch subagents (`sdlc-review-code`, `sdlc-execute`, `sdlc-lite-execute`, `sdlc-plan`, `sdlc-lite-plan`) contain agent names in their examples and dispatch logic. If the upstream cc-sdlc uses different agent names than the project (e.g., `frontend-developer` vs `frontend-engineer`), do NOT rename the project's references to match upstream.
+Skills that dispatch subagents (`sdlc-review-code`, `sdlc-execute`, `sdlc-lite-execute`, `sdlc-plan`, `sdlc-lite-plan`) contain agent names in their examples and dispatch logic. If the upstream z-sdlc uses different agent names than the project (e.g., `frontend-developer` vs `frontend-engineer`), do NOT rename the project's references to match upstream.
 
 **Guarded rename rule for agents:** Before renaming any agent reference in a dispatching skill:
 1. Build the project's actual agent inventory: `ls .claude/agents/`

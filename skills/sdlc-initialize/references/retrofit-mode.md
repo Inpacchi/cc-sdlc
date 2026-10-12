@@ -1,6 +1,6 @@
 # Retrofit Mode
 
-For existing projects with code and documentation that need cc-sdlc integrated.
+For existing projects with code and documentation that need z-sdlc integrated.
 
 ## Phase R1: Discovery
 
@@ -30,7 +30,7 @@ For existing projects with code and documentation that need cc-sdlc integrated.
 
 ## Phase R3: Implementation
 
-1. Install files from cc-sdlc source (same as Greenfield Phase 1)
+1. Install files from z-sdlc source (same as Greenfield Phase 1)
 2. Augment existing CLAUDE.md with SDLC process section (do NOT overwrite)
 3. Create concept directories in `docs/chronicle/` based on approved proposal
 4. Move/copy existing docs to appropriate locations

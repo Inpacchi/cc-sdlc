@@ -11,7 +11,7 @@
        - Multi-agent approach: specialized agents for logs, metrics, code changes
        - Dynamic knowledge retention vs static runbooks that become obsolete
        - Consistent investigation workflows eliminate human troubleshooting variability
-     Existing cc-sdlc debugging-methodology.yaml for investigation approach. -->
+     Existing z-sdlc debugging-methodology.yaml for investigation approach. -->
 
 How to classify, triage, respond to, and learn from production incidents. Connects incidents back to the deliverable lifecycle so lessons feed forward into future planning.
 

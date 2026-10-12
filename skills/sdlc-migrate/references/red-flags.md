@@ -2,15 +2,15 @@
 
 | Thought | Reality |
 |---------|---------|
-| "I'll just copy all files from cc-sdlc" | Content-merge exists for a reason — direct copy overwrites project customizations |
-| "The project's agent names match cc-sdlc's" | They almost never do. Always read the project's context-map, not the source's |
+| "I'll just copy all files from z-sdlc" | Content-merge exists for a reason — direct copy overwrites project customizations |
+| "The project's agent names match z-sdlc's" | They almost never do. Always read the project's context-map, not the source's |
 | "I'll copy agent-selection.yaml with the other process files" | `agent-selection.yaml` is project-specific — it contains the project's agent roster, not the framework's. Never overwrite it. |
 | "I'll skip the changelog review" | Breaking changes and new capabilities need user input before applying |
 | "The tracker levels look right, I'll overwrite them" | The source repo's tracker reflects the source repo's levels, not this project's |
-| "I'll rephrase the framework sections to be clearer" | Verbatim rule. Copy exactly from cc-sdlc. Do not rephrase. |
-| "I'll remove this agent mapping that cc-sdlc doesn't have" | Project-specific mappings are intentional. Never remove them. |
+| "I'll rephrase the framework sections to be clearer" | Verbatim rule. Copy exactly from z-sdlc. Do not rephrase. |
+| "I'll remove this agent mapping that z-sdlc doesn't have" | Project-specific mappings are intentional. Never remove them. |
 | "No files were deleted, so §2.1a doesn't apply" | Always check. Moved files appear as add+delete pairs, not renames. |
-| "I'll just read the file from the cc-sdlc directory" | Use `git -C [path] show HEAD:file` — never raw filesystem reads. The repo may have uncommitted WIP. |
+| "I'll just read the file from the z-sdlc directory" | Use `git -C [path] show HEAD:file` — never raw filesystem reads. The repo may have uncommitted WIP. |
 | "I'll use `git show HEAD:path > file` to extract" | UNSAFE. Shell redirect truncates the target before git show runs. If git show fails, the target becomes an empty file. See `references/source-repo-safety.md`. |
 | "New knowledge files are installed, so the project benefits automatically" | Knowledge in [sdlc-root]/ is available but not applied until skills and agents are updated to use it. §3.4 closes this gap. |
 | "This file has no PROJECT-SECTION markers, so I'll just overwrite it" | Run deviation detection (§2.1c) first — the project may have customized framework content that should be wrapped in markers before overwriting. |

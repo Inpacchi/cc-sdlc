@@ -19,7 +19,7 @@ description: >
 
 # Reference Doc Creation
 
-Create an internal developer-facing reference doc following cc-sdlc conventions. The doc describes how a system works — event schemas, API surfaces, pipeline stage inventories, config matrices, domain gotchas — in a format optimized for coding agents investigating, debugging, or extending that system. Humans read it too; agents are the primary audience.
+Create an internal developer-facing reference doc following z-sdlc conventions. The doc describes how a system works — event schemas, API surfaces, pipeline stage inventories, config matrices, domain gotchas — in a format optimized for coding agents investigating, debugging, or extending that system. Humans read it too; agents are the primary audience.
 
 **Argument:** `$ARGUMENTS` (subject of the doc — system, feature, or concern to document)
 

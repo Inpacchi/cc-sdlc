@@ -18,7 +18,7 @@ related_files:
 # Handoff: Teach `sdlc-explain` to produce side-by-side option previews like the pin key page
 
 ## Why this is a handoff
-The source session was deciding how to update the map pin key in the consumer app (paire-app). CD asked to see two candidate designs, then said they loved how the preview page was generated and asked for the upstream cc-sdlc `sdlc-explain` skill to be modified to match. The skill lives in this repo at `skills/sdlc-explain/SKILL.md`; the handoff was written in the paire-appetit workspace and moved here. The source session should not inherit the pin key work itself (option B was chosen and is being built separately).
+The source session was deciding how to update the map pin key in the consumer app (paire-app). CD asked to see two candidate designs, then said they loved how the preview page was generated and asked for the upstream z-sdlc `sdlc-explain` skill to be modified to match. The skill lives in this repo at `skills/sdlc-explain/SKILL.md`; the handoff was written in the paire-appetit workspace and moved here. The source session should not inherit the pin key work itself (option B was chosen and is being built separately).
 
 The source session could not read `sdlc-explain` (it is not installed in the paire-appetit workspace), so everything below describes what the preview page did, not what the skill does today. The receiving session must read `skills/sdlc-explain/SKILL.md` first and diff it against this description.
 
@@ -41,11 +41,11 @@ Open design choice for the upstream skill: whether this is the default for every
 - **Output style CD was using:** a "Plain English Deliverable" style from the paire-appetit workspace (not part of this repo).
 - **Closest existing skills here:** `skills/sdlc-explain/SKILL.md` (the target), `skills/sdlc-render/SKILL.md` (renders finished markdown deliverables to HTML) and `skills/sdlc-walkthru/SKILL.md` (paced read of an artifact). Neither produces option comparisons from real project assets.
 - **Closest existing convention:** `process/html-rendering.md` § "Two Categories of HTML" already describes "exploration artifacts" such as side-by-side approach comparisons as throwaway working tools. The reference page is a concrete example of that category.
-- **CD's words:** "i love how this artifact was generated - create a handoff for cc-sdlc upstream to modify the sdlc-explain skill accordingly."
+- **CD's words:** "i love how this artifact was generated - create a handoff for z-sdlc upstream to modify the sdlc-explain skill accordingly."
 - **How the page was built (for reproduction):** the pin images were resized to about 72px tall with `sips`, base64-embedded into one HTML file through a small Python substitution over a template with `{{asset}}` placeholders, then published with the Artifact tool using the artifact-design guidance (tokens on `:root`, dark-mode blocks, no external assets).
 
 ## Recommended next step
-Open a session in this repo (cc-sdlc) and run: **`/sdlc-develop-skill`** (MODIFY mode) on `sdlc-explain`, with this file and the reference HTML as the seed.
+Open a session in this repo (z-sdlc) and run: **`/sdlc-develop-skill`** (MODIFY mode) on `sdlc-explain`, with this file and the reference HTML as the seed.
 
 Reasoning: this is a change to an existing skill, and the modify mode handles the framework-versus-project-section markers and the DRY check against `sdlc-render` and `sdlc-walkthru`. 
 

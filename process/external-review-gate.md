@@ -67,7 +67,7 @@ exact same classification (`[sdlc-root]/process/finding-classification.md`) and
 the exact same fix path as any agent finding: **the external model never edits
 files; domain agents fix, and the internal loop re-verifies.** This keeps the
 Manager Rule intact — an external model's output is input to triage, subordinate
-to cc-sdlc's own review.
+to z-sdlc's own review.
 
 A FIX from the external gate re-opens the internal loop: after the fix, dispatch
 the internal reviewers again (fixes can introduce new problems), and only once
@@ -137,7 +137,7 @@ optional). If present, the skill runs it as the gate.
   gate could not run; the skill records "external gate errored — skipped" and
   proceeds to commit. **Never block a commit on external availability.**
 - The wrapper owns endpoint, secret scrubbing, and prompt shaping, and provides
-  the default model choice. cc-sdlc ships a **standard template** at
+  the default model choice. z-sdlc ships a **standard template** at
   `[sdlc-root]/templates/external-review.sh.template` — enabling is copy +
   `chmod +x` + adjusting the defaults, because the right model and the egress
   policy remain project decisions. Codex-backed wrappers SHOULD honor the
@@ -148,7 +148,7 @@ optional). If present, the skill runs it as the gate.
 
 ### Standard template
 
-cc-sdlc ships a Codex-backed standard template, adopted from a
+z-sdlc ships a Codex-backed standard template, adopted from a
 production installation, at:
 
 ```
@@ -389,7 +389,7 @@ never block a promotion pass on external availability.
   — parking-lot text is project knowledge; state where it is going before
   running a hosted model.
 
-cc-sdlc ships a standard template for this wrapper too, at
+z-sdlc ships a standard template for this wrapper too, at
 `[sdlc-root]/templates/external-review-knowledge.sh.template` — enable it the
 same way (copy to `[sdlc-root]/external-review-knowledge.sh`, `chmod +x`,
 adjust defaults). It carries the same operational details as the diff-review

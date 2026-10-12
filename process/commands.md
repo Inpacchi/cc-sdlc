@@ -21,7 +21,7 @@ The standard deliverable lifecycle: **ideation → plan → execute**. Most work
 | "Initialize SDLC in this project" | Invokes `sdlc-initialize` — detects greenfield vs retrofit, walks through full framework setup |
 | "Let's organize the chronicles" | Invokes `sdlc-archive` — archive completed deliverables from `current_work/` to `chronicle/`, reconciles untracked ad hoc work first |
 | "Let's update the SDLC" | Propose process improvement. See `[sdlc-root]/process/sdlc_changelog.md` |
-| "Migrate my SDLC framework" | Invokes `sdlc-migrate` — apply cc-sdlc upstream updates while preserving project customizations |
+| "Migrate my SDLC framework" | Invokes `sdlc-migrate` — apply z-sdlc upstream updates while preserving project customizations |
 
 ## Status & Navigation
 
@@ -82,7 +82,7 @@ Installed only when CD opts into the `design` bundle during `/sdlc-initialize`.
 
 | Command | Action |
 |---------|--------|
-| `/sdlc-port-opencode` | Adapt existing cc-sdlc installation for OpenCode — creates `.opencode/agents/`, `AGENTS.md`, and `opencode.json` (incl. local model endpoint) alongside the Claude Code setup; skills and `[sdlc-root]` content are shared, not copied (OpenCode reads `.claude/skills/` directly) |
+| `/sdlc-port-opencode` | Adapt existing z-sdlc installation for OpenCode — creates `.opencode/agents/`, `AGENTS.md`, and `opencode.json` (incl. local model endpoint) alongside the Claude Code setup; skills and `[sdlc-root]` content are shared, not copied (OpenCode reads `.claude/skills/` directly) |
 
 ## Rendering
 

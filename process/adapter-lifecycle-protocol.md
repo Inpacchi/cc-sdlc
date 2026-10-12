@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Adapter plugins transform cc-sdlc's file-based knowledge routing into alternate backends (memory graphs, vector stores, external APIs). Before this protocol, adapters achieved this by overriding `sdlc-initialize` and `sdlc-migrate` entirely — full skill replacements that forked upstream's logic, accumulated merge drift, and lagged behind upstream improvements.
+Adapter plugins transform z-sdlc's file-based knowledge routing into alternate backends (memory graphs, vector stores, external APIs). Before this protocol, adapters achieved this by overriding `sdlc-initialize` and `sdlc-migrate` entirely — full skill replacements that forked upstream's logic, accumulated merge drift, and lagged behind upstream improvements.
 
 The adapter lifecycle protocol separates the concerns. Upstream owns the migration algorithm (drift detection, changelog gating, marker preservation, bundle handling, file merging). Adapters own the knowledge backend and content transformation. The protocol defines extension points — phases where upstream delegates to the adapter — so adapters participate without overriding.
 
@@ -12,7 +12,7 @@ When no adapter is declared, upstream's skills run identically to today. The pro
 
 ## Relationship to the Phrasing Contract
 
-The phrasing contract (`process/knowledge-routing.md` § "Adapter Plugins and the Phrasing Contract") governs **content** — what phrases cc-sdlc uses when referencing the knowledge layer, so adapters can pattern-match and transform them.
+The phrasing contract (`process/knowledge-routing.md` § "Adapter Plugins and the Phrasing Contract") governs **content** — what phrases z-sdlc uses when referencing the knowledge layer, so adapters can pattern-match and transform them.
 
 The lifecycle protocol governs **execution** — when adapters run during initialize and migrate, what inputs they receive, and what outputs they must produce.
 
@@ -30,16 +30,16 @@ Lives at the adapter plugin's root directory (e.g., `.claude/plugins/neuroloom-s
 
 ```json
 {
-  "ccsdlc_adapter": true,
-  "supported_ccsdlc_version": "1.4.0",
+  "zsdlc_adapter": true,
+  "supported_zsdlc_version": "1.4.0",
   "phase_handlers": "references/adapter-lifecycle.md"
 }
 ```
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `ccsdlc_adapter` | boolean | Must be `true`. Marker that identifies this plugin as a cc-sdlc adapter. |
-| `supported_ccsdlc_version` | string | Highest cc-sdlc version the adapter's handlers have been verified against. Gates `[contract-change]` entries during migration — entries above this version halt deterministically. |
+| `zsdlc_adapter` | boolean | Must be `true`. Marker that identifies this plugin as a z-sdlc adapter. Adapters written before 2026-10-12 use the pre-rename key `ccsdlc_adapter`; readers accept either. |
+| `supported_zsdlc_version` | string | Highest z-sdlc version the adapter's handlers have been verified against. Gates `[contract-change]` entries during migration — entries above this version halt deterministically. Pre-rename key: `supported_ccsdlc_version`; readers accept either, and a migration that refreshes a project's adapter entry writes the new key. |
 | `phase_handlers` | string | Path to the handler reference doc, relative to the plugin root. Contains instructions for each phase the adapter participates in. |
 
 ### Discovery during initialization
@@ -50,7 +50,7 @@ During Phase 1 (before writing `.sdlc-manifest.json`), upstream's init scans for
 For each directory in .claude/plugins/:
   If {plugin_dir}/adapter.json exists:
     Read and parse adapter.json
-    If ccsdlc_adapter == true:
+    If zsdlc_adapter == true (or the pre-rename ccsdlc_adapter == true):
       Record this as the active adapter
 ```
 
@@ -67,7 +67,7 @@ The discovered adapter is persisted in `.sdlc-manifest.json` so `sdlc-migrate` c
   "adapter": {
     "plugin": "neuroloom-sdlc-plugin",
     "plugin_root": ".claude/plugins/neuroloom-sdlc-plugin",
-    "supported_ccsdlc_version": "1.4.0",
+    "supported_zsdlc_version": "1.4.0",
     "phase_handlers": "references/adapter-lifecycle.md"
   },
   "installed_files": { "..." }
@@ -78,7 +78,7 @@ The discovered adapter is persisted in `.sdlc-manifest.json` so `sdlc-migrate` c
 |-------|------|-------------|
 | `plugin` | string | Adapter plugin name (read from the plugin's `plugin.json` → `name`) |
 | `plugin_root` | string | Path to the adapter plugin root, relative to project root |
-| `supported_ccsdlc_version` | string | Copied from `adapter.json` at install time; updated during migration if the adapter's `adapter.json` has been bumped |
+| `supported_zsdlc_version` | string | Copied from `adapter.json` at install time; updated during migration if the adapter's `adapter.json` has been bumped |
 | `phase_handlers` | string | Copied from `adapter.json` — path to the handler doc, relative to `plugin_root` |
 
 ### Detection during migration
@@ -90,7 +90,7 @@ The discovered adapter is persisted in `.sdlc-manifest.json` so `sdlc-migrate` c
 3. Resolve handler doc: `{project_root}/{adapter.plugin_root}/{adapter.phase_handlers}`.
 4. Load phase handler instructions from that doc.
 5. Which phases the adapter participates in is determined by which H2 sections exist in the handler doc.
-6. Refresh `supported_ccsdlc_version` from the live `adapter.json` (the adapter may have been updated between migrations).
+6. Refresh `supported_zsdlc_version` from the live `adapter.json` (the adapter may have been updated between migrations).
 
 If the handler doc is missing or unreadable, halt with a clear error (adapter declared but handlers not found).
 
@@ -130,7 +130,7 @@ When an adapter declares this phase, upstream skips §2.1b entirely for knowledg
 2. **Upsert new and changed entries** — send only the delta to the backend. The backend handles idempotent write (create-or-update by ID).
 3. **Protect project entries** — entries originated by the project (different origin tag) are invisible to this operation. They are never overwritten, removed, or re-tagged.
 4. **Deprecate removed entries** — entries present in the backend but absent from upstream get marked deprecated (never hard-deleted — projects may still reference them).
-5. **Update manifest** — the project's `source_version` in `.sdlc-manifest.json` reflects the new cc-sdlc version after the full migration completes (handled by upstream, not the adapter).
+5. **Update manifest** — the project's `source_version` in `.sdlc-manifest.json` reflects the new z-sdlc version after the full migration completes (handled by upstream, not the adapter).
 
 This eliminates the materialization round-trip. No flat files are created, diffed, or cleaned up. The backend's own storage semantics handle what upstream's key-level merge does for flat-file projects.
 
@@ -323,7 +323,7 @@ When an adapter phase fails:
 
 - **The phrasing contract** — remains exactly as-is. Content-level using Pattern Mapping.
 - **`contract_changes.yaml`** — remains the versioning mechanism for breaking changes.
-- **`supported_ccsdlc_version`** — remains required (now lives in the manifest's `adapter` block).
+- **`supported_zsdlc_version`** — remains required (now lives in the manifest's `adapter` block).
 - **Upstream's non-adapter behavior** — when no adapter is declared, skills run identically to today. No conditional branches in the main flow.
 - **`sdlc-port`** — remains a standalone one-time migration tool. Not part of the lifecycle protocol.
 - **The reviewer/auditor contracts** — `sdlc-reviewer` still flags inline adapter conditionals. `sdlc-compliance-auditor` still validates phrasing contract compliance. Neither needs changes.
@@ -340,12 +340,12 @@ For adapters currently using full skill overrides (e.g., `neuroloom-sdlc-plugin`
 
 3. **Remove skill overrides** — once upstream ships lifecycle-aware skills, the adapter removes its `/sdlc-initialize` and `/sdlc-migrate` overrides. The handler doc plus existing reference docs become the entire adapter surface for these skills.
 
-4. **Version gate** — the adapter sets `supported_ccsdlc_version` to the first upstream release with lifecycle support. Projects initialized before this version continue using the adapter's override until re-initialized.
+4. **Version gate** — the adapter sets `supported_zsdlc_version` to the first upstream release with lifecycle support. Projects initialized before this version continue using the adapter's override until re-initialized.
 
 ---
 
 ## Versioning and Compatibility
 
-The lifecycle protocol is versioned implicitly by the `supported_ccsdlc_version` field. If upstream adds a new phase or changes phase semantics, it will be gated behind a `[contract-change]` entry in the changelog. Adapters that haven't verified against the new version will halt at their version gate.
+The lifecycle protocol is versioned implicitly by the `supported_zsdlc_version` field. If upstream adds a new phase or changes phase semantics, it will be gated behind a `[contract-change]` entry in the changelog. Adapters that haven't verified against the new version will halt at their version gate.
 
 New phases are always additive — existing phases never have their semantics changed without a `contract_changes.yaml` entry.

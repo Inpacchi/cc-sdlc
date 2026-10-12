@@ -20,7 +20,7 @@ Authoritative post-migration version. If this matches the intended `LATEST_VERSI
 
 **Source clone state:**
 ```bash
-ls /tmp/cc-sdlc-migrate/ 2>/dev/null
+ls /tmp/z-sdlc-migrate/ 2>/dev/null
 ```
 If present, the temp clone wasn't cleaned up — may indicate crash during or before Phase 4.6. Safe to delete manually if the migration is resolved.
 
@@ -41,7 +41,7 @@ grep -c '"event":"drift_decision"' .sdlc-transaction-log
 | Crash during §2.1 direct copy | **File-level idempotency saves you.** Re-run — each direct copy is idempotent (same git show → same content). Previously copied files will simply re-copy with the same result. |
 | Crash during §2.1b knowledge YAML merge | **Knowledge files at intermediate state.** Re-run — key-level merge is idempotent when re-applied against its own output. Use git diff to verify files look correct after re-run. |
 | Drift decisions lost to crash (drift_detected without matching drift_decision) | **Re-run `/sdlc-migrate`.** Drift re-detected at §1.2a; CD re-prompted with same options. Prior decisions not preserved across crashes. |
-| Temp clone at `/tmp/cc-sdlc-migrate/` from prior run | **Clean up manually:** `rm -rf /tmp/cc-sdlc-migrate/` before re-running. Phase 0 would have cloned fresh. |
+| Temp clone at `/tmp/z-sdlc-migrate/` from prior run | **Clean up manually:** `rm -rf /tmp/z-sdlc-migrate/` before re-running. Phase 0 would have cloned fresh. |
 
 ## Step 3: Never do these things
 

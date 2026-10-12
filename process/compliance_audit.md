@@ -173,7 +173,7 @@ Use this as a quick pass/fail checklist:
 - [ ] Standard directory structure exists
 - [ ] Concept registry (if maintained) is up to date
 - [ ] `.sdlc-manifest.json` exists and `source_version` is current
-- [ ] All framework files from cc-sdlc source manifest are present (fetch `skeleton/manifest.json` from source repo)
+- [ ] All framework files from z-sdlc source manifest are present (fetch `skeleton/manifest.json` from source repo)
 - [ ] No stale references to removed framework features in skills or agents
 
 ---

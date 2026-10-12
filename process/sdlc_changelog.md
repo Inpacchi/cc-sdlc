@@ -37,6 +37,48 @@ Each entry contains:
 
 ---
 
+## 2026-10-12: Adapter fields and the improve route take the z-sdlc name [contract-change]
+
+**Origin:** the rename to z-sdlc (entry below) left three names that other repositories store: two adapter fields and the improve loop's route value.
+
+**What changed:**
+- `process/adapter-lifecycle-protocol.md`, `process/knowledge-routing.md`, `sdlc-initialize`, `sdlc-migrate`: adapters mark themselves with `zsdlc_adapter` and declare `supported_zsdlc_version`. The pre-rename keys `ccsdlc_adapter` and `supported_ccsdlc_version` stay readable, and a migration that refreshes a project's adapter entry writes the new key and drops the old one.
+- `sdlc-audit` improvement mode: the framework route and section are `z-sdlc`; factories and reports from before the rename call them `cc-sdlc`, and the two are the same route.
+- `skeleton/contract_changes.yaml` 0018 records it.
+
+**Adapter action:** declare `zsdlc_adapter` and `supported_zsdlc_version` (neuroloom-sdlc-plugin does as of this change). A factory that stores the route (quantile's improve loop) accepts both values in its schema and ledger.
+
+**Rationale:** Every reader accepts both names, so an adapter or ledger written before the rename keeps working, and nothing has to change in lockstep. Release type: major, with contract 0017 in the same release.
+
+---
+
+## 2026-10-12: The framework is called z-sdlc everywhere
+
+**Origin:** CD (2026-10-12): every cc-sdlc reference becomes z-sdlc. The `sdlc-*` skill and file names and "SDLC" stay.
+
+**What changed:**
+- Every skill, agent, process doc, template, knowledge file, bootstrap file and design doc names the framework z-sdlc (Z-SDLC in titles).
+- The temporary clone paths are `/tmp/z-sdlc-bootstrap`, `/tmp/z-sdlc-lite-bootstrap` and `/tmp/z-sdlc-migrate`, and the source placeholder is `[z-sdlc-path]`. `sdlc-initialize` also accepts `/tmp/cc-sdlc-bootstrap` from a BOOTSTRAP.md copied before the rename, and looks for a local copy under both names.
+- The framework-development skills are `zsdlc-audit`, `zsdlc-audit-adapter-installation`, `zsdlc-create-skill`, `zsdlc-ingest` and `zsdlc-research`.
+- Unchanged on purpose: this changelog's past entries and the changelog archive (`archive --upstream` matches a project's copied entries by their dated headings, so those must stay as written), past `contract_changes.yaml` entries (append-only), and the old repository URL in `sdlc-migrate`'s `source_repo` rewrite. The adapter fields and the improve loop's route value are renamed in the next entry, with compatibility.
+
+**Rationale:** One name for the framework in everything it installs. Projects get the new text at their next migration (direct copies). Release type: patch.
+
+---
+
+## 2026-10-12: The framework moved to endless-galaxy-studios/z-sdlc
+
+**Origin:** CD moved the repository from `Inpacchi/cc-sdlc` into the Endless Galaxy Studios organization and renamed it `z-sdlc` for branding. The `sdlc-*` names inside stay.
+
+**What changed:**
+- `BOOTSTRAP.md`, `BOOTSTRAP-LITE.md`, `README.md` and the `.sdlc-manifest.json` template point at `https://github.com/endless-galaxy-studios/z-sdlc`, for cloning and for the raw bootstrap file.
+- `skills/sdlc-initialize`: clones from the new URL, and looks for a local copy under the new name first (`~/Projects/z-sdlc`, `~/z-sdlc`, `../z-sdlc`), then the old one.
+- `skills/sdlc-migrate` § 4.5 step 1a: a project whose `source_repo` names `github.com/Inpacchi/cc-sdlc` (HTTPS or SSH) gets it rewritten to the same form at the new home. Any other value, such as a fork or a local path, is left alone.
+
+**Rationale:** GitHub redirects the old URL, but only until something takes the old name, and every install's manifest still names it. Migration fixes each project's record, so no project has to be edited by hand. A migration runs the project's installed `sdlc-migrate`, so the rewrite happens at the first migration after one installs this version; the redirect covers the time between. Release type: patch.
+
+---
+
 ## 2026-10-11: Changelog archiving: project-only changelogs, quarterly archive files
 
 **Origin:** CD decided the process changelog gets archived (2026-10-11) and chose all four parts of `docs/current_work/ideas/changelog-archiving_design.md`. [contract-change] (adapter exemption list; contract 0017)

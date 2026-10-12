@@ -1,10 +1,10 @@
-# cc-sdlc
+# z-sdlc
 
 A reusable Software Development Lifecycle (SDLC) framework for AI-assisted development projects using Claude Code.
 
 ## What This Is
 
-cc-sdlc is a lightweight process framework for projects that use Claude Code (CC) as a primary development tool. It defines how work flows from idea to archive, how humans and AI agents collaborate, and how project knowledge is captured and reused across sessions.
+z-sdlc is a lightweight process framework for projects that use Claude Code (CC) as a primary development tool. It defines how work flows from idea to archive, how humans and AI agents collaborate, and how project knowledge is captured and reused across sessions.
 
 The framework is designed to be adopted incrementally — start with the core process, add skills and agents as your workflow matures.
 
@@ -29,7 +29,7 @@ The framework is designed to be adopted incrementally — start with the core pr
 
 ```bash
 # One command — downloads the bootstrap file
-curl -fsSL https://raw.githubusercontent.com/Inpacchi/cc-sdlc/master/BOOTSTRAP.md -o .claude/BOOTSTRAP.md
+curl -fsSL https://raw.githubusercontent.com/endless-galaxy-studios/z-sdlc/master/BOOTSTRAP.md -o .claude/BOOTSTRAP.md
 ```
 
 Open your project in Claude Code and say:
@@ -97,6 +97,6 @@ This layer starts mostly empty and fills in as your project accumulates insights
 
 ## Upstream
 
-This framework is maintained at [github.com/Inpacchi/cc-sdlc](https://github.com/Inpacchi/cc-sdlc).
+This framework is maintained at [github.com/endless-galaxy-studios/z-sdlc](https://github.com/endless-galaxy-studios/z-sdlc).
 
 Knowledge YAMLs and discipline files were seeded from a cross-project reference implementation. They are intentionally generic — project-specific content belongs in your project's `docs/` and `CLAUDE.md`.

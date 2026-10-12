@@ -183,7 +183,7 @@ protocol — with two adjustments:
 
 - **It does not fix and does not decide.** It only emits findings, which the
   architect/manager classifies like any other. Domain agents fix; the internal
-  loop re-verifies. This keeps it subordinate to cc-sdlc's own review.
+  loop re-verifies. This keeps it subordinate to z-sdlc's own review.
 - **Weight it for higher false positives.** It lacks codebase context and the
   plan's deliberate trade-offs, so its findings lean INVESTIGATE over FIX until
   corroborated. Apply the Anti-Conformity Safeguard when an internal reviewer

@@ -1,7 +1,7 @@
 ---
-name: ccsdlc-audit
+name: zsdlc-audit
 description: >
-  Unified auditing skill for the cc-sdlc framework source repo with two modes: compliance and
+  Unified auditing skill for the z-sdlc framework source repo with two modes: compliance and
   improvement. Compliance mode audits manifest completeness, cross-reference consistency, stale
   references, changelog freshness, knowledge store conventions, discipline health, skill/agent
   convention compliance, setup.sh correctness, and cross-skill DRY (verbatim or near-verbatim
@@ -21,7 +21,7 @@ description: >
 
 # Framework Audit
 
-Unified auditing for both structural compliance and process improvement of the cc-sdlc source repo. Two modes, flexible inputs.
+Unified auditing for both structural compliance and process improvement of the z-sdlc source repo. Two modes, flexible inputs.
 
 **Argument:** `$ARGUMENTS` (mode + optional source — see Input Resolution below)
 
@@ -38,15 +38,15 @@ Parse `$ARGUMENTS` to determine mode and source:
 
 | Invocation | Mode | Source |
 |-----------|------|--------|
-| `/ccsdlc-audit` (no args) | Compliance | Current framework state |
-| `/ccsdlc-audit compliance` | Compliance | Current framework state |
-| `/ccsdlc-audit compliance --skip-validation` | Compliance | Current state, skip active validation (6e) — fast structural health check only |
-| `/ccsdlc-audit compliance <session>` | Compliance | Specific session — did it follow framework conventions? |
-| `/ccsdlc-audit compliance <commit(s)>` | Compliance | Specific commits — do they maintain framework consistency? |
-| `/ccsdlc-audit improve` | Improve | Current session |
-| `/ccsdlc-audit improve <session>` | Improve | Past session |
-| `/ccsdlc-audit improve <commit(s)>` | Improve | Specific commits |
-| `/ccsdlc-audit improve <session> <commit(s)>` | Improve | Session + commits combined |
+| `/zsdlc-audit` (no args) | Compliance | Current framework state |
+| `/zsdlc-audit compliance` | Compliance | Current framework state |
+| `/zsdlc-audit compliance --skip-validation` | Compliance | Current state, skip active validation (6e) — fast structural health check only |
+| `/zsdlc-audit compliance <session>` | Compliance | Specific session — did it follow framework conventions? |
+| `/zsdlc-audit compliance <commit(s)>` | Compliance | Specific commits — do they maintain framework consistency? |
+| `/zsdlc-audit improve` | Improve | Current session |
+| `/zsdlc-audit improve <session>` | Improve | Past session |
+| `/zsdlc-audit improve <commit(s)>` | Improve | Specific commits |
+| `/zsdlc-audit improve <session> <commit(s)>` | Improve | Session + commits combined |
 
 **Identifying sessions vs commits in arguments:**
 - Session identifiers: UUIDs, quoted names, or search terms (resolved against JSONL files)
@@ -98,7 +98,7 @@ Candidates come from two sources: entries marked `[VALIDATED]` by the active val
 
 ## Improvement Mode
 
-Analyze sessions and/or commits to identify how the cc-sdlc framework itself should evolve. Full methodology in `references/improvement-methodology.md`.
+Analyze sessions and/or commits to identify how the z-sdlc framework itself should evolve. Full methodology in `references/improvement-methodology.md`.
 
 ### Workflow
 
@@ -199,7 +199,7 @@ Update `process/sdlc_changelog.md` for every process change applied.
 - **Feeds into:** skill modifications, knowledge store updates, discipline parking lots, process doc changes, manifest updates, CLAUDE-SDLC.md updates
 - **Uses:** `sdlc-compliance-auditor` subagent (compliance mode 10-dimension scan), session JSONL, git history, all framework source files
 - **Complements:** `sdlc-playbook-generate` (playbooks capture "how to repeat"; this captures "how to improve")
-- **Does NOT replace:** `ccsdlc-ingest` (bulk knowledge import — audit triages existing entries, does not ingest new ones)
+- **Does NOT replace:** `zsdlc-ingest` (bulk knowledge import — audit triages existing entries, does not ingest new ones)
 
 ## Additional Resources
 

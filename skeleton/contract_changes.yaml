@@ -1,11 +1,11 @@
-# cc-sdlc Contract Changes
+# z-sdlc Contract Changes
 #
-# Structured record of breaking-or-behavioral changes in cc-sdlc that require
+# Structured record of breaking-or-behavioral changes in z-sdlc that require
 # active migration work in downstream projects beyond simple direct-copy.
 #
 # sdlc-migrate consumes this file. On every migration run:
 #
-#   1. Read this file from the cc-sdlc source (it is not installed into projects).
+#   1. Read this file from the z-sdlc source (it is not installed into projects).
 #   2. Read the project's `.sdlc-manifest.json` → `last_applied_contract_id`.
 #   3. For each entry with `id` > last_applied_contract_id, apply it.
 #   4. Update `last_applied_contract_id` to the newest entry's id.
@@ -367,3 +367,19 @@ changes:
       (skills/sdlc-archive/scripts/), direct-copied, never content-merged.
       Adapter action: exempt process/changelog-archive/*.md from
       transformation, like process/sdlc_changelog.md.
+
+  - id: "0018"
+    date: "2026-10-12"
+    title: "Adapter fields and the improve route take the z-sdlc name"
+    type: other
+    changelog_ref: "2026-10-12: Adapter fields and the improve route take the z-sdlc name"
+    notes: >
+      The framework was renamed z-sdlc. Adapter plugins mark themselves with
+      zsdlc_adapter and declare supported_zsdlc_version (adapter.json and the
+      project manifest's adapter block); the pre-rename keys ccsdlc_adapter and
+      supported_ccsdlc_version stay readable, and sdlc-migrate writes the new key
+      when it refreshes a project's adapter entry. sdlc-audit's improvement mode
+      names the framework route and section z-sdlc; factories and reports from
+      before the rename use cc-sdlc, and a factory's schema and ledger reader
+      must accept both. Additive for readers: nothing breaks on an old adapter
+      or an old ledger.

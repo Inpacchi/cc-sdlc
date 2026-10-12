@@ -1,9 +1,9 @@
 {
-  "_comment": "Drop this file in the root of a project to mark it as using cc-sdlc. Used by sdlc-initialize to track installation state.",
-  "cc-sdlc": {
+  "_comment": "Drop this file in the root of a project to mark it as using z-sdlc. Used by sdlc-initialize to track installation state.",
+  "z-sdlc": {
     "version": "1.0.0",
     "installed_at": "YYYY-MM-DD",
-    "source": "https://github.com/Inpacchi/cc-sdlc",
+    "source": "https://github.com/endless-galaxy-studios/z-sdlc",
     "install_mode": "default",
     "project": {
       "name": "[Your Project Name]",
@@ -13,6 +13,6 @@
       "skills_root": ".claude/skills",
       "agents_root": ".claude/agents"
     },
-    "notes": "Update installed_at when running sdlc-initialize or sdlc-migrate to track when cc-sdlc content was last synchronized."
+    "notes": "Update installed_at when running sdlc-initialize or sdlc-migrate to track when z-sdlc content was last synchronized."
   }
 }

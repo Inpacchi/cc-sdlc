@@ -167,7 +167,7 @@ Controls whether a knowledge file is injected into agent dispatch prompts during
 - `spec_relevant: true` — Knowledge that shapes **what** gets built: domain models, design methodologies, product research frameworks, security taxonomies, accessibility principles. Loaded at spec time AND plan/execution time.
 - `spec_relevant: false` — Knowledge that shapes **how** it gets built: code patterns, debugging methodologies, test tooling, deployment patterns. Loaded only at plan/execution time.
 
-**Default is `false`** in the cc-sdlc source repo because spec-relevance is project-specific. Projects override to `true` for stores that matter to their spec writing. The `sdlc-migrate` skill preserves project overrides when updating framework files.
+**Default is `false`** in the z-sdlc source repo because spec-relevance is project-specific. Projects override to `true` for stores that matter to their spec writing. The `sdlc-migrate` skill preserves project overrides when updating framework files.
 
 **Opt-in filtering:** If no knowledge file in the project has `spec_relevant: true`, `sdlc-plan` loads ALL mapped files at spec time (current behavior preserved). Filtering only activates once at least one file is tagged `true`. Tag at least 2-3 files as spec-relevant, or leave all as `false` for full loading — tagging only one file may produce under-informed specs.
 
@@ -203,7 +203,7 @@ project_applicability:
 
 **`action_if_irrelevant` values:**
 
-- `keep` — Always retain this file regardless of project type. Used for cc-sdlc infrastructure files (agent protocols, debugging, testing paradigm) and universal methodologies.
+- `keep` — Always retain this file regardless of project type. Used for z-sdlc infrastructure files (agent protocols, debugging, testing paradigm) and universal methodologies.
 - `customize` — The file's structure is useful but its content is stack-specific. During initialization, the agent rewrites the content for the project's actual stack (e.g., swap Playwright CLI patterns for Cypress patterns).
 - `remove` — The file is not applicable. Delete it from the project's knowledge directory and remove its entry from `[sdlc-root]/knowledge/agent-context-map.yaml`.
 
@@ -211,7 +211,7 @@ project_applicability:
 
 ## Setup: Wiring Agents to Knowledge
 
-After installing cc-sdlc into a project, the agent-context-map references **generic role names** (e.g., `sdet`, `architect`, `backend-developer`). These must be updated to match your project's actual agent filenames.
+After installing z-sdlc into a project, the agent-context-map references **generic role names** (e.g., `sdet`, `architect`, `backend-developer`). These must be updated to match your project's actual agent filenames.
 
 ### Step 1: Update `[sdlc-root]/knowledge/agent-context-map.yaml`
 

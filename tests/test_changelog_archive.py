@@ -237,7 +237,7 @@ class UpstreamCopyTests(Base):
     def setUp(self):
         super().setUp()
         self.upstream = self.dir / "upstream.md"
-        # cc-sdlc's live file and an archive file, concatenated as sdlc-migrate pipes them.
+        # z-sdlc's live file and an archive file, concatenated as sdlc-migrate pipes them.
         self.upstream.write_text(
             HEADER + entry("2026-10-03", "Upstream Q4") + entry("2026-08-01", "Upstream Q3", sep=False)
             + "\n" + ca.archive_header("2026-Q2") + entry("2026-05-01", "Upstream Q2", sep=False)
@@ -257,7 +257,7 @@ class UpstreamCopyTests(Base):
         before = self.all_bodies()
         code, out = run("archive", self.log, "--upstream", self.upstream, "--today", self.TODAY, "--threshold-kb", "500")
         self.assertEqual(code, 0, out)
-        self.assertIn("3 of the moved entries were copied from cc-sdlc", out)
+        self.assertIn("3 of the moved entries were copied from z-sdlc", out)
         live = self.log.read_text()
         self.assertIn("Own Q4", live)
         self.assertIn("Own Q3", live)
@@ -270,7 +270,7 @@ class UpstreamCopyTests(Base):
         self.write(entry("2026-10-06", "Own Q4"), entry("2026-01-02", "Own Q1", sep=False))
         code, out = run("archive", self.log, "--upstream", self.upstream, "--today", self.TODAY, "--threshold-kb", "500")
         self.assertEqual(code, 0)
-        self.assertIn("no entry copied from cc-sdlc", out)
+        self.assertIn("no entry copied from z-sdlc", out)
         self.assertIn("Own Q1", self.log.read_text())
 
     def test_upstream_from_stdin(self):
@@ -318,7 +318,7 @@ class InitTests(Base):
         self.assertNotIn(ca.POINTER_MARK, text)
         _, entries = ca.split(text)
         self.assertEqual(len(entries), 1)
-        self.assertIn("Installed cc-sdlc v2.0.0", entries[0].text)
+        self.assertIn("Installed z-sdlc v2.0.0", entries[0].text)
         self.assertEqual(run("init", source, target, "--version", "v2.0.0")[0], 2)
 
     def test_refuses_a_source_without_header(self):

@@ -8,9 +8,9 @@ Usage:
 
 archive: when CHANGELOG is over the threshold, every entry dated before the
   previous calendar quarter moves, unedited and in its original order, to
-  changelog-archive/YYYY-Qn.md beside it. With --upstream (cc-sdlc's changelog
+  changelog-archive/YYYY-Qn.md beside it. With --upstream (z-sdlc's changelog
   and archive files, concatenated; `-` reads stdin), entries copied from
-  cc-sdlc move too, whatever their date and the file's size: an entry is a
+  z-sdlc move too, whatever their date and the file's size: an entry is a
   copy when its `## YYYY-MM-DD: Title` line matches one upstream. The live
   file keeps a pointer line. Nothing is written unless the entries across
   all the files are the same before and after.
@@ -207,7 +207,7 @@ def heading(e: Entry) -> str:
 
 
 def upstream_headings(text: str) -> set[str]:
-    """The `## YYYY-MM-DD: Title` lines of cc-sdlc's changelog and archive files."""
+    """The `## YYYY-MM-DD: Title` lines of z-sdlc's changelog and archive files."""
     return {heading(e) for e in split(text, "upstream")[1]}
 
 
@@ -232,7 +232,7 @@ def plan(changelog: Path, today: dt.date, threshold_kb: int, upstream: set[str] 
             else f"{size // 1024} KB, under the {threshold_kb} KB threshold"
         )
         if upstream is not None:
-            why += "; no entry copied from cc-sdlc"
+            why += "; no entry copied from z-sdlc"
         return header, entries, archives, {}, 0, why
     return header, entries, archives, moving, len(copies), ""
 
@@ -284,7 +284,7 @@ def cmd_archive(changelog: Path, today: dt.date, threshold_kb: int, dry_run: boo
         print(f"{'Would move' if dry_run else 'Moved'} {len(group)} entries to {folder / (quarter + '.md')}")
     size_after = len(new_live.encode("utf-8"))
     if upstream is not None:
-        print(f"{n_copies} of the moved entries were copied from cc-sdlc")
+        print(f"{n_copies} of the moved entries were copied from z-sdlc")
     print(f"{changelog}: {changelog.stat().st_size // 1024} KB -> {size_after // 1024} KB, {len(kept)} entries kept")
     if dry_run:
         return 0
@@ -324,13 +324,13 @@ def cmd_init(source: Path, target: Path, version: str, today: dt.date) -> int:
     if not header.endswith("---"):
         header += "\n\n---"
     entry = (
-        f"## {today.isoformat()}: Installed cc-sdlc {version}\n\n"
+        f"## {today.isoformat()}: Installed z-sdlc {version}\n\n"
         "**Origin:** `sdlc-initialize`.\n\n"
         f"**What happened:** the framework was installed at {version}. Its own history is the "
-        "cc-sdlc repository's changelog; this file records this project's process changes from here on, "
+        "z-sdlc repository's changelog; this file records this project's process changes from here on, "
         "and each migration adds an entry.\n\n"
         "**Changes made:**\n\n"
-        f"1. Installed cc-sdlc {version}.\n"
+        f"1. Installed z-sdlc {version}.\n"
     )
     atomic_write(target, header + "\n\n" + entry)
     print(f"Wrote {target}: the header and one install entry.")
@@ -347,7 +347,7 @@ def main(argv: list[str] | None = None) -> int:
         p.add_argument("--threshold-kb", type=int, default=THRESHOLD_KB)
         if name == "archive":
             p.add_argument("--dry-run", action="store_true")
-            p.add_argument("--upstream", help="cc-sdlc's changelog and archive files, concatenated; - for stdin")
+            p.add_argument("--upstream", help="z-sdlc's changelog and archive files, concatenated; - for stdin")
     p = sub.add_parser("init")
     p.add_argument("source", type=Path)
     p.add_argument("target", type=Path)

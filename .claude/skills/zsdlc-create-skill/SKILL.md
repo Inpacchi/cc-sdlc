@@ -1,21 +1,21 @@
 ---
-name: ccsdlc-create-skill
+name: zsdlc-create-skill
 description: >
-  Create a new SDLC framework skill in the cc-sdlc source repo. Walks through purpose definition,
+  Create a new SDLC framework skill in the z-sdlc source repo. Walks through purpose definition,
   skill type selection (orchestration, utility, exploration, domain-specific), frontmatter
   generation with trigger phrases and anti-triggers, type-appropriate body scaffolding,
   Red Flags table, Integration section, and registration in manifest.json and CLAUDE-SDLC.md.
   Enforces single-line YAML descriptions, verb-first naming, manager-rule references for
   agent-dispatching skills, and mandatory sections. Dispatches sdlc-reviewer for quality gate.
   Triggers on "create a new skill", "new skill", "add a skill", "scaffold a skill",
-  "I need a skill for", "make a skill", "create a framework skill", "/ccsdlc-create-skill".
+  "I need a skill for", "make a skill", "create a framework skill", "/zsdlc-create-skill".
   Do NOT use for creating agents — use sdlc-develop-agent.
   Do NOT use for modifying existing skills — edit directly.
 ---
 
 # Skill Creation
 
-Create a new SDLC framework skill in the cc-sdlc source repo. Scaffold the complete skill file, validate conventions, register in the manifest, and quality-gate with the reviewer subagent.
+Create a new SDLC framework skill in the z-sdlc source repo. Scaffold the complete skill file, validate conventions, register in the manifest, and quality-gate with the reviewer subagent.
 
 **Argument:** `$ARGUMENTS` (what the skill should do)
 
@@ -165,7 +165,7 @@ Dispatch the `sdlc-reviewer` subagent on the created skill file. Present its fin
 
 ## Integration
 
-- **Feeds into:** The created skill becomes part of the cc-sdlc framework skill library (installed to child projects via setup.sh)
+- **Feeds into:** The created skill becomes part of the z-sdlc framework skill library (installed to child projects via setup.sh)
 - **Uses:** `skeleton/manifest.json` (registration), `CLAUDE-SDLC.md` (command table), `sdlc-reviewer` (quality gate), existing skills (as reference patterns)
 - **Complements:** `sdlc-develop-agent` (agents vs skills), `sdlc-review` (review existing skills)
 - **Does NOT replace:** Direct editing of existing skills (this creates new ones only)

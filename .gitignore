@@ -24,7 +24,7 @@ node_modules/
 /tmp/
 
 # Framework-dev tooling in .claude/ — broadly ignored, but track skills and agents
-# so they're shared with other cc-sdlc maintainers. Agent memory stays local.
+# so they're shared with other z-sdlc maintainers. Agent memory stays local.
 .claude/*
 !.claude/skills
 !.claude/skills/**

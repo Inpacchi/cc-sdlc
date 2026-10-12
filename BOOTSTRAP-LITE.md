@@ -1,4 +1,4 @@
-# CC-SDLC Lite Bootstrap
+# Z-SDLC Lite Bootstrap
 
 A **minimal SDLC starter kit** for teams new to the framework. Installs 3 agents, 2 skills, a small knowledge/discipline store, and the core manager-rule discipline — enough to feel the benefit, nothing that requires ceremony.
 
@@ -25,7 +25,7 @@ Everything else. If you later want chronicles, playbooks, full spec/plan/execute
 ## Source
 
 ```
-repo: https://github.com/Inpacchi/cc-sdlc
+repo: https://github.com/endless-galaxy-studios/z-sdlc
 branch: master
 ```
 
@@ -38,10 +38,10 @@ When the user asks to bootstrap SDLC Lite, follow these steps in order. **Use `A
 ### Step 1: Fetch the framework (temp clone)
 
 ```bash
-git clone --depth 1 https://github.com/Inpacchi/cc-sdlc.git /tmp/cc-sdlc-lite-bootstrap
+git clone --depth 1 https://github.com/endless-galaxy-studios/z-sdlc.git /tmp/z-sdlc-lite-bootstrap
 ```
 
-Verify `/tmp/cc-sdlc-lite-bootstrap/templates/sdlc_lite_plan_template.md` exists. If the clone fails, stop and report the error — do not delete `BOOTSTRAP-LITE.md`, the user will retry.
+Verify `/tmp/z-sdlc-lite-bootstrap/templates/sdlc_lite_plan_template.md` exists. If the clone fails, stop and report the error — do not delete `BOOTSTRAP-LITE.md`, the user will retry.
 
 Create the lite install root in the project:
 
@@ -84,7 +84,7 @@ Record the user's answer verbatim — it feeds every agent's scope, tool list, a
 
 ### Step 3: Create the 3 agents (lite orchestration of `/sdlc-develop-agent`)
 
-Read `/tmp/cc-sdlc-lite-bootstrap/templates/agent-template.md` as the structural reference. For each of the 3 agents below, generate the frontmatter + body using the detected stack + user input from Step 2, then write to `.claude/agents/{name}.md`.
+Read `/tmp/z-sdlc-lite-bootstrap/templates/agent-template.md` as the structural reference. For each of the 3 agents below, generate the frontmatter + body using the detected stack + user input from Step 2, then write to `.claude/agents/{name}.md`.
 
 **Simplifications vs. full `/sdlc-develop-agent`:**
 - No domain-conflict check across existing agents (lite roster is fixed)
@@ -184,8 +184,8 @@ Write all 3 files. Confirm each exists before moving on.
 The framework's `skills/sdlc-lite-plan/` and `skills/sdlc-lite-execute/` are already "lite" relative to the full SDLC, but they reference a handful of files this bootstrap doesn't install (chronicle, playbooks, `agent-selection.yaml`). Copy them in, then edit out the dead references directly — this is mechanical text manipulation during installation, not an SDLC work session, so no agent dispatch.
 
 ```bash
-cp -r /tmp/cc-sdlc-lite-bootstrap/skills/sdlc-lite-plan .claude/skills/
-cp -r /tmp/cc-sdlc-lite-bootstrap/skills/sdlc-lite-execute .claude/skills/
+cp -r /tmp/z-sdlc-lite-bootstrap/skills/sdlc-lite-plan .claude/skills/
+cp -r /tmp/z-sdlc-lite-bootstrap/skills/sdlc-lite-execute .claude/skills/
 ```
 
 **Edits to apply to both `.claude/skills/sdlc-lite-plan/SKILL.md` and `.claude/skills/sdlc-lite-execute/SKILL.md`:**
@@ -235,20 +235,20 @@ Verification:
 ```bash
 # Architecture (system design patterns the architect will read)
 mkdir -p ops/sdlc-lite/knowledge/architecture
-cp /tmp/cc-sdlc-lite-bootstrap/knowledge/architecture/technology-patterns.yaml ops/sdlc-lite/knowledge/architecture/
-cp /tmp/cc-sdlc-lite-bootstrap/knowledge/architecture/domain-boundary-gotchas.yaml ops/sdlc-lite/knowledge/architecture/
-cp /tmp/cc-sdlc-lite-bootstrap/knowledge/architecture/api-design-methodology.yaml ops/sdlc-lite/knowledge/architecture/
+cp /tmp/z-sdlc-lite-bootstrap/knowledge/architecture/technology-patterns.yaml ops/sdlc-lite/knowledge/architecture/
+cp /tmp/z-sdlc-lite-bootstrap/knowledge/architecture/domain-boundary-gotchas.yaml ops/sdlc-lite/knowledge/architecture/
+cp /tmp/z-sdlc-lite-bootstrap/knowledge/architecture/api-design-methodology.yaml ops/sdlc-lite/knowledge/architecture/
 
 # Coding (quality principles + language patterns for fullstack)
 mkdir -p ops/sdlc-lite/knowledge/coding
-cp /tmp/cc-sdlc-lite-bootstrap/knowledge/coding/code-quality-principles.yaml ops/sdlc-lite/knowledge/coding/
+cp /tmp/z-sdlc-lite-bootstrap/knowledge/coding/code-quality-principles.yaml ops/sdlc-lite/knowledge/coding/
 # Copy typescript-patterns.yaml ONLY if TypeScript detected in Step 2
 # Otherwise skip — the store stays TypeScript-free rather than misleading
 
 # Testing (gotchas + tool patterns for code-reviewer)
 mkdir -p ops/sdlc-lite/knowledge/testing
-cp /tmp/cc-sdlc-lite-bootstrap/knowledge/testing/gotchas.yaml ops/sdlc-lite/knowledge/testing/
-cp /tmp/cc-sdlc-lite-bootstrap/knowledge/testing/testing-paradigm.yaml ops/sdlc-lite/knowledge/testing/
+cp /tmp/z-sdlc-lite-bootstrap/knowledge/testing/gotchas.yaml ops/sdlc-lite/knowledge/testing/
+cp /tmp/z-sdlc-lite-bootstrap/knowledge/testing/testing-paradigm.yaml ops/sdlc-lite/knowledge/testing/
 ```
 
 **Rewrite paths inside copied YAML** — each copied file may reference `[sdlc-root]/...` internally. Grep each file and replace `[sdlc-root]` → `ops/sdlc-lite`. Verify:
@@ -260,7 +260,7 @@ grep -l '\[sdlc-root\]' ops/sdlc-lite/knowledge/**/*.yaml
 
 **Disciplines** — create 3 parking lots:
 
-Write each of these 3 files with content derived from `/tmp/cc-sdlc-lite-bootstrap/disciplines/README.md` § "How to Use" (the parking-lot pattern, triage markers, freeform entry format). Do not copy the full README — synthesize a 30-40 line parking lot file per discipline:
+Write each of these 3 files with content derived from `/tmp/z-sdlc-lite-bootstrap/disciplines/README.md` § "How to Use" (the parking-lot pattern, triage markers, freeform entry format). Do not copy the full README — synthesize a 30-40 line parking lot file per discipline:
 
 - `ops/sdlc-lite/disciplines/architecture.md`
 - `ops/sdlc-lite/disciplines/coding.md`
@@ -308,8 +308,8 @@ Before starting substantive work, consult `ops/sdlc-lite/knowledge/agent-context
 ### Step 6: Install templates
 
 ```bash
-cp /tmp/cc-sdlc-lite-bootstrap/templates/sdlc_lite_plan_template.md ops/sdlc-lite/templates/
-cp /tmp/cc-sdlc-lite-bootstrap/templates/sdlc_lite_result_template.md ops/sdlc-lite/templates/
+cp /tmp/z-sdlc-lite-bootstrap/templates/sdlc_lite_plan_template.md ops/sdlc-lite/templates/
+cp /tmp/z-sdlc-lite-bootstrap/templates/sdlc_lite_result_template.md ops/sdlc-lite/templates/
 ```
 
 ### Step 7: Install core process + memory files
@@ -317,9 +317,9 @@ cp /tmp/cc-sdlc-lite-bootstrap/templates/sdlc_lite_result_template.md ops/sdlc-l
 **Core process docs** — copy verbatim, then rewrite `[sdlc-root]` → `ops/sdlc-lite` inside each file:
 
 ```bash
-cp /tmp/cc-sdlc-lite-bootstrap/process/manager-rule.md ops/sdlc-lite/process/manager-rule.md
-cp /tmp/cc-sdlc-lite-bootstrap/process/finding-classification.md ops/sdlc-lite/process/finding-classification.md
-cp /tmp/cc-sdlc-lite-bootstrap/process/review-fix-loop.md ops/sdlc-lite/process/review-fix-loop.md
+cp /tmp/z-sdlc-lite-bootstrap/process/manager-rule.md ops/sdlc-lite/process/manager-rule.md
+cp /tmp/z-sdlc-lite-bootstrap/process/finding-classification.md ops/sdlc-lite/process/finding-classification.md
+cp /tmp/z-sdlc-lite-bootstrap/process/review-fix-loop.md ops/sdlc-lite/process/review-fix-loop.md
 ```
 
 These are the spine of the review/triage half of the SDLC — kept intact in lite (not summarized inline in the skills). After copying, grep each file for `[sdlc-root]` and replace with `ops/sdlc-lite`. Verify:
@@ -400,7 +400,7 @@ The single most important file. Without this block, the agent doesn't know when 
 
 # SDLC-Lite
 
-This project uses the cc-sdlc **lite** toolkit — a minimal planning/execution/review loop. See `ops/sdlc-lite/` for the installed content.
+This project uses the z-sdlc **lite** toolkit — a minimal planning/execution/review loop. See `ops/sdlc-lite/` for the installed content.
 
 ## When to invoke
 
@@ -586,7 +586,7 @@ Say **"Bootstrap SDLC"** or **"Initialize SDLC"** in Claude Code. `sdlc-initiali
 ### Step 12: Cleanup (mandatory on success)
 
 ```bash
-rm -rf /tmp/cc-sdlc-lite-bootstrap
+rm -rf /tmp/z-sdlc-lite-bootstrap
 rm -f BOOTSTRAP-LITE.md .claude/BOOTSTRAP-LITE.md
 ```
 
@@ -607,9 +607,9 @@ Removed temp clone and BOOTSTRAP-LITE.md. Framework is self-contained.
 1. **`AskUserQuestion` for all prompts** — stack confirmation (Step 2), custom skill (Step 9), skill purpose (Step 9.1).
 2. **No confirmation gates between mechanical steps** — Steps 1, 4, 5, 6, 7, 8, 10, 11, 12 run without pausing. Only the explicit user-input steps (2, 3 briefing, 9) prompt.
 3. **Preserve existing files** — Never overwrite `CLAUDE.md`; always append. If `docs/_index.md` exists, merge carefully.
-4. **If the user already has full cc-sdlc installed** — stop at Step 1. Say: "Full SDLC is already installed at `ops/sdlc/`. SDLC-Lite is a subset of what you have — no action needed. Use `/sdlc-lite-plan` / `/sdlc-lite-execute` which are already available."
-5. **Clean up on success** — remove `/tmp/cc-sdlc-lite-bootstrap` AND `BOOTSTRAP-LITE.md`.
-6. **Clean up on failure** — remove `/tmp/cc-sdlc-lite-bootstrap` but **leave** `BOOTSTRAP-LITE.md` so the user can retry.
+4. **If the user already has full z-sdlc installed** — stop at Step 1. Say: "Full SDLC is already installed at `ops/sdlc/`. SDLC-Lite is a subset of what you have — no action needed. Use `/sdlc-lite-plan` / `/sdlc-lite-execute` which are already available."
+5. **Clean up on success** — remove `/tmp/z-sdlc-lite-bootstrap` AND `BOOTSTRAP-LITE.md`.
+6. **Clean up on failure** — remove `/tmp/z-sdlc-lite-bootstrap` but **leave** `BOOTSTRAP-LITE.md` so the user can retry.
 7. **The Manager Rule does not apply during the bootstrap itself.** Bootstrap is framework installation, not an SDLC work session. All steps here — including the skill-file strip in Step 4 and the YAML path rewrites in Step 5 — are mechanical text manipulation performed directly by Claude Code. The Manager Rule activates for the user's first real work session after the install is complete, at which point the lite skills enforce it.
 
 ---
@@ -617,7 +617,7 @@ Removed temp clone and BOOTSTRAP-LITE.md. Framework is self-contained.
 ## One-liner install
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/Inpacchi/cc-sdlc/master/BOOTSTRAP-LITE.md -o .claude/BOOTSTRAP-LITE.md
+curl -fsSL https://raw.githubusercontent.com/endless-galaxy-studios/z-sdlc/master/BOOTSTRAP-LITE.md -o .claude/BOOTSTRAP-LITE.md
 ```
 
 Then in Claude Code: **"Bootstrap SDLC Lite"**

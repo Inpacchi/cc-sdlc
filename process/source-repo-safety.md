@@ -2,13 +2,13 @@
 
 ## Source Repo Access Rule
 
-**All reads from the cc-sdlc source repo MUST use git commands**, not filesystem reads. This ensures you're reading committed state, not the working tree.
+**All reads from the z-sdlc source repo MUST use git commands**, not filesystem reads. This ensures you're reading committed state, not the working tree.
 
-- Read a file: `git -C [cc-sdlc-path] show HEAD:<path>`
-- List files: `git -C [cc-sdlc-path] ls-tree -r --name-only HEAD`
-- Diff since version: `git -C [cc-sdlc-path] diff [source_version]..HEAD`
+- Read a file: `git -C [z-sdlc-path] show HEAD:<path>`
+- List files: `git -C [z-sdlc-path] ls-tree -r --name-only HEAD`
+- Diff since version: `git -C [z-sdlc-path] diff [source_version]..HEAD`
 
-Never use `cat`, `cp`, `ls`, or direct file reads against `[cc-sdlc-path]`. The source repo may have uncommitted work in progress.
+Never use `cat`, `cp`, `ls`, or direct file reads against `[z-sdlc-path]`. The source repo may have uncommitted work in progress.
 
 ## Safe File Extraction (CRITICAL)
 
@@ -17,7 +17,7 @@ Never use `cat`, `cp`, `ls`, or direct file reads against `[cc-sdlc-path]`. The 
 **Safe pattern — verify before overwriting:**
 ```bash
 # Extract to temp, verify content exists, then move
-CONTENT=$(git -C [cc-sdlc-path] show HEAD:<path> 2>/dev/null) || {
+CONTENT=$(git -C [z-sdlc-path] show HEAD:<path> 2>/dev/null) || {
   echo "ERROR: git show failed for <path> — file NOT overwritten"
   return 1  # or continue to next file
 }
@@ -31,7 +31,7 @@ echo "$CONTENT" > [project-path]/[target]
 **Alternative — use git archive for batch extraction:**
 ```bash
 # Extract specific files to a temp directory, then move
-git -C [cc-sdlc-path] archive HEAD:<dir> | tar -x -C /tmp/extract/
+git -C [z-sdlc-path] archive HEAD:<dir> | tar -x -C /tmp/extract/
 # Verify each file before copying to project
 ```
 

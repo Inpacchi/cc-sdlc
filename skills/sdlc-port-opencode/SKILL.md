@@ -1,7 +1,7 @@
 ---
 name: sdlc-port-opencode
 description: >
-  Adapt an existing cc-sdlc installation to work with OpenCode agents alongside Claude Code.
+  Adapt an existing z-sdlc installation to work with OpenCode agents alongside Claude Code.
   OpenCode natively discovers .claude/skills/ and falls back to CLAUDE.md, so skills and the
   shared [sdlc-root] content are used as-is by both tools — no duplication. This skill ports the
   parts OpenCode does NOT auto-discover: it creates .opencode/agents/ from .claude/agents/ with
@@ -9,7 +9,7 @@ description: >
   opencode.json (provider, model, mcp, permission) — including wiring a local OpenAI-compatible model
   endpoint when present. Does NOT remove or replace the Claude Code setup — it adds OpenCode
   compatibility alongside it.
-  Use when an existing cc-sdlc project needs OpenCode compatibility alongside its Claude Code setup.
+  Use when an existing z-sdlc project needs OpenCode compatibility alongside its Claude Code setup.
   Triggers on "port to opencode", "make this work with opencode", "opencode compatibility",
   "wire for opencode", "adapt for opencode", "opencode setup", "/sdlc-port-opencode".
   Do NOT use for full framework migration or updates — use sdlc-migrate.
@@ -19,7 +19,7 @@ description: >
 
 # Port SDLC to OpenCode
 
-Adapt an existing cc-sdlc installation so the project's SDLC agents, skills, and process documentation work with [OpenCode](https://opencode.ai). This creates a parallel `.opencode/` structure and an `AGENTS.md` alongside the existing `.claude/` setup — it **does not remove or replace anything**.
+Adapt an existing z-sdlc installation so the project's SDLC agents, skills, and process documentation work with [OpenCode](https://opencode.ai). This creates a parallel `.opencode/` structure and an `AGENTS.md` alongside the existing `.claude/` setup — it **does not remove or replace anything**.
 
 **Argument:** `$ARGUMENTS` (optional: specific components to port, e.g., "agents only", "config only")
 
@@ -39,7 +39,7 @@ What OpenCode does **not** auto-discover from the Claude Code layer — and what
 
 ## Preconditions
 
-- The project must have an existing cc-sdlc installation (`.claude/skills/`, `.claude/agents/`, `CLAUDE.md` with SDLC sections)
+- The project must have an existing z-sdlc installation (`.claude/skills/`, `.claude/agents/`, `CLAUDE.md` with SDLC sections)
 - Verify with `ls .claude/skills/ .claude/agents/` and check `CLAUDE.md` exists
 - If preconditions fail, tell the user to run `/sdlc-initialize` first
 
@@ -123,7 +123,7 @@ For each `.md` file in `.claude/agents/` (skip `AGENT_SUGGESTIONS.md` if present
 **Frontmatter** — OpenCode agent frontmatter fields: `description`, `mode`, `model`, `temperature`, `tools`, `permission`, `color`, `disable`, `hidden`.
 
 - **`description`**: Claude Code agents use a double-quoted single line with `\n`; OpenCode accepts a `>` folded scalar. Convert to a `>` folded scalar, unescaping `\n` to real line breaks.
-- **`mode`**: Add `mode: subagent`. cc-sdlc framework agents are dispatched by orchestrating skills, not interacted with directly — `subagent` is correct. (Use `primary` only for an agent meant to be a top-level driver, which cc-sdlc agents are not.)
+- **`mode`**: Add `mode: subagent`. z-sdlc framework agents are dispatched by orchestrating skills, not interacted with directly — `subagent` is correct. (Use `primary` only for an agent meant to be a top-level driver, which z-sdlc agents are not.)
 - **`model`**: Claude Code uses bare tier names (`sonnet`/`opus`/`haiku`). OpenCode requires `provider/model-id` format (e.g. `anthropic/claude-sonnet-4-5`, or `local/qwen3-coder` for a local endpoint). **Prefer omitting `model` entirely** — an OpenCode subagent then inherits the invoking primary's model, which keeps the project's default (set once in `opencode.json`) authoritative and sidesteps Claude-specific tier names. Only set an explicit `model` when an agent genuinely needs a different tier than the default; resolve it to the project's configured OpenCode provider/model.
 - **`tools`**: If the Claude Code agent restricts tools, translate the allowed set using the Tool Mapping table (e.g. `Read, Grep, Glob` → `read`, `grep`, `glob`). Omit if the agent had no restriction.
 
@@ -295,7 +295,7 @@ Use this table when adapting agent files and AGENTS.md. OpenCode's built-in tool
 
 ## Integration
 
-- **Depends on:** Existing cc-sdlc installation (`sdlc-initialize` must have run first)
+- **Depends on:** Existing z-sdlc installation (`sdlc-initialize` must have run first)
 - **Feeds into:** OpenCode-based development using the same SDLC process and knowledge layer, including against a local model endpoint
 - **Uses:** `.claude/agents/`, `.claude/skills/` (read in place), `CLAUDE.md`, `.sdlc-manifest.json`, `[sdlc-root]` content
 - **Complements:** `sdlc-initialize` (creates the Claude Code installation this skill reads from), `sdlc-migrate` (updates the Claude Code installation — re-run this skill after migration if OpenCode agent files or config need updating)

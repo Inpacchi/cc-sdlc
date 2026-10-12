@@ -1,6 +1,6 @@
 # Component Catalog — Project-Populated Template
 #
-# This file is a TEMPLATE, not a cc-sdlc rule set. Projects populate it with
+# This file is a TEMPLATE, not a z-sdlc rule set. Projects populate it with
 # their own shared UI components and the test strategies for each. The entries
 # below (MUI DataGrid, MUI Form Dialog, status chip, page header) are example
 # rows showing the expected structure — keep them if your project uses these

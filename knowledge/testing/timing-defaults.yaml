@@ -1,7 +1,7 @@
 # Timing Defaults — Project-Populated Template
 #
 # This file is a TEMPLATE for project-specific timing measurements. It is NOT
-# a canonical cc-sdlc rule set — values are project-specific by nature (they
+# a canonical z-sdlc rule set — values are project-specific by nature (they
 # depend on framework choices, infrastructure, service latency, and UI library).
 #
 # Generic guidance on WHEN to use explicit waits (vs signal-based waits) lives

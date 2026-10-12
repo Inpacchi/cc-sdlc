@@ -237,7 +237,7 @@ Execution phases are gated:
 
 ## Project Initialization
 
-To adopt cc-sdlc in a new or existing project, invoke the `sdlc-initialize` skill. It detects the project state and selects the appropriate mode:
+To adopt z-sdlc in a new or existing project, invoke the `sdlc-initialize` skill. It detects the project state and selects the appropriate mode:
 
 | Mode | When | What Happens |
 |------|------|-------------|
@@ -246,7 +246,7 @@ To adopt cc-sdlc in a new or existing project, invoke the `sdlc-initialize` skil
 
 **Trigger:** Say **"Initialize SDLC in this project"** or **"Bootstrap SDLC"**
 
-The skill walks through: file installation from cc-sdlc source, CLAUDE.md authoring, deliverable catalog setup, domain agent creation (via `/sdlc-develop-agent`), agent-context map wiring, knowledge seeding, discipline initialization, testing gotcha seeding, plugin verification, and a final checklist. Retrofit mode handles existing projects with code and documentation.
+The skill walks through: file installation from z-sdlc source, CLAUDE.md authoring, deliverable catalog setup, domain agent creation (via `/sdlc-develop-agent`), agent-context map wiring, knowledge seeding, discipline initialization, testing gotcha seeding, plugin verification, and a final checklist. Retrofit mode handles existing projects with code and documentation.
 
 ---
 

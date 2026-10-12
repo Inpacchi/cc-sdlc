@@ -1,13 +1,13 @@
 ---
-name: ccsdlc-research
+name: zsdlc-research
 description: >
   Research external knowledge sources (engineering blogs, conference talks, papers, documentation)
-  to find content relevant to the cc-sdlc framework's knowledge domains. Dispatches research-analyst agents to
+  to find content relevant to the z-sdlc framework's knowledge domains. Dispatches research-analyst agents to
   discover, fetch, classify, and curate articles into tiered reference docs.
   Produces company profiles, article catalogs with URLs, and cross-cutting insight summaries.
   Triggers on "research [company] blog", "find articles from [source]", "what has [company] published",
   "look into [company] engineering", "curate [source] for the framework", "find SDLC methodology sources",
-  "research testing patterns from [source]", "/ccsdlc-research".
+  "research testing patterns from [source]", "/zsdlc-research".
   Do NOT use for ingesting content into knowledge stores — use sdlc-ingest.
   Do NOT use for exploring framework ideas — use sdlc-idea.
   Do NOT use for web searches about specific bugs or library APIs — use direct WebSearch or Context7.
@@ -15,7 +15,7 @@ description: >
 
 # External Knowledge Research
 
-Research external knowledge sources and curate articles relevant to the cc-sdlc framework's knowledge domains into tiered reference docs. The skill dispatches research-analyst agents to systematically discover content, then saves structured docs with company profiles, article catalogs, and relevance notes.
+Research external knowledge sources and curate articles relevant to the z-sdlc framework's knowledge domains into tiered reference docs. The skill dispatches research-analyst agents to systematically discover content, then saves structured docs with company profiles, article catalogs, and relevance notes.
 
 **Argument:** `$ARGUMENTS` (company name, blog URL, or topic area to research)
 

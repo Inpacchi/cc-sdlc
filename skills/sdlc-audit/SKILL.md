@@ -200,7 +200,7 @@ When fed commits (without a session):
 
 ### Improvement with a Factory Digest
 
-An agent factory (issue-driven headless stages, such as the cc-sdlc software factory's weekly improve loop) can feed its own record to this mode. The **factory digest** is a JSON file the factory builds deterministically from its GitHub history over a window. It holds:
+An agent factory (issue-driven headless stages, such as the z-sdlc software factory's weekly improve loop) can feed its own record to this mode. The **factory digest** is a JSON file the factory builds deterministically from its GitHub history over a window. It holds:
 - **signals**, each with a stable `id`: CD's reviews and revision requests, questions and CD's answers, triage overrides, follow-ups CD unchecked, PRs closed without merging, failed runs and their failing step, CD's reactions, and the commits that changed the factory or the SDLC in the window;
 - **run metrics** (stage, status, cost, turns, models), where a missing value is unknown, not zero;
 - the **ledger** of earlier proposals, each with its fingerprint and CD's disposition: open, accepted, rejected or deferred, with CD's reason.
@@ -214,9 +214,9 @@ An agent factory (issue-driven headless stages, such as the cc-sdlc software fac
 4. Write each proposal so CD can act on it: the **target** (file, workflow, skill or setting), the **change**, **why** (the evidence, cited by signal `id`, at least one, never invented), the **expected effect**, a **severity** (high, medium, low; § Categorization Framework in the methodology) and a **route**:
    - `hygiene`: SDLC hygiene an agent may write (discipline parking lots, knowledge YAMLs other than the context map and agent-governing files, the SDLC changelog);
    - `cd`: skills, agents, process docs, templates, workflows, guards and other code-owned configuration, which CD applies;
-   - `cc-sdlc`: a problem whose fix belongs in the framework itself (a headless rule, a shared skill, a template), for CD to carry upstream;
+   - `z-sdlc`: a problem whose fix belongs in the framework itself (a headless rule, a shared skill, a template), for CD to carry upstream. Factories and reports from before 2026-10-12 call this route and section `cc-sdlc`; treat the two as the same;
    - `issue`: project work (a recurring code area that causes rework, a missing test, a docs gap), for CD to file.
-5. Cover every section: **factory process** (stage flow, triage calibration, revise and follow-up mechanics, holds, failure patterns, cost and turns by stage), **SDLC content**, **the framework** (cc-sdlc), **factory infrastructure** (workflows, guards, runners, images, smoke coverage, the security boundary) and **the project**. A section with nothing actionable stays empty; never fill it with observations that carry no change.
+5. Cover every section: **factory process** (stage flow, triage calibration, revise and follow-up mechanics, holds, failure patterns, cost and turns by stage), **SDLC content**, **the framework** (z-sdlc), **factory infrastructure** (workflows, guards, runners, images, smoke coverage, the security boundary) and **the project**. A section with nothing actionable stays empty; never fill it with observations that carry no change.
 6. Rank by severity, then by the weight of the evidence. Merge proposals that share a fix. Keep within the caller's cap; the ones that don't make it go in `notes`, never silently.
 
 **Headless run:** this input is report-only. Return the proposals in the caller's output schema with status `awaiting-approval`; they are the action plan CD approves outside the run. Apply nothing, write and commit nothing, and post nothing. A digest with signals but nothing actionable is still a result: no proposals, and a summary that says nothing needs action.

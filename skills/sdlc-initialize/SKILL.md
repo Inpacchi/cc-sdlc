@@ -1,12 +1,12 @@
 ---
 name: sdlc-initialize
 description: >
-  Bootstrap a new project with the cc-sdlc framework — determines whether this is a greenfield or retrofit
+  Bootstrap a new project with the z-sdlc framework — determines whether this is a greenfield or retrofit
   initialization, then walks through the full setup: ideation, spec drafting, skeleton installation, CLAUDE.md
   authoring, deliverable catalog, domain agent creation, knowledge seeding, discipline initialization, and
-  verification. This is the single entry point for any project adopting cc-sdlc.
+  verification. This is the single entry point for any project adopting z-sdlc.
   Triggers on "initialize sdlc", "bootstrap sdlc", "set up sdlc", "sdlc init", "initialize this project",
-  "bootstrap this project", "set up the SDLC", "I want to use cc-sdlc", "integrate sdlc",
+  "bootstrap this project", "set up the SDLC", "I want to use z-sdlc", "integrate sdlc",
   "I'd like to bootstrap the SDLC process in this project".
   Do NOT use for resuming existing SDLC work — use sdlc-status to find active deliverables.
   Do NOT use for creating a single deliverable — use sdlc-plan.
@@ -15,11 +15,11 @@ description: >
 
 # SDLC Initialize
 
-Orchestrate the full initialization of cc-sdlc in a project. This skill detects the project state, selects the right initialization mode, and walks through each phase with CD approval at key gates.
+Orchestrate the full initialization of z-sdlc in a project. This skill detects the project state, selects the right initialization mode, and walks through each phase with CD approval at key gates.
 
 **This skill sets up the framework. It does NOT create deliverables beyond the founding spec.** After initialization, hand off to `sdlc-plan` or `sdlc-lite-plan` for the first piece of implementation work.
 
-**Argument:** `$ARGUMENTS` (optional — cc-sdlc source path, or project description for greenfield)
+**Argument:** `$ARGUMENTS` (optional — z-sdlc source path, or project description for greenfield)
 
 <!-- MIRROR-START: headless-mode.md#headless-stop-rule -->
 **Headless runs (no person present).** This run is headless if the caller's prompt or appended system prompt has a line starting `SDLC headless mode:`, or if no ask-the-user tool (`AskUserQuestion`, or the harness's equivalent such as OpenCode's `question`) can be used — none is available or loadable, or a call to it is denied without an answer. A dispatched subagent is never headless itself; in a headless run the orchestrator tells each subagent so, and the limits below bind it too. In a headless run, every point in this skill that asks CD something the next step depends on, waits for CD's approval, or escalates to CD **stops the run there**: save the work so far, return the questions, the document or action plan awaiting approval, or the open-findings table as the run's result (in the caller's output schema if it passed one), and end the turn normally — a stop is a result, not an error. A missing precondition the caller must fix ends the run with status `failed` and the reason. Never guess an answer, take a default for a decision CD owns, approve your own work, or skip the gate. List questions the next step does not depend on in the result instead of stopping. Take the no path on optional offers. Cause no side effect outside the working tree — no push, post, comment, label, publish, external send, or live-system change — unless the caller's prompt names it; list those actions in the result. Reads are fine. A question the prompt or thread already answers is not a gate. Full rule and result format: `[sdlc-root]/process/headless-mode.md`.
@@ -147,7 +147,7 @@ Then enter the ideation loop. The principles here are borrowed from `sdlc-idea` 
 
 When enough is understood, draft a D1 spec. CC writes this directly (no agents exist yet).
 
-Use the spec template from cc-sdlc source (`templates/spec_template.md`) as the structural guide. For initialization, the spec must cover at minimum:
+Use the spec template from z-sdlc source (`templates/spec_template.md`) as the structural guide. For initialization, the spec must cover at minimum:
 
 ```markdown
 # D1: [Project Name] — Spec
@@ -223,23 +223,23 @@ If CD requests changes, make them directly (no agents to dispatch) and re-presen
 
 ### Phase 1: Install the Skeleton
 
-**1a. Locate cc-sdlc source.**
+**1a. Locate z-sdlc source.**
 
-Determine where the cc-sdlc source is. Check in order:
+Determine where the z-sdlc source is. Check in order:
 
-1. `$ARGUMENTS` for an explicit path (e.g., `/tmp/cc-sdlc-bootstrap` from BOOTSTRAP.md)
-2. Check if `.claude/BOOTSTRAP.md` or `BOOTSTRAP.md` exists — if so, follow its instructions to clone to `/tmp/cc-sdlc-bootstrap`
-3. Check `/tmp/cc-sdlc-bootstrap` (bootstrap flow already cloned it)
-4. Common local locations: `~/Projects/cc-sdlc`, `~/cc-sdlc`, `../cc-sdlc`, `~/src/ops/sdlc`
-5. Clone from GitHub to temp: `git clone --depth 1 https://github.com/Inpacchi/cc-sdlc.git /tmp/cc-sdlc-bootstrap`
+1. `$ARGUMENTS` for an explicit path (e.g., `/tmp/z-sdlc-bootstrap` from BOOTSTRAP.md)
+2. Check if `.claude/BOOTSTRAP.md` or `BOOTSTRAP.md` exists — if so, follow its instructions to clone to `/tmp/z-sdlc-bootstrap`
+3. Check `/tmp/z-sdlc-bootstrap` (bootstrap flow already cloned it), or `/tmp/cc-sdlc-bootstrap` from a BOOTSTRAP.md copied before the rename
+4. Common local locations: `~/Projects/z-sdlc`, `~/z-sdlc`, `../z-sdlc`, then the pre-rename names `~/Projects/cc-sdlc`, `~/cc-sdlc`, `../cc-sdlc`, and `~/src/ops/sdlc`
+5. Clone from GitHub to temp: `git clone --depth 1 https://github.com/endless-galaxy-studios/z-sdlc.git /tmp/z-sdlc-bootstrap`
 
 Verify the source by checking for `skeleton/manifest.json`.
 
 **If already installed** (`.sdlc-manifest.json` exists and `ops/sdlc/` is populated): Skip to Phase 1c (verify). Do not reinstall.
 
-**1b. Install files from cc-sdlc source.**
+**1b. Install files from z-sdlc source.**
 
-Read `skeleton/manifest.json` from the cc-sdlc source. This manifest defines the canonical directory structure and file list.
+Read `skeleton/manifest.json` from the z-sdlc source. This manifest defines the canonical directory structure and file list.
 
 **Optional bundles.** Before copying, read `manifest.bundles`. For each bundle, ask CD whether to install it using `AskUserQuestion`:
 
@@ -271,14 +271,14 @@ For each directory in manifest.directories:
 **Safe file extraction:** See `[sdlc-root]/process/source-repo-safety.md` for verified-content extraction patterns. The core rule: never use shell redirection (`git show > file`) — it truncates the target before git show runs, leaving empty files on failure.
 
 **Not installed to child projects:**
-- `templates/optional/` — Conditional CLAUDE.md appendices (e.g., `data-pipeline-integrity.md`). Read from cc-sdlc source during Phase 2 when needed, not installed.
+- `templates/optional/` — Conditional CLAUDE.md appendices (e.g., `data-pipeline-integrity.md`). Read from z-sdlc source during Phase 2 when needed, not installed.
 - `CLAUDE-SDLC.md` — Content is merged directly into the project's `CLAUDE.md` during Phase 2. No separate file is created.
-- `process/changelog-archive/` — cc-sdlc's own archived changelog entries. History, not framework content.
+- `process/changelog-archive/` — z-sdlc's own archived changelog entries. History, not framework content.
 
-**The process changelog starts as the project's own.** Don't copy `process/sdlc_changelog.md`: cc-sdlc's entries are the framework's history and stay in cc-sdlc, where `sdlc-migrate` reads them. After the skills are copied, write the header and one install entry:
+**The process changelog starts as the project's own.** Don't copy `process/sdlc_changelog.md`: z-sdlc's entries are the framework's history and stay in z-sdlc, where `sdlc-migrate` reads them. After the skills are copied, write the header and one install entry:
 
 ```bash
-git -C [cc-sdlc-path] show HEAD:process/sdlc_changelog.md \
+git -C [z-sdlc-path] show HEAD:process/sdlc_changelog.md \
   | python3 .claude/skills/sdlc-archive/scripts/changelog_archive.py init - [sdlc-root]/process/sdlc_changelog.md --version [source_version]
 ```
 
@@ -330,7 +330,7 @@ fi
 
 ```
 For each directory in .claude/plugins/:
-  If {plugin_dir}/adapter.json exists and contains "ccsdlc_adapter": true:
+  If {plugin_dir}/adapter.json exists and contains "zsdlc_adapter": true (or the pre-rename "ccsdlc_adapter": true):
     Record as active adapter
 ```
 
@@ -350,8 +350,8 @@ When no adapter is found, behavior is identical to before this protocol existed.
 {
   "_comment": "Generated by sdlc-initialize. Used by sdlc-migrate skill for version tracking.",
   "version": "1.0.0",
-  "source_repo": "<git remote origin from cc-sdlc source, or 'local'>",
-  "source_version": "<latest semver release tag from cc-sdlc source (e.g., 'v1.4.0'), or 'unknown'>",
+  "source_repo": "<git remote origin from z-sdlc source, or 'local'>",
+  "source_version": "<latest semver release tag from z-sdlc source (e.g., 'v1.4.0'), or 'unknown'>",
   "source_version_sha": "<commit SHA of the release tag, for precise diff resolution>",
   "install_date": "<ISO 8601 timestamp>",
   "file_count": <number of files installed>,
@@ -371,11 +371,11 @@ When no adapter is found, behavior is identical to before this protocol existed.
 
 **`installed_bundles`:** List of opt-in bundle names the project accepted during initialization. Empty array if none accepted. `sdlc-migrate` uses this field as the authoritative signal for which bundles are installed; for projects installed before bundles existed, migrate falls back to file-existence detection.
 
-**`bundle_fragments`:** Map of injected `BUNDLE-SECTION` fragment labels (`bundle/fragment`) to their target file paths, written when a bundle with `fragments` is installed. Empty object if no installed bundle carries fragments. The compliance auditor validates block presence against this map without needing the cc-sdlc source.
+**`bundle_fragments`:** Map of injected `BUNDLE-SECTION` fragment labels (`bundle/fragment`) to their target file paths, written when a bundle with `fragments` is installed. Empty object if no installed bundle carries fragments. The compliance auditor validates block presence against this map without needing the z-sdlc source.
 
-**`source_version` and `source_version_sha`:** `source_version` stores the release tag (e.g., `v1.4.0`) — resolve via `git -C [cc-sdlc-path] tag -l 'v[0-9]*.[0-9]*.[0-9]*' --sort=-v:refname | head -1`. `source_version_sha` stores the tag's commit hash for precise diffs. If no tags exist (pre-release source), fall back to `"unknown"` for the tag and store the HEAD SHA. `sdlc-migrate` uses these fields to determine what changed between the installed version and the latest release.
+**`source_version` and `source_version_sha`:** `source_version` stores the release tag (e.g., `v1.4.0`) — resolve via `git -C [z-sdlc-path] tag -l 'v[0-9]*.[0-9]*.[0-9]*' --sort=-v:refname | head -1`. `source_version_sha` stores the tag's commit hash for precise diffs. If no tags exist (pre-release source), fall back to `"unknown"` for the tag and store the HEAD SHA. `sdlc-migrate` uses these fields to determine what changed between the installed version and the latest release.
 
-**`last_applied_contract_id`:** The id of the newest entry in `skeleton/contract_changes.yaml` at the time of this install. New projects start already caught up — `sdlc-migrate` will not re-apply historical renames and other one-shot migrations meant for older projects. Read this value from the cc-sdlc source when writing the manifest: parse `contract_changes.yaml`, take the last entry's `id`.
+**`last_applied_contract_id`:** The id of the newest entry in `skeleton/contract_changes.yaml` at the time of this install. New projects start already caught up — `sdlc-migrate` will not re-apply historical renames and other one-shot migrations meant for older projects. Read this value from the z-sdlc source when writing the manifest: parse `contract_changes.yaml`, take the last entry's `id`.
 
 **`adapter`:** `null` when no adapter plugin is found. When an adapter is discovered (via `adapter.json` in `.claude/plugins/`), this block is populated automatically during Phase 1:
 
@@ -383,7 +383,7 @@ When no adapter is found, behavior is identical to before this protocol existed.
 "adapter": {
   "plugin": "<plugin name from plugin.json>",
   "plugin_root": "<path to adapter plugin root, relative to project root>",
-  "supported_ccsdlc_version": "<from adapter.json>",
+  "supported_zsdlc_version": "<from adapter.json: supported_zsdlc_version, or the pre-rename supported_ccsdlc_version>",
   "phase_handlers": "<from adapter.json>"
 }
 ```
@@ -408,7 +408,7 @@ The `sdlc_root` field enables `sdlc-migrate` to resolve the project's SDLC root 
 Report progress to CD:
 ```
 INSTALLATION PROGRESS
-Source: [cc-sdlc path]
+Source: [z-sdlc path]
 Files installed: [count]
 Files skipped: [count] (already exist)
 ```
@@ -448,7 +448,7 @@ Required files (commonly missed):
 [ ] ops/sdlc/plugins/lsp-setup.md
 ```
 
-If any are missing, copy them from the cc-sdlc source. Do not proceed to Phase 2 with missing files.
+If any are missing, copy them from the z-sdlc source. Do not proceed to Phase 2 with missing files.
 
 ### Phase 1d: Ensure private state files are gitignored
 
@@ -487,7 +487,7 @@ CC writes CLAUDE.md directly (agents don't exist yet). Use the spec as the sourc
 3. **Technology stack** — per-package if monorepo (from spec)
 4. **Coding standards** — per-language conventions
    - If multi-language: document the boundary conventions (e.g., snake_case API, camelCase frontend)
-5. **SDLC process section** — read `CLAUDE-SDLC.md` from cc-sdlc source and merge the full content into this section, adapted for this project
+5. **SDLC process section** — read `CLAUDE-SDLC.md` from z-sdlc source and merge the full content into this section, adapted for this project
 6. **Verification policy** — zero-assumption rule, Context7 for external libs, read code before asserting
 7. **Agent dispatch conventions** — agent-first, never self-implement, manager rule
 
@@ -498,7 +498,7 @@ CC writes CLAUDE.md directly (agents don't exist yet). Use the spec as the sourc
    - Files: `*seed*.{ts,js,py}`, `*scrape*.{ts,js,py}`, `*allowlist*`, `*blocklist*`
    - Spec mentions: "seed", "scrape", "ETL", "pipeline", "ingest", "allowlist"
    
-   If detected, read `templates/optional/data-pipeline-integrity.md` from cc-sdlc source and append to CLAUDE.md. If uncertain, ask CD.
+   If detected, read `templates/optional/data-pipeline-integrity.md` from z-sdlc source and append to CLAUDE.md. If uncertain, ask CD.
 
 **Gate:** Present the drafted CLAUDE.md to CD. Use `AskUserQuestion`: "CLAUDE.md is ready for review. Any changes before I save it?"
 
@@ -552,7 +552,7 @@ If CD's proposed roster omits either of these, add them and explain why. These a
 5. Testing and infrastructure (sdet, build-engineer)
 
 **Framework agents (pre-installed by Phase 1 — do NOT create as domain agents):**
-- `sdlc-reviewer` — reviews skill/agent files against cc-sdlc conventions (dispatched by `sdlc-develop-skill`, `sdlc-develop-agent`)
+- `sdlc-reviewer` — reviews skill/agent files against z-sdlc conventions (dispatched by `sdlc-develop-skill`, `sdlc-develop-agent`)
 - `sdlc-compliance-auditor` — performs 10-dimension compliance scan (dispatched by `sdlc-audit`)
 
 The `sdlc-audit` skill is already installed by Phase 1 — do not recreate it as an agent.
@@ -653,7 +653,7 @@ Based on the D1 spec, here is how each knowledge store maps to this project:
 Keep (always relevant or matches spec):
   [x] debugging-methodology — Always relevant
   [x] security-review-taxonomy — Always relevant
-  [x] agent-communication-protocol — Governs cc-sdlc agents
+  [x] agent-communication-protocol — Governs z-sdlc agents
   [x] typescript-patterns — Project uses TypeScript
   [x] design/component-patterns — UI component rules (any project with a UI)
   [x] design/interaction-animation — Interactive states, micro-interactions
@@ -691,7 +691,7 @@ For each major technology in the spec's stack, ask: "What would an agent need to
 
 **6c. Create stack-specific knowledge files.**
 
-Dispatch the `software-architect` agent (or nearest equivalent) to draft knowledge YAML files for the project's stack-specific technologies. Each file follows the cc-sdlc knowledge format:
+Dispatch the `software-architect` agent (or nearest equivalent) to draft knowledge YAML files for the project's stack-specific technologies. Each file follows the z-sdlc knowledge format:
 
 ```yaml
 id: technology-patterns
@@ -762,7 +762,7 @@ Dispatch the `software-architect` agent to produce the seed content for all 9 di
 | deployment | Target platform, service topology, local dev stack |
 | business-analysis | Revenue model, multi-tenancy, auth strategy |
 | product-research | Market context, competitive landscape, ecosystem position |
-| process-improvement | Note: "First project from cc-sdlc — capture friction for upstream" |
+| process-improvement | Note: "First project from z-sdlc — capture friction for upstream" |
 
 ### Phase 8: Seed Testing Knowledge
 
@@ -817,7 +817,7 @@ For most fresh installations, the assessment is straightforward:
 - Disciplines that received knowledge seeding in Phases 6-8 AND have entries in `agent-context-map.yaml` → Level 2
 - Disciplines with only parking lot seeding from Phase 7 → Level 1
 
-Update the Process Maturity Tracker table in `ops/sdlc/disciplines/process-improvement.md` with the assessed levels and evidence. The tracker was copied from the cc-sdlc source with source-repo levels — it must be adjusted to reflect this project's actual state.
+Update the Process Maturity Tracker table in `ops/sdlc/disciplines/process-improvement.md` with the assessed levels and evidence. The tracker was copied from the z-sdlc source with source-repo levels — it must be adjusted to reflect this project's actual state.
 
 This is a quick assessment (2-3 minutes total), not a gate. Present the tracker to CD as informational.
 
@@ -916,7 +916,7 @@ After the audit passes (or only minor/info findings remain):
 Remove the temp clone if it exists:
 
 ```bash
-rm -rf /tmp/cc-sdlc-bootstrap
+rm -rf /tmp/z-sdlc-bootstrap
 ```
 
 Remove the bootstrap file — it served its purpose:
@@ -932,13 +932,13 @@ rm -f .claude/agents/AGENT_SUGGESTIONS.md
 rm -rf .claude/skills/sdlc-initialize/
 ```
 
-**On failure:** If initialization fails partway, still remove `/tmp/cc-sdlc-bootstrap` but leave the bootstrap file, AGENT_SUGGESTIONS.md, and sdlc-initialize so the user can retry.
+**On failure:** If initialization fails partway, still remove `/tmp/z-sdlc-bootstrap` but leave the bootstrap file, AGENT_SUGGESTIONS.md, and sdlc-initialize so the user can retry.
 
 ---
 
 ## Retrofit Mode
 
-For existing projects with code and documentation that need cc-sdlc integrated. Discovers and categorizes existing docs, proposes a migration plan, then runs the standard install while augmenting (not replacing) existing content.
+For existing projects with code and documentation that need z-sdlc integrated. Discovers and categorizes existing docs, proposes a migration plan, then runs the standard install while augmenting (not replacing) existing content.
 
 See `references/retrofit-mode.md` for Phases R1–R4.
 

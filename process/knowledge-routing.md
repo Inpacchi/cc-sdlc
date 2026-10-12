@@ -121,9 +121,9 @@ If you add a new knowledge file that should apply to multiple agents (e.g., a pr
 
 ## Adapter Plugins and the Phrasing Contract
 
-Some projects use an adapter plugin (e.g., `neuroloom-sdlc-plugin`) that swaps cc-sdlc's file-based knowledge routing for a different backend (e.g., a memory graph accessed via `memory_search`). The adapter plugin transforms skills and agents at install time — replacing file-path references with backend-native calls — and preserves those transformations during migrations via content-aware merging.
+Some projects use an adapter plugin (e.g., `neuroloom-sdlc-plugin`) that swaps z-sdlc's file-based knowledge routing for a different backend (e.g., a memory graph accessed via `memory_search`). The adapter plugin transforms skills and agents at install time — replacing file-path references with backend-native calls — and preserves those transformations during migrations via content-aware merging.
 
-This pattern (core stays pure, adapter transforms at boundaries) follows the Terraform/Prisma provider model. The key constraint: **cc-sdlc must use consistent phrasing** so the adapter's pattern-matching transformer can find and replace references reliably.
+This pattern (core stays pure, adapter transforms at boundaries) follows the Terraform/Prisma provider model. The key constraint: **z-sdlc must use consistent phrasing** so the adapter's pattern-matching transformer can find and replace references reliably.
 
 ### Standard Phrases (the contract)
 
@@ -173,7 +173,7 @@ In these contexts, use inline-backticked paths (e.g., `` `[sdlc-root]/knowledge/
 
 #### Adapter metadata transformation (Neuroloom and similar)
 
-Metadata references point at filesystem locations that exist in file-based cc-sdlc installations but **don't exist in adapter-backend projects** (e.g., `[sdlc-root]/disciplines/*.md` paths are invalid in Neuroloom where disciplines live in the memory graph). To avoid misleading Neuroloom users with dead file paths, adapter plugins MAY transform metadata references in parenthetical/table-cell contexts to their backend-native equivalent.
+Metadata references point at filesystem locations that exist in file-based z-sdlc installations but **don't exist in adapter-backend projects** (e.g., `[sdlc-root]/disciplines/*.md` paths are invalid in Neuroloom where disciplines live in the memory graph). To avoid misleading Neuroloom users with dead file paths, adapter plugins MAY transform metadata references in parenthetical/table-cell contexts to their backend-native equivalent.
 
 For example, the Neuroloom plugin transforms:
 - `Discipline parking lot entries ([sdlc-root]/disciplines/*.md)` → `Discipline parking lot entries (memory graph, entries tagged sdlc:discipline:*)`
@@ -192,19 +192,19 @@ Not all adapters need to do this — it's an adapter design choice. The contract
 
 - **Don't scatter conditional branches** across skills. The adapter handles translation at install time — inline conditionals add noise without adding capability.
 - **Don't invent new phrasings** for the same operation. If a skill needs to look up an agent's mapped files, use the exact phrase from the canonical table above.
-- **Don't directly reference adapter-specific tools** in cc-sdlc skills. Those are adapter concerns.
+- **Don't directly reference adapter-specific tools** in z-sdlc skills. Those are adapter concerns.
 
 ### Relationship to the Adapter Lifecycle Protocol
 
-This document governs the **content contract** — what phrases cc-sdlc uses so adapters can transform them. The **adapter lifecycle protocol** (`[sdlc-root]/process/adapter-lifecycle-protocol.md`) governs **execution** — when adapters run during initialize and migrate, and how upstream delegates knowledge and transformation phases. Both are required for adapter integration.
+This document governs the **content contract** — what phrases z-sdlc uses so adapters can transform them. The **adapter lifecycle protocol** (`[sdlc-root]/process/adapter-lifecycle-protocol.md`) governs **execution** — when adapters run during initialize and migrate, and how upstream delegates knowledge and transformation phases. Both are required for adapter integration.
 
-### When cc-sdlc Changes
+### When z-sdlc Changes
 
-If a change to cc-sdlc introduces a new knowledge-access pattern, the adapter plugin's handler doc must be updated in parallel. Document the new phrase in the table above so the adapter maintainer can add a transformation rule. The commit message should tag the change with `[contract-change]` so adapter maintainers can filter for it.
+If a change to z-sdlc introduces a new knowledge-access pattern, the adapter plugin's handler doc must be updated in parallel. Document the new phrase in the table above so the adapter maintainer can add a transformation rule. The commit message should tag the change with `[contract-change]` so adapter maintainers can filter for it.
 
 ### Adapter Version Declaration (required)
 
-Every adapter plugin MUST declare which cc-sdlc version its Pattern Mapping and post-op audit have been verified against. This declaration is the single source of truth used by upstream's `sdlc-migrate` §1.2 contract-change gate to decide whether `[contract-change]` entries in the migration range are safe to auto-resolve or require a deterministic halt.
+Every adapter plugin MUST declare which z-sdlc version its Pattern Mapping and post-op audit have been verified against. This declaration is the single source of truth used by upstream's `sdlc-migrate` §1.2 contract-change gate to decide whether `[contract-change]` entries in the migration range are safe to auto-resolve or require a deterministic halt.
 
 **Required field in plugin manifest** (`.claude-plugin/plugin.json` or equivalent):
 
@@ -212,19 +212,21 @@ Every adapter plugin MUST declare which cc-sdlc version its Pattern Mapping and 
 {
   "name": "<adapter-plugin-name>",
   "version": "<plugin-semver>",
-  "supported_ccsdlc_version": "<highest cc-sdlc version covered>"
+  "supported_zsdlc_version": "<highest z-sdlc version covered>"
 }
 ```
 
-**Semantics:** `supported_ccsdlc_version` is the highest cc-sdlc version whose `[contract-change]` entries have been reviewed and reflected in the plugin's transformation rules and forbidden-phrase detection. The plugin maintainer bumps this field after verifying coverage — never before.
+Adapters written before 2026-10-12 declare it as `supported_ccsdlc_version` (and mark themselves with `ccsdlc_adapter`); readers accept either name.
 
-**Upstream migrate gate:** `sdlc-migrate` §1.2 MUST use deterministic semver comparison at its contract-change gate. For each `[contract-change]` entry in the migration range, compare the entry's cc-sdlc version against the adapter's declared `supported_ccsdlc_version` (from `adapter.json`):
-- `entry_version <= supported_ccsdlc_version` → the adapter declares support; auto-resolve and continue.
-- `entry_version > supported_ccsdlc_version` → halt deterministically with a message that identifies the uncovered entries and the current PSV.
+**Semantics:** `supported_zsdlc_version` is the highest z-sdlc version whose `[contract-change]` entries have been reviewed and reflected in the plugin's transformation rules and forbidden-phrase detection. The plugin maintainer bumps this field after verifying coverage — never before.
+
+**Upstream migrate gate:** `sdlc-migrate` §1.2 MUST use deterministic semver comparison at its contract-change gate. For each `[contract-change]` entry in the migration range, compare the entry's z-sdlc version against the adapter's declared `supported_zsdlc_version` (from `adapter.json`):
+- `entry_version <= supported_zsdlc_version` → the adapter declares support; auto-resolve and continue.
+- `entry_version > supported_zsdlc_version` → halt deterministically with a message that identifies the uncovered entries and the current PSV.
 
 Prose-interpreted gates (where the LLM running the skill decides at runtime whether coverage is "probably fine") are explicitly forbidden. The determinism requirement exists because prose-interpreted gates are non-reproducible: the same migration run twice can halt once and silently pass the other. That defeats the purpose of the gate.
 
-**When bumping `supported_ccsdlc_version`:** review every `[contract-change]` entry in cc-sdlc's changelog between the previous PSV and the new PSV. Verify the adapter's transformation rules have handlers for each newly standardized phrase AND the adapter's post-op audit has detectors for each newly forbidden phrase. Bumping without verification defeats the entire gate — it converts a deterministic safety check into a rubber stamp.
+**When bumping `supported_zsdlc_version`:** review every `[contract-change]` entry in z-sdlc's changelog between the previous PSV and the new PSV. Verify the adapter's transformation rules have handlers for each newly standardized phrase AND the adapter's post-op audit has detectors for each newly forbidden phrase. Bumping without verification defeats the entire gate — it converts a deterministic safety check into a rubber stamp.
 
 **First-time introduction:** this requirement was added to the contract mid-stream. Existing adapters (e.g., `neuroloom-sdlc-plugin` at 0.4.0+) must add the field on their next release. Adapters without the field MUST halt their own migrate gate — missing declaration is treated as "unsupported at any version."
 

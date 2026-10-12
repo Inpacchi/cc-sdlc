@@ -466,7 +466,7 @@ After each phase's POST-GATE clears, commit the phase's work before starting the
    - Application code and test files
    - Discipline parking lot entries (`[sdlc-root]/disciplines/*.md`) if discipline capture added entries
    - Any other SDLC artifacts produced during the phase
-2. Commit with the cc-sdlc format: `feat[DNN](phase-N): [phase name] — [brief description]`
+2. Commit with the z-sdlc format: `feat[DNN](phase-N): [phase name] — [brief description]`
 3. Do NOT wait until all phases are complete to commit
 
 This ensures each phase is independently reviewable, bisectable, and revertable. A single monolithic commit at the end defeats the purpose of phased execution.
@@ -518,7 +518,7 @@ Before claiming the work is done:
    - CLAUDE.md updates from step 3d (root and any module-level files)
    - Process changelog (`[sdlc-root]/process/sdlc_changelog.md`) if updated
    - Review fixes from the review loop
-6. Commit using the cc-sdlc commit format:
+6. Commit using the z-sdlc commit format:
    ```
    {type}[{deliverable_id}]({scope}): {description}
 

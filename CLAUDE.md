@@ -1,6 +1,6 @@
-# CC-SDLC — Claude Code SDLC Toolkit
+# Z-SDLC — Claude Code SDLC Toolkit
 
-This is the **source repository** for the cc-sdlc framework. It contains SDLC skills, agents, knowledge stores, and compliance tooling that get installed into target projects via the `sdlc-initialize` skill.
+This is the **source repository** for the z-sdlc framework. It contains SDLC skills, agents, knowledge stores, and compliance tooling that get installed into target projects via the `sdlc-initialize` skill.
 
 ## Directives Are Framework Changes
 
@@ -30,10 +30,10 @@ Example: "ask before rendering HTML instead of auto-rendering" is not a session 
 
 | Location | Type | Runs in | Purpose |
 |----------|------|---------|---------|
-| `skills/`, `agents/` | Project skills/agents | Target projects only | Installed to target's `.claude/skills/` and `.claude/agents/` via `sdlc-initialize`. Never run in cc-sdlc source. |
-| `.claude/skills/`, `.claude/agents/` | Framework development | cc-sdlc source only | Used to maintain the framework itself. Not installed to target projects. |
+| `skills/`, `agents/` | Project skills/agents | Target projects only | Installed to target's `.claude/skills/` and `.claude/agents/` via `sdlc-initialize`. Never run in z-sdlc source. |
+| `.claude/skills/`, `.claude/agents/` | Framework development | z-sdlc source only | Used to maintain the framework itself. Not installed to target projects. |
 
-**Key implication:** Skills in `skills/` must not reference cc-sdlc source paths like `skeleton/manifest.json` or bare `agents/` — those don't exist in target projects. Use `[sdlc-root]/...` for SDLC content and `.claude/...` for installed skills/agents.
+**Key implication:** Skills in `skills/` must not reference z-sdlc source paths like `skeleton/manifest.json` or bare `agents/` — those don't exist in target projects. Use `[sdlc-root]/...` for SDLC content and `.claude/...` for installed skills/agents.
 
 ## Plugin Dependencies
 
@@ -46,13 +46,13 @@ See `plugins/README.md` for details and `plugins/*-setup.md` for installation in
 
 ## Adapter Plugins
 
-cc-sdlc is the stable core. Adapter plugins live in separate repos and transform cc-sdlc's file-based knowledge references into alternate backends (e.g., memory graphs) at install/migration time.
+z-sdlc is the stable core. Adapter plugins live in separate repos and transform z-sdlc's file-based knowledge references into alternate backends (e.g., memory graphs) at install/migration time.
 
 | Plugin | Location | What It Adapts |
 |--------|----------|----------------|
-| **neuroloom-sdlc-plugin** | `~/Projects/neuroloom/neuroloom-sdlc-plugin` (local); `endless-galaxy-studios/neuroloom-sdlc-plugin` (GitHub) | Swaps file-based knowledge routing (`agent-context-map.yaml`) for Neuroloom's `memory_search` / `memory_store` MCP calls. Declares lifecycle phase handlers via `adapter.json`; upstream delegates knowledge-seed, knowledge-update, post-file-write, and post-operation phases. `/sdlc-port` remains adapter-independent. Transforms cc-sdlc skills during install/migration via a phrasing-contract-driven transformation table (`references/pattern-mapping-rules.md`). |
+| **neuroloom-sdlc-plugin** | `~/Projects/neuroloom/neuroloom-sdlc-plugin` (local); `endless-galaxy-studios/neuroloom-sdlc-plugin` (GitHub) | Swaps file-based knowledge routing (`agent-context-map.yaml`) for Neuroloom's `memory_search` / `memory_store` MCP calls. Declares lifecycle phase handlers via `adapter.json`; upstream delegates knowledge-seed, knowledge-update, post-file-write, and post-operation phases. `/sdlc-port` remains adapter-independent. Transforms z-sdlc skills during install/migration via a phrasing-contract-driven transformation table (`references/pattern-mapping-rules.md`). |
 
-**The phrasing contract** (`process/knowledge-routing.md` § "Adapter Plugins and the Phrasing Contract") is the interface between cc-sdlc and adapters. cc-sdlc commits to using a fixed set of standard phrases when referencing the knowledge layer; adapters commit to transforming those exact phrases. When you change a knowledge-layer reference pattern in cc-sdlc, tag the changelog entry with `[contract-change]` so adapter maintainers catch it on their next upstream pull.
+**The phrasing contract** (`process/knowledge-routing.md` § "Adapter Plugins and the Phrasing Contract") is the interface between z-sdlc and adapters. z-sdlc commits to using a fixed set of standard phrases when referencing the knowledge layer; adapters commit to transforming those exact phrases. When you change a knowledge-layer reference pattern in z-sdlc, tag the changelog entry with `[contract-change]` so adapter maintainers catch it on their next upstream pull.
 
 **Working across both repos:** If a change here affects the contract, make the paired change in `neuroloom-sdlc-plugin` (typically in `references/pattern-mapping-rules.md`). Verify: `grep -n "consult\|Read" ~/Projects/neuroloom/neuroloom-sdlc-plugin/references/pattern-mapping-rules.md` shows the transformation table up to date.
 
@@ -63,7 +63,7 @@ cc-sdlc is the stable core. Adapter plugins live in separate repos and transform
 - The `skeleton/manifest.json` is the source of truth for what gets installed — keep it in sync
 - CLAUDE-SDLC.md is the drop-in that target projects add to their CLAUDE.md — it must be self-contained
 - **Changelog rule:** When you change any process file (skills, agents, process docs, CLAUDE-SDLC.md, disciplines, knowledge), update `process/sdlc_changelog.md` **immediately in the same step** — not as a follow-up. If the user has to ask for the changelog update, it was already too late.
-- **Path variable rule:** Skills, agents, and installed docs reference SDLC paths using `[sdlc-root]` — both directories (e.g., `[sdlc-root]/knowledge/`, `[sdlc-root]/disciplines/`) and specific files (e.g., `[sdlc-root]/knowledge/agent-context-map.yaml`, `[sdlc-root]/process/sdlc_changelog.md`). Never use bare paths like `knowledge/`, `disciplines/`, or `agent-context-map.yaml`. The `[sdlc-root]` placeholder resolves to the project's installed location (typically `ops/sdlc/`). Exception: `sdlc-migrate` and `sdlc-initialize` may use bare paths when documenting cc-sdlc source structure or in mapping tables showing source → target.
+- **Path variable rule:** Skills, agents, and installed docs reference SDLC paths using `[sdlc-root]` — both directories (e.g., `[sdlc-root]/knowledge/`, `[sdlc-root]/disciplines/`) and specific files (e.g., `[sdlc-root]/knowledge/agent-context-map.yaml`, `[sdlc-root]/process/sdlc_changelog.md`). Never use bare paths like `knowledge/`, `disciplines/`, or `agent-context-map.yaml`. The `[sdlc-root]` placeholder resolves to the project's installed location (typically `ops/sdlc/`). Exception: `sdlc-migrate` and `sdlc-initialize` may use bare paths when documenting z-sdlc source structure or in mapping tables showing source → target.
 - **Consistency check rule:** After completing any batch of changes to this repo, run the following checks **before presenting the final summary to the user**. Do not wait to be asked.
 
 ### Commit Convention
