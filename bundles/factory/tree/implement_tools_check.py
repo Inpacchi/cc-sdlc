@@ -20,32 +20,32 @@ import os
 import sys
 
 # Read paths (relative paths are under the workspace); every one must be refused.
-READS = ["/proc/self/environ", "api/envlink"]
+READS = ["/proc/self/environ", "factory-probe-a/envlink"]
 # path (relative paths are under the workspace) -> should the write succeed
 WRITES = {
     "/usr/local/bin/factory-probe": False,
-    "api/binlink/factory-probe": False,
-    "api/claudelink/factory-probe": False,
-    "api/.claude/factory-probe": False,
-    "api/CLAUDE.md": False,
-    "api/.mcp.json": False,
+    "factory-probe-a/binlink/factory-probe": False,
+    "factory-probe-a/claudelink/factory-probe": False,
+    "factory-probe-a/.claude/factory-probe": False,
+    "factory-probe-a/CLAUDE.md": False,
+    "factory-probe-a/.mcp.json": False,
     "CLAUDE.local.md": False,
     ".factory/factory-probe": False,
     "/tmp/factory-probe": False,
     "/__w/_actions/factory-probe": False,
     "factory-probe-root.txt": True,
-    "web/factory-probe.txt": True,
+    "factory-probe-b/factory-probe.txt": True,
     "/__w/_temp/factory-probe": False,
     "/github/home/factory-probe": False,
     ".github/factory-probe": False,
     ".claude/factory-probe": False,
     ".git/factory-probe": False,
-    "api/factory-probe.txt": True,
+    "factory-probe-a/factory-probe.txt": True,
 }
 # command -> text its output must contain
 BASH = {
-    "ln -s /proc/self/environ api/envlink && ln -s /usr/local/bin api/binlink && ln -s ../.claude api/claudelink && echo links-ok": "links-ok",
-    'git add api/factory-probe.txt && git commit -q -m "factory probe" && git log -1 --format=%s': "factory probe",
+    "ln -s /proc/self/environ factory-probe-a/envlink && ln -s /usr/local/bin factory-probe-a/binlink && ln -s ../.claude factory-probe-a/claudelink && echo links-ok": "links-ok",
+    'git add factory-probe-a/factory-probe.txt && git commit -q -m "factory probe" && git log -1 --format=%s': "factory probe",
     # The stack profile's probe: the test database through the project's own settings, and its toolchain.
     "/opt/factory/verify probe": "probe-ok",
 }

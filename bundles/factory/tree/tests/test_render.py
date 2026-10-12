@@ -1,5 +1,5 @@
-"""Tests for render.py: quantile's workflows are its templates rendered with its factory.json, byte for
-byte; another project's settings render workflows that pass workflow_policy.py with none of quantile's
+"""Tests for render.py: this project's workflows are its templates rendered with its factory.json, byte for
+byte; another project's settings render workflows that pass workflow_policy.py with none of this project's
 values left; and what the renderer refuses."""
 
 import contextlib
@@ -27,7 +27,7 @@ def quiet_main(args):
     with contextlib.redirect_stdout(io.StringIO()):
         return render.main(args)
 
-# Another project: every setting differs from quantile's.
+# Another project: every setting differs from any real project's.
 OTHER = {
     "app": {"user_id": 123456, "login": "other-factory[bot]"},
     "image": {"repository": "ghcr.io/other-org/job", "digest": "sha256:" + "b" * 64},
@@ -48,13 +48,36 @@ OTHER = {
               "database": "otherdb", "env": {}},
 }
 OTHER_PLANNING = {"database": {"host": "10.0.0.9", "port": 5433, "name": "otherdb", "user": "reader2", "local_port": 7432}}
-QUANTILE_ONLY = ("339877552", "z-software-factory", "factory-writer", "factory-planning", "factory-production",
-                 "a543528d", "endless-galaxy-studios", "[self-hosted, factory]", "[self-hosted, factory-p",
-                 "claude-sonnet-5-5", "claude-opus-5-5", "claude-haiku-5-5", "database quantile", "127.0.0.1:6432",
-                 '"23 22 * * 0"', 'endlessgalaxy.workers.dev', 'AGENT_MINUTES: "240"', 'REVISION_LIMIT: "3"', 'REVISION_LIMIT: "5"')
+THIS = json.loads((FACTORY / "factory.json").read_text())
+THIS_PLANNING = json.loads((FACTORY / "planning.json").read_text()) if (FACTORY / "planning.json").exists() else {}
 
 
-class Quantile(unittest.TestCase):
+def strings(value):
+    if isinstance(value, str):
+        yield value
+    elif isinstance(value, dict):
+        for v in value.values():
+            yield from strings(v)
+    elif isinstance(value, list):
+        for v in value:
+            yield from strings(v)
+
+
+def this_projects_values():
+    """This project's settings as they appear in its rendered workflows (values too short to be telling left out)."""
+    c, db = THIS, THIS_PLANNING.get("database") or {}
+    values = [str(c["app"]["user_id"]), c["app"]["login"].removesuffix("[bot]"), *c["environments"].values(),
+              c["image"]["repository"], c["image"]["digest"].removeprefix("sha256:")[:8],
+              *(f"[self-hosted, {label}]" for label in c["runners"].values() if isinstance(label, str)),
+              *strings(c["models"]), f'"{c["improve"]["cron"]}"', f'AGENT_MINUTES: "{c["limits"]["agent_minutes"]}"',
+              f'REVISION_LIMIT: "{c["limits"]["code_revisions"]}"', f'REVISION_LIMIT: "{c["limits"]["doc_revisions"]}"',
+              c["smoke"]["echo_host"]]
+    if db.get("host"):
+        values += [f"database {db['name']}", f"127.0.0.1:{db['local_port']}"]
+    return [v for v in dict.fromkeys(values) if len(v) >= 4]
+
+
+class ThisProject(unittest.TestCase):
     def test_the_workflows_are_the_templates_rendered(self):
         rendered = render.render_all(FACTORY, FACTORY / "templates")
         on_disk = {p.name: p.read_text() for p in WORKFLOWS.glob("factory-*.yml")}
@@ -71,7 +94,7 @@ class AnotherProject(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
         root = pathlib.Path(self.tmp.name)
-        # The other project's factory directory: quantile's files, its own settings.
+        # The other project's factory directory: this project's files, its own settings.
         self.factory = root / "factory"
         shutil.copytree(FACTORY, self.factory, ignore=shutil.ignore_patterns("tests", "templates", "__pycache__"))
         (self.factory / "factory.json").write_text(json.dumps(OTHER))
@@ -85,13 +108,13 @@ class AnotherProject(unittest.TestCase):
     def tearDown(self):
         self.tmp.cleanup()
 
-    def test_none_of_quantiles_settings_are_left(self):
+    def test_none_of_this_projects_settings_are_left(self):
         for name, text in self.rendered.items():
-            for value in QUANTILE_ONLY:
+            for value in this_projects_values():
                 with self.subTest(workflow=name, value=value):
                     self.assertNotIn(value, text)
 
-    def test_its_settings_are_where_quantiles_were(self):
+    def test_its_settings_are_where_this_projects_were(self):
         implement = self.rendered["factory-implement.yml"]
         self.assertIn("runs-on: [self-hosted, strict-pool]", implement)
         self.assertIn("image: ghcr.io/other-org/job@sha256:" + "b" * 64, implement)
@@ -123,12 +146,12 @@ class AnotherProject(unittest.TestCase):
 
     @unittest.skipUnless(HAS_YAML, "needs PyYAML")
     def test_the_policy_reads_the_labels_from_factory_json(self):
-        # With quantile's factory.json, the other project's planning jobs are on unknown runners.
+        # With this project's factory.json, the other project's planning jobs are on unknown runners.
         shutil.copy(FACTORY / "factory.json", self.factory / "factory.json")
         r = subprocess.run([sys.executable, str(FACTORY / "workflow_policy.py"), str(self.out), str(self.factory)],
                            capture_output=True, text=True)
         self.assertEqual(r.returncode, 1)
-        self.assertIn("a planning agent job must run on factory-plan runners", r.stdout)
+        self.assertIn(f"a planning agent job must run on {THIS['runners']['planning']} runners", r.stdout)
 
 
 class Refusals(unittest.TestCase):

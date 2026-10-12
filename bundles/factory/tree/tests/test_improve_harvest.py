@@ -16,7 +16,7 @@ import improve_harvest as ih  # noqa: E402
 import improve_report as ir  # noqa: E402
 
 REPO = "o/r"
-APP = {"login": "z-software-factory[bot]", "id": ih.APP_USER_ID, "type": "Bot"}
+APP = {"login": ih.APP["login"], "id": ih.APP_USER_ID, "type": "Bot"}
 LEGACY = {"login": "github-actions[bot]", "id": ih.LEGACY_BOT_ID, "type": "Bot"}
 CD = {"login": "cd", "id": 1, "type": "User"}
 READER = {"login": "reader", "id": 2, "type": "User"}

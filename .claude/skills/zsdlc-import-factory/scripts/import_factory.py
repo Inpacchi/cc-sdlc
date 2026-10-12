@@ -173,9 +173,9 @@ class Import:
                 continue
             if not self.last:  # no recorded starting point: the incubator's version is the import
                 start = ours
-            elif rel in base:
+            elif rel in base and (ours is not None or self.ever_in_bundle(rel)):
                 start = (self.blob(self.last, f"{self.source}/{rel}"), base[rel] == "100755")
-            else:
+            else:  # new since the last import, or excluded then and bundle code under today's rules
                 start = None
             if ours == start:  # only the incubator changed it: import it
                 (self.added if ours is None else self.removed if theirs is None else self.changed).append(rel)
@@ -189,6 +189,15 @@ class Import:
                 self.needs.append((ACCEPT, f"bundle code {rel}: changed in both the incubator and z-sdlc since the last "
                                            "import; merge z-sdlc's change into the incubator's file and commit it "
                                            "there, then --apply --accept takes the incubator's"))
+
+    def ever_in_bundle(self, rel):
+        """Whether z-sdlc's history has ever had this bundle code file. One the bundle never had was excluded at
+        the last import (the rules changed since), so it is new to the bundle, not something z-sdlc removed.
+        Outside a git repository, assume it was."""
+        path = (self.tree_dir / rel).relative_to(self.root).as_posix()
+        r = subprocess.run(["git", "-C", str(self.root), "log", "-1", "--format=%H", "--", path],
+                           capture_output=True, text=True)
+        return r.returncode != 0 or bool(r.stdout.strip())
 
     def check_specific(self):
         patterns = self.rules.get("specific") or []

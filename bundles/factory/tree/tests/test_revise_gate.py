@@ -13,7 +13,7 @@ import unittest
 
 FACTORY = pathlib.Path(__file__).resolve().parents[1]
 SCRIPT = FACTORY / "revise_gate.sh"
-APP_USER_ID = 339877552
+APP_USER_ID = json.loads((FACTORY / "factory.json").read_text())["app"]["user_id"]
 RUN_URL = "https://github.com/o/r/actions/runs/1"
 
 FAKE_GH = textwrap.dedent("""\

@@ -37,6 +37,28 @@ Each entry contains:
 
 ---
 
+## 2026-10-12: The factory bundle sets up from zero: host setup, the App, the echo service, placeholders
+
+**Origin:** the factory is meant to be usable by anyone who installs z-sdlc, not only by CD's organization (CD). The bundle assumed Endless Galaxy's App, job image, echo service and runner host, and the host setup wasn't in it at all.
+
+**What happened:** imported from endless-galaxy-studios/quantile ec4b0d9..c6520ae. Quantile's commits made each piece of the factory read the project's own settings, and the import proof (an empty project with the seed's placeholders) found that the host setup stopped outside a checkout with an `origin`; fixed in quantile and imported.
+
+**Changes made:**
+
+1. **`bundles/factory/seed/factory.json`** — `app`, `image` and `smoke.echo_host` are placeholders (`your-factory-app[bot]`, `ghcr.io/your-org/factory-job`, an all-zero digest, `echo.example.invalid`) instead of Endless Galaxy's values; the runner labels and environment names stay as shared defaults.
+2. **`bundles/factory/tree/bootstrap.py`** — checks first that `factory.json` names the project's own App, image and echo service, and applies nothing until it does, naming the Enablement step that fills each.
+3. **`bundles/factory/tree/create_app.py`** (new) — creates the factory's GitHub App in an organization through GitHub's manifest flow, with exactly the four permissions `bootstrap.py` checks and no webhook; writes its bot user into `factory.json` and its private key to a new mode-600 file.
+4. **`bundles/factory/tree/echo/`** (new) — the echo service smoke calls: `worker.js` for Cloudflare Workers, `server.py` for any container host behind HTTPS.
+5. **`bundles/factory/tree/host/setup.sh`**, **`seccomp-bwrap.json`** and **`bundles/factory/seed/host/host.conf`** (new to the bundle) — the runner host setup: runner labels and group from `factory.json`, the host's own settings (organization, home directory, LAN resolver, probe ports, a planning database port, runner counts and limits) from `host.conf`, each with a default; `--print-settings` resolves them without root. The production tier's host scripts stay per project.
+6. **`bundles/factory/tree/planning-services.sh`**, **`templates/factory-plan.yml`**, **`templates/factory-revise-doc.yml`** — the planning database is optional (D3): with none in `planning.json`, the plan and revise-doc stages run without one.
+7. **`bundles/factory/tree/templates/factory-smoke.yml`**, **`implement_tools_check.py`** — smoke's write probe uses directories it creates, not one project's layout.
+8. **`bundles/factory/tree/tests/`** — the tests read the project's own `factory.json` instead of Endless Galaxy's App and values, so every adopter's CI runs them unchanged; new tests for the App creation, the echo server, the host settings and the optional planning database.
+9. **`.claude/skills/zsdlc-import-factory/`** — `host/` is bundle code except the production tier's two scripts, and `host/host.conf` is a seed. A file z-sdlc's history never had (excluded at the last import, bundle code under today's rules) is reported as added, not as z-sdlc's removal; with a test. The home-directory pattern no longer matches `api.github.com/users/`.
+
+**Rationale:** an adopter now fills four placeholders with its own App, image and echo service, each made by a script or file in the bundle, and sets up its runner host from the same checkout; nothing in the bundle presumes Endless Galaxy. Release type: minor (new command surface: `create_app.py`, the host setup).
+
+---
+
 ## 2026-10-12: Public and generic: project-internal material leaves z-sdlc
 
 **Origin:** z-sdlc is public and for anyone, and the factory is meant to be an abstraction every adopter can use (CD). A review of what z-sdlc publishes found no credentials, but it did find CD's own projects' internals: a runner host's network addresses in the factory's smoke template, the factory's design record (one project's hosts, operations, costs and history), another project's product material, and private projects named as examples in files every project installs.

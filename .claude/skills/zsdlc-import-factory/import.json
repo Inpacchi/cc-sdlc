@@ -9,11 +9,13 @@
     "services.json",
     "triage-policy.md",
     "README.md",
-    "tests/test_codeowners.py"
+    "tests/test_codeowners.py",
+    "host/host.conf"
   ],
   "excluded": [
     "production/*",
-    "host/*",
+    "host/setup-production.sh",
+    "host/db-reader.sh",
     "db_access_check.py",
     "db-access.json",
     "tests/test_gates.py",
@@ -34,10 +36,10 @@
     "\\b10\\.[0-9]+\\.[0-9]+\\.[0-9]+\\b",
     "\\b100\\.(6[4-9]|[7-9][0-9]|1[01][0-9]|12[0-7])\\.",
     "/home/[a-z]",
-    "/Users/[A-Za-z]"
+    "(?-i:/Users/)[A-Za-z]"
   ],
   "last_import": {
-    "commit": "ec4b0d97a4ce90325e6f7ee2758f1729c8584e5f",
+    "commit": "c6520ae41394bb795542ce6f6c3e3ed61699e292",
     "date": "2026-10-12"
   }
 }

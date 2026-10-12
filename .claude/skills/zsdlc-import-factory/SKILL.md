@@ -30,9 +30,9 @@ CD decided (2026-10-12) that quantile incubates the software factory and z-sdlc 
 
 | Kind | Rule | On import |
 |---|---|---|
-| Excluded | `excluded` globs: the production tier (`production/`, `host/`, its tests) and quantile's Django-specific database access list | Never imported: per project |
-| Seed | `seed` paths: `factory.json`, `planning.json`, `services.json`, `triage-policy.md`, `README.md`, `tests/test_codeowners.py` | Not copied. The bundle keeps its own generic version in `bundles/factory/seed/`; the report says when the bundle's version needs a matching change |
-| Bundle code | Everything else | Compared three ways (quantile now, the bundle now, quantile at the last import): quantile's changes are copied into `bundles/factory/tree/`; z-sdlc's own changes are kept and go to quantile; a file changed on both sides is a conflict |
+| Excluded | `excluded` globs: the production tier (`production/`, its host scripts `host/setup-production.sh` and `host/db-reader.sh`, its tests) and quantile's Django-specific database access list | Never imported: per project |
+| Seed | `seed` paths: `factory.json`, `planning.json`, `services.json`, `triage-policy.md`, `README.md`, `tests/test_codeowners.py`, `host/host.conf` | Not copied. The bundle keeps its own generic version in `bundles/factory/seed/`; the report says when the bundle's version needs a matching change |
+| Bundle code | Everything else | Compared three ways (quantile now, the bundle now, quantile at the last import): quantile's changes are copied into `bundles/factory/tree/`; z-sdlc's own changes are kept and go to quantile; a file changed on both sides is a conflict. A file z-sdlc's history never had (excluded at the last import, bundle code under today's rules) is added, not z-sdlc's removal |
 
 `free_settings` names JSON seed settings whose keys are the project's own data (`stack.env`'s variable names), which aren't compared. `specific` lists patterns of quantile-specific text the report flags when an import adds them. `last_import` is the quantile commit last imported; the script updates it.
 

@@ -1,11 +1,14 @@
 """Tests for git_guard.sh: the checks factory-implement's Package step runs before it uses git on the
 agent's repository. Each case booby-traps a fresh repository one way and expects a refusal."""
 
+import json
 import os
 import pathlib
 import subprocess
 import tempfile
 import unittest
+
+APP = json.loads((pathlib.Path(__file__).resolve().parents[1] / "factory.json").read_text())["app"]
 
 GUARD = pathlib.Path(__file__).resolve().parents[1] / "git_guard.sh"
 
@@ -33,8 +36,8 @@ class GitGuard(unittest.TestCase):
                                 cwd=self.repo, check=True, capture_output=True, text=True).stdout
         self.hooks.write_text(hashes)
         # What the action does during the agent step.
-        git("config", "user.name", "z-software-factory[bot]", cwd=self.repo)
-        git("config", "user.email", "339877552+z-software-factory[bot]@users.noreply.github.com", cwd=self.repo)
+        git("config", "user.name", APP["login"], cwd=self.repo)
+        git("config", "user.email", f"{APP['user_id']}+{APP['login']}@users.noreply.github.com", cwd=self.repo)
 
     def tearDown(self):
         self.tmp.cleanup()

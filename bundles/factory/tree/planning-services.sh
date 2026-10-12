@@ -4,11 +4,16 @@
 # production database without ever seeing the password. Run as root before the agent, with the
 # password in FACTORY_DB_READER_PASSWORD (that step's env only). The config sits in a directory only
 # the postgres user can read, under the runner temp directory the sandbox can't see.
-# Usage: planning-services.sh <planning.json> <config-dir>
+# Usage: planning-services.sh <planning.json> <config-dir>. With no database in planning.json it does nothing.
 set -euo pipefail
 
 cfg=$1
 dir=$2
+# The database is optional (D3): a project whose planning.json names none plans without production data.
+if [ -z "$(jq -r '.database.host // ""' "$cfg")" ]; then
+  echo "planning-services: planning.json names no database; planning runs without production data"
+  exit 0
+fi
 [ -n "${FACTORY_DB_READER_PASSWORD:-}" ] || { echo "planning-services: no database password" >&2; exit 1; }
 host=$(jq -r .database.host "$cfg"); port=$(jq -r .database.port "$cfg"); name=$(jq -r .database.name "$cfg")
 user=$(jq -r .database.user "$cfg"); local_port=$(jq -r .database.local_port "$cfg")

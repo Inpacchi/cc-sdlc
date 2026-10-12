@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""The GitHub half of a repository's factory setup (z-sdlc process/factory.md, Enablement steps 2 to 8).
+"""The GitHub half of a repository's factory setup (z-sdlc process/factory.md, Enablement steps 2 to 9).
 
     python3 .github/factory/bootstrap.py            report what is missing; change nothing
     python3 .github/factory/bootstrap.py --apply    also create what it can, then report
@@ -128,6 +128,11 @@ class Bootstrap:
             raise Settings(f"can't read {self.repo} (HTTP {status}): check the name and gh's login")
         self.repo_id, self.default = info["id"], info["default_branch"]
         self.org = (info.get("owner") or {}).get("type") == "Organization"
+        if not self.check_settings() and self.apply:
+            # The labels and runner-group entries would work, but a factory with someone else's App or image
+            # wouldn't: fill factory.json first, so the setup is applied once, whole.
+            self.apply = False
+            self.note("problem", "settings", "nothing applied: fill the settings above, run render.py, then --apply")
         self.check_labels()
         self.check_environments()
         self.check_secrets()
@@ -136,6 +141,28 @@ class Bootstrap:
         self.check_codeowners()
         self.check_branch_rules()
         return self.failed
+
+    def check_settings(self):
+        """factory.json's settings that only the adopter can fill: the bundle's seed holds placeholders for them
+        (z-sdlc process/factory.md, Enablement). True when every one is filled."""
+        app, image = self.cfg.get("app") or {}, self.cfg.get("image") or {}
+        echo = (self.cfg.get("smoke") or {}).get("echo_host") or ""
+        digest = image.get("digest") or ""
+        unset = []
+        if not (isinstance(app.get("user_id"), int) and app["user_id"] > 0) or not str(app.get("login", "")).endswith("[bot]") \
+                or str(app.get("login", "")).startswith("your-"):
+            unset.append("app.user_id and app.login: your factory App's bot user (Enablement step 5, create_app.py)")
+        if not image.get("repository") or "your-org" in image["repository"]:
+            unset.append("image.repository: where your job image is published (Enablement step 3)")
+        if not re.fullmatch(r"sha256:[0-9a-f]{64}", digest) or set(digest[7:]) == {"0"}:
+            unset.append("image.digest: the built image's digest (Enablement step 3)")
+        if not echo or echo.endswith(".invalid"):
+            unset.append("smoke.echo_host: your echo service (Enablement step 4)")
+        for text in unset:
+            self.note("missing", "settings", f"factory.json {text}")
+        if not unset:
+            self.note("ok", "settings", "factory.json names your App, image and echo service")
+        return not unset
 
     def check_labels(self):
         have = {l["name"]: l for l in self.list_all(f"repos/{self.repo}/labels", None) or []}

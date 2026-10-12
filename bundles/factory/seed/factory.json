@@ -1,12 +1,12 @@
 {
-  "_doc": "This repository's factory settings. render.py renders .github/workflows/factory-*.yml from templates/ with them (and planning.json's database); the factory's scripts and workflow_policy.py read them at run time. The defaults are Endless Galaxy's shared setup (one App, shared runners, the python-node job image); set the stack block for this project (process/factory.md, Enablement). Edit this or a template, then run render.py; CI's render check refuses a workflow edited by hand.",
+  "_doc": "This repository's factory settings. render.py renders .github/workflows/factory-*.yml from templates/ with them (and planning.json's database); the factory's scripts and workflow_policy.py read them at run time. The app, image and smoke.echo_host values are placeholders: Enablement fills them with your organization's factory App, job image and echo service, and bootstrap.py applies nothing until it has. The runner labels and environment names are defaults every project in the organization shares; set the stack block for this project (process/factory.md, Enablement). Edit this or a template, then run render.py; CI's render check refuses a workflow edited by hand.",
   "app": {
-    "user_id": 339877552,
-    "login": "z-software-factory[bot]"
+    "user_id": 0,
+    "login": "your-factory-app[bot]"
   },
   "image": {
-    "repository": "ghcr.io/endless-galaxy-studios/factory-job",
-    "digest": "sha256:a543528d6119752b68750818e25c575a5c552e30ed9ad97894bc5d43be7f94ac"
+    "repository": "ghcr.io/your-org/factory-job",
+    "digest": "sha256:0000000000000000000000000000000000000000000000000000000000000000"
   },
   "runners": {
     "strict": "factory",
@@ -63,8 +63,8 @@
     "cron": "23 22 * * 0"
   },
   "smoke": {
-    "_doc": "factory-smoke's stand-in service: a host that echoes each request's headers back as indented JSON (httpbin's /headers), so the credential-mask and services probes can see what the sandbox proxy injected. Endless Galaxy's is a Cloudflare Worker, factory-echo, on its engineering account. host_probes: the runner host's own addresses (LAN, VPN, compose network gateways), space-separated, which smoke's isolation probe must find unreachable from a job; the default Docker bridge and rootless gateways are always probed.",
-    "echo_host": "factory-echo.endlessgalaxy.workers.dev",
+    "_doc": "factory-smoke's stand-in service: a host that echoes each request's headers back as indented JSON (httpbin's /headers), so the credential-mask and services probes can see what the sandbox proxy injected. echo/ holds its source: a Cloudflare Worker, or a small server for any container host behind HTTPS. host_probes: the runner host's own addresses (LAN, VPN, compose network gateways), space-separated, which smoke's isolation probe must find unreachable from a job; the default Docker bridge and rootless gateways are always probed.",
+    "echo_host": "echo.example.invalid",
     "host_probes": ""
   },
   "stack": {

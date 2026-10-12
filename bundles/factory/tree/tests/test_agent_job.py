@@ -12,6 +12,7 @@ import tempfile
 import unittest
 
 FACTORY = pathlib.Path(__file__).resolve().parents[1]
+APP = json.loads((FACTORY / "factory.json").read_text())["app"]
 SCRIPT = FACTORY / "agent_job.sh"
 NEEDS_JQ = unittest.skipUnless(shutil.which("jq"), "needs jq")
 
@@ -197,8 +198,8 @@ class Repo(AgentJob):
         self.repo = self.root / "ws"
         git("clone", "-q", "--no-local", str(src), str(self.repo), cwd=self.root)
         git("remote", "remove", "origin", cwd=self.repo)
-        git("config", "user.name", "z-software-factory[bot]", cwd=self.repo)
-        git("config", "user.email", "339877552+z-software-factory[bot]@users.noreply.github.com", cwd=self.repo)
+        git("config", "user.name", APP["login"], cwd=self.repo)
+        git("config", "user.email", f"{APP['user_id']}+{APP['login']}@users.noreply.github.com", cwd=self.repo)
         self.checks.mkdir(mode=0o700)
         hashes = subprocess.run("find .git/hooks -type f -exec sha256sum {} + | sort", shell=True, cwd=self.repo,
                                 check=True, capture_output=True, text=True).stdout
@@ -293,7 +294,7 @@ class ReviseContext(AgentJob):
                         PR="5", ISSUE_NUMBER="7", BRANCH="factory/7-impl", BASE="b" * 40, REVISION="2",
                         REVISION_LIMIT="3")
         cd = {"login": "cd", "type": "User"}
-        app = {"login": "z-software-factory[bot]", "type": "Bot", "id": 339877552}
+        app = {"login": APP["login"], "type": "Bot", "id": APP["user_id"]}
         self.data = {
             "repos/o/r/pulls/5": {"body": "The PR's description."},
             "repos/o/r/issues/5/comments": [
@@ -344,7 +345,7 @@ class ReviseContext(AgentJob):
 
     def test_nothing_new_is_refused(self):
         self.data["repos/o/r/issues/5/comments"].append(
-            {"user": {"type": "Bot", "id": 339877552}, "created_at": "2026-10-12T00:00:00Z",
+            {"user": {"type": "Bot", "id": APP["user_id"]}, "created_at": "2026-10-12T00:00:00Z",
              "body": "<!-- factory-revise: 2 -->\nRevised again."})
         r = self.run_context()
         self.assertEqual(r.returncode, 1)

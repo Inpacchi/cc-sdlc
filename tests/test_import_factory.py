@@ -129,6 +129,26 @@ class ImportFactory(unittest.TestCase):
         self.assertEqual(code, 0, out)
         self.assertTrue((self.z / "bundles/factory/tree/new_tool.py").exists())
 
+    def test_a_file_the_rules_no_longer_exclude_is_added_not_removed_by_z_sdlc(self):
+        self.put(self.inc, ".github/factory/host/setup.sh", "setup\n")
+        rules = {**RULES, "excluded": [*RULES["excluded"], "host/*"]}
+        self.rules.write_text(json.dumps(rules))
+        self.commit("host setup")
+        self.assertEqual(self.run_it("--apply")[0], 0)
+        git(self.z.parent, "init", "-q", str(self.z))
+        git(self.z, "add", "-A")
+        git(self.z, "commit", "-q", "-m", "z-sdlc")
+        rules = {**json.loads(self.rules.read_text()), "excluded": RULES["excluded"]}
+        self.rules.write_text(json.dumps(rules))
+        code, out = self.run_it()
+        self.assertIn("added    host/setup.sh", out)
+        self.assertNotIn("removed it", out)
+        # A file z-sdlc's history had and deleted is still z-sdlc's removal.
+        (self.z / "bundles/factory/tree/guard.py").unlink()
+        git(self.z, "commit", "-q", "-am", "z-sdlc drops the guard")
+        code, out = self.run_it()
+        self.assertIn("ahead    guard.py (z-sdlc removed it)", out)
+
     def test_a_removed_file_needs_accept(self):
         self.put(self.z, "bundles/factory/tree/old/gone.py", "z = 1\n")
         code, out = self.run_it("--apply")

@@ -16,6 +16,10 @@ sys.path.insert(0, str(FACTORY))
 import bootstrap  # noqa: E402
 
 REPO, OTHER = "acme/widget", "acme/gadget"
+# The settings Enablement fills, as a project that has done so has them.
+FIXTURE_SETTINGS = {"app": {"user_id": 424242, "login": "acme-factory[bot]"},
+                    "image": {"repository": "ghcr.io/acme/factory-job", "digest": "sha256:" + "a" * 64},
+                    "smoke": {"echo_host": "echo.acme.example", "host_probes": ""}}
 OTHER_WF = f"{OTHER}/.github/workflows/factory-triage.yml@refs/heads/main"
 
 
@@ -27,7 +31,7 @@ class FakeGitHub:
         self.repo_secrets, self.org_secrets = set(), set()
         self.groups = [{"id": 4, "name": "factory-pool", "visibility": "selected", "restricted_to_workflows": True,
                         "selected_workflows": [OTHER_WF], "repos": [9], "runners": ["runner-1"]}]
-        self.installations = [{"id": 1, "app_slug": "z-software-factory", "repository_selection": "all",
+        self.installations = [{"id": 1, "app_slug": "acme-factory", "repository_selection": "all",
                                "permissions": dict(bootstrap.APP_PERMISSIONS)}]
         self.rulesets = [{"id": 1, "enforcement": "active", "target": "branch",
                           "conditions": {"ref_name": {"include": ["~DEFAULT_BRANCH"]}},
@@ -175,6 +179,7 @@ class Bootstrap(unittest.TestCase):
         factory.mkdir(parents=True)
         workflows.mkdir()
         cfg = json.loads((FACTORY / "factory.json").read_text())
+        cfg.update(FIXTURE_SETTINGS)  # a set-up project's own App, image and echo host, whatever this one's are
         (factory / "factory.json").write_text(json.dumps(cfg))
         (factory / "planning.json").write_text(json.dumps({"database": {"host": "", "name": ""}}))
         (factory / "services.json").write_text(json.dumps({"services": []}))
@@ -335,6 +340,19 @@ class Bootstrap(unittest.TestCase):
         code, out = self.run_it()
         self.assertEqual(code, 1)
         self.assertIn("doesn't own /.claude/", out)
+
+    def test_the_seeds_placeholders_block_apply(self):
+        cfg = json.loads((self.root / ".github/factory/factory.json").read_text())
+        cfg.update({"app": {"user_id": 0, "login": "your-factory-app[bot]"},
+                    "image": {"repository": "ghcr.io/your-org/factory-job", "digest": "sha256:" + "0" * 64},
+                    "smoke": {"echo_host": "echo.example.invalid", "host_probes": ""}})
+        (self.root / ".github/factory/factory.json").write_text(json.dumps(cfg))
+        code, out = self.run_it("--apply")
+        self.assertEqual(code, 1)
+        self.assertEqual(self.gh.writes, [])
+        for text in ("app.user_id and app.login", "image.repository", "image.digest", "smoke.echo_host",
+                     "nothing applied: fill the settings above"):
+            self.assertIn(text, out)
 
     def test_an_unreadable_factory_json_is_a_settings_error(self):
         (self.root / ".github" / "factory" / "factory.json").write_text("{}")
