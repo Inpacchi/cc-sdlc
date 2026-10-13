@@ -199,6 +199,17 @@ class Import:
                            capture_output=True, text=True)
         return r.returncode != 0 or bool(r.stdout.strip())
 
+    def was_ours(self, ours, data):
+        """Whether these bytes are a version of z-sdlc's file its history committed: then the incubator's copy is
+        one --to-incubator wrote, not an edit made there. Outside a git repository, assume it isn't."""
+        h = subprocess.run(["git", "hash-object", "--stdin"], input=data, capture_output=True)
+        r = subprocess.run(["git", "-C", str(self.root), "log", "--format=", "--raw", "--no-abbrev", "--", ours],
+                           capture_output=True, text=True)
+        if h.returncode or r.returncode:
+            return False
+        blob = h.stdout.decode().strip()
+        return any(line.split()[3] == blob for line in r.stdout.splitlines() if line.startswith(":"))
+
     def check_specific(self):
         patterns = self.rules.get("specific") or []
         if not patterns:
@@ -264,6 +275,8 @@ class Import:
                     edited = self.blob(self.last, theirs) != copy
                 except Stop:
                     edited = True
+            if edited and self.was_ours(ours, copy):  # the incubator took a copy z-sdlc committed (--to-incubator)
+                edited = False
             if edited:
                 self.needs.append((FIX, f"{theirs}: the incubator changed its copy of z-sdlc's {ours} since the "
                                         "last import; port the change into z-sdlc, then copy it back"))

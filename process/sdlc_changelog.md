@@ -37,6 +37,24 @@ Each entry contains:
 
 ---
 
+## 2026-10-12: One factory runner host serves several organizations
+
+**Origin:** a second organization's factory will share an existing runner host rather than need its own machine (CD: "change setup.sh").
+
+**What happened:** `host/setup.sh` used fixed names for its users, firewall tables and services, so a host ran one organization's runners; setting it up for a second would have reused the first's users and runner directories. Imported from quantile 6251b8c..07d9441.
+
+**Changes made:**
+
+1. **`bundles/factory/tree/host/setup.sh`** — `RUNNER_INSTANCE` (in `host.conf`) names a second organization's runners: users `factory-runner-<instance>` and `factory-planner-<instance>`, their own nft tables, firewall units and runner services, each isolated from the others as from the host. Without it the names are as before. Setup refuses, before changing anything, a runner directory registered to another organization; new runner users get subordinate IDs above every range already given out, not a fixed block that could collide on a fresh host; replacing the shared seccomp profile says so.
+2. **`bundles/factory/seed/host/host.conf`** — documents `RUNNER_INSTANCE` and that each organization's limits come out of the same host.
+3. **`bundles/factory/tree/tests/test_host_setup.py`** — the instance names, refused names, and the ownership guard.
+4. **`process/factory.md`** — Enablement step 8: a host can serve several organizations; a planning database port is only ever the organization's own.
+5. **`.claude/skills/zsdlc-import-factory/scripts/import_factory.py`** — a copy of `process/factory.md` or a skill that the incubator committed from z-sdlc (`--to-incubator`) is recognized by z-sdlc's history, not reported as an edit made in the incubator; with a test.
+
+**Rationale:** runner hosts are the costly part of the factory; letting organizations share one, each confined as strictly as from the host itself, removes the need for a machine per organization. Release type: minor (a new host setting).
+
+---
+
 ## 2026-10-12: factory.md's Enablement starts from zero, and says what a stack profile is
 
 **Origin:** with the bundle carrying everything an organization needs (the entry below), its Enablement still assumed Endless Galaxy's App, image, echo service and runners already existed (CD: the factory is an abstraction for anyone). Checking GitHub's documentation for the plan the factory needs corrected an earlier answer: a free organization isn't enough.

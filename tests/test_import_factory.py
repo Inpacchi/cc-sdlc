@@ -149,6 +149,25 @@ class ImportFactory(unittest.TestCase):
         code, out = self.run_it()
         self.assertIn("ahead    guard.py (z-sdlc removed it)", out)
 
+    def test_a_copy_z_sdlc_committed_is_not_an_incubator_edit(self):
+        self.assertEqual(self.run_it("--apply")[0], 0)
+        git(self.z.parent, "init", "-q", str(self.z))
+        self.put(self.z, PROCESS, "rules, revised\n")
+        git(self.z, "add", "-A")
+        git(self.z, "commit", "-q", "-m", "z-sdlc revises the rules")
+        # --to-incubator's copy, committed in the incubator; then z-sdlc revises again, uncommitted.
+        self.put(self.inc, "ops/sdlc/" + PROCESS, "rules, revised\n")
+        self.commit("docs: z-sdlc's rules")
+        self.put(self.z, PROCESS, "rules, revised twice\n")
+        code, out = self.run_it()
+        self.assertNotIn("the incubator changed its copy", out)
+        self.assertIn("z-sdlc's process/factory.md is newer", out)
+        # An edit made in the incubator is still one.
+        self.put(self.inc, "ops/sdlc/" + PROCESS, "rules, edited in the incubator\n")
+        self.commit("docs: an incubator edit")
+        code, out = self.run_it()
+        self.assertIn("the incubator changed its copy", out)
+
     def test_a_removed_file_needs_accept(self):
         self.put(self.z, "bundles/factory/tree/old/gone.py", "z = 1\n")
         code, out = self.run_it("--apply")

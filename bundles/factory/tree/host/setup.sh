@@ -14,6 +14,11 @@
 #   TIER=planning  factory-planner: spec and plan. The same firewall, plus the open internet the stages
 #                  need and, if host.conf names one, a database port on this host's own addresses.
 #
+# One host can run several organizations' runners. The first keeps the plain names above; each other
+# organization sets RUNNER_INSTANCE in its own host.conf (for example `acme`), and gets its own users
+# (factory-runner-acme, factory-planner-acme), firewall tables, services and runners, isolated from the
+# others' as from the host. Setup refuses to touch runners registered to another organization.
+#
 # This host's settings are host.conf beside this script (each has a default; see the file). Run from a
 # checkout of the project's default branch, as root:
 #   sudo bash setup.sh                          (strict tier)
@@ -44,20 +49,27 @@ RUNNER_NAME_PREFIX=${RUNNER_NAME_PREFIX:-$(hostname -s)}
 LAN_DNS=${LAN_DNS:-}
 PROBE_PORTS=${PROBE_PORTS:-22 80 443 3000 5432 6379 8000 8080}
 PLANNING_DB_PORT=${PLANNING_DB_PORT:-}
+RUNNER_INSTANCE=${RUNNER_INSTANCE:-}
+if [[ -n $RUNNER_INSTANCE && ! $RUNNER_INSTANCE =~ ^[a-z][a-z0-9]{0,11}$ ]]; then
+  printf 'ERROR: RUNNER_INSTANCE must be a lowercase letter then up to 11 lowercase letters or digits\n' >&2; exit 1
+fi
+# Names for this organization's runners: plain for the host's first organization, suffixed for another.
+dash=${RUNNER_INSTANCE:+-$RUNNER_INSTANCE} under=${RUNNER_INSTANCE:+_$RUNNER_INSTANCE}
 
 TIER=${TIER:-strict}
 case $TIER in
   strict)
-    RUNNER_USER=factory-runner; SUBIDS=165536-231071
-    NFT_TABLE=factory_runner; NFT_FILE=/etc/factory-runner/firewall.nft; FW_UNIT=factory-firewall
-    RUNNER_UNIT=factory-runner; RUNNER_LABELS=$(setting runners.strict); NAME_PREFIX=$RUNNER_NAME_PREFIX-factory
+    RUNNER_USER=factory-runner$dash
+    NFT_TABLE=factory_runner$under; NFT_FILE=/etc/factory-runner/firewall$dash.nft; FW_UNIT=factory-firewall$dash
+    RUNNER_UNIT=factory-runner$dash; RUNNER_LABELS=$(setting runners.strict); NAME_PREFIX=$RUNNER_NAME_PREFIX-factory
     DEFAULT_COUNT=${STRICT_RUNNERS:-3}; MEM_HIGH=${STRICT_MEMORY_HIGH:-8G}; MEM_MAX=${STRICT_MEMORY_MAX:-10G}
     CPU_QUOTA=${STRICT_CPU_QUOTA:-400%}
     DB_PORT= ;;
   planning)
-    RUNNER_USER=factory-planner; SUBIDS=231072-296607
-    NFT_TABLE=factory_planner; NFT_FILE=/etc/factory-runner/planner-firewall.nft; FW_UNIT=factory-planner-firewall
-    RUNNER_UNIT=factory-planner; RUNNER_LABELS=$(setting runners.planning); NAME_PREFIX=$RUNNER_NAME_PREFIX-planner
+    RUNNER_USER=factory-planner$dash
+    NFT_TABLE=factory_planner$under; NFT_FILE=/etc/factory-runner/planner-firewall$dash.nft
+    FW_UNIT=factory-planner-firewall$dash
+    RUNNER_UNIT=factory-planner$dash; RUNNER_LABELS=$(setting runners.planning); NAME_PREFIX=$RUNNER_NAME_PREFIX-planner
     DEFAULT_COUNT=${PLANNING_RUNNERS:-2}; MEM_HIGH=${PLANNING_MEMORY_HIGH:-4G}; MEM_MAX=${PLANNING_MEMORY_MAX:-5G}
     CPU_QUOTA=${PLANNING_CPU_QUOTA:-200%}
     # The one exception D3 allows: a database the planning tier reads, published on this host.
@@ -67,22 +79,24 @@ esac
 RUNNER_HOME=$RUNNER_HOME_BASE/$RUNNER_USER
 RUNNER_COUNT=${RUNNER_COUNT:-$DEFAULT_COUNT}
 RUNNER_URL=https://github.com/$FACTORY_ORG
-# Strict instance 1 keeps the original paths and name, so the first registration carries over.
+# The first organization's strict runner 1 keeps the paths and name from before there were several, so
+# its registration carries over.
+legacy_first() { [[ $TIER == strict && -z $RUNNER_INSTANCE ]] && (($1 == 1)); }
 runner_dir() {
-  if [[ $TIER == strict ]] && (($1 == 1)); then echo "$RUNNER_HOME/actions-runner"; else echo "$RUNNER_HOME/actions-runner-$1"; fi
+  if legacy_first "$1"; then echo "$RUNNER_HOME/actions-runner"; else echo "$RUNNER_HOME/actions-runner-$1"; fi
 }
 runner_work() {
-  if [[ $TIER == strict ]] && (($1 == 1)); then echo "$RUNNER_HOME/_work"; else echo "$RUNNER_HOME/_work-$1"; fi
+  if legacy_first "$1"; then echo "$RUNNER_HOME/_work"; else echo "$RUNNER_HOME/_work-$1"; fi
 }
 runner_name() {
-  if [[ $TIER == strict ]] && (($1 == 1)); then echo "$NAME_PREFIX"; else echo "$NAME_PREFIX-$1"; fi
+  if legacy_first "$1"; then echo "$NAME_PREFIX"; else echo "$NAME_PREFIX-$1"; fi
 }
 RUNNER_VERSION=2.338.0
 RUNNER_SHA256=af4b794c1bc41d73d40535e3fe092a39f9679cd8d965954c2aca25a05ca41d32
 
 if [[ ${1:-} == --print-settings ]]; then
-  for v in TIER FACTORY_ORG RUNNER_URL RUNNER_GROUP RUNNER_LABELS RUNNER_USER RUNNER_HOME RUNNER_COUNT MEM_HIGH MEM_MAX \
-           CPU_QUOTA DB_PORT LAN_DNS PROBE_PORTS; do
+  for v in TIER FACTORY_ORG RUNNER_URL RUNNER_GROUP RUNNER_LABELS RUNNER_INSTANCE RUNNER_USER RUNNER_HOME RUNNER_UNIT \
+           FW_UNIT NFT_TABLE NFT_FILE RUNNER_COUNT MEM_HIGH MEM_MAX CPU_QUOTA DB_PORT LAN_DNS PROBE_PORTS; do
     printf '%s=%s\n' "$v" "${!v}"
   done
   printf 'RUNNER_NAMES=%s\n' "$(for i in $(seq "$RUNNER_COUNT"); do runner_name "$i"; done | tr '\n' ' ' | sed 's/ $//')"
@@ -91,6 +105,18 @@ fi
 
 log() { printf '\n==> %s\n' "$*"; }
 die() { printf 'ERROR: %s\n' "$*" >&2; exit 1; }
+
+# Never take over another organization's runners: a runner directory this run would use must be
+# registered to this organization, or not at all.
+for i in $(seq 99); do
+  conf=$(runner_dir "$i")/.runner
+  [[ -r $conf ]] || continue
+  url=$(python3 -I -c 'import json,sys; print(json.load(open(sys.argv[1], encoding="utf-8-sig")).get("gitHubUrl", ""))' "$conf" 2>/dev/null) \
+    || die "can't read $conf"
+  if [[ ${url%/} != "$RUNNER_URL" ]]; then
+    die "$RUNNER_USER's runner $i is registered to $url, not $RUNNER_URL: for a second organization on this host, set RUNNER_INSTANCE in its host.conf"
+  fi
+done
 
 [[ $EUID -eq 0 ]] || die "run as root (sudo bash $0)"
 command -v dockerd-rootless-setuptool.sh >/dev/null || die "docker-ce-rootless-extras is not installed"
@@ -115,8 +141,13 @@ RUID=$(id -u "$RUNNER_USER")
 for g in sudo docker adm lpadmin; do
   if id -nG "$RUNNER_USER" | tr ' ' '\n' | grep -qx "$g"; then die "$RUNNER_USER must not be in group $g"; fi
 done
-grep -q "^$RUNNER_USER:" /etc/subuid || usermod --add-subuids "$SUBIDS" "$RUNNER_USER"
-grep -q "^$RUNNER_USER:" /etc/subgid || usermod --add-subgids "$SUBIDS" "$RUNNER_USER"
+# Subordinate IDs for rootless Docker: a block of 65536 above every range already given out.
+if ! grep -q "^$RUNNER_USER:" /etc/subuid || ! grep -q "^$RUNNER_USER:" /etc/subgid; then
+  subids=$(awk -F: 'NF >= 3 && $2 + $3 > max { max = $2 + $3 } END { if (max < 165536) max = 165536; print max "-" max + 65535 }' \
+    /etc/subuid /etc/subgid)
+  grep -q "^$RUNNER_USER:" /etc/subuid || usermod --add-subuids "$subids" "$RUNNER_USER"
+  grep -q "^$RUNNER_USER:" /etc/subgid || usermod --add-subgids "$subids" "$RUNNER_USER"
+fi
 
 host_ips=$(ip -4 -o addr show | awk '{print $4}' | cut -d/ -f1 | grep -v '^127\.' | tr '\n' ' ')
 db_rule=
@@ -129,10 +160,15 @@ install -d -m 755 /etc/factory-runner
 # calls bubblewrap needs. Jobs name it with `--security-opt seccomp=/etc/factory-runner/seccomp-bwrap.json`
 # and the rootless Docker CLI reads it. Root-owned, so no job can edit it (a workflow could still pass
 # seccomp=unconfined itself; CI's workflow-policy check refuses that).
+# Every organization's runners on this host share it: the last setup run installs its version.
 python3 -m json.tool "$SCRIPT_DIR/seccomp-bwrap.json" >/dev/null || die "seccomp-bwrap.json is not valid JSON"
+if [[ -f /etc/factory-runner/seccomp-bwrap.json ]] && ! cmp -s "$SCRIPT_DIR/seccomp-bwrap.json" /etc/factory-runner/seccomp-bwrap.json; then
+  echo "Replacing /etc/factory-runner/seccomp-bwrap.json: the jobs of every organization's runners on this host use the new one."
+fi
 install -m 644 -o root -g root "$SCRIPT_DIR/seccomp-bwrap.json" /etc/factory-runner/seccomp-bwrap.json
 cat > "$NFT_FILE" <<EOF
-# Loaded by $FW_UNIT.service. Own table, never 'flush ruleset' (ufw is active).
+# Loaded by $FW_UNIT.service. Own table, never 'flush ruleset' (other tables, ufw's or another
+# organization's runners', must stay).
 # Matches by socket owner: rootless Docker egress leaves the host as $RUNNER_USER's sockets.
 table inet $NFT_TABLE
 delete table inet $NFT_TABLE
@@ -353,12 +389,12 @@ TimeoutStopSec=5min
 [Install]
 WantedBy=multi-user.target
 EOF
-# Strict instance 1 lives in the original directory: point the template's path at it.
-if [[ $TIER == strict ]] && [[ ! -e $RUNNER_HOME/actions-runner-1 ]]; then ln -s actions-runner "$RUNNER_HOME/actions-runner-1"; fi
+# The first organization's strict runner 1 lives in the original directory: point the template's path at it.
+if legacy_first 1 && [[ ! -e $RUNNER_HOME/actions-runner-1 ]]; then ln -s actions-runner "$RUNNER_HOME/actions-runner-1"; fi
 # An earlier version's single-runner unit is replaced by factory-runner@1, unless it is running a job:
 # then it is left alone this time (the other instances still start) and a later run migrates it.
 keep_old=
-if [[ $TIER == strict ]] && [[ -f /etc/systemd/system/factory-runner.service ]]; then
+if legacy_first 1 && [[ -f /etc/systemd/system/factory-runner.service ]]; then
   if pgrep -u "$RUNNER_USER" -f "$(runner_dir 1)/bin/Runner.Worker" >/dev/null; then
     keep_old=1
     echo "The old factory-runner.service is running a job: left as runner 1 for now. Re-run setup when it is idle."

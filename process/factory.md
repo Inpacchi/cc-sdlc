@@ -412,7 +412,10 @@ needs an organization owner's `gh` login (`admin:org`) for the runner groups and
    .github/factory/host/setup.sh` (the planning tier). It creates each tier's user, rootless Docker,
    firewall and runners, and registers no runner whose jobs can reach the host or the LAN. Put the
    host's own LAN and VPN addresses in `factory.json`'s `smoke.host_probes`, so smoke checks them
-   too. One host serves the whole organization.
+   too. One host serves the whole organization, and can serve other organizations too: each one
+   after the first sets `RUNNER_INSTANCE` in its `host.conf` and gets its own users, firewall tables
+   and services, isolated from the others' as from the host. Setup refuses runners registered to
+   another organization, and a planning database port is only ever the organization's own.
 9. **CODEOWNERS and the `main` ruleset** (D2 rule 6): code owners on `.github/`, `.claude/`,
    `CLAUDE.md` at any depth, `.mcp.json`, `[sdlc-root]/` and the test and build configuration, with
    owner-less lines last for the discipline parking lots, the knowledge YAMLs (except the
