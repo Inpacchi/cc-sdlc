@@ -37,6 +37,33 @@ Each entry contains:
 
 ---
 
+## 2026-10-15: The factory owns its labels
+
+**Origin:** The incubator's compliance audit after its migration to v2.1.0 flagged all 13 of the factory's `factory:*` labels as label sprawl. CD asked how two z-sdlc bundles could disagree, and for the best fix, shipped as a patch (CD, 2026-10-15: v2.1.1).
+
+**What happened:**
+- **The two rules:** github-provenance (2026-09-02) made its config block "the complete allowed label set … a label not listed there is definitionally sprawl", and its audit (§ 10h) requires the repository's labels to equal that set exactly. Then, its checkpoint skills were z-sdlc's only automated label writers. The factory bundle (2026-10-12) brought its own 13 labels, created by `bootstrap.py` and documented in `process/factory.md` § Labels.
+- **Nothing reconciled them:** neither bundle's docs named the other, the factory import's proof installs the factory alone, the release reviews were scoped to the factory's code, and this repository's checks don't look at bundles together. Every project running both bundles gets 13 `minor` findings.
+
+**Changes made:**
+1. **`bundles/github-provenance/fragments/sdlc-compliance-auditor.md` § 10h:**
+   - when the project runs the factory (`.github/factory/factory.json`: the bundle installed, or the factory's incubator), `factory:` labels are the factory's, not the config block's;
+   - they're checked against `process/factory.md` § Labels, so a missing one, or a `factory:` label the table doesn't list, is still drift;
+   - a config block that lists them is drift too.
+2. **`process/github-checkpoints.md` § Labels:** labels another bundle owns are outside the config block's set, and the factory's are the case today.
+3. **`process/factory.md` § Labels:** the factory owns the `factory:` namespace. A project with github-provenance keeps the labels out of its checkpoint config, and a new label goes in the table and `LABELS` together.
+4. **`bundles/factory/tree/bootstrap.py`:** `LABEL_PREFIX`. A `factory:` label it doesn't define is reported (a typo, or one a removed stage left), never removed, since that would strip it from every issue. This covers projects with the factory but no github-provenance audit. Test: `test_a_label_in_the_factorys_namespace_it_doesnt_define_is_reported_never_removed`.
+5. **`tests/test_factory_labels.py`** (new): the factory's table and `bootstrap.py`'s `LABELS` name the same labels, so the audit's reference can't drift from the code.
+6. **`CLAUDE.md`** (this repository's): bundles share a project. A bundle that adds something a project's GitHub or config holds is checked against every other bundle's rules and audits.
+
+**Upgrading:** a project running both bundles takes this with its next migration: the auditor's fragment and the process docs refresh, and the 13 findings go. Leave the factory's labels out of the config block, and take out any listed there by hand.
+
+**Rationale:**
+- **Ownership by namespace, not a shared list:** a list of the factory's labels in the config would be a second copy that drifts the first time the factory adds one.
+- **Why the factory is named directly:** a manifest field declaring the namespace wouldn't reach the incubator, which runs the factory without installing the bundle, and the factory is the only bundle that creates labels. A generic declaration waits for a second one.
+
+---
+
 ## 2026-10-15: The import's last commit, after the incubator's history rewrite
 
 **Origin:** The incubator rewrote its own history after its production move. The commit `import.json` recorded as the last import no longer exists there, so the next import would have stopped.

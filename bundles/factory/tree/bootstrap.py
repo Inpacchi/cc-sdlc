@@ -27,6 +27,9 @@ import sys
 import urllib.parse
 
 # Every factory label (process/factory.md, Labels): name, colour, description.
+# The factory owns every label in its namespace, LABEL_PREFIX: a project's other label rules (github-provenance's
+# checkpoint labels) leave them to this list, process/factory.md § Labels.
+LABEL_PREFIX = "factory:"
 LABELS = [
     ("factory:triage", "1d76db", "Opt-in: run factory triage on this issue (removed when triage applies)"),
     ("factory:ready-for-dispatch", "0e8a16",
@@ -194,6 +197,13 @@ class Bootstrap:
                 ok += 1
         if ok:
             self.note("ok", "labels", f"{ok} of {len(LABELS)} as the factory defines them")
+        # One in the factory's namespace it doesn't define (a typo, or one a removed stage left): never deleted for
+        # you, since removing a label strips it from every issue that has it.
+        defined = {n.lower() for n, _, _ in LABELS}
+        for name in sorted(have):
+            if name.lower().startswith(LABEL_PREFIX) and name.lower() not in defined:
+                self.note("problem", "labels", f"{name}: not one of the factory's labels; remove it, or add it to "
+                                               "LABELS if the factory should have it")
 
     # ---- environments
     def wanted_environments(self):

@@ -464,6 +464,8 @@ becomes a new repo label nobody decided to create. The audit's taxonomy parity c
 just missing ones. A new label is a CD decision recorded in the config block, not an agent's
 judgment in the moment.
 
+**Labels another bundle owns are outside that set.** A project that runs the software factory (`.github/factory/factory.json`) also has the factory's `factory:*` labels. The factory's App and CD apply them, under the factory's rules (`[sdlc-root]/process/factory.md` § Labels), never a checkpoint. So the config block doesn't list them, which would make it a second copy of the factory's list. The audit checks them against the factory's table instead (`sdlc-compliance-auditor` § 10h), and the factory's own `bootstrap.py` reports one it doesn't define.
+
 **Close reasons, not labels.** "This is a duplicate," "this won't be done," and "this isn't
 valid" are expressed with GitHub's native close reasons (close as *duplicate* / *not
 planned*, with a one-line comment when the reason needs a word of explanation) — never with

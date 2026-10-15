@@ -103,10 +103,12 @@ For each driving repo:
 gh label list --repo <org>/<repo> --json name --limit 200
 ```
 
-**The repo's label set must equal exactly the config block's label set** (universal + conditional + human). Both directions are drift:
+**The repo's label set must equal exactly the config block's label set** (universal + conditional + human), labels another bundle owns aside (below). Both directions are drift:
 
 - **A missing label is drift (`minor`)** — not tolerated as a silently empty label filter; a filter that returns nothing looks identical to a filter that matched nothing, and the difference matters.
 - **An extra label is drift (`minor`)** — the REST create call silently auto-creates unknown labels, so a typo in a checkpoint create becomes a repo label nobody decided on. This check is the designated detector for that sprawl. (Exception: GitHub's default labels the project chose to keep — flag once as `info` for CD to prune or add to the config block.)
+
+**Labels the software factory owns.** When the project runs the factory (`.github/factory/factory.json` exists: the `factory` bundle is installed, or the project is the factory's incubator), labels starting `factory:` are the factory's, not the config block's (`[sdlc-root]/process/github-checkpoints.md` § Labels), so they're no drift against it. Check them against the factory's own table instead, `[sdlc-root]/process/factory.md` § Labels: one the table lists that the repo lacks, or a `factory:` label the table doesn't list, is drift (`minor`). The factory's `bootstrap.py` reports both, and its `--apply` creates the missing ones. A config block that lists `factory:` labels is drift too (`minor`): it's a second copy of the factory's list.
 
 **When `issue_types` is configured: open issues with no issue type are drift (`minor`)** — `create-or-link` sets the type on the create call, and GitHub silently drops `type` for callers without push access (200 response, nothing in the miss-log), so this check is the only detector for that failure mode. Closed pre-cutoff issues are out of scope.
 

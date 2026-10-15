@@ -302,6 +302,18 @@ class Bootstrap(unittest.TestCase):
         self.assertIn("factory-planning is deployable from any branch", out)
         self.assertEqual(self.gh.writes, [])
 
+    def test_a_label_in_the_factorys_namespace_it_doesnt_define_is_reported_never_removed(self):
+        self.gh.set_up()
+        self.gh.labels += [{"name": "factory:tirage", "color": "000000", "description": ""},
+                           {"name": "sdlc", "color": "000000", "description": ""}]  # another bundle's: not ours
+        for args in ((), ("--apply",)):
+            code, out = self.run_it(*args)
+            self.assertEqual(code, 1, out)
+            self.assertIn("factory:tirage: not one of the factory's labels", out)
+            self.assertNotIn("sdlc:", out)
+        self.assertEqual(self.gh.writes, [])
+        self.assertIn("factory:tirage", {l["name"] for l in self.gh.labels})
+
     def test_a_label_that_differs_is_updated_on_apply_only(self):
         self.gh.set_up()
         self.gh.labels[0]["color"] = "000000"

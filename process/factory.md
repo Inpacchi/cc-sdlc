@@ -307,6 +307,8 @@ that run there:
 
 Every factory label. D1 rule 1: an issue carries at most one state label.
 
+The factory owns every label starting `factory:`. `bootstrap.py` creates these and reports one in that namespace it doesn't define, which it never removes (removing a label strips it from every issue that has it). A project with the github-provenance bundle keeps them out of its checkpoint label config, and its audit checks them against this table (`[sdlc-root]/process/github-checkpoints.md` § Labels). A new factory label goes in this table and in `bootstrap.py`'s `LABELS` together.
+
 | Label | Set by | Meaning |
 |---|---|---|
 | `factory:triage` | CD | Opt-in: run triage on this issue. The apply step removes it. |

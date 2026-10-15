@@ -2,7 +2,7 @@
 type: handoff
 slug: bundle-label-namespaces
 created: 2026-10-15
-status: pending
+status: resolved
 trigger: issue
 recommended_next_skill: direct-dispatch
 source_session_summary: "The incubator's post-migration compliance audit (v2.1.0, 2026-10-15) flagged all 13 factory:* labels as label sprawl: github-provenance's exact-set label check and the factory bundle's own labels were never reconciled"
@@ -63,3 +63,7 @@ Reasoning: the design is settled, and the change is a manifest field plus four e
 
 - **Changing the factory's label names or the checkpoint labels themselves.**
 - **The incubator's own config:** it waits for this fix, and the finding stays open there until then.
+
+## Resolution (2026-10-15, z-sdlc v2.1.1)
+
+Fixed without the manifest field. A field in the installed bundles wouldn't have reached the incubator, which runs the factory without installing the bundle, and the factory is the only bundle that creates labels. So § 10h recognizes the factory by `.github/factory/factory.json`, and checks `factory:` labels against `process/factory.md` § Labels, which a repository test keeps equal to `bootstrap.py`'s `LABELS`. `bootstrap.py` reports a `factory:` label it doesn't define, for projects without github-provenance's audit, and `CLAUDE.md` gained the rule that bundles are checked against each other. A generic namespace declaration waits for a second bundle that creates labels. The changelog entry is "The factory owns its labels".
