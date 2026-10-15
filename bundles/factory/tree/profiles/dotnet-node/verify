@@ -1,0 +1,62 @@
+#!/usr/bin/env bash
+# dotnet-node profile: the project's checks, for agents in the Bash sandbox. The factory's skills run
+# this instead of naming the project's commands: it calls the tools directly, never a Makefile or a
+# package.json script, which the agent could have edited (a check a project's build script chains in,
+# such as a bundle-size gate, is left to CI on the PR). Installed read-only at /opt/factory by
+# agent_job.sh workspace, beside verify.conf, whose python= line is the .NET directory (its solution
+# or project) and node= the Node one (factory.json's stack.python and stack.node).
+# Usage: verify [--print] [dotnet|node|probe ...]
+#   no area      dotnet and node
+#   dotnet       build and test, Release, through with-test-services (it reaches the test database);
+#                tests in the categories Nightly (long suites with their own schedule) and External
+#                (they need the network or a secret, which a job doesn't have) are left out
+#   node         lint, type check, unit tests (vitest) and production build (vite)
+#   probe        what an agent job needs works here: the test database through the sandbox's proxy,
+#                a .NET build from the restored packages, and the Node toolchain (factory-smoke's
+#                implement-tools probe); prints probe-ok when all do
+#   --print      print the commands and run nothing (to run a narrower one, such as a single test)
+# Runs every area asked for, even after one fails, and exits 1 if any did.
+# Every .NET build here runs in one process (-m:1): MSBuild's worker nodes talk over Unix sockets,
+# which the sandbox blocks, and a solution built with them fails with no error at all. `dotnet run`
+# (and `dotnet ef`) ignore -m:1: build with it first, then run with --no-build.
+set -uo pipefail
+
+here=$(cd "$(dirname "$0")" && pwd)
+dotnet_dir=$(sed -n 's/^python=//p' "$here/verify.conf")
+node_dir=$(sed -n 's/^node=//p' "$here/verify.conf")
+[ -n "$dotnet_dir" ] && [ -n "$node_dir" ] || { echo "verify: no python (.NET) or node directory in $here/verify.conf" >&2; exit 2; }
+wrap=$here/with-test-services
+bin=node_modules/.bin
+
+print=no
+areas=()
+for a in "$@"; do
+  case "$a" in
+    --print) print=yes ;;
+    dotnet|node|probe) areas+=("$a") ;;
+    *) echo "verify: unknown area $a (dotnet, node, probe)" >&2; exit 2 ;;
+  esac
+done
+[ ${#areas[@]} -gt 0 ] || areas=(dotnet node)
+
+command_for() {
+  case "$1" in
+    dotnet) echo "$wrap bash -c 'cd $dotnet_dir && dotnet test --no-restore -c Release -m:1 --filter \"Category!=Nightly&Category!=External\"'" ;;
+    node) echo "cd $node_dir && $bin/eslint . && $bin/tsc -b && $bin/vitest run && $bin/vite build" ;;
+    probe) echo "$wrap pg_isready -q -h 127.0.0.1 -p 5432 && echo db-ok && (cd $dotnet_dir && dotnet build --no-restore -c Release -m:1 -v quiet -nologo > /dev/null) && echo dotnet-ok && (cd $node_dir && $bin/tsc --version) && echo probe-ok" ;;
+  esac
+}
+
+failed=()
+[ "$print" = no ] || echo "note: give every dotnet build and test here -m:1 (MSBuild's worker nodes need Unix sockets, which the sandbox blocks; without it a build fails with no error). dotnet run and dotnet ef ignore -m:1: dotnet build -m:1 first, then run them with --no-build."
+for area in "${areas[@]}"; do
+  cmd=$(command_for "$area")
+  if [ "$print" = yes ]; then echo "$area: $cmd"; continue; fi
+  echo "== verify $area: $cmd"
+  bash -c "$cmd" || failed+=("$area")
+done
+if [ ${#failed[@]} -gt 0 ]; then
+  echo "verify: failed: ${failed[*]}"
+  exit 1
+fi
+[ "$print" = yes ] || echo "verify: passed: ${areas[*]}"

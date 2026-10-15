@@ -37,6 +37,187 @@ Each entry contains:
 
 ---
 
+## 2026-10-13: The factory CI tier is held; host setup never runs a runner-writable file as root
+
+**Origin:** The pilot project's review of the CI tier (software-architect, devops, code-review). The architect rejected running `sudo TIER=ci setup.sh`. Its premise: assume a pull request's code reaches the host as the runner user. Two findings, confirmed against actions/runner v2.338.0, make that premise true:
+- **C1, the docker client.** The runner starts the docker client for a step's `docker exec` with the step's whole environment (StepHost.cs), so `LD_PRELOAD` from `$GITHUB_ENV` reaches the host binary first: the guard's `/bin/sh` and python3, or `/usr/bin/docker` itself without a guard. The runner's host-to-container path translation is a prefix match, so a host path to a planted library slips through untranslated.
+- **C2, the hooks.** The runner picks a hook's shell with `GetDefaultShellForScript(path, prependPath)` (JobHookProvider.cs), and `$GITHUB_PATH` feeds `prependPath`. So the job-completed hook runs a bash the job chose.
+
+**What happened:** On a persistent runner, job-controlled environment and PATH reach the runner's own host-side processes. That is the runner's design, not a gap in the guard (2026-10-13 entries below). Hardening the guard further would be whack-a-mole, so the tier is held for a design decision.
+
+The review also found a root escalation present in every tier from the start. setup.sh ran `"$dir/bin/installdependencies.sh"` as root whenever `config.sh` wasn't executable, and that directory belongs to the runner user. A compromised runner user could plant the script, and the next setup run would execute it as root. The same script's apt run could upgrade shared libraries on a production host.
+
+**Changes made:**
+
+1. **`bundles/factory/tree/host/setup.sh`**:
+   - **Runner libraries:** root installs them from apt, from an explicit list of the runner's Debian dependencies (installdependencies.sh v2.338.0), with `--no-upgrade`, and never runs anything from the runner's directory. This affects every tier, but only does anything on a host missing one of those libraries.
+   - **The seccomp profile** is replaced only when it differs, by an atomic rename, so the other tiers' jobs never see it missing.
+   - **`TIER=ci` is refused** after `--print-settings` and before any root work, naming this entry.
+2. **`bundles/factory/tree/tests/test_host_setup.py`**: the hold.
+3. **`process/factory.md`**: "The CI tier" opens with the hold. Enablement step 2 adds `.github/factory/host/reg-token` to what `.gitignore` must cover.
+
+**For CD to decide (the CI tier's design):**
+- **A. Disposable per-job runners** (recommended). A root-owned launcher mints a just-in-time (JIT) runner config per job and starts a fresh runner in a throwaway rootless container. Its image is the runner plus the end-to-end toolchain, and the job runs in it (no `container:`). The container is destroyed after one job, so everything C1 and C2 reach is inside it. The runner user, firewall and caps stay the outer boundary. It needs a credential on the host that can register runners: a second GitHub App with only `organization_self_hosted_runners: write`, its key root-only. The container only ever gets the single-use JIT config.
+- **B. Untrusted code never reaches the host.** The tier runs only the default branch's code, so its group can be restricted to `ci.yml@refs/heads/main`, a platform-enforced boundary. Pull-request end-to-end tests go to hosted runners, where the per-test CPU need (a server, Postgres, two browsers) starves 2 vCPU. So B means a lighter pre-merge subset plus the full suite after merge, or paid larger runners.
+- **C. Harden the persistent runner** (a static first-exec shim, no completed hook, a loader-variable scrub). Residual exposure through the runner's own processes; not recommended.
+
+The guard, hooks and check timer stay in the tree, held, as design inputs. The review's findings on them (service-container start TOCTOU, fail-closed ordering, the check not killing in-flight jobs, the `_PipelineMapping` redundancy, the exec environment allowlist, a stricter network regex, `..` tests) are recorded for whichever design follows.
+
+**For CD, all tiers (proposals, nothing changed):**
+- **IPv6.** The firewall and the isolation probe are IPv4-only, so a host's global IPv6 addresses and its LAN's global prefix aren't blocked. The simplest sound fix rejects all IPv6 egress for factory users, since IPv4 reaches everything the jobs need.
+- **`--disableupdate`.** It would pin the runner to setup.sh's verified version, at the cost of a bump within 30 days of each runner release.
+- **One checkout per tier.** Run each tier's setup from one designated checkout: its host.conf caps that tier (the pilot project now defaults its host.conf to `TIER=ci`).
+
+**Rationale:** A boundary has to hold against what the runner itself does with a job's input. The fix that applies everywhere (root never executing what the runner user can write) goes in now. The CI tier waits for a design that puts the runner's own processes inside the disposable boundary.
+
+---
+
+## 2026-10-13: The factory's seeded CODEOWNERS test works in a repository with Git LFS
+
+**Origin:** The pilot project's first hosted CI run of the factory checks (its fix is c7892b62 there).
+
+**What happened:** The seeded `tests/test_codeowners.py` replays the publish path on a local `git clone --depth 1 --no-local` of the CI checkout (`RealChangelog`). In a repository that tracks files with Git LFS, `actions/checkout` leaves them as pointers, and git-lfs on the runner then tries to fetch their objects from a "remote" that has none. The clone exits 128 ("remote missing object"). The incubator has no LFS, so it never saw this.
+
+**Changes made:**
+
+1. **`bundles/factory/seed/tests/test_codeowners.py`**: the test's git calls (`run()` and `RealChangelog.git()`) set `GIT_LFS_SKIP_SMUDGE=1`; the test never reads LFS content. A seed: new projects get it, and an existing project takes the change by hand (the pilot project has it).
+
+**Rationale:** A project's own files decide whether it uses LFS. A seeded test has to pass in either case.
+
+---
+
+## 2026-10-13: The factory CI tier holds against a hostile job definition
+
+**Origin:** The pilot project's software-architect reviewed the CI tier. A `pull_request` run executes the pull request's own workflow, and the CI group can't be workflow-restricted (pull requests' merge refs). So for a pull request from a branch, the workflow policy is a merge gate, not an execution gate, and a job definition on the tier can be hostile (`container.options: -v …`, a new workflow on the label). The review asked for ephemeral runners or wiping between jobs, runner credentials kept from job containers, daemon defaults, a recurring isolation probe and no shared host caches. It also found `*.csproj.user` and a root `dotnet-tools.json` missing from `dotnet-node`'s CODEOWNERS list.
+
+**What happened:** Read against the runner's source (actions/runner v2.338.0):
+- **The runner's docker calls.** `DockerCommandManager` builds one options string and splices the job's `container.options` into it verbatim, and a job's `container.volumes` become `-v` too. docker/cli stops reading options at the image (`SetInterspersed(false)`).
+- **What a job can reach.** Job containers get the whole work directory read-write. The runner's credentials sit outside it, reachable only through a mount the job adds.
+- **What persists between jobs.** `ActionManager` deletes `_actions` at every job start and `_temp` is recreated, but `_tool` and the workspaces persist. So does `_PipelineMapping`, which `PipelineDirectoryManager` joins to `_work` unchecked when the next job starts, before its hooks run.
+- **Steps' secrets.** A step's environment, secrets included, reaches `docker exec` through the CLI's own environment (`-e KEY`).
+- **Mid-job containers.** `docker run` (docker:// steps, container actions) mounts runner directories mid-job, after the job's code could have swapped one for a symlink.
+
+**Changes made:**
+
+1. **`bundles/factory/tree/host/docker_guard.py`** (new): the CI tier's runners reach docker only through it.
+   - **What passes:** the runner's own commands, exact forms only.
+   - **Mounts:** only the runner's own directories, by exact path with no symlink below them, or anonymous volumes.
+   - **Refused:** any option it doesn't know (`--env-file`, `--cidfile` and the rest), every privilege and namespace option, other networks, published ports, and other security options. Those must stay a pair with the policy's `ALLOWED_OPTIONS`. It also refuses `docker run` and `docker build`, so no `docker://` step or Dockerfile action runs on the tier.
+   - **What it forces:** `no-new-privileges` on every container, and docker always against the instance's own daemon. Every command but `exec` gets a minimal environment.
+2. **`bundles/factory/tree/host/ci_job_hook.sh`** (new): the job-started hook deletes `_tool` and empties the workspaces, keeping the directories the runner made for the job. The job-completed hook deletes `_tool`, the workspaces and `_PipelineMapping`. They work in the rootless daemon's user namespace, for files owned by subordinate IDs. `reset` deletes the whole work directory as root.
+3. **`bundles/factory/tree/host/setup.sh`** (`TIER=ci`):
+   - **Installs:** the guard, the hook and a root-owned probe, under `/usr/local/lib/factory-runner`. Each instance gets root-owned settings (`/etc/factory-runner/factory-ci/N.json`) and wrappers, and its `.env` puts the guard first on PATH with both hooks.
+   - **The runner unit:** wipes the work directory as root before every start.
+   - **The check timer:** `factory-ci-check.timer` runs every 6 hours. It checks the firewall, the slice caps, the isolation probe from a container (host, LAN and host socket closed, internet open; a failed pull of the probe's image says so), and each instance's PATH, hooks and guard, which must refuse a mount of the runner's own directory. A failure stops `factory-ci@*`, which stays stopped until someone starts it again. Setup's last step is the check's first run, so a misconfigured tier never takes a job.
+4. **`bundles/factory/tree/tests/test_docker_guard.py`, `test_ci_job_hook.py`** (new): the runner's own argv (job container, exec, `--config` pull and login, networks) passes; every hostile variant is refused; the guard's environment and host are checked. The hooks' modes are tested on a temp tree, and bad paths and a missing pid file are refused.
+5. **`process/factory.md`**: "The CI tier" gains the threat model (merge gate against execution gate), the guard, hooks and check, the docker:// and Dockerfile-action ban, no host paths, and ephemeral runners as CD's call. They need a credential on the host that can register runners, and the factory App lacks that permission. `dotnet-node`'s CODEOWNERS list gains the project files' `.user` files and a root `dotnet-tools.json` (with the seeded test and the proof's CODEOWNERS).
+
+**Rationale:** The factory's own pool keeps hostile workflows out by its workflow restriction. The CI tier can't, so it enforces at the one place every job definition passes through, the runner's docker commands. It also leaves nothing on disk for the next job.
+
+---
+
+## 2026-10-13: A factory CI tier: isolated self-hosted runners for a project's own CI jobs
+
+**Origin:** The pilot project. CD's decision for its pull-request end-to-end jobs (Playwright, against the real server and Postgres) was a dedicated, isolated CI runner tier on the runner host, built the factory's way, with no paid larger runners, and with pre-merge end-to-end tests kept for factory PRs. They had moved off 2-vCPU GitHub-hosted runners because two browsers starved the CPU, and ran on an unisolated self-hosted runner, which the workflow policy refuses.
+
+**What happened:** CD asked for the tier's runner group to be restricted to the project's CI workflow. GitHub's runner groups pin each selected workflow to a branch, with no wildcard ([docs](https://docs.github.com/en/enterprise-cloud@latest/actions/hosting-your-own-runners/managing-self-hosted-runners/managing-access-to-self-hosted-runners-using-groups)). A `pull_request` run comes from the PR's merge ref, so a `ci.yml@refs/heads/main` entry never matches it and its jobs would wait forever. That restriction can't coexist with pre-merge tests, so the CI group is restricted to the repositories that use it. The isolation lives in the runners (their own user, firewall and caps, a job container required) and in the policy's hold on the label. `factory-pool` keeps its workflow restriction: agent workflows run from events on the default branch. This, and the Chromium point in item 4, are decisions for CD to confirm.
+
+**Changes made:**
+
+1. **`bundles/factory/tree/host/setup.sh`**: `TIER=ci`. User `factory-ci`, nft table `factory_ci`, firewall unit and file, runner unit `factory-ci@N`, names `<prefix>-ci-N`, all suffixed for a second organization. Label `runners.ci`; group `runners.groups.ci` (default `factory-ci`), computed per tier now. Caps from host.conf's `CI_RUNNERS` (2), `CI_MEMORY_HIGH` (12G), `CI_MEMORY_MAX` (16G) and `CI_CPU_QUOTA` (800%), for the tier's runners together. Otherwise the strict tier's setup: firewall (internet, no host or LAN), rootless Docker, isolation self-check from inside a container, job container required. A `factory.json` without `runners.ci` is refused with the reason.
+2. **`bundles/factory/tree/bootstrap.py`**: once a workflow runs on `runners.ci`, the CI group, created with the repository and without a workflow restriction. An existing CI group restricted to workflows is reported with why it would strand pull requests, and left to CD.
+3. **`bundles/factory/tree/workflow_policy.py`**: CI-tier rules for any job on the label. It must be in one of the project's own workflows (never a factory one), run no agent, and run in a container (the existing rule: no service containers). It needs explicit read-only permissions and checkouts with `persist-credentials: false`. It holds no secret and no job token, except the job token as the container's pull credentials. `systempaths=unconfined` comes only with the factory seccomp profile. The label counts as a factory label, so it is never a hosted label or exemptible.
+4. **`process/factory.md`**: Enablement step 8 runs `TIER=ci`. Step 10's "The CI tier" covers the setup order (bootstrap creates the group before setup registers into it), why the group isn't workflow-restricted, the job rules, the seccomp profile as allowed but not required, and capacity. Docker's default seccomp is stricter, and enough for a browser run without its own sandbox, which is Playwright's default. Chromium's sandbox under `seccomp-bwrap.json` wasn't tested.
+5. **`render.py`** treats `runners.ci` and `runners.groups` as run-time settings. **Seeds:** `factory.json` gains `runners.ci: factory-ci`, and `host/host.conf` the `CI_*` settings. **Tests:** `test_host_setup.py` (the tier's names, caps, group, second organization, an old `factory.json`), `test_bootstrap.py` (the group made only once a workflow uses the label, without a workflow restriction; a restricted one left to CD), `test_render.py` (a compliant CI-tier job, each rule broken, a factory workflow on the label).
+
+**Rationale:** End-to-end suites need more machine than GitHub's standard runners, and pre-merge they run a pull request's code, agent-written for factory PRs. The factory already knows how to run untrusted code on its own hardware: a firewalled user, rootless Docker, a container per job, and nothing in the job worth taking. The CI tier is that, for the project's CI, without the agent machinery.
+
+---
+
+## 2026-10-13: The factory's workflow policy scans local actions, and names its exceptions in factory.json
+
+**Origin:** The pilot project (CD: "fix the checker upstream"). The policy, which Enablement step 10 makes required CI over every workflow in a repository, refused 6 jobs in the project's own `ci.yml`. Two refusals were for a local composite action the policy refused rather than read. Four were for the end-to-end jobs on a self-hosted runner outside a container. CD's runner choice for those jobs (GitHub-hosted, possibly larger runners, or an isolated self-hosted runner) is still open, so the checker had to support either without loosening anything.
+
+**What happened:** A blanket rescoping (checking only the factory's own workflows) would have stopped the policy from catching a newly added self-hosted PR job, so each exception is named instead. The new settings live in a `policy` block in `factory.json`, which CODEOWNERS covers through `/.github/` and only `workflow_policy.py` reads.
+
+**Changes made:**
+
+1. **`bundles/factory/tree/workflow_policy.py`**:
+   - **Local actions** (`uses: ./…`) resolve in the repository and are scanned. A composite action's steps join the calling job's, nested ones too, so every step rule reads them: docker, direct Claude Code, the agent jobs' checks, and the OAuth, App-key and fixture-secret confinement. Refused: a docker or JavaScript action, a path with no `action.yml` or outside the repository, a ref, an action that uses itself, nesting deeper than 8, and an agent step inside one. An agent job still runs no local action at all, as before.
+   - **`policy.hosted_labels`**: the organization's own GitHub-hosted runner labels count as hosted, wherever the policy asks (the container rule, the App key's job, the fixtures job). Refused, regardless of case: a label GitHub gives every self-hosted runner (`self-hosted`, `linux`, `windows`, `macos`, `x64`, `arm`, `arm64`), a factory runner label, and anything that isn't a label.
+   - **`policy.self_hosted_exemptions`**: exact `{workflow, job, reason}` entries. They lift only the container rule, and only for one of the project's own jobs. Never a factory workflow, a job on the factory's runners or an agent job, and never with a reason under 20 characters. An entry that names no job, or a job that runs hosted, is a violation, so the list stays exactly what it lets through. Each use prints a CI notice.
+2. **`bundles/factory/tree/render.py`**: the `policy` block, like `stack`, is read at run time, not by a template.
+3. **`bundles/factory/seed/factory.json`**: the empty `policy` block, with its `_doc`.
+4. **`bundles/factory/tree/tests/test_render.py`**: `ProjectWorkflows`, run in a repository laid out as GitHub's: nested composite actions scanned, each unscannable kind refused, a local action in an agent job refused, the factory's secrets refused inside a local action, the organization's labels, an exemption lifting one named job and not a new one, an exemption never reaching the secret rules, and each exemption that can't hold.
+5. **`process/factory.md`**: Enablement step 10 says the policy scans local actions, and when a project's own CI needs `policy.hosted_labels` or an exemption.
+
+**Rationale:** The policy reads every workflow so that a job someone adds later falls under the factory's rules by default. Exceptions now live in a reviewed file with reasons, and the checker refuses any that stop being true. The secret rules have no exceptions at all.
+
+---
+
+## 2026-10-13: Factory Enablement: what CODEOWNERS must cover per profile, and the project's own CI
+
+**Origin:** The pilot project's Enablement review. That project's session found that none of the files .NET and pnpm load just because they exist were code-owned, and that its existing CI would run factory PRs' code next to a secret.
+
+**What happened:** Two of the factory's protections rest on CODEOWNERS covering every file a stack's tools load by existing. A revise or continued run installs a factory branch's dependencies outside the sandbox (`install.sh`: `dotnet restore`, `pnpm install`). The only guard there is `factory_branch.sh check` refusing any change to a CODEOWNERS path. The same files decide what the project's CI does with a factory PR. Enablement step 9 said "the test and build configuration" and nothing more specific. For .NET that set is wide: a project file can hook a target into restore, and any `.props`/`.targets` it imports can too. And factory branches live in the repository, so `pull_request` CI on a factory PR gets the repository's secrets. In the pilot project, the build step (PR code) ran before the step holding `SLEEVED_API_KEY`, and the end-to-end jobs ran on a self-hosted runner outside any container. Running the workflow policy on that repository found 6 violations in its own `ci.yml`, which Enablement step 10's required check would have hit on the first PR.
+
+**Changes made:**
+
+1. **`process/factory.md`** § Stack Profiles: "What CODEOWNERS must cover, per profile", the files each profile's tools load just because they exist, at any depth and in every casing a tool accepts. python-node: requirements, pyproject, setup, pytest and tox config, conftest, sitecustomize. dotnet-node: `*.csproj`, `*.props`, `*.targets`, `*.rsp`, the solution files, `global.json`, `nuget.config` in its three casings, the tool manifest, runsettings, `xunit.runner.json`, `.editorconfig`, `.globalconfig`. Node in both: `package.json`, `.npmrc`, and each package manager's own lockfile and files. Enablement step 9 points at it. Step 10 says to run the policy (which reads every workflow) before making it required, and warns that the project's existing CI runs agent-written code. Every job that builds, tests or lints a PR's code therefore holds no secret before or after it, uses `persist-credentials: false` and a read-only token, and runs on a hosted runner or in a container. A job that needs a secret runs the default branch's code.
+2. **`bundles/factory/seed/tests/test_codeowners.py`**: `test_the_profiles_build_files` checks sample paths from the profile's list in the project's two directories (`factory.json`'s stack). New projects get it; existing projects keep their own copy.
+3. **`.claude/skills/zsdlc-import-factory/scripts/import_factory.py`**: the proof's Enablement-shaped CODEOWNERS covers both profiles' lists (and names Enablement step 9, not 7).
+
+**Rationale:** "The test and build configuration" left each project to rediscover which files a toolchain executes by convention. The factory's own install step and the project's CI both depend on that list, so the profile that brings the toolchain now names it, and the seeded test holds a new project to it.
+
+---
+
+## 2026-10-13: Factory fixtures: a hosted job hands secret-sourced test fixtures to the agent job
+
+**Origin:** The pilot project. Four of the pilot project's tests need card-art fixtures that CI fetches with a secret (`SLEEVED_API_KEY`), and the implement sandbox has neither the network nor the secret, so the `dotnet-node` profile left them out (`Category=External`). CD asked whether the factory could fetch the art itself ("can we wire this in as a service?"), chose option 3 of five (CD, 2026-10-13: a hosted fixtures job that hands an artifact to the agent job), and approved D2 rule 7 for it.
+
+**What happened:** A service (`services.json`) was the wrong tool. It would have put a masked credential and two egress hosts into the code-writing stages, against the planning-only services rule (CD 2026-10-10) and D2 rule 2's empty network for implement. The chosen shape keeps the secret off the self-hosted host entirely. It is CI's own three steps (restore the cache, fetch on a miss, upload) in a job on a GitHub-hosted runner, and the agent job only downloads the result. Two GitHub Actions details shaped the templates. A job whose upstream job is skipped may be skipped too unless its condition says otherwise, so `publish` now states its own condition, as `report` already did. And an expression like `secrets.` with an empty name breaks the whole workflow, so the secret is read as `secrets['NAME']`, which stays valid when a project has no fixtures.
+
+**Changes made:**
+
+1. **`bundles/factory/tree/templates/factory-implement.yml`, `factory-revise.yml`**: a `fixtures` job, skipped when `fixtures.path` is empty. It checks out the default branch, restores `path` with `actions/cache` (v6.1.0) under `cache_key-<hashFiles(key_files)>`, and on a miss installs `apt` and runs `run` with the secret exported under its own name. Then it refuses fixtures that contain the secret (plain or base64) and uploads them as `factory-fixtures`. The agent job `needs` it, runs unless it failed, and downloads the artifact into `path` before the agent starts. `publish` states its condition explicitly. `report-failure` names a failed fixtures job.
+2. **`bundles/factory/tree/render.py`**: `%{key?}` is an optional setting, which renders empty when `factory.json` doesn't have it. A project installed before the `fixtures` block keeps rendering without editing its settings.
+3. **`bundles/factory/tree/workflow_policy.py`**: the fixtures job kind (a factory workflow's job named `fixtures`; a project's own `ci.yml` may use the name). It must be in the implement or revise workflow, on a GitHub-hosted runner, with no agent, container, environment or outputs. Its permissions are exactly `contents: read`, it checks out the default branch once without persisted credentials, and it uses only the checkout, cache and upload-artifact actions. Its one secret appears only as `${{ secrets['NAME'] }}` in a run step's `FIXTURE_SECRET`. No other job, and no workflow env, may reference that secret. `factory.json`'s fixtures values are checked for anything that would change the workflow text they render into: an expression, a quote, `..`, or a path without its command and cache key.
+4. **`bundles/factory/seed/factory.json`**: the `fixtures` block, empty (path, run, secret, apt, cache_key, key_files), with its `_doc`.
+5. **`bundles/factory/tree/tests/test_render.py`**: optional placeholders; a project without the block renders skipped fixtures jobs; a project with one renders them, names the secret only in the fixtures job, and passes the policy. The policy refuses the secret in an agent job, a factory-branch checkout, a self-hosted runner, outputs, another action, another secret, and settings that would change the workflow.
+6. **`process/factory.md`**: D2 rule 7 (CD's sentence, with how the job does it). Enablement step 2 points at the `fixtures` block, and step 7 lists its secret as a read-only repository secret.
+
+**Rationale:** The factory's boundary is that an agent job holds no credential beyond its own read-only token. Test fixtures that need a secret were the first thing that boundary kept out of a factory run, and the answer keeps the boundary: the privileged fetch happens in a trusted job, and only its non-secret result crosses over, as D1 already does for writes.
+
+---
+
+## 2026-10-13: A second factory stack profile, dotnet-node (.NET 10 and pnpm/Vite)
+
+**Origin:** The pilot project (its session, at CD's request), which is .NET 10 with a pnpm/Vite web client, is installing the `factory` bundle, and its only profile was `python-node`. Under the pilot rule (CD, 2026-10-12) the fix goes straight into the bundle code.
+
+**What happened:** A profile was written from `python-node` and proven against a clean archive of the pilot project in a local stand-in for the implement sandbox (the job image with no network, a read-only root, no HOME and a seccomp filter refusing `socket(AF_UNIX)`). That run found what the sandbox does to .NET. MSBuild's worker nodes talk over Unix sockets, so a solution's build fails in under a second with "Build FAILED, 0 errors" and leaves orphaned workers. No environment variable, SDK `MSBuild.rsp` or root `Directory.Build.rsp` overrides the `-maxcpucount` the dotnet CLI passes; only an explicit `-m:1` works, and `dotnet run` and `dotnet ef` ignore it. With `-m:1`, 5,565 of the pilot project's 5,573 tests pass there (4 are skipped, and the 4 that fail are card-art cases that need a secret), and tsc, vitest, the Vite build and both of its bundle gates pass too. `eslint .` fails on `scripts/*.mjs` and `perf/*.mjs` alone, which the pilot project's own lint never covers. With no HOME, `dotnet restore` writes NuGet's data into the working directory (`.local/share/NuGet/`), an untracked file that would stop the run's publish; `XDG_DATA_HOME` moves it. A second run started from a git repository and applied the asks to the pilot project (the card-art cases tagged `External`, eslint without `scripts/` and `perf/`, `.factory/` ignored). In it install, `verify probe` and `verify` all pass, `git status` stays empty, and no process outlives a command. It also showed a gap that predates the profile. Every job writes `.factory/` into the workspace, and the publish step refuses untracked files. The incubator gitignores `.factory/`, but Enablement never said to.
+
+**Changes made:**
+
+1. **`bundles/factory/tree/profiles/dotnet-node/`** (new): `Dockerfile` (python:3.12-slim-bookworm, because the plan and smoke templates call `/usr/local/bin/python3` by path; the .NET 10 SDK copied from `mcr.microsoft.com/dotnet/sdk:10.0` with `libicu72`; Node 22; pnpm 10.33.0 as a package, not corepack; Postgres 16 and pgbouncer). `install.sh` (`dotnet restore`, `dotnet tool restore` when there is a tool manifest, `pnpm install --frozen-lockfile`; .NET's home, the NuGet packages, the data directory (`XDG_DATA_HOME`) and the pnpm store go in `.factory/`; it sets no-node-reuse, no shared compilation, no telemetry or first-run certificate, and NuGet audit off in the sandbox). `test-services.sh` (Postgres only, the same lockdown checks, and a `ConnectionStrings__DefaultConnection` line). `with-test-services` (ports 5432 and 6432). `verify` (areas `dotnet` and `node`, plus `probe`; `-m:1` on every build; tests in the categories `Nightly` and `External` left out; `--print` tells the agent the `-m:1` rule).
+2. **`bundles/factory/tree/tests/test_agent_job.py`**: `VerifyDotnetNode` covers the new profile's commands, areas and failures. The `Freeze` test reads the project's profile from `factory.json` instead of naming `python-node`; before this, it failed in any project on another profile, and these tests are required CI (Enablement step 10). All 269 tests pass in a project on `dotnet-node`.
+3. **`process/factory.md`**: "Limits of this version" names both profiles. § Stack Profiles gains a table of the two profiles and what each needs of a project, says why `verify` leaves a build script's own gates to CI, and covers the sandbox's `-m:1` rule and end-to-end suites. The `stack.python`/`stack.node` slots stay, renamed only when a stack doesn't fit two directories, because renaming them changes every project's `factory.json`. Enablement step 2 requires `.gitignore` to cover the env file and `.factory/`, and says to render after choosing the profile: `factory-image` builds the chosen profile's `Dockerfile`, so the pilot project's render check failed until it re-rendered.
+
+**Rationale:** The second stack is where the factory learns what "one kind of project" really varies in. The sandbox's Unix-socket block is invisible to Python and npm but breaks MSBuild silently, and only a run that imitates the sandbox finds it before a paid agent run does. Proof on a real runner is still `factory-smoke`, in the pilot project's Enablement.
+
+---
+
+## 2026-10-13: The factory import's patterns name no host
+
+**Origin:** the import tool's rules, public in z-sdlc, listed the incubator's runner host by name as a pattern to flag; CD asked for it to go.
+
+**Changes made:**
+
+1. **`.claude/skills/zsdlc-import-factory/import.json`** — the host name is out of `specific`; private and VPN address ranges and home directories still catch host-specific text an import would add.
+
+**Rationale:** a public file shouldn't name a private machine, even as a pattern. Release type: patch.
+
+---
+
 ## 2026-10-12: One factory runner host serves several organizations
 
 **Origin:** a second organization's factory will share an existing runner host rather than need its own machine (CD: "change setup.sh").

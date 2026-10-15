@@ -13,6 +13,7 @@ import unittest
 
 FACTORY = pathlib.Path(__file__).resolve().parents[1]
 APP = json.loads((FACTORY / "factory.json").read_text())["app"]
+PROFILE = json.loads((FACTORY / "factory.json").read_text())["stack"]["profile"]
 SCRIPT = FACTORY / "agent_job.sh"
 NEEDS_JQ = unittest.skipUnless(shutil.which("jq"), "needs jq")
 
@@ -60,8 +61,8 @@ class Freeze(AgentJob):
         self.assertNotIn("planning-sandbox.settings.json", frozen)
         self.assertEqual(stat.S_IMODE(self.checks.stat().st_mode), 0o700)
         self.assertTrue(os.access(self.checks / "git_guard.sh", os.X_OK))
-        # The stack profile, at the same path as in the repository.
-        profile = self.checks / "profiles/python-node"
+        # The project's stack profile, at the same path as in the repository.
+        profile = self.checks / "profiles" / PROFILE
         self.assertEqual(sorted(p.name for p in profile.iterdir()),
                          ["Dockerfile", "install.sh", "test-services.sh", "verify", "with-test-services"])
         for name in ("install.sh", "test-services.sh", "verify", "with-test-services"):
@@ -465,6 +466,43 @@ class Verify(unittest.TestCase):
         self.assertEqual(self.verify("everything").returncode, 2)
         (self.dir / "verify.conf").write_text("")
         self.assertEqual(self.verify("--print").returncode, 2)
+
+
+class VerifyDotnetNode(Verify):
+    """The dotnet-node profile's verify: verify.conf's python= is the .NET directory."""
+
+    def setUp(self):
+        super().setUp()
+        shutil.copy(FACTORY / "profiles/dotnet-node/verify", self.dir)
+        (self.dir / "verify.conf").write_text("python=.\nnode=src/Web\n")
+
+    def test_print_shows_the_commands(self):
+        r = self.verify("--print")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        wrap = f"{self.dir}/with-test-services"
+        lines = r.stdout.splitlines()
+        # The note first: an agent's own dotnet commands need -m:1 in the sandbox too.
+        self.assertIn("-m:1", lines[0])
+        self.assertEqual(lines[1:], [
+            f"dotnet: {wrap} bash -c 'cd . && dotnet test --no-restore -c Release -m:1"
+            " --filter \"Category!=Nightly&Category!=External\"'",
+            "node: cd src/Web && node_modules/.bin/eslint . && node_modules/.bin/tsc -b"
+            " && node_modules/.bin/vitest run && node_modules/.bin/vite build"])
+        probe = self.verify("--print", "probe").stdout
+        self.assertIn("dotnet build --no-restore -c Release -m:1", probe)
+        self.assertIn("echo probe-ok", probe)
+
+    def test_runs_every_area_and_reports_the_failures(self):
+        (self.dir / "with-test-services").write_text('#!/usr/bin/env bash\nexec "$@"\n')
+        (self.dir / "with-test-services").chmod(0o755)
+        (self.dir / "verify.conf").write_text("python=no-such-dir\nnode=no-such-dir\n")
+        r = self.verify("dotnet", "node")
+        self.assertEqual(r.returncode, 1)
+        self.assertIn("== verify dotnet:", r.stdout)
+        self.assertIn("== verify node:", r.stdout)
+        self.assertIn("verify: failed: dotnet node", r.stdout)
+        # The python-node area names aren't this profile's.
+        self.assertEqual(self.verify("python").returncode, 2)
 
 
 class Usage(AgentJob):

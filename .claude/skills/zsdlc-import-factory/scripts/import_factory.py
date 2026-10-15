@@ -44,13 +44,54 @@ HERE = pathlib.Path(__file__).resolve()
 ROOT = HERE.parents[4]
 RULES = HERE.parents[1] / "import.json"
 
-# The CODEOWNERS Enablement step 7 asks for (process/factory.md), for the empty project's seeded test.
+# The CODEOWNERS Enablement step 9 asks for (process/factory.md), for the empty project's seeded test: the
+# factory's paths, and what each profile's tools load just because it exists (§ Stack Profiles).
 PROOF_CODEOWNERS = """/.github/ @owner
 .mcp.json @owner
 .claude/ @owner
 CLAUDE.md @owner
 CLAUDE.local.md @owner
 /ops/sdlc/ @owner
+requirements*.txt @owner
+pyproject.toml @owner
+setup.py @owner
+setup.cfg @owner
+pytest.ini @owner
+tox.ini @owner
+conftest.py @owner
+sitecustomize.py @owner
+*.csproj @owner
+*.fsproj @owner
+*.vbproj @owner
+*.csproj.user @owner
+*.fsproj.user @owner
+*.vbproj.user @owner
+*.props @owner
+*.targets @owner
+*.rsp @owner
+*.sln @owner
+*.slnx @owner
+*.slnf @owner
+global.json @owner
+nuget.config @owner
+NuGet.config @owner
+NuGet.Config @owner
+.config/dotnet-tools.json @owner
+dotnet-tools.json @owner
+*.runsettings @owner
+xunit.runner.json @owner
+.editorconfig @owner
+.globalconfig @owner
+package.json @owner
+package-lock.json @owner
+pnpm-lock.yaml @owner
+pnpm-workspace.yaml @owner
+.npmrc @owner
+.pnpmfile.cjs @owner
+eslint.config.* @owner
+tsconfig*.json @owner
+vite.config.* @owner
+vitest.config.* @owner
 /ops/sdlc/disciplines/*.md
 /ops/sdlc/knowledge/**/*.yaml
 /ops/sdlc/process/sdlc_changelog.md

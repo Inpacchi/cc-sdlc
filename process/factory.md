@@ -26,10 +26,10 @@ service are the organization's own: the seed holds placeholders for them, which 
 (steps 3 to 5).
 
 **Limits of this version.** The project's SDLC root must be `ops/sdlc` (the scripts and the gate
-digest name it). The runners need Linux hosts (systemd, nftables, rootless Docker). The one stack
-profile, `python-node`, is Django and Vite's: its `verify probe` runs `manage.py migrate --plan`, and
-its `node` checks are eslint, `tsc -b` and the Vite build; another stack needs a profile of its own
-(§ Stack Profiles). The plan and spec stages run with or without a database (`planning.json`, D3).
+digest name it). The runners need Linux hosts (systemd, nftables, rootless Docker). Two stack
+profiles: `python-node` (Django and Vite, npm) and `dotnet-node` (.NET 10 and Vite, pnpm); another
+stack needs a profile of its own (§ Stack Profiles). The plan and spec stages run with or without a
+database (`planning.json`, D3).
 
 ---
 
@@ -129,6 +129,8 @@ Agent jobs run on self-hosted runners, and a runner host may also run production
    - the runtime sandbox probe (rule 5).
 
    CI's `workflow-policy` check catches accidental drift from these rules on every PR. It is not a security control: a workflow is a program (expressions, `$GITHUB_ENV` writes, other actions), so a static check can't be complete against someone editing workflows on purpose. Its known gaps are under Leaves open.
+
+7. **Fixtures a project's tests need from a secret-holding source come from a hosted fixtures job on the default branch, as an artifact; the agent job never holds the secret** (CD, 2026-10-13). `factory.json`'s `fixtures` block names the command, its one repository secret, the directory it fills (gitignored) and the cache key. The implement and revise workflows run it in a `fixtures` job on a GitHub-hosted runner, from the default branch's checkout, so a factory branch an agent wrote never runs with the secret. The job restores the directory from the Actions cache first (the project's CI can fill the same entry), so the source is called only on a miss. It refuses fixtures that contain the secret, then hands the directory over as an artifact, which the agent job puts in the workspace before the agent starts. `workflow_policy.py` holds the job to this shape, and refuses the secret anywhere else in the workflow.
 
 ### Forbids
 
@@ -333,17 +335,48 @@ agent could have edited. A profile has five files:
 | File | Run by | Does |
 |---|---|---|
 | `Dockerfile` | `factory-image`, on a GitHub-hosted runner | The job image: the stack's toolchain and test services, plus what the factory's own steps use (the Bash sandbox's `bubblewrap` and `socat`, `jq`, `git`, `curl`, `unzip`, and `pgbouncer` for the planning tier). No project dependencies. |
-| `install.sh <python-dir> <node-dir>` | The job, outside the sandbox, after secrets are out of the environment | Installs the project's dependencies: the implement sandbox has no network. |
+| `install.sh <stack.python> <stack.node>` | The job, outside the sandbox, after secrets are out of the environment | Installs the project's dependencies: the implement sandbox has no network. |
 | `test-services.sh <socket-dir> <database>` | The job, as root, before the agent | Starts throwaway test services on the job container's loopback, with logins that can't run code, and prints their settings for the project's env file. |
 | `with-test-services <command>` | Commands inside the sandbox | Runs a command with the test services' ports reachable through the sandbox's proxy. |
-| `verify [python\|node\|probe]` | The stages and smoke | The project's checks (tests, lint, type check, build); `probe` proves the toolchain and the test database work. Reads its directories from `verify.conf`. |
+| `verify [<area> ...\|probe]` | The stages and smoke | The project's checks (tests, lint, type check, build), in the profile's own areas, which `--print` lists; `probe` proves the toolchain and the test database work. Reads its directories from `verify.conf`. |
 
 The interface is the first profile's shape: `agent_job.sh` passes `stack.python` and `stack.node` as
-the project's two directories, and `verify` takes `python` and `node` areas. A profile for another
-stack uses them for its own directories until the first such profile generalizes the stack block.
-Start from a copy of `python-node`, keep its security properties (no superuser test login, services
-started with an empty environment, nothing installed inside the sandbox), and prove it with
-`factory-smoke`.
+the project's two directories (`verify.conf`'s `python=` and `node=`), whatever the stack. A profile
+for another stack uses them for its own directories; renaming them is a change to every project's
+`factory.json`, left until a stack doesn't fit two directories. Start from a copy of the nearest
+profile, keep its security properties (no superuser test login, services started with an empty
+environment, nothing installed inside the sandbox), and prove it with `factory-smoke`.
+
+| Profile | `stack.python`, `stack.node` | `verify` areas | Test services | What the project must meet |
+|---|---|---|---|---|
+| `python-node` | The Django project; the Vite app (npm) | `python` (pytest), `node` (eslint, `tsc -b`, Vite build) | Postgres 16 and Redis 7 | Django reads the env file; `probe` runs `manage.py migrate --plan` |
+| `dotnet-node` | The directory of the solution (or project) `dotnet` builds; the Vite app (pnpm) | `dotnet` (`dotnet test`, Release), `node` (eslint, `tsc -b`, vitest, Vite build) | Postgres 16 | Tests in the categories `Nightly` (long suites on their own schedule) and `External` (they need the network or a secret, which no job has) are left out; `eslint .` must pass, not only the paths the project's lint script names; the default connection string names `stack.database` as database and user (ASP.NET Core reads no env file) |
+
+`verify` calls the tools, never a Makefile or package.json script, so a check a project's build
+script chains in (a bundle-size gate, a generated file) is left to CI on the PR. In the sandbox, Unix
+sockets are blocked, and MSBuild's worker nodes use them: `dotnet-node` builds in one process
+(`-m:1`), and `verify --print` tells the agent to do the same (`dotnet run` and `dotnet ef` ignore
+the switch, so they run with `--no-build` after a `dotnet build -m:1`). End-to-end suites
+(Playwright) are not in any profile: they need browsers and live servers, and CI runs them.
+
+**What CODEOWNERS must cover, per profile** (Enablement step 9). A revise or continued run installs a
+factory branch's dependencies outside the sandbox, and the project's CI builds a factory PR's code.
+Both rely on no factory commit having changed a file a tool loads just because it exists. The
+publish guard and the branch check refuse only what CODEOWNERS covers, so it must cover each of
+these at any depth, whether or not the project has one yet. CODEOWNERS matching is case-sensitive,
+so cover every casing a tool accepts.
+- **`python-node`:** `requirements*.txt`, `pyproject.toml`, `setup.py`, `setup.cfg`, `pytest.ini`,
+  `tox.ini`, `conftest.py`, `sitecustomize.py`, and the Node files below.
+- **`dotnet-node`:** `*.csproj` (and `*.fsproj`, `*.vbproj`), their `.user` files (MSBuild imports
+  `<project>.user` when it exists), `*.props`, `*.targets`, `*.rsp` (`Directory.Build.*`,
+  `Directory.Packages.props` and `Directory.Solution.*` among them), `*.sln`, `*.slnx`, `*.slnf`,
+  `global.json`, `nuget.config`, `NuGet.config` and `NuGet.Config`, `.config/dotnet-tools.json` and a
+  root `dotnet-tools.json`, `*.runsettings`, `xunit.runner.json`, `.editorconfig`, `.globalconfig`,
+  and the Node files below. A project file can run code during `dotnet restore`, so owning `*.csproj`
+  makes a new project or package CD's change; the implement sandbox can't fetch a package anyway.
+- **Node, in both:** `package.json` (`install` runs its lifecycle scripts), `.npmrc`, and the eslint,
+  TypeScript, Vite and Vitest configs; for npm (`python-node`) `package-lock.json`, and for pnpm
+  (`dotnet-node`) `pnpm-lock.yaml`, `pnpm-workspace.yaml` and `.pnpmfile.cjs`.
 
 ---
 
@@ -364,12 +397,18 @@ needs an organization owner's `gh` login (`admin:org`) for the runner groups and
    required reviewer (D4 rule 5) on a private repository needs GitHub Enterprise. Why an
    organization, not a repository's own runners: one pool of hardened runners serves every project,
    and the group's selected-workflows list keeps a project's other workflows off them.
-2. **Settings.** In `.github/factory/factory.json`, the `stack` block: the profile, where the project
-   keeps its Python and Node code, its env file, its test database name, and workspace paths its
-   code reads. Write `triage-policy.md` (its direction, rules, containers, plan triggers and external
-   sources). The planning tier (D3) is required; its database is optional. To give the plan and spec
-   stages one, fill `planning.json` and create the read-only role it names (D3 rule 3); list services
-   in `services.json` (D3 rule 4). Leave both empty for none.
+2. **Settings.** In `.github/factory/factory.json`, the `stack` block: the profile, the project's two
+   directories (§ Stack Profiles), its env file, its test database name, and workspace paths its code
+   reads. The profile is rendered into `factory-image` (it builds that profile's `Dockerfile`), so
+   render after choosing it, or CI's render check fails. `.gitignore` must cover the env file and
+   `.factory/` (the jobs' working files and the profile's caches): a run that leaves an untracked file
+   isn't published. It must also cover `.github/factory/host/reg-token`, the runner registration token
+   step 8 writes there. Tests that need fixtures from a secret-holding source get them through the
+   `fixtures` block (D2 rule 7); leave its `path` empty for none. Write `triage-policy.md` (its
+   direction, rules, containers, plan triggers and external sources). The planning tier (D3) is
+   required; its database is optional. To give the plan and spec stages one, fill `planning.json` and
+   create the read-only role it names (D3 rule 3); list services in `services.json` (D3 rule 4). Leave
+   both empty for none.
 3. **The job image.** Set `image.repository` to where the organization publishes it (for example
    `ghcr.io/<org>/factory-job`), render, and push to `main`: `factory-image` builds the profile's
    `Dockerfile` on a GitHub-hosted runner and publishes it (or run it by hand). Its run on the
@@ -402,27 +441,100 @@ needs an organization owner's `gh` login (`admin:org`) for the runner groups and
    `FACTORY_APP_CLIENT_ID` (the commands `create_app.py` printed; then delete the key file). In
    `factory-planning`: `FACTORY_DB_READER_PASSWORD` with a planning database, and `FACTORY_SVC_1`..`4`
    for services. Repository secrets: `CLAUDE_CODE_OAUTH_TOKEN` (from `claude setup-token`; never an
-   organization secret), and optionally `CONTEXT7_API_KEY`.
+   organization secret), optionally `CONTEXT7_API_KEY`, and the one `fixtures.secret` names, if any
+   (read-only; only the fixtures job references it).
 8. **The runner host.** A Linux host with systemd, nftables, `python3`, rootless Docker's extras
-   (`docker-ce-rootless-extras`) and room for the runners' work and images. From a checkout of
-   `main`, set the host's own settings in `.github/factory/host/host.conf`; then, for each tier, write a
-   runner registration token (`gh api -X POST orgs/<org>/actions/runners/registration-token --jq
-   .token`) to `.github/factory/host/reg-token` (mode 600) and run `sudo bash
-   .github/factory/host/setup.sh` (the strict tier) or `sudo TIER=planning bash
-   .github/factory/host/setup.sh` (the planning tier). It creates each tier's user, rootless Docker,
-   firewall and runners, and registers no runner whose jobs can reach the host or the LAN. Put the
-   host's own LAN and VPN addresses in `factory.json`'s `smoke.host_probes`, so smoke checks them
-   too. One host serves the whole organization, and can serve other organizations too: each one
-   after the first sets `RUNNER_INSTANCE` in its `host.conf` and gets its own users, firewall tables
-   and services, isolated from the others' as from the host. Setup refuses runners registered to
-   another organization, and a planning database port is only ever the organization's own.
+   (`docker-ce-rootless-extras`) and room for the runners' work and images. From a checkout of `main`,
+   set the host's own settings in `.github/factory/host/host.conf`; then, for each tier, write a runner
+   registration token (`gh api -X POST orgs/<org>/actions/runners/registration-token --jq .token`) to
+   `.github/factory/host/reg-token` (mode 600) and run `sudo bash .github/factory/host/setup.sh` (the
+   strict tier) or `sudo TIER=planning bash .github/factory/host/setup.sh` (the planning tier), and
+   `sudo TIER=ci bash .github/factory/host/setup.sh` for the CI tier if the project needs one (step
+   10). It creates each tier's user, rootless Docker, firewall and runners, and registers no runner
+   whose jobs can reach the host or the LAN. Put the host's own LAN and VPN addresses in
+   `factory.json`'s `smoke.host_probes`, so smoke checks them too. One host serves the whole
+   organization, and can serve other organizations too: each one after the first sets `RUNNER_INSTANCE`
+   in its `host.conf` and gets its own users, firewall tables and services, isolated from the others'
+   as from the host. Setup refuses runners registered to another organization, and a planning database
+   port is only ever the organization's own.
 9. **CODEOWNERS and the `main` ruleset** (D2 rule 6): code owners on `.github/`, `.claude/`,
-   `CLAUDE.md` at any depth, `.mcp.json`, `[sdlc-root]/` and the test and build configuration, with
-   owner-less lines last for the discipline parking lots, the knowledge YAMLs (except the
-   agent-governing ones) and the SDLC changelog; code-owner review required on `main`. The seeded
-   `tests/test_codeowners.py` checks the file against the guard; until it exists it fails, and its
-   path lists are the project's to extend (its test and build configuration, its source paths).
+   `CLAUDE.md` at any depth, `.mcp.json`, `[sdlc-root]/` and the test and build configuration,
+   including every file the profile's tools load just because it exists (§ Stack Profiles, What
+   CODEOWNERS must cover), with owner-less lines last for the discipline parking lots, the knowledge
+   YAMLs (except the agent-governing ones) and the SDLC changelog; code-owner review required on
+   `main`. The seeded `tests/test_codeowners.py` checks the file against the guard; until it exists
+   it fails, and its path lists are the project's to extend (its test and build configuration, the
+   profile's list, its source paths).
 10. **CI**, required on `main`: `python .github/factory/render.py --check`, then
     `python .github/factory/workflow_policy.py .github/workflows`, then
-    `python -m unittest discover -s .github/factory/tests` (with PyYAML).
+    `python -m unittest discover -s .github/factory/tests` (with PyYAML). The policy reads every
+    workflow, the project's own included, and scans the local composite actions they use: run it
+    before making it required. A CI job on the organization's own GitHub-hosted (larger) runners
+    needs its label in `factory.json`'s `policy.hosted_labels`. A job that must stay on a
+    self-hosted runner outside the factory container needs an entry in
+    `policy.self_hosted_exemptions` (its workflow, job and reason). An exemption lifts only the
+    container rule, the last of the rules below, so its reason says how that runner is isolated
+    instead. The other rules below still apply to the job.
+
+    **The project's existing CI runs agent-written code.** Factory branches live in the repository,
+    so a factory PR's `pull_request` runs get the repository's secrets. Before the first run, hold
+    every job that builds, tests or lints a PR's code to an agent job's rules:
+    - no secret in that job, whether before or after the PR's code runs. A build step can write
+      `$GITHUB_ENV` or `$GITHUB_PATH` and redirect every later step;
+    - `persist-credentials: false` on its checkout, and a read-only token;
+    - a GitHub-hosted runner, or a self-hosted one only inside a container, as the factory's own
+      jobs are: the CI tier below.
+
+    A job that needs a secret (a fixture fetch) runs the default branch's code, as the fixtures job
+    does (D2 rule 7).
+
+    **The CI tier.** *Held (2026-10-13): not usable until CD decides its design, and `setup.sh`
+    refuses `TIER=ci` until then. A review found that a pull request's job reaches the host as the
+    runner user through the runner's own host-side processes. The docker client and the job hooks
+    start with the job's environment and PATH, which the guard and hooks below can't close.* A
+    project CI job that outgrows GitHub-hosted runners, such as an end-to-end suite, runs on the
+    CI tier: the label `runners.ci` (`factory-ci`) and the runner group
+    `runners.groups.ci` (`factory-ci`).
+    - **Setup order.** `bootstrap.py --apply` creates the group once a workflow uses the label.
+      Run it before `sudo TIER=ci bash .github/factory/host/setup.sh` (step 8), which registers the
+      runners into the group.
+    - **The group is restricted to repositories, not workflows.** A pull request's run comes from
+      its merge ref, which a group's branch-pinned workflow list never matches, so its jobs would
+      wait forever. The runners are the isolation instead: their own user, firewall and caps, and
+      a job container required.
+    - **What the policy holds every job on the label to:** the rules above; a container, with no
+      service containers (a database starts in the job); explicit read-only permissions; never an
+      agent job or a factory workflow. The only token it may hold is the job token, as its
+      container's pull credentials.
+    - **Writing the job.** Write `runs-on: [self-hosted, factory-ci]`, the form bootstrap reads.
+      The factory seccomp profile (`/etc/factory-runner/seccomp-bwrap.json`) is allowed, not
+      required: Docker's default is stricter, and enough for a browser run without its own sandbox
+      (Playwright's default).
+    - **Capacity.** `host.conf`'s `CI_*` settings cap the tier's runners together. Check the
+      jobs' `timeout-minutes` against the first capped runs.
+    - **The threat model.** A pull request's run executes the pull request's own workflow, and
+      no workflow restriction stands in the way. So for a pull request from a branch, the
+      policy is a merge gate, not an execution gate, and the tier holds against a hostile job
+      definition:
+      - **The docker guard.** The runners reach docker only through `host/docker_guard.py`. It
+        passes the runner's own commands and refuses every other mount (the runner's directory and
+        its credentials among them), privilege, namespace and published port. It also refuses
+        `docker run` and `docker build`, which the runner makes mid-job, after the job's code could
+        have planted a symlink in a directory it mounts. **So no `docker://` step and no Dockerfile
+        action runs on the CI tier.** Every container gets `no-new-privileges`.
+      - **The job hooks** (`host/ci_job_hook.sh`) delete what a job leaves in the work directory
+        for the next: the tool cache, the workspaces and the runner's workspace map. The runner
+        deletes its actions and temp directory itself. Every runner start deletes the whole work
+        directory, as root.
+      - **The periodic check.** A root timer re-runs the isolation probe every 6 hours, with the
+        firewall, the caps and each runner's guard and hooks. A failure stops the tier's runners,
+        and they stay stopped until someone fixes the cause and starts them
+        (`systemctl start 'factory-ci@*'`, or setup again).
+      - **No host path.** The tier offers no writable host path a job could share with the next
+        (no tool or browser cache on the host), so bake browsers into the job's image.
+
+      Ephemeral runners (`--ephemeral`, registered again for every job) would add one more
+      thing: a registration stolen despite the guard would end with its job. They need a
+      credential on the host that can register runners, a permission the factory's App
+      deliberately lacks, so they are CD's call.
 11. **Smoke.** Run `factory-smoke`; every job must pass before the first issue (D2 rule 5).

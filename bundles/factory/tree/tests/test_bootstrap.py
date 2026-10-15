@@ -311,6 +311,45 @@ class Bootstrap(unittest.TestCase):
         self.assertEqual(code, 0, out)
         self.assertEqual(self.gh.labels[0]["color"], bootstrap.LABELS[0][1])
 
+    def ci_workflow(self):
+        (self.root / ".github" / "workflows" / "ci.yml").write_text(
+            "jobs:\n  t:\n    runs-on: ubuntu-latest\n  e2e:\n    runs-on: [self-hosted, factory-ci]\n")
+
+    def ci_group(self):
+        return next((g for g in self.gh.groups if g["name"] == "factory-ci"), None)
+
+    def test_the_ci_tier_gets_a_group_for_its_repositories_not_its_workflows(self):
+        self.gh.set_up()
+        code, out = self.run_it()
+        self.assertEqual(code, 0, out)
+        self.assertNotIn("factory-ci", out)  # no workflow uses the label: no group
+        self.ci_workflow()
+        code, out = self.run_it()
+        self.assertEqual(code, 1)
+        self.assertIn("the group itself (selected repositories, any of its workflows)", out)
+        code, out = self.run_it("--apply")
+        ci = self.ci_group()
+        # Pull requests' runs come from merge refs, which a branch-pinned workflow list never matches.
+        self.assertEqual((ci["visibility"], ci["repos"], ci["restricted_to_workflows"], ci["selected_workflows"]),
+                         ("selected", [7], False, []))
+        self.assertIn("register its runners with host/setup.sh (TIER=ci)", out)
+        self.assertNotIn("ci.yml", json.dumps(self.pool()["selected_workflows"]))  # never in the agents' pool
+        self.gh.writes.clear()
+        code, out = self.run_it("--apply")
+        self.assertEqual(self.gh.writes, [])
+        self.assertIn("widget (its workflows that run on factory-ci)", out)
+
+    def test_a_ci_group_restricted_to_workflows_is_left_to_cd(self):
+        self.gh.set_up()
+        self.ci_workflow()
+        self.gh.groups.append({"id": 6, "name": "factory-ci", "visibility": "selected", "restricted_to_workflows": True,
+                               "selected_workflows": [f"{REPO}/.github/workflows/ci.yml@refs/heads/main"], "repos": [7],
+                               "runners": ["box-ci-1"]})
+        code, out = self.run_it("--apply")
+        self.assertEqual(code, 1)
+        self.assertIn("its merge ref, which the list never matches", out)
+        self.assertEqual(self.gh.writes, [])
+
     def test_a_group_open_to_every_workflow_is_left_to_cd(self):
         self.gh.set_up()
         self.pool()["restricted_to_workflows"] = False

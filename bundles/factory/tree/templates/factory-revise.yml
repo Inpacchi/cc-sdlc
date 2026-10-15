@@ -73,9 +73,74 @@ jobs:
           REQUESTER: ${{ inputs.requester }}
         run: .github/factory/revise_gate.sh code
 
-  revise:
+  # Test fixtures whose source needs a secret (D2 rule 7; factory.json's fixtures): made on a
+  # GitHub-hosted runner from the default branch and handed to the agent job as an artifact, so the agent
+  # job never holds the secret. Skipped when factory.json sets no fixtures path.
+  fixtures:
     needs: gate
-    if: needs.gate.outputs.proceed == 'true'
+    if: >-
+      '%{fixtures.path?}' != '' && needs.gate.outputs.proceed == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      # The default branch's command: a factory branch an agent wrote never runs with the secret.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          persist-credentials: false
+
+      # The project's CI can fill the same entry (same path and key): the secret's source is called only on a miss.
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        id: cache
+        with:
+          path: %{fixtures.path?}
+          key: %{fixtures.cache_key?}-${{ hashFiles('%{fixtures.key_files?}') }}
+
+      - name: Make the fixtures
+        if: steps.cache.outputs.cache-hit != 'true'
+        env:
+          FIXTURE_SECRET: ${{ secrets['%{fixtures.secret?}'] }}
+        run: |
+          set -euo pipefail
+          apt='%{fixtures.apt?}'
+          if [ -n "$apt" ]; then sudo apt-get update -q && sudo apt-get install -y -q $apt; fi
+          # The secret under its own name, for the command only.
+          name='%{fixtures.secret?}'
+          if [ -n "$name" ]; then export "$name=$FIXTURE_SECRET"; fi
+          unset FIXTURE_SECRET
+          %{fixtures.run?}
+
+      # Nothing that holds the secret leaves this job: not the artifact, and not the cache entry it saves
+      # (actions/cache saves only when the job succeeds).
+      - name: Check the fixtures hold no secret
+        env:
+          FIXTURE_SECRET: ${{ secrets['%{fixtures.secret?}'] }}
+          FIXTURE_PATH: %{fixtures.path?}
+        run: |
+          set -euo pipefail
+          [ -n "$(find "$FIXTURE_PATH" -type f -print -quit 2> /dev/null)" ] \
+            || { echo "::error::the fixtures command left no file in $FIXTURE_PATH"; exit 1; }
+          if [ -n "$FIXTURE_SECRET" ]; then
+            b64=$(printf %s "$FIXTURE_SECRET" | base64 -w0)
+            if grep -rqF -e "$FIXTURE_SECRET" -e "$b64" "$FIXTURE_PATH"; then
+              echo "::error::the fixtures hold the secret; not handing them over"; exit 1
+            fi
+          fi
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: factory-fixtures
+          path: %{fixtures.path?}
+          if-no-files-found: error
+          retention-days: 1
+
+  revise:
+    # After the fixtures job, or without it (skipped: no fixtures); never after it failed.
+    needs: [gate, fixtures]
+    if: >-
+      !cancelled() && needs.gate.outputs.proceed == 'true' && needs.fixtures.result != 'failure'
     runs-on: [self-hosted, %{runners.strict}]
     # Backstop only; the Revise step's own timeout (AGENT_MINUTES) is the real bound.
     timeout-minutes: %{limits.agent_minutes+30}
@@ -169,6 +234,13 @@ jobs:
             # The run is killed at AGENT_MINUTES; stopping before then keeps the work (headless-mode.md).
             echo "FACTORY_BUDGET=Time budget: this run is stopped after $AGENT_MINUTES minutes (ops/sdlc/process/headless-mode.md, Stop before a time limit). Run date now and between steps. With 20 minutes left, start nothing new: commit what is done, answer each request not reached as needs-your-call, and stop with status escalated and one major finding whose summary starts Unfinished and says what is left."
           } >> "$GITHUB_ENV"
+
+      # The fixtures job's artifact (factory.json's fixtures), into the gitignored path it fills.
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        if: needs.fixtures.result == 'success'
+        with:
+          name: factory-fixtures
+          path: %{fixtures.path?}
 
       - name: Write MCP config
         shell: bash
@@ -304,7 +376,9 @@ jobs:
 
   publish:
     needs: [gate, revise]
-    if: needs.revise.outputs.bundle == 'yes'
+    # Explicit: a skipped fixtures job, before revise, would otherwise skip this too.
+    if: >-
+      !cancelled() && needs.revise.result == 'success' && needs.revise.outputs.bundle == 'yes'
     runs-on: ubuntu-latest
     environment: %{environments.writer}
     timeout-minutes: 10
@@ -399,7 +473,7 @@ jobs:
           gh api -X DELETE "repos/$GH_REPO/issues/$PR/labels/factory:revise" > /dev/null 2>&1 || true
 
   report-failure:
-    needs: [gate, revise, publish, report]
+    needs: [gate, fixtures, revise, publish, report]
     if: failure()
     runs-on: ubuntu-latest
     environment: %{environments.writer}
@@ -420,6 +494,7 @@ jobs:
           GH_TOKEN: ${{ steps.app.outputs.token || github.token }}
           GH_REPO: ${{ github.repository }}
           GATE: ${{ needs.gate.result }}
+          FIXTURES: ${{ needs.fixtures.result }}
           PREPARED: ${{ needs.revise.outputs.prepared }}
           RAN: ${{ needs.revise.outputs.ran }}
           PACKAGED: ${{ needs.revise.outputs.packaged }}
@@ -428,6 +503,7 @@ jobs:
           PUBLISH: ${{ needs.publish.result }}
         run: |
           if [ "$GATE" = failure ]; then why="This PR can't be revised by the factory."
+          elif [ "$FIXTURES" = failure ]; then why="The fixtures job failed (factory.json's fixtures: restoring or making the test fixtures, or they held the secret)."
           elif [ "$PREPARED" != success ]; then why="Preparing failed: no review comments since the last revision, the branch changes agent configuration, or the test services."
           elif [ "$RAN" != success ] && [ -n "$LOST" ]; then
             why="The revise agent $LOST."

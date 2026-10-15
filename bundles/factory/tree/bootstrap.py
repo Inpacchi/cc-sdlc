@@ -11,7 +11,10 @@ branch's rules (security configuration stays CD's). It writes only what differs,
 It runs as the gh login: the runner groups and the App check need an organization admin's token (admin:org),
 and without one they are reported as unchecked. The runner groups are factory.json's runners.groups, by default
 the shared pool factory-pool (strict and planning) and, with a production tier (production/ops.json), the
-project's own factory-pool-<repository>-prod.
+project's own factory-pool-<repository>-prod; both are restricted to the workflows that use them. When a
+workflow runs on the CI tier's label (runners.ci), the CI group too (factory-ci), restricted to the
+repositories that use it and not to workflows: a pull request's run comes from its merge ref, which a
+group's branch-pinned workflow list never matches.
 
 Exit 0 when nothing is missing, 1 when something is (or a write failed), 2 on a usage or settings error.
 """
@@ -44,6 +47,7 @@ LABELS = [
 ]
 APP_PERMISSIONS = {"contents": "write", "issues": "write", "pull_requests": "write", "metadata": "read"}
 SHARED_GROUP = "factory-pool"
+CI_GROUP = "factory-ci"
 RUNS_ON = re.compile(r"^\s*runs-on:\s*\[\s*self-hosted\s*,\s*([A-Za-z0-9_.-]+)\s*\]", re.M)
 CODEOWNERS_PATHS = (".github/CODEOWNERS", "CODEOWNERS", "docs/CODEOWNERS")
 
@@ -89,7 +93,10 @@ class Bootstrap:
             raise Settings(f"can't read .github/factory/factory.json's runners, environments and app: {e}") from e
         groups = runners.get("groups") or {}
         self.groups = {"shared": groups.get("shared") or SHARED_GROUP,
-                       "production": groups.get("production") or f"factory-pool-{self.name}-prod"}
+                       "production": groups.get("production") or f"factory-pool-{self.name}-prod",
+                       "ci": groups.get("ci") or CI_GROUP}
+        # The CI tier is optional: a factory.json from before it has no label for it.
+        self.ci_label = runners.get("ci") if isinstance(runners.get("ci"), str) else None
         # A production tier is the project's own operations catalog (D4); without it there is no gate to run.
         self.production = (factory / "production" / "ops.json").exists()
 
@@ -286,8 +293,8 @@ class Bootstrap:
 
     # ---- runner groups
     def workflow_refs(self):
-        """The rendered workflows per tier: the shared pool's (strict and planning) and production's."""
-        shared, production = [], []
+        """The workflows per tier: the shared pool's (strict and planning), production's and the CI tier's."""
+        shared, production, ci = [], [], []
         for f in sorted((self.root / ".github" / "workflows").glob("*.yml")):
             labels = set(RUNS_ON.findall(f.read_text()))
             ref = f"{self.repo}/.github/workflows/{f.name}@refs/heads/{self.default}"
@@ -295,7 +302,9 @@ class Bootstrap:
                 shared.append(ref)
             if self.labels["production"] in labels:
                 production.append(ref)
-        return shared, production
+            if self.ci_label and self.ci_label in labels:
+                ci.append(ref)
+        return shared, production, ci
 
     def check_runner_groups(self):
         if not self.org:
@@ -305,28 +314,34 @@ class Bootstrap:
         if groups is None:
             self.note("unchecked", "runner groups", "needs an organization admin's token (admin:org)")
             return
-        shared, production = self.workflow_refs()
+        shared, production, ci = self.workflow_refs()
         by_name = {g["name"]: g for g in groups}
         self.check_group(by_name.get(self.groups["shared"]), self.groups["shared"], shared, "host/setup.sh")
         if self.production:
             self.check_group(by_name.get(self.groups["production"]), self.groups["production"], production,
                              "host/setup-production.sh")
+        if ci:
+            self.check_group(by_name.get(self.groups["ci"]), self.groups["ci"], ci, "host/setup.sh (TIER=ci)",
+                             by_workflow=False)
 
-    def check_group(self, group, name, refs, setup):
+    def check_group(self, group, name, refs, setup, by_workflow=True):
+        """A runner group: this repository in it, and (by_workflow) its workflows; the CI group isn't restricted
+        to workflows, because pull requests' runs come from merge refs a branch-pinned list never matches."""
         section = f"runner group {name}"
         base = f"orgs/{self.owner}/actions/runner-groups"
         if group is None:
+            what = f"{len(refs)} workflows" if by_workflow else "any of its workflows"
             if not self.apply:
-                self.note("missing", section, f"the group itself (selected repositories, {len(refs)} workflows)")
+                self.note("missing", section, f"the group itself (selected repositories, {what})")
                 return
             status, group = self.api("POST", base, {"name": name, "visibility": "selected",
                                                     "selected_repository_ids": [self.repo_id],
-                                                    "restricted_to_workflows": True, "selected_workflows": refs})
+                                                    "restricted_to_workflows": by_workflow,
+                                                    "selected_workflows": refs if by_workflow else []})
             if status != 201:
                 self.note("failed", section, f"create the group: HTTP {status} {(group or {}).get('message', '')}")
                 return
-            self.note("created", section, f"for {self.name}, with {len(refs)} workflows; register its runners "
-                      f"with {setup}")
+            self.note("created", section, f"for {self.name}, with {what}; register its runners with {setup}")
             return
         gid = group["id"]
         if group.get("visibility") != "selected":
@@ -343,7 +358,14 @@ class Bootstrap:
                 repo_ids.append(self.repo_id)
             elif not self.apply:
                 self.note("missing", section, f"repository {self.name}")
-        if not group.get("restricted_to_workflows"):
+        if not by_workflow:
+            if group.get("restricted_to_workflows"):
+                # Lifting it is CD's call, like restricting the others.
+                self.note("problem", section, "is restricted to selected workflows: a pull request's run comes from "
+                          "its merge ref, which the list never matches, so its jobs would wait forever")
+            elif self.repo_id in repo_ids:
+                self.note("ok", section, f"{self.name} (its workflows that run on {self.ci_label})")
+        elif not group.get("restricted_to_workflows"):
             # Restricting it now would stop every other project's workflows that aren't listed: CD's call.
             self.note("problem", section, "isn't restricted to selected workflows")
         else:

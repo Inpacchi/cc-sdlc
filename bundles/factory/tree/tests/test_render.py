@@ -135,6 +135,10 @@ class AnotherProject(unittest.TestCase):
         self.assertIn("bash /opt/factory-probe/services_probe.sh echo.other.example", smoke)
         self.assertIn('FACTORY_HOST_PROBES: "10.9.9.9 10.9.9.10 172.17.0.1 10.0.2.2"', smoke)
         self.assertIn("runs-on: [self-hosted, prod-pool]", self.rendered["factory-gate.yml"])
+        # No fixtures block (a project from before it): the fixtures jobs render, and are skipped.
+        for name in ("factory-implement.yml", "factory-revise.yml"):
+            self.assertIn("      '' != '' && ", self.rendered[name])
+            self.assertIn("secrets[''] }}", self.rendered[name])
 
     @unittest.skipUnless(HAS_YAML, "needs PyYAML")
     def test_the_policy_holds_with_its_labels_and_environments(self):
@@ -154,11 +158,326 @@ class AnotherProject(unittest.TestCase):
         self.assertIn(f"a planning agent job must run on {THIS['runners']['planning']} runners", r.stdout)
 
 
+FIXTURES = {"path": "tools/art/cache", "run": "IDS=A,B tools/art/sync.sh", "secret": "ART_API_KEY", "apt": "webp",
+            "cache_key": "art-v1", "key_files": "tools/art/sync.sh"}
+
+
+@unittest.skipUnless(HAS_YAML, "needs PyYAML")
+class Fixtures(unittest.TestCase):
+    """A project with fixtures (D2 rule 7): the fixtures job renders with its settings and passes the
+    policy; the policy refuses each way the job or its secret could reach further."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        root = pathlib.Path(self.tmp.name)
+        self.factory = root / "factory"
+        shutil.copytree(FACTORY, self.factory, ignore=shutil.ignore_patterns("tests", "templates", "__pycache__"))
+        self.settings = {**OTHER, "fixtures": dict(FIXTURES)}
+        self.write_settings()
+        (self.factory / "planning.json").write_text(json.dumps(OTHER_PLANNING))
+        self.out = root / "workflows"
+        self.out.mkdir()
+        self.rendered = render.render_all(self.factory, FACTORY / "templates")
+        for name, text in self.rendered.items():
+            (self.out / name).write_text(text)
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def write_settings(self):
+        (self.factory / "factory.json").write_text(json.dumps(self.settings))
+
+    def policy(self):
+        r = subprocess.run([sys.executable, str(FACTORY / "workflow_policy.py"), str(self.out), str(self.factory)],
+                           capture_output=True, text=True)
+        return r.returncode, r.stdout
+
+    def edit(self, name, old, new):
+        text = (self.out / name).read_text()
+        self.assertIn(old, text)
+        (self.out / name).write_text(text.replace(old, new, 1))
+
+    def test_the_job_renders_and_holds(self):
+        for name in ("factory-implement.yml", "factory-revise.yml"):
+            text = self.rendered[name]
+            with self.subTest(workflow=name):
+                self.assertIn("      'tools/art/cache' != '' && ", text)
+                self.assertIn("key: art-v1-${{ hashFiles('tools/art/sync.sh') }}", text)
+                self.assertIn("FIXTURE_SECRET: ${{ secrets['ART_API_KEY'] }}", text)
+                self.assertIn("          IDS=A,B tools/art/sync.sh\n", text)
+                self.assertIn("if: needs.fixtures.result == 'success'", text)
+                # The secret is named only in the fixtures job.
+                jobs = text.split("\n  fixtures:\n", 1)[1].split("\n  implement:\n" if "implement" in name
+                                                                   else "\n  revise:\n", 1)
+                self.assertIn("ART_API_KEY", jobs[0])
+                self.assertNotIn("ART_API_KEY", jobs[1])
+        self.assertEqual(self.policy(), (0, "workflow policy: 17 workflows, 0 violations\n"))
+
+    def test_a_projects_own_fixtures_job_is_its_own(self):
+        # The policy reads every workflow; a project's ci.yml may have a job of that name.
+        (self.out / "ci.yml").write_text("on: push\njobs:\n  fixtures:\n    runs-on: ubuntu-latest\n    steps:\n"
+                                          "      - run: make fixtures\n        env:\n          K: ${{ secrets.OTHER_KEY }}\n")
+        self.assertEqual(self.policy(), (0, "workflow policy: 18 workflows, 0 violations\n"))
+
+    def test_the_secret_in_an_agent_job(self):
+        self.edit("factory-implement.yml", "          ADVISOR: ${{ inputs.advisor || 'none' }}\n",
+                  "          ADVISOR: ${{ inputs.advisor || 'none' }}\n          ART: ${{ secrets.ART_API_KEY }}\n")
+        code, out = self.policy()
+        self.assertEqual(code, 1)
+        self.assertIn("implement: references the fixtures secret ART_API_KEY", out)
+
+    def test_a_factory_branch_checkout(self):
+        self.edit("factory-revise.yml", "          ref: ${{ github.event.repository.default_branch }}\n          persist-credentials: false\n\n"
+                  "      # The project's CI", "          ref: ${{ needs.gate.outputs.branch }}\n          persist-credentials: false\n\n"
+                  "      # The project's CI")
+        code, out = self.policy()
+        self.assertEqual(code, 1)
+        self.assertIn("fixtures: the fixtures job checks out the default branch once", out)
+
+    def test_a_self_hosted_runner_outputs_or_another_action(self):
+        self.edit("factory-implement.yml", "    runs-on: ubuntu-latest\n    timeout-minutes: 15\n",
+                  "    runs-on: [self-hosted, strict-pool]\n    timeout-minutes: 15\n    outputs:\n      x: y\n")
+        self.edit("factory-implement.yml", "      - uses: actions/cache@", "      - uses: someone/cache@")
+        code, out = self.policy()
+        self.assertEqual(code, 1)
+        self.assertIn("fixtures: the fixtures job runs on a GitHub-hosted runner", out)
+        self.assertIn("fixtures: the fixtures job has no outputs", out)
+        self.assertIn("action not allowed in the fixtures job: someone/cache@", out)
+
+    def test_a_secret_any_other_way(self):
+        self.edit("factory-implement.yml", "          FIXTURE_PATH: tools/art/cache\n",
+                  "          FIXTURE_PATH: tools/art/cache\n          OTHER: ${{ secrets.OTHER_KEY }}\n")
+        code, out = self.policy()
+        self.assertEqual(code, 1)
+        self.assertIn("env OTHER: a fixtures job's secret is", out)
+
+    def test_settings_that_would_change_the_workflow(self):
+        for key, value in (("run", "x ${{ secrets.OTHER_KEY }}"), ("path", "a'b"), ("path", "../up"),
+                           ("secret", "A-B"), ("apt", "webp; curl x"), ("key_files", "a') || ('b")):
+            with self.subTest(key=key, value=value):
+                self.settings["fixtures"] = {**FIXTURES, key: value}
+                self.write_settings()
+                code, out = self.policy()
+                self.assertEqual(code, 1)
+                self.assertIn(f"factory.json fixtures.{key}:", out)
+        self.settings["fixtures"] = {**FIXTURES, "run": ""}
+        self.write_settings()
+        self.assertIn("a path needs run, cache_key and key_files", self.policy()[1])
+
+
+COMPOSITE = "runs:\n  using: composite\n  steps:\n{steps}"
+RUN = "    - shell: bash\n      run: {run}\n"
+CI = "on: pull_request\njobs:\n{jobs}"
+JOB = "  {name}:\n    runs-on: {runs_on}\n{extra}    steps:\n      - uses: {uses}\n"
+REASON = "the end-to-end suites need a larger machine than hosted runners give"
+
+
+@unittest.skipUnless(HAS_YAML, "needs PyYAML")
+class ProjectWorkflows(unittest.TestCase):
+    """The policy reads the project's own workflows too. Local composite actions are scanned as the job's own
+    steps; the organization's hosted labels count as hosted; and a self-hosted CI job runs without the factory
+    container only by a named, reasoned exemption, which never reaches the factory's secret rules."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.repo = pathlib.Path(self.tmp.name) / "repo"
+        self.factory = self.repo / ".github/factory"
+        shutil.copytree(FACTORY, self.factory, ignore=shutil.ignore_patterns("tests", "templates", "__pycache__"))
+        self.settings = json.loads(json.dumps(OTHER))
+        self.write_settings()
+        (self.factory / "planning.json").write_text(json.dumps(OTHER_PLANNING))
+        self.workflows = self.repo / ".github/workflows"
+        self.workflows.mkdir()
+        for name, text in render.render_all(self.factory, FACTORY / "templates").items():
+            (self.workflows / name).write_text(text)
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def write_settings(self):
+        (self.factory / "factory.json").write_text(json.dumps(self.settings))
+
+    def set_policy(self, **policy):
+        self.settings["policy"] = {"hosted_labels": [], "self_hosted_exemptions": [], **policy}
+        self.write_settings()
+
+    def ci(self, *jobs):
+        (self.workflows / "ci.yml").write_text(CI.format(jobs="".join(jobs)))
+
+    def action(self, path, text):
+        (self.repo / path).mkdir(parents=True, exist_ok=True)
+        (self.repo / path / "action.yml").write_text(text)
+
+    def policy(self):
+        r = subprocess.run([sys.executable, str(FACTORY / "workflow_policy.py"), str(self.workflows), str(self.factory)],
+                           capture_output=True, text=True)
+        return r.returncode, r.stdout
+
+    def test_a_composite_action_is_scanned_as_the_jobs_own_steps(self):
+        self.action(".github/actions/setup", COMPOSITE.format(steps=RUN.format(run="echo setup")
+                                                             + "    - uses: ./.github/actions/inner\n"))
+        self.action(".github/actions/inner", COMPOSITE.format(steps=RUN.format(run="echo inner")))
+        self.ci(JOB.format(name="test", runs_on="ubuntu-latest", extra="", uses="./.github/actions/setup"))
+        self.assertEqual(self.policy(), (0, "workflow policy: 18 workflows, 0 violations\n"))
+        # A nested action's step is checked like any other.
+        self.action(".github/actions/inner", COMPOSITE.format(steps=RUN.format(run="claude -p hello")))
+        code, out = self.policy()
+        self.assertEqual(code, 1)
+        self.assertIn("test / run: runs Claude Code outside the action", out)
+
+    def test_what_cant_be_scanned_is_refused(self):
+        self.action(".github/actions/js", "runs:\n  using: node24\n  main: index.js\n")
+        self.action(".github/actions/self", COMPOSITE.format(steps="    - uses: ./.github/actions/self\n"))
+        self.action(".github/actions/agent", COMPOSITE.format(steps="    - uses: anthropics/claude-code-action@v1\n"))
+        self.ci(*(JOB.format(name=f"j{i}", runs_on="ubuntu-latest", extra="", uses=uses) for i, uses in enumerate(
+            ["./.github/actions/js", "./.github/actions/missing", "./../outside", "./.github/actions/self",
+             "./.github/actions/agent"])))
+        code, out = self.policy()
+        self.assertEqual(code, 1)
+        for message in ("j0: local action ./.github/actions/js runs node24, not composite steps",
+                        "j1: local action ./.github/actions/missing has no action.yml or action.yaml",
+                        "j2: local action ./../outside is outside the repository",
+                        "j3: local action ./.github/actions/self uses itself",
+                        "j4: agent step inside local action ./.github/actions/agent"):
+            self.assertIn(message, out)
+
+    def test_an_agent_job_runs_no_local_action(self):
+        self.action(".github/actions/setup", COMPOSITE.format(steps=RUN.format(run="echo setup")))
+        self.ci("  agent:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: ./.github/actions/setup\n"
+                "      - uses: anthropics/claude-code-action@v1\n")
+        code, out = self.policy()
+        self.assertEqual(code, 1)
+        self.assertIn("agent: an agent job runs no local action", out)
+
+    def test_the_factorys_secrets_inside_a_local_action(self):
+        self.action(".github/actions/leak", COMPOSITE.format(
+            steps="    - shell: bash\n      run: echo\n      env:\n        T: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}\n"))
+        self.ci(JOB.format(name="test", runs_on="ubuntu-latest", extra="", uses="./.github/actions/leak"))
+        code, out = self.policy()
+        self.assertEqual(code, 1)
+        self.assertIn("OAuth token in env outside an agent job's run step", out)
+
+    def test_the_organizations_hosted_labels(self):
+        self.ci(JOB.format(name="big", runs_on="org-linux-16core", extra="", uses="actions/checkout@v4"))
+        code, out = self.policy()
+        self.assertIn("big: runs off GitHub-hosted runners without a container", out)
+        self.set_policy(hosted_labels=["org-linux-16core"])
+        self.assertEqual(self.policy(), (0, "workflow policy: 18 workflows, 0 violations\n"))
+        # Labels every self-hosted runner carries (GitHub matches them without regard to case), or a factory runner's.
+        for label in ("self-hosted", "Linux", "x64", "ARM64", "strict-pool", "Strict-Pool", "has space"):
+            with self.subTest(label=label):
+                self.set_policy(hosted_labels=["org-linux-16core", label])
+                code, out = self.policy()
+                self.assertEqual(code, 1)
+                self.assertIn("isn't a GitHub-hosted runner label", out)
+
+    def test_an_exemption_lets_one_named_job_through(self):
+        services = "    services:\n      postgres:\n        image: postgres:16\n"
+        self.ci(JOB.format(name="e2e", runs_on="[self-hosted, ci-box]", extra=services, uses="actions/checkout@v4"),
+                JOB.format(name="e2e-new", runs_on="[self-hosted, ci-box]", extra="", uses="actions/checkout@v4"))
+        code, out = self.policy()
+        self.assertIn("e2e: runs service containers off GitHub-hosted runners", out)
+        self.set_policy(self_hosted_exemptions=[{"workflow": "ci.yml", "job": "e2e", "reason": REASON}])
+        code, out = self.policy()
+        self.assertIn(f"::notice::ci.yml: e2e: runs on a self-hosted runner without the factory container", out)
+        errors = [line for line in out.splitlines() if line.startswith("::error::")]
+        self.assertFalse([line for line in errors if "ci.yml: e2e: " in line], errors)
+        # Only the job it names: a new self-hosted job is still a violation.
+        self.assertEqual(code, 1)
+        self.assertIn("e2e-new: runs off GitHub-hosted runners without a container", out)
+
+    def test_an_exemption_never_reaches_the_secret_rules(self):
+        self.ci("  e2e:\n    runs-on: [self-hosted, ci-box]\n    steps:\n      - run: echo\n        env:\n"
+                "          T: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}\n          K: ${{ secrets.FACTORY_APP_PRIVATE_KEY }}\n")
+        self.set_policy(self_hosted_exemptions=[{"workflow": "ci.yml", "job": "e2e", "reason": REASON}])
+        code, out = self.policy()
+        self.assertEqual(code, 1)
+        self.assertIn("OAuth token in env outside an agent job's run step", out)
+        self.assertIn("App key outside create-github-app-token's private-key", out)
+
+    CI_JOB = ("  e2e:\n    runs-on: [self-hosted, ci-pool]\n    permissions:\n      contents: read\n      packages: read\n"
+              "    container:\n      image: ghcr.io/other-org/e2e@sha256:" + "c" * 64 + "\n      credentials:\n"
+              "        username: ${{ github.actor }}\n        password: ${{ secrets.GITHUB_TOKEN }}\n"
+              "      options: >-\n        --security-opt seccomp=/etc/factory-runner/seccomp-bwrap.json\n"
+              "        --security-opt systempaths=unconfined\n"
+              "    steps:\n      - uses: actions/checkout@v4\n        with:\n          persist-credentials: false\n"
+              "      - run: make e2e\n")
+
+    def ci_tier(self, job=None, workflow="ci.yml"):
+        self.settings["runners"] = {**OTHER["runners"], "ci": "ci-pool"}
+        self.write_settings()
+        (self.workflows / workflow).write_text(CI.format(jobs=job or self.CI_JOB))
+
+    def test_a_ci_tier_job_that_holds_nothing(self):
+        # In a container, read-only, no persisted credentials, the job token only as the image's pull credentials.
+        self.ci_tier()
+        self.assertEqual(self.policy(), (0, "workflow policy: 18 workflows, 0 violations\n"))
+
+    def test_what_a_ci_tier_job_may_not_do(self):
+        cases = [
+            (("persist-credentials: false", "fetch-depth: 0"), "checkout sets persist-credentials: false"),
+            (("contents: read\n      packages: read", "contents: write"), "needs explicit read-only permissions"),
+            (("      - run: make e2e\n", "      - run: make e2e\n        env:\n          K: ${{ secrets.ART_KEY }}\n"),
+             "holds no secret and no job token"),
+            (("      - run: make e2e\n", "      - run: make e2e\n        env:\n          GH_TOKEN: ${{ github.token }}\n"),
+             "holds no secret and no job token"),
+            (("        --security-opt seccomp=/etc/factory-runner/seccomp-bwrap.json\n", ""),
+             "systempaths=unconfined comes only with the factory seccomp profile"),
+            (("    container:\n", "    services:\n      pg:\n        image: postgres:16\n    container:\n"),
+             "runs service containers off GitHub-hosted runners"),
+            (("      - run: make e2e\n", "      - uses: anthropics/claude-code-action@v1\n"), "no agent job runs on the CI tier"),
+        ]
+        for (old, new), message in cases:
+            with self.subTest(message=message):
+                self.assertIn(old, self.CI_JOB)
+                self.ci_tier(self.CI_JOB.replace(old, new, 1))
+                code, out = self.policy()
+                self.assertEqual(code, 1)
+                self.assertIn(message, out)
+
+    def test_the_ci_tier_is_for_a_projects_own_workflows(self):
+        self.ci_tier(workflow="factory-extra.yml")
+        code, out = self.policy()
+        self.assertEqual(code, 1)
+        self.assertIn("only a project's own workflows run on the CI tier (ci-pool)", out)
+        # And its label is one of the factory's: never a hosted label, never exempt.
+        self.set_policy(hosted_labels=["ci-pool"])
+        self.assertIn("isn't a GitHub-hosted runner label", self.policy()[1])
+
+    def test_exemptions_that_cant_hold(self):
+        self.ci(JOB.format(name="hosted", runs_on="ubuntu-latest", extra="", uses="actions/checkout@v4"),
+                JOB.format(name="pool", runs_on="[self-hosted, strict-pool]", extra="", uses="actions/checkout@v4"),
+                JOB.format(name="agent", runs_on="[self-hosted, ci-box]", extra="", uses="anthropics/claude-code-action@v1"))
+        entry = lambda **kw: {"workflow": "ci.yml", "job": "hosted", "reason": REASON, **kw}
+        cases = [
+            ([entry(workflow="factory-implement.yml", job="implement")], "never a factory workflow"),
+            ([entry(reason="short")], "reason says why"),
+            ([entry(job="gone")], "ci.yml has no job gone"),
+            ([entry()], "hosted: has an exemption from the container rule it doesn't need"),
+            ([entry(job="pool")], "pool: exempt from the container rule, but an agent job or one on the factory's"),
+            ([entry(job="agent")], "agent: exempt from the container rule, but an agent job or one on the factory's"),
+            ([entry(), entry()], "listed twice"),
+            ([{"workflow": "ci.yml", "job": "hosted"}], "needs exactly workflow, job and reason"),
+        ]
+        for exemptions, message in cases:
+            with self.subTest(message=message):
+                self.set_policy(self_hosted_exemptions=exemptions)
+                code, out = self.policy()
+                self.assertEqual(code, 1)
+                self.assertIn(message, out)
+
+
 class Refusals(unittest.TestCase):
     VALUES = {"a": {"n": 3, "s": "x", "l": ["p", "q"], "b": True}, "_doc": "notes", "planning": {"x": 1}}
 
     def test_substitution(self):
         self.assertEqual(render.render("%{a.s}:%{a.n}:%{a.n+4}:[%{a.l}]", self.VALUES), "x:3:7:[p, q]")
+
+    def test_an_optional_setting_renders_empty_when_missing(self):
+        # A project installed before a setting existed keeps rendering (the fixtures block).
+        self.assertEqual(render.render("[%{a.s?}][%{a.z?}][%{z.y?}]", self.VALUES), "[x][][]")
+        with self.assertRaises(render.Invalid):
+            render.render("%{a?}", self.VALUES)
 
     def test_unknown_or_group_or_unrenderable(self):
         for template in ("%{a.z}", "%{a}", "%{z.y}", "%{a.b}", "%{a.s+1}"):

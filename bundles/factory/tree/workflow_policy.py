@@ -12,11 +12,21 @@ permission, and the runtime sandbox probe (factory-smoke). The factory's design 
 this leaves open (z-sdlc process/factory.md, D2).
 
 Allowlists, not blocklists:
-- Runners: only exact GitHub-hosted labels count as hosted. Any other job needs a container whose
-  only options are the factory seccomp profile and systempaths=unconfined, with no volumes, no
-  service containers, no docker:// steps and no docker CLI.
-- Actions: `uses: ./...` (unscanned local actions) and any action naming claude other than
-  `anthropics/claude-code-action@` are refused.
+- Runners: only exact GitHub-hosted labels count as hosted, plus the organization's own hosted
+  (larger) runner labels factory.json's policy.hosted_labels lists (never a label every self-hosted
+  runner carries, nor a factory runner's). A listed label counts as hosted wherever the policy asks:
+  the container rule, the App key's job and the fixtures job. Any other job needs a container
+  whose only options are the factory seccomp profile and systempaths=unconfined, with no volumes, no
+  service containers, no docker:// steps and no docker CLI, unless policy.self_hosted_exemptions
+  names it: one of the project's own CI jobs (never in a factory workflow, on the factory's runners
+  or running an agent), by workflow and job, with a written reason. An exemption lifts only that
+  container rule; the secret rules below hold in every job. An exemption that names no job, or a
+  job that doesn't need it, is a violation, so the list stays exact.
+- Actions: a local action (`uses: ./...`) is scanned: a composite action's steps are checked as the
+  calling job's own, nested local actions included. One that can't be scanned (a docker or
+  JavaScript action, a path with no action.yml or outside the repository, one that uses itself) is
+  refused, as is an agent step inside one, any local action in an agent job, and any action naming
+  claude other than `anthropics/claude-code-action@`.
 - Agent steps (`anthropics/claude-code-action@`): only allowlisted inputs. claude_code_oauth_token is
   the OAuth secret, github_token the job's own token, settings a frozen settings file. claude_args
   is parsed the way the action parses it: each flag at most once, from an allowlist, with its value
@@ -47,6 +57,19 @@ Allowlists, not blocklists:
   container rule doesn't apply; instead it has the production environment (CD's approval), exactly
   read-only permissions, no `uses:` steps, no secrets and no agent. The production environment is
   for that job only (CD gates run through it too). factory-gate.yml has no agent job.
+- CI tier (factory.json's runners.ci, host/setup.sh TIER=ci): a project's own CI jobs that must run
+  self-hosted, pull requests' code included. A job on its label is in one of the project's own
+  workflows (never a factory-*.yml), runs no agent, runs in a container (the runner requires one; the
+  container rule above), has explicit read-only permissions, checks out without persisted
+  credentials, and holds no secret and no job token: the only one allowed is the job token as its
+  container's pull credentials. systempaths=unconfined comes only with the factory seccomp profile.
+- Fixtures (design rule D2 rule 7): a factory workflow's job named `fixtures` is in the implement or
+  revise workflow and runs on a GitHub-hosted runner with no agent, container, environment or
+  outputs, permissions exactly contents: read, one checkout of the default branch without persisted
+  credentials, and only the checkout, cache and upload-artifact actions. Its one secret is
+  ${{ secrets['NAME'] }} in a run step's FIXTURE_SECRET, and no other job or workflow env references
+  that secret. factory.json's fixtures values, which render into the workflow text, hold no
+  expression and no character that would break it.
 """
 
 import json
@@ -117,19 +140,87 @@ PRODUCTION_WORKFLOW = "factory-gate.yml"
 PRODUCTION_JOBS = {"execute": "runner"}
 PRODUCTION_PERMISSIONS = {"actions": "read", "contents": "read", "issues": "read", "pull-requests": "read"}
 SECRET_REF = re.compile(r"secrets\.|secrets\[|toJSON\(\s*secrets", re.I)
+FIXTURES_JOB = "fixtures"
+FIXTURES_WORKFLOWS = {"factory-implement.yml", "factory-revise.yml"}
+FIXTURES_ACTIONS = ("actions/checkout@", "actions/cache@", "actions/upload-artifact@")
+FIXTURE_SECRET = re.compile(r"^\$\{\{ secrets\['([A-Za-z_][A-Za-z0-9_]*)?'\] \}\}$")
+# factory.json's fixtures values render into workflow text: an expression or a quote would change it.
+FIXTURE_VALUES = {
+    "path": re.compile(r"^(?!/)(?!.*(?:^|/)\.\.(?:/|$))[A-Za-z0-9._/-]*$"),
+    "secret": re.compile(r"^(?:[A-Za-z_][A-Za-z0-9_]*)?$"),
+    "apt": re.compile(r"^[a-z0-9.+ -]*$"),
+    "cache_key": re.compile(r"^[A-Za-z0-9._-]*$"),
+    "key_files": re.compile(r"^[A-Za-z0-9._/*-]*$"),
+    "run": re.compile(r"^(?!.*\$\{\{)[\x20-\x7e]*$"),
+}
+
+LABEL = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
+# Labels GitHub gives every self-hosted runner (matched without regard to case): never a hosted label.
+SELF_HOSTED_DEFAULTS = {"self-hosted", "linux", "windows", "macos", "x64", "arm", "arm64"}
+WORKFLOW_FILE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*\.ya?ml$")
+JOB_ID = re.compile(r"^[A-Za-z_][A-Za-z0-9_-]*$")
+LOCAL_ACTION_DEPTH = 8
 
 # The project's runner labels and environment names (factory.json in the factory directory; configure()).
 PLANNING_LABEL = PRODUCTION_LABEL = WRITER_ENVIRONMENT = PLANNING_ENVIRONMENT = PRODUCTION_ENVIRONMENT = None
+FACTORY_LABELS = frozenset()
+CI_LABEL = None
+# factory.json's policy block: extra hosted labels, and {(workflow, job): reason} exemptions from the container rule.
+HOSTED_EXTRA = frozenset()
+EXEMPTIONS = {}
+# The repository the workflows belong to, where `uses: ./...` resolves (main()).
+REPO_ROOT = None
 
 
 def configure(factory_dir):
-    """Read the runner labels and environment names this project's workflows were rendered with."""
+    """Read the runner labels and environment names this project's workflows were rendered with, and its
+    policy block. Returns the policy block's own violations."""
     global PLANNING_LABEL, PRODUCTION_LABEL, WRITER_ENVIRONMENT, PLANNING_ENVIRONMENT, PRODUCTION_ENVIRONMENT
+    global FACTORY_LABELS, HOSTED_EXTRA, EXEMPTIONS, CI_LABEL
     config = json.loads((pathlib.Path(factory_dir) / "factory.json").read_text())
     PLANNING_LABEL, PRODUCTION_LABEL = config["runners"]["planning"], config["runners"]["production"]
+    FACTORY_LABELS = frozenset(v for k, v in config["runners"].items() if isinstance(v, str))
+    CI_LABEL = config["runners"].get("ci") if isinstance(config["runners"].get("ci"), str) else None
     environments = config["environments"]
     WRITER_ENVIRONMENT, PLANNING_ENVIRONMENT = environments["writer"], environments["planning"]
     PRODUCTION_ENVIRONMENT = environments["production"]
+    failures = []
+    policy = config.get("policy") or {}
+    labels = policy.get("hosted_labels", [])
+    if not isinstance(labels, list):
+        failures.append("factory.json policy.hosted_labels: a list of runner labels")
+        labels = []
+    good = set()
+    for label in labels:
+        if (not isinstance(label, str) or not LABEL.match(label) or label.lower() in SELF_HOSTED_DEFAULTS
+                or label.lower() in {f.lower() for f in FACTORY_LABELS}):
+            failures.append(f"factory.json policy.hosted_labels: {label!r} isn't a GitHub-hosted runner label "
+                            "(never one every self-hosted runner carries, or one of the factory's runner labels)")
+        else:
+            good.add(label)
+    HOSTED_EXTRA = frozenset(good)
+    exemptions = policy.get("self_hosted_exemptions", [])
+    if not isinstance(exemptions, list):
+        failures.append("factory.json policy.self_hosted_exemptions: a list of {workflow, job, reason}")
+        exemptions = []
+    EXEMPTIONS = {}
+    for entry in exemptions:
+        where = f"factory.json policy.self_hosted_exemptions: {entry!r}"
+        if not isinstance(entry, dict) or set(entry) != {"workflow", "job", "reason"}:
+            failures.append(f"{where}: needs exactly workflow, job and reason")
+            continue
+        workflow, job, reason = entry["workflow"], entry["job"], entry["reason"]
+        if not isinstance(workflow, str) or not WORKFLOW_FILE.match(workflow) or workflow.startswith("factory-"):
+            failures.append(f"{where}: workflow is one of the project's own workflow files, never a factory workflow")
+        elif not isinstance(job, str) or not JOB_ID.match(job):
+            failures.append(f"{where}: job is a job ID")
+        elif not isinstance(reason, str) or len(reason.strip()) < 20:
+            failures.append(f"{where}: reason says why the job can't run hosted or in the factory container")
+        elif (workflow, job) in EXEMPTIONS:
+            failures.append(f"{where}: listed twice")
+        else:
+            EXEMPTIONS[(workflow, job)] = reason.strip()
+    return failures
 
 
 def environment_name(job):
@@ -190,10 +281,67 @@ def tier_failures(workflow_name, name, job, is_agent_job):
 
 def hosted(runs_on):
     labels = [runs_on] if isinstance(runs_on, str) else runs_on
-    return isinstance(labels, list) and bool(labels) and all(l in HOSTED for l in labels)
+    return isinstance(labels, list) and bool(labels) and all(l in HOSTED or l in HOSTED_EXTRA for l in labels)
+
+
+def load_local_action(uses):
+    """A local composite action's definition, or why it can't be scanned."""
+    if REPO_ROOT is None:
+        return None, "can't be resolved (the workflows aren't in a repository's .github/workflows)"
+    if "@" in uses:
+        return None, "names a ref, which a local action can't"
+    root = REPO_ROOT.resolve()
+    path = (root / uses[2:]).resolve()
+    if path != root and root not in path.parents:
+        return None, "is outside the repository"
+    file = next((path / n for n in ("action.yml", "action.yaml") if (path / n).is_file()), None)
+    if file is None:
+        return None, "has no action.yml or action.yaml, so it can't be scanned"
+    try:
+        action = yaml.safe_load(file.read_text())
+    except yaml.YAMLError:
+        return None, "doesn't parse"
+    runs = action.get("runs") if isinstance(action, dict) else None
+    using = str((runs or {}).get("using", "")) if isinstance(runs, dict) else ""
+    if using != "composite":
+        return None, f"runs {using or 'nothing'}, not composite steps, so it can't be scanned"
+    if not isinstance(runs.get("steps"), list):
+        return None, "has no steps list"
+    return action, None
+
+
+def expand_steps(name, steps, chain=()):
+    """The job's steps with each local composite action's steps after the step that calls it, nested
+    ones included, and why any local action can't be scanned. Every step-level rule reads this list."""
+    out, failures = [], []
+    for step in steps:
+        if not isinstance(step, dict):
+            continue
+        out.append(step)
+        uses = str(step.get("uses", ""))
+        if chain and uses.startswith(ACTION):
+            failures.append(f"{name}: agent step inside local action {chain[-1]}: the policy checks agent steps "
+                            "only in the workflow")
+        if not uses.startswith("./"):
+            continue
+        if uses in chain:
+            failures.append(f"{name}: local action {uses} uses itself")
+            continue
+        if len(chain) >= LOCAL_ACTION_DEPTH:
+            failures.append(f"{name}: local action {uses} is nested too deep to scan")
+            continue
+        action, why = load_local_action(uses)
+        if why:
+            failures.append(f"{name}: local action {uses} {why}")
+            continue
+        inner, more = expand_steps(name, action["runs"]["steps"], chain + (uses,))
+        out += inner
+        failures += more
+    return out, failures
 
 
 def container_failures(name, job):
+    """(job: its steps expanded, expand_steps)"""
     failures = []
     if not job.get("container"):
         failures.append(f"{name}: runs off GitHub-hosted runners without a container")
@@ -481,24 +629,170 @@ def app_key_failures(name, job, workflow_env, is_agent_job):
     return failures
 
 
-def job_failures(name, job, workflow_env, model_input, factory_dir, workflow_name=""):
-    failures = []
-    steps = job.get("steps") or []
+JOB_TOKEN_REF = re.compile(r"github\.token|secrets\.GITHUB_TOKEN|secrets\[\s*['\"]GITHUB_TOKEN", re.I)
+SECCOMP_OPTION = ("--security-opt", "seccomp=/etc/factory-runner/seccomp-bwrap.json")
+SYSTEMPATHS_OPTION = ("--security-opt", "systempaths=unconfined")
+
+
+def ci_tier_failures(workflow_name, name, job, is_agent_job):
+    """The CI tier: a project's own CI jobs, pull requests' code included, on isolated self-hosted runners.
+    Nothing there for a pull request's code to take: no secret, no job token beyond the container's pull
+    credentials, read-only permissions, checkouts that keep no credentials. (job: its steps expanded.)"""
     runs_on = job.get("runs-on", [])
-    on_prod = PRODUCTION_LABEL in ([runs_on] if isinstance(runs_on, str) else runs_on if isinstance(runs_on, list) else [])
-    if not hosted(runs_on) and not on_prod:
-        failures += container_failures(name, job)
+    labels = [runs_on] if isinstance(runs_on, str) else runs_on if isinstance(runs_on, list) else []
+    if not CI_LABEL or CI_LABEL not in labels:
+        return []
+    failures = []
+    if workflow_name.startswith("factory-"):
+        failures.append(f"{name}: only a project's own workflows run on the CI tier ({CI_LABEL})")
+    if is_agent_job:
+        failures.append(f"{name}: no agent job runs on the CI tier ({CI_LABEL})")
+    perms = job.get("permissions")
+    if not isinstance(perms, dict) or any(v not in ("read", "none") for v in perms.values()):
+        failures.append(f"{name}: a CI-tier job needs explicit read-only permissions")
+    for step in job.get("steps") or []:
+        if str(step.get("uses", "")).startswith("actions/checkout@") \
+                and (step.get("with") or {}).get("persist-credentials") is not False:
+            failures.append(f"{name}: a CI-tier job's checkout sets persist-credentials: false")
+    container = job.get("container")
+    scanned = dict(job)
+    if isinstance(container, dict):
+        creds = dict(container.get("credentials") or {})
+        if str(creds.get("password", "")).strip() in JOB_TOKENS:
+            creds.pop("password")  # the job token pulls the job's image, and nothing else
+        scanned["container"] = {**container, "credentials": creds}
+        try:
+            words = shlex.split(str(container.get("options", "")))
+            options = set(zip(words[::2], words[1::2]))
+        except ValueError:
+            options = set()
+        if SYSTEMPATHS_OPTION in options and SECCOMP_OPTION not in options:
+            failures.append(f"{name}: systempaths=unconfined comes only with the factory seccomp profile")
+    if SECRET_REF.search(str(scanned)) or JOB_TOKEN_REF.search(str(scanned)):
+        failures.append(f"{name}: a CI-tier job runs pull requests' code, so it holds no secret and no job token "
+                        "(the job token only as its container's pull credentials)")
+    return failures
+
+
+def fixture_secrets(job):
+    """The secret names a fixtures job's FIXTURE_SECRET steps name ('' for none)."""
+    names = set()
+    for step in job.get("steps") or []:
+        for key, value in (step.get("env") or {}).items():
+            match = FIXTURE_SECRET.match(str(value).strip())
+            if key == "FIXTURE_SECRET" and match:
+                names.add(match.group(1) or "")
+    return names
+
+
+def fixtures_failures(workflow_name, name, job, is_agent_job):
+    """Fixtures from a secret-holding source (D2 rule 7): made on a hosted runner from the default branch,
+    handed over as an artifact; the secret reaches only this job's own steps. A project's own workflows
+    (ci.yml) may have a job of that name: only the factory's are checked."""
+    if name != FIXTURES_JOB or not workflow_name.startswith("factory-"):
+        return []
+    failures = []
+    if workflow_name not in FIXTURES_WORKFLOWS:
+        failures.append(f"{name}: a fixtures job belongs to {', '.join(sorted(FIXTURES_WORKFLOWS))} only")
+    if not hosted(job.get("runs-on", [])):
+        failures.append(f"{name}: the fixtures job runs on a GitHub-hosted runner")
+    if is_agent_job:
+        failures.append(f"{name}: the fixtures job runs no agent")
+    for key in ("container", "services", "environment", "outputs"):
+        if job.get(key):
+            failures.append(f"{name}: the fixtures job has no {key}")
+    if job.get("permissions") != {"contents": "read"}:
+        failures.append(f"{name}: the fixtures job's permissions must be exactly contents: read")
+    steps = job.get("steps") or []
+    checkouts = [s for s in steps if str(s.get("uses", "")).startswith("actions/checkout@")]
+    with_ = (checkouts[0].get("with") or {}) if len(checkouts) == 1 else {}
+    if len(checkouts) != 1 or with_.get("ref") not in DEFAULT_BRANCH_REFS or with_.get("persist-credentials") is not False:
+        failures.append(f"{name}: the fixtures job checks out the default branch once, without persisted credentials")
     for step in steps:
         uses = str(step.get("uses", ""))
-        if uses.startswith("./"):
-            failures.append(f"{name}: local action {uses} isn't scanned")
-        elif "claude" in uses.lower() and not uses.startswith(ACTION):
+        if uses and not uses.startswith(FIXTURES_ACTIONS):
+            failures.append(f"{name}: action not allowed in the fixtures job: {uses}")
+        if SECRET_REF.search(str({k: v for k, v in step.items() if k != "env"})):
+            failures.append(f"{name} / {step.get('name', uses or 'step')}: secret outside a step's env")
+        for key, value in (step.get("env") or {}).items():
+            if SECRET_REF.search(str(value)) and not (key == "FIXTURE_SECRET" and "run" in step
+                                                       and FIXTURE_SECRET.match(str(value).strip())):
+                failures.append(f"{name} / {step.get('name', 'step')}: env {key}: a fixtures job's secret is "
+                                "${{ secrets['NAME'] }} in a run step's FIXTURE_SECRET")
+    if SECRET_REF.search(str({k: v for k, v in job.items() if k != "steps"})):
+        failures.append(f"{name}: secret in the fixtures job's own settings")
+    if len(fixture_secrets(job) - {""}) > 1:
+        failures.append(f"{name}: the fixtures job uses one secret")
+    return failures
+
+
+def fixture_secret_failures(path, workflow):
+    """A fixtures job's secret reaches no other job, nor the workflow env; factory.json's fixtures values
+    can't change the workflow text they render into."""
+    failures = []
+    if not path.name.startswith("factory-"):
+        return failures
+    jobs = workflow.get("jobs") or {}
+    names = fixture_secrets(jobs.get(FIXTURES_JOB) or {}) - {""}
+    for secret in sorted(names):
+        ref = re.compile(rf"secrets(?:\.{secret}\b|\[\s*['\"]{secret}['\"]\s*\])", re.I)
+        if ref.search(str(workflow.get("env") or {})):
+            failures.append(f"{path}: the fixtures secret {secret} is in the workflow env")
+        for name, job in jobs.items():
+            steps, _ = expand_steps(name, job.get("steps") or [])
+            if name != FIXTURES_JOB and ref.search(str({**job, "steps": steps})):
+                failures.append(f"{path}: {name}: references the fixtures secret {secret}")
+    return failures
+
+
+def fixture_value_failures(factory_dir):
+    config = json.loads((pathlib.Path(factory_dir) / "factory.json").read_text())
+    fixtures = config.get("fixtures") or {}
+    failures = []
+    for key, pattern in FIXTURE_VALUES.items():
+        value = fixtures.get(key, "")
+        if not isinstance(value, str) or not pattern.match(value):
+            failures.append(f"factory.json fixtures.{key}: {value!r} would change the workflow text it renders into")
+    if fixtures.get("path") and not all(fixtures.get(k) for k in ("run", "cache_key", "key_files")):
+        failures.append("factory.json fixtures: a path needs run, cache_key and key_files")
+    return failures
+
+
+def job_failures(name, job, workflow_env, model_input, factory_dir, workflow_name="", used_exemptions=None):
+    # Every rule below reads the job with its local composite actions' steps in place.
+    steps, failures = expand_steps(name, job.get("steps") or [])
+    is_agent_job = any(str(s.get("uses", "")).startswith(ACTION) for s in job.get("steps") or [])
+    if is_agent_job and any(str(s.get("uses", "")).startswith("./") for s in job.get("steps") or []):
+        failures.append(f"{name}: an agent job runs no local action")
+    job = {**job, "steps": steps}
+    runs_on = job.get("runs-on", [])
+    labels = [runs_on] if isinstance(runs_on, str) else runs_on if isinstance(runs_on, list) else []
+    on_prod = PRODUCTION_LABEL in labels
+    reason = EXEMPTIONS.get((workflow_name, name))
+    if reason is not None and used_exemptions is not None:
+        used_exemptions.add((workflow_name, name))
+    if not hosted(runs_on) and not on_prod:
+        if reason is None:
+            failures += container_failures(name, job)
+        elif is_agent_job or FACTORY_LABELS & set(labels):
+            failures.append(f"{name}: exempt from the container rule, but an agent job or one on the factory's "
+                            "runners never is")
+            failures += container_failures(name, job)
+        else:
+            print(f"::notice::{workflow_name}: {name}: runs on a self-hosted runner without the factory "
+                  f"container (factory.json policy.self_hosted_exemptions: {reason})")
+    elif reason is not None:
+        failures.append(f"{name}: has an exemption from the container rule it doesn't need (it runs hosted)")
+    for step in steps:
+        uses = str(step.get("uses", ""))
+        if "claude" in uses.lower() and not uses.startswith(ACTION):
             failures.append(f"{name}: Claude action other than {ACTION}: {uses}")
         if DIRECT_CLAUDE.search(str(step.get("run", ""))):
             failures.append(f"{name} / {step.get('name', 'run')}: runs Claude Code outside the action")
-    is_agent_job = any(str(s.get("uses", "")).startswith(ACTION) for s in steps)
     failures += tier_failures(workflow_name, name, job, is_agent_job)
     failures += production_failures(workflow_name, name, job, is_agent_job)
+    failures += fixtures_failures(workflow_name, name, job, is_agent_job)
+    failures += ci_tier_failures(workflow_name, name, job, is_agent_job)
     if is_agent_job and str({**workflow_env, **(job.get("env") or {})}.get("CLAUDE_CODE_DISABLE_BACKGROUND_TASKS")) != "1":
         # Headless mode: the run ends with the orchestrator's turn, so a background agent's work is lost.
         failures.append(f"{name}: agent job without CLAUDE_CODE_DISABLE_BACKGROUND_TASKS: \"1\"")
@@ -510,11 +804,15 @@ def job_failures(name, job, workflow_env, model_input, factory_dir, workflow_nam
 
 
 def main():
+    global REPO_ROOT
     root = pathlib.Path(sys.argv[1])
     factory_dir = pathlib.Path(sys.argv[2]) if len(sys.argv) > 2 else root.parent / "factory"
-    configure(factory_dir)
+    failures = configure(factory_dir)
+    # `uses: ./...` resolves in the repository whose .github/workflows these are.
+    resolved = root.resolve()
+    REPO_ROOT = resolved.parent.parent if resolved.parent.name == ".github" else None
     paths = sorted([*root.glob("*.yml"), *root.glob("*.yaml")])
-    failures = []
+    used = set()
     for path in paths:
         workflow = yaml.safe_load(path.read_text()) or {}
         workflow_env = workflow.get("env") or {}
@@ -523,7 +821,13 @@ def main():
         dispatch = triggers.get("workflow_dispatch") if isinstance(triggers, dict) else None
         model_input = ((dispatch or {}).get("inputs") or {}).get("model")
         for name, job in (workflow.get("jobs") or {}).items():
-            failures += [f"{path}: {f}" for f in job_failures(name, job, workflow_env, model_input, factory_dir, path.name)]
+            failures += [f"{path}: {f}" for f in job_failures(name, job, workflow_env, model_input, factory_dir,
+                                                               path.name, used)]
+        failures += fixture_secret_failures(path, workflow)
+    failures += fixture_value_failures(factory_dir)
+    # An exemption names a job that exists: the list stays exactly what it lets through.
+    for workflow, job in sorted(set(EXEMPTIONS) - used):
+        failures.append(f"factory.json policy.self_hosted_exemptions: {workflow} has no job {job}")
     # claude_args wraps each result schema in single quotes: one apostrophe breaks every run of that stage.
     for schema in sorted(factory_dir.glob("*.schema.json")):
         if "'" in schema.read_text():

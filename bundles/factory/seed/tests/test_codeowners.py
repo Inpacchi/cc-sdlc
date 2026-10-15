@@ -2,6 +2,7 @@
 what agents may never change, what they may write, and the SDLC changelog's real publish path. The path lists
 are this project's; edit them with its CODEOWNERS. Run by CI: python -m unittest discover -s .github/factory/tests"""
 
+import json
 import os
 import pathlib
 import re
@@ -16,10 +17,32 @@ import implement_guard as guard  # noqa: E402
 
 PATH = FACTORY.parent / "CODEOWNERS"
 CODEOWNERS = PATH.read_text() if PATH.exists() else ""
+# What the stack profile's tools load just because it exists (z-sdlc process/factory.md, § Stack Profiles, What
+# CODEOWNERS must cover): sample paths in the project's two directories (factory.json's stack), present or not.
+NODE_FILES = ["package.json", ".npmrc", "eslint.config.js", "tsconfig.json", "tsconfig.app.json", "vite.config.ts",
+              "vitest.config.ts"]
+# Each profile's package manager: npm reads its own lockfile, pnpm its own, its workspace file and .pnpmfile.cjs.
+PACKAGE_MANAGER_FILES = {"python-node": ["package-lock.json"],
+                         "dotnet-node": ["pnpm-lock.yaml", "pnpm-workspace.yaml", ".pnpmfile.cjs"]}
+PROFILE_FILES = {
+    "python-node": ["requirements.txt", "requirements-dev.txt", "pyproject.toml", "setup.py", "setup.cfg", "pytest.ini",
+                    "tox.ini", "conftest.py", "tests/conftest.py", "sitecustomize.py"],
+    "dotnet-node": ["App.csproj", "src/App/App.csproj", "src/App/App.csproj.user", "Directory.Build.props",
+                    "Directory.Build.targets",
+                    "src/Directory.Build.rsp", "Directory.Packages.props", "Directory.Solution.props",
+                    "Directory.Solution.targets", "build/common.targets", "App.sln", "App.slnx", "App.slnf", "global.json",
+                    "dotnet-tools.json", "nuget.config", "NuGet.config", "NuGet.Config", ".config/dotnet-tools.json", "tests/test.runsettings",
+                    "tests/xunit.runner.json", ".editorconfig", "src/.globalconfig"],
+}
+
+
+# A project may track files with Git LFS, and CI's checkout leaves them as pointers: a local clone would make
+# git-lfs fetch objects that aren't there. These tests never read LFS content.
+GIT_ENV = {**os.environ, "GIT_LFS_SKIP_SMUDGE": "1"}
 
 
 def run(*args, cwd):
-    subprocess.run(args, cwd=cwd, check=True, capture_output=True)
+    subprocess.run(args, cwd=cwd, check=True, capture_output=True, env=GIT_ENV)
 
 
 class CodeownersPaths(unittest.TestCase):
@@ -33,6 +56,15 @@ class CodeownersPaths(unittest.TestCase):
         for path in [".github/workflows/ci.yml", ".github/CODEOWNERS", ".github/factory/implement_guard.py",
                      ".claude/settings.json", ".claude/skills/sdlc-implement/SKILL.md", "CLAUDE.md", "docs/CLAUDE.md",
                      ".mcp.json", "ops/sdlc/process/review-fix-loop.md"]:
+            self.assertIsNotNone(guard.protected(path, self.patterns), path)
+
+    def test_the_profiles_build_files(self):
+        # A revise run installs a factory branch's dependencies outside the sandbox, and CI builds a factory PR.
+        stack = json.loads((FACTORY / "factory.json").read_text())["stack"]
+        paths = [os.path.normpath(f"{stack['python']}/{p}") for p in PROFILE_FILES.get(stack["profile"], [])]
+        paths += [os.path.normpath(f"{stack['node']}/{p}")
+                  for p in NODE_FILES + PACKAGE_MANAGER_FILES.get(stack["profile"], [])]
+        for path in paths:
             self.assertIsNotNone(guard.protected(path, self.patterns), path)
 
     def test_not_protected(self):
@@ -94,7 +126,8 @@ class RealChangelog(unittest.TestCase):
         run("git", "checkout", "-q", "--detach", self.base, cwd=self.dst)
 
     def git(self, *args):
-        return subprocess.run(["git", *args], cwd=self.dst, check=True, capture_output=True, text=True).stdout.strip()
+        return subprocess.run(["git", *args], cwd=self.dst, check=True, capture_output=True, text=True,
+                              env=GIT_ENV).stdout.strip()
 
     def check(self, allowed):
         cwd = os.getcwd()

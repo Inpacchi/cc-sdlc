@@ -9,10 +9,13 @@ factory workflow without a template and any template without a workflow; CI runs
 workflow_policy.py, which checks the rendered files (D2 rule 6).
 
 A placeholder is %{key}, a dotted path into factory.json, or into planning.json under `planning.`
-(the planning tier's database). %{key+N} adds N to a number; a list renders as `a, b`. Plain text
-substitution, so a template is the workflow byte for byte outside its placeholders. Refused: an
-unknown key, a %{ left unresolved, and a factory.json setting no template uses (keys starting with _
-are notes; the stack block is read at run time, by agent_job.sh).
+(the planning tier's database). %{key+N} adds N to a number; a list renders as `a, b`. %{key?} is an
+optional setting: it renders empty when factory.json doesn't have it (a project installed before the
+setting existed keeps rendering; the fixtures block). Plain text substitution, so a template is the
+workflow byte for byte outside its placeholders. Refused: an unknown key, a %{ left unresolved, and a
+factory.json setting no template uses (keys starting with _ are notes; the stack block is read at run
+time, by agent_job.sh, the policy block by workflow_policy.py, and runners.ci and runners.groups by host/setup.sh
+and bootstrap.py).
 """
 
 import json
@@ -22,7 +25,7 @@ import sys
 
 HEADER = ("# Rendered from .github/factory/templates/{name} and factory.json by render.py:"
           " edit those and re-render, not this file.\n")
-PLACEHOLDER = re.compile(r"%\{([a-z][a-z0-9_]*(?:\.[a-z][a-z0-9_]*)*)(?:\+(\d+))?\}")
+PLACEHOLDER = re.compile(r"%\{([a-z][a-z0-9_]*(?:\.[a-z][a-z0-9_]*)*)(?:\+(\d+)|(\?))?\}")
 
 
 class Invalid(Exception):
@@ -50,10 +53,12 @@ def leaves(values, prefix=""):
             yield f"{prefix}{key}"
 
 
-def lookup(values, key):
+def lookup(values, key, optional=False):
     value = values
     for part in key.split("."):
         if not isinstance(value, dict) or part not in value:
+            if optional:
+                return ""
             raise Invalid(f"unknown setting %{{{key}}}")
         value = value[part]
     if isinstance(value, dict):
@@ -71,8 +76,8 @@ def text(value, key):
 
 def render(template, values, used=None):
     def substitute(match):
-        key, add = match.group(1), match.group(2)
-        value = lookup(values, key)
+        key, add, optional = match.group(1), match.group(2), match.group(3)
+        value = lookup(values, key, optional=bool(optional))
         if used is not None:
             used.add(key)
         if add is not None:
@@ -98,9 +103,11 @@ def render_all(factory_dir, templates_dir):
             out[template.name] = HEADER.format(name=template.name) + render(template.read_text(), values, used)
         except Invalid as e:
             raise Invalid(f"{template}: {e}")
-    # planning.json and the stack block are read at run time too (planning-services.sh, agent_job.sh), so a
-    # setting there no template names isn't dead.
-    unused = sorted(k for k in leaves(values) if not k.startswith(("planning.", "stack.")) and k not in used)
+    # planning.json and the stack block are read at run time too (planning-services.sh, agent_job.sh), the policy
+    # block by workflow_policy.py, and the CI tier's label and the runner groups by host/setup.sh and bootstrap.py,
+    # so a setting there no template names isn't dead.
+    run_time = ("planning.", "stack.", "policy.", "runners.groups.")
+    unused = sorted(k for k in leaves(values) if not k.startswith(run_time) and k != "runners.ci" and k not in used)
     if unused:
         raise Invalid(f"factory.json settings no template uses: {', '.join(unused)}")
     return out

@@ -1,5 +1,5 @@
 {
-  "_doc": "This repository's factory settings. render.py renders .github/workflows/factory-*.yml from templates/ with them (and planning.json's database); the factory's scripts and workflow_policy.py read them at run time. The app, image and smoke.echo_host values are placeholders: Enablement fills them with your organization's factory App, job image and echo service, and bootstrap.py applies nothing until it has. The runner labels and environment names are defaults every project in the organization shares; set the stack block for this project (process/factory.md, Enablement). Edit this or a template, then run render.py; CI's render check refuses a workflow edited by hand.",
+  "_doc": "This repository's factory settings. render.py renders .github/workflows/factory-*.yml from templates/ with them (and planning.json's database); the factory's scripts and workflow_policy.py read them at run time. The app, image and smoke.echo_host values are placeholders: Enablement fills them with your organization's factory App, job image and echo service, and bootstrap.py applies nothing until it has. The runner labels and environment names are defaults every project in the organization shares (runners.ci is the CI tier's, for a project's own self-hosted CI jobs; host/setup.sh's TIER=ci); set the stack block for this project (process/factory.md, Enablement). Edit this or a template, then run render.py; CI's render check refuses a workflow edited by hand.",
   "app": {
     "user_id": 0,
     "login": "your-factory-app[bot]"
@@ -11,7 +11,8 @@
   "runners": {
     "strict": "factory",
     "planning": "factory-plan",
-    "production": "factory-prod"
+    "production": "factory-prod",
+    "ci": "factory-ci"
   },
   "environments": {
     "writer": "factory-writer",
@@ -75,5 +76,19 @@
     "env_file": "api/.env",
     "database": "app",
     "env": {}
+  },
+  "fixtures": {
+    "_doc": "Test fixtures whose source needs a secret (process/factory.md, D2 rule 7). When path is set, the implement and revise workflows run a fixtures job on a GitHub-hosted runner: it checks out the default branch, restores path from the Actions cache (key: cache_key-<hash of key_files>), and on a miss installs the apt packages and runs run with the repository secret named by secret in its environment, under that name. It refuses fixtures that hold the secret, then hands path to the agent job as an artifact, which puts it in the workspace before the agent starts. The agent job never holds the secret. path must be gitignored. Leave path empty for none.",
+    "path": "",
+    "run": "",
+    "secret": "",
+    "apt": "",
+    "cache_key": "",
+    "key_files": ""
+  },
+  "policy": {
+    "_doc": "Read by workflow_policy.py, which CI runs over every workflow, the project's own included (process/factory.md, Enablement step 10); no template uses these. hosted_labels: the organization's own GitHub-hosted (larger) runner labels, addressed by label, not by runner group; a listed label counts as hosted wherever the policy asks (the container rule, the App key's job, the fixtures job), so never list one a self-hosted runner can carry (self-hosted, linux, x64 and the like are refused) or a factory runner label. self_hosted_exemptions: the project's own CI jobs that may run on a self-hosted runner without the factory container, each {\"workflow\": \"ci.yml\", \"job\": \"<job id>\", \"reason\": \"<how that runner is isolated, and why the job can't run hosted>\"}; never a factory workflow, a job on the factory's runners or an agent job; the factory's secret rules still hold in it; an entry for a job that no longer exists or now runs hosted is a violation. Both empty by default.",
+    "hosted_labels": [],
+    "self_hosted_exemptions": []
   }
 }
