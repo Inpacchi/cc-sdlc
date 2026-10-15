@@ -14,8 +14,8 @@ optional setting: it renders empty when factory.json doesn't have it (a project 
 setting existed keeps rendering; the fixtures block). Plain text substitution, so a template is the
 workflow byte for byte outside its placeholders. Refused: an unknown key, a %{ left unresolved, and a
 factory.json setting no template uses (keys starting with _ are notes; the stack block is read at run
-time, by agent_job.sh, the policy block by workflow_policy.py, and runners.ci and runners.groups by host/setup.sh
-and bootstrap.py).
+time, by agent_job.sh, the policy block by workflow_policy.py, and the ci block, runners.ci and runners.groups by
+host/setup.sh and bootstrap.py).
 """
 
 import json
@@ -106,7 +106,7 @@ def render_all(factory_dir, templates_dir):
     # planning.json and the stack block are read at run time too (planning-services.sh, agent_job.sh), the policy
     # block by workflow_policy.py, and the CI tier's label and the runner groups by host/setup.sh and bootstrap.py,
     # so a setting there no template names isn't dead.
-    run_time = ("planning.", "stack.", "policy.", "runners.groups.")
+    run_time = ("planning.", "stack.", "policy.", "ci.", "runners.groups.")
     unused = sorted(k for k in leaves(values) if not k.startswith(run_time) and k != "runners.ci" and k not in used)
     if unused:
         raise Invalid(f"factory.json settings no template uses: {', '.join(unused)}")

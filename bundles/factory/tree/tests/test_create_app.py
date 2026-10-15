@@ -26,6 +26,12 @@ class Manifest(unittest.TestCase):
         self.assertIs(m["public"], False)
         self.assertEqual(m["redirect_url"], "http://127.0.0.1:4321/created")
 
+    def test_the_runner_registration_app_has_one_permission(self):
+        m = create_app.manifest("acme-factory-runners", "acme", 4242, create_app.RUNNER_PERMISSIONS)
+        self.assertEqual(m["default_permissions"], {"organization_self_hosted_runners": "write"})
+        self.assertEqual((m["public"], m["default_events"]), (False, []))
+        self.assertNotIn("hook_attributes", m)
+
     def test_the_page_posts_to_the_organizations_form(self):
         html = create_app.page("acme", "st4te", create_app.manifest("acme-factory", "acme", 4321))
         self.assertIn('action="https://github.com/organizations/acme/settings/apps/new?state=st4te"', html)

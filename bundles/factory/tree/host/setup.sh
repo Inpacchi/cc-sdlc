@@ -14,17 +14,14 @@
 #   TIER=planning  factory-planner: spec and plan. The same firewall, plus the open internet the stages
 #                  need and, if host.conf names one, a database port on this host's own addresses.
 #   TIER=ci        factory-ci: a project's own CI jobs that must run self-hosted (end-to-end suites that
-#                  outgrow GitHub-hosted runners), pull requests included. The strict tier's firewall and
-#                  container requirement; its own runner group (runners.groups.ci, default factory-ci),
-#                  restricted to the projects that use it, not to workflows: a pull request's run comes
-#                  from its merge ref, which a group's branch-pinned workflow list never matches. So a
-#                  pull request's own job definition reaches these runners, and they hold against a hostile
-#                  one: docker only through docker_guard.py (the runner's own commands, no other mount,
-#                  privilege or namespace, no docker run or build), ci_job_hook.sh wiping what a job leaves
-#                  (job started and completed, and the whole work directory on every runner start), and a
-#                  periodic check that stops the tier's runners if any isolation check fails. They stay
-#                  stopped until someone fixes the cause and starts them (systemctl start 'factory-ci@*',
-#                  or this setup again).
+#                  outgrow GitHub-hosted runners), pull requests included, one disposable runner per job.
+#                  Steps 1-6 as for strict (its user, firewall, caps, rootless Docker, the isolation test),
+#                  then setup-ci.sh: the job image (the project's toolchain with the runner on top, built
+#                  here), the isolation checks, and one systemd slot per concurrent job running
+#                  ci_launcher.py. A slot starts a fresh container per job from a just-in-time runner
+#                  registration and removes it after, so whatever a pull request's job does, to the runner's
+#                  own processes included, ends with its container. The runner-registration App's key must
+#                  already be at /etc/factory-runner/factory-ci/app.pem, root-only (never in a checkout).
 #
 # One host can run several organizations' runners. The first keeps the plain names above; each other
 # organization sets RUNNER_INSTANCE in its own host.conf (for example `acme`), and gets its own users
@@ -37,6 +34,8 @@
 #   sudo TIER=planning bash setup.sh            (planning tier)
 #   sudo TIER=ci bash setup.sh                  (CI tier)
 #   bash setup.sh --print-settings              (show the resolved settings and stop; no root needed)
+# The first run for a tier also names the repository whose checkout owns it, which must be this one's:
+#   sudo TIER_OWNER=<owner>/<repository> bash setup.sh
 # Idempotent: safe to re-run. Runner registration happens only when a registration token file exists
 # (default: <this dir>/reg-token, mode 600). One token registers every new instance (it stays valid for
 # an hour); the file is deleted after use.
@@ -69,6 +68,7 @@ fi
 # Names for this organization's runners: plain for the host's first organization, suffixed for another.
 dash=${RUNNER_INSTANCE:+-$RUNNER_INSTANCE} under=${RUNNER_INSTANCE:+_$RUNNER_INSTANCE}
 
+tier_named=${TIER:+yes}
 TIER=${TIER:-strict}
 case $TIER in
   strict)
@@ -94,10 +94,16 @@ case $TIER in
     NFT_TABLE=factory_ci$under; NFT_FILE=/etc/factory-runner/ci-firewall$dash.nft; FW_UNIT=factory-ci-firewall$dash
     # A factory.json from before the CI tier has no runners.ci: refused below, with the reason.
     RUNNER_UNIT=factory-ci$dash; RUNNER_LABELS=$(setting runners.ci 2> /dev/null || true); NAME_PREFIX=$RUNNER_NAME_PREFIX-ci
-    # End-to-end suites (a server, a browser or two, a database) are CPU-bound: the cap is for both runners together.
-    DEFAULT_COUNT=${CI_RUNNERS:-2}; MEM_HIGH=${CI_MEMORY_HIGH:-12G}; MEM_MAX=${CI_MEMORY_MAX:-16G}
+    # End-to-end suites (a server, a browser or two, a database) are CPU-bound. Each job's container has its own
+    # caps (CI_JOB_*), and the slice caps every concurrent job together: its CPUQuota is what keeps the host's own
+    # work (production included) its cores, since a weight here would only rank the CI user against other users.
+    DEFAULT_COUNT=${CI_RUNNERS:-2}; MEM_HIGH=${CI_MEMORY_HIGH:-14G}; MEM_MAX=${CI_MEMORY_MAX:-16G}
     CPU_QUOTA=${CI_CPU_QUOTA:-800%}
     RUNNER_GROUP=$(group_setting ci factory-ci)
+    CI_APP_CLIENT_ID=${CI_APP_CLIENT_ID:-}
+    CI_JOB_CPUS=${CI_JOB_CPUS:-4}; CI_JOB_MEMORY=${CI_JOB_MEMORY:-6g}; CI_JOB_PIDS=${CI_JOB_PIDS:-8192}
+    CI_JOB_SHM=${CI_JOB_SHM:-1g}; CI_JOB_HOURS=${CI_JOB_HOURS:-6}; CI_IDLE_HOURS=${CI_IDLE_HOURS:-24}
+    CI_MIN_FREE_GB=${CI_MIN_FREE_GB:-20}
     DB_PORT= ;;
   *) printf 'ERROR: TIER must be strict, planning or ci\n' >&2; exit 1 ;;
 esac
@@ -122,8 +128,10 @@ RUNNER_VERSION=2.338.0
 RUNNER_SHA256=af4b794c1bc41d73d40535e3fe092a39f9679cd8d965954c2aca25a05ca41d32
 
 if [[ ${1:-} == --print-settings ]]; then
+  ci_settings=
+  [[ $TIER == ci ]] && ci_settings="CI_APP_CLIENT_ID CI_JOB_CPUS CI_JOB_MEMORY CI_JOB_PIDS CI_JOB_SHM CI_JOB_HOURS CI_IDLE_HOURS CI_MIN_FREE_GB"
   for v in TIER FACTORY_ORG RUNNER_URL RUNNER_GROUP RUNNER_LABELS RUNNER_INSTANCE RUNNER_USER RUNNER_HOME RUNNER_UNIT \
-           FW_UNIT NFT_TABLE NFT_FILE RUNNER_COUNT MEM_HIGH MEM_MAX CPU_QUOTA DB_PORT LAN_DNS PROBE_PORTS; do
+           FW_UNIT NFT_TABLE NFT_FILE RUNNER_COUNT MEM_HIGH MEM_MAX CPU_QUOTA DB_PORT LAN_DNS PROBE_PORTS $ci_settings; do
     printf '%s=%s\n' "$v" "${!v}"
   done
   printf 'RUNNER_NAMES=%s\n' "$(for i in $(seq "$RUNNER_COUNT"); do runner_name "$i"; done | tr '\n' ' ' | sed 's/ $//')"
@@ -133,11 +141,6 @@ fi
 log() { printf '\n==> %s\n' "$*"; }
 die() { printf 'ERROR: %s\n' "$*" >&2; exit 1; }
 
-# The CI tier is held: a review found that a pull request's job reaches the host as the runner user through
-# the runner's own host-side processes (the docker client and the job hooks start with the job's environment
-# and PATH), which no docker guard or hook can close. It waits on CD's design decision (z-sdlc
-# process/sdlc_changelog.md, 2026-10-13: The factory CI tier is held).
-[[ $TIER != ci ]] || die "the CI tier is held until CD decides its design: a pull request's job reaches this host through the runner's own processes (z-sdlc process/sdlc_changelog.md, 2026-10-13)"
 
 # Never take over another organization's runners: a runner directory this run would use must be
 # registered to this organization, or not at all.
@@ -157,10 +160,46 @@ command -v nft >/dev/null || die "nft is not installed"
 [[ -f "$SCRIPT_DIR/seccomp-bwrap.json" ]] || die "seccomp-bwrap.json must sit next to this script"
 [[ $RUNNER_COUNT =~ ^[1-9][0-9]?$ ]] || die "RUNNER_COUNT must be 1-99"
 [[ $FACTORY_ORG =~ ^[A-Za-z0-9-]+$ ]] || die "set FACTORY_ORG in host.conf (the GitHub organization the runners register to)"
+if [[ $TIER == ci ]]; then
+  # Everything the CI tier needs, checked before anything on this host changes.
+  for f in setup-ci.sh ci_launcher.py ci-runner.Dockerfile; do [[ -f $SCRIPT_DIR/$f ]] || die "$f must sit next to this script"; done
+  [[ $CI_APP_CLIENT_ID =~ ^[A-Za-z0-9.]+$ ]] \
+    || die "set CI_APP_CLIENT_ID in host.conf: the runner-registration App's client ID (create_app.py --runners)"
+  # Zero means unlimited to Docker, so every cap must be positive.
+  for v in CI_JOB_CPUS CI_JOB_HOURS CI_IDLE_HOURS; do
+    [[ ${!v} =~ ^([1-9][0-9]*(\.[0-9]+)?|0\.[0-9]*[1-9][0-9]*)$ ]] || die "$v must be a number above 0"
+  done
+  for v in CI_JOB_PIDS CI_MIN_FREE_GB; do [[ ${!v} =~ ^[1-9][0-9]*$ ]] || die "$v must be a whole number above 0"; done
+  for v in CI_JOB_MEMORY CI_JOB_SHM; do [[ ${!v} =~ ^[1-9][0-9]*[kmg]$ ]] || die "$v must be like 6g or 512m"; done
+  python3 -I - "$CI_JOB_MEMORY" "$RUNNER_COUNT" "$MEM_HIGH" "$MEM_MAX" <<'PY' || die "the CI tier's memory settings (above)"
+import sys
+def size(text):
+    text = text.strip().lower()
+    return int(text[:-1]) * 1024 ** "kmgt".index(text[-1]) * 1024 if text[-1] in "kmgt" else int(text)
+try:
+    job, count, high, top = size(sys.argv[1]), int(sys.argv[2]), size(sys.argv[3]), size(sys.argv[4])
+except ValueError:
+    sys.exit("CI_MEMORY_HIGH and CI_MEMORY_MAX must be sizes like 14G")
+# Two busy jobs at their caps must fit under MemoryHigh, with room for the daemon, or the slice reclaims constantly.
+need = job * count + 2 * 1024 ** 3
+if high < need or top < high:
+    sys.exit(f"CI_MEMORY_HIGH ({sys.argv[3]}) must be at least CI_RUNNERS x CI_JOB_MEMORY + 2G ({need // 1024 ** 2}M), "
+             f"and CI_MEMORY_MAX ({sys.argv[4]}) at least CI_MEMORY_HIGH")
+PY
+  # The runner-registration App's key reaches every runner group in the organization: root-only, never in a checkout.
+  ci_key=/etc/factory-runner/$RUNNER_UNIT/app.pem
+  if [[ -e $SCRIPT_DIR/ci-app.pem ]]; then
+    die "a key at $SCRIPT_DIR/ci-app.pem: the runner-registration App's key never goes in a checkout. Install it with sudo install -D -m 600 -o root -g root <key> $ci_key, then delete every other copy"
+  fi
+  [[ -f $ci_key && ! -L $ci_key ]] \
+    || die "install the runner-registration App's private key first: sudo install -D -m 600 -o root -g root <key> $ci_key (then delete every other copy)"
+  chown root:root "$ci_key" && chmod 600 "$ci_key"
+fi
 
-# One designated checkout per tier: the first setup run records the repository whose checkout set the tier up,
-# and a run from another repository's checkout is refused, so its host.conf can't re-cap or re-label a tier it
-# doesn't own (a dropped TIER would otherwise fall through to strict).
+# One designated checkout per tier: the repository whose checkout sets the tier up is recorded, and a run from
+# another repository's checkout is refused, so its host.conf can't re-cap or re-label a tier it doesn't own (a
+# dropped TIER would otherwise fall through to strict). The record is made only when the operator names that
+# repository (TIER_OWNER): the first checkout to run doesn't get a tier by default.
 tier_owner=$({ git -C "$SCRIPT_DIR" remote get-url origin 2>/dev/null || true; } \
   | sed -E 's#^(https://github\.com/|git@github\.com:)##; s#\.git$##')
 [[ -n $tier_owner ]] || die "can't tell which repository this checkout is (no origin remote)"
@@ -169,6 +208,10 @@ if [[ -f $owner_file ]]; then
   [[ $(<"$owner_file") == "$tier_owner" ]] \
     || die "the $TIER tier ($RUNNER_UNIT) is set up from $(<"$owner_file")'s checkout: run setup there, or remove $owner_file to hand the tier to $tier_owner"
 else
+  [[ ${TIER_OWNER:-} == "$tier_owner" ]] \
+    || die "no checkout owns the $TIER tier ($RUNNER_UNIT) yet: if $tier_owner's should, run again with TIER=$TIER TIER_OWNER=$tier_owner"
+  # A claim names its tier too: a dropped TIER would claim strict.
+  [[ -n $tier_named ]] || die "name the tier you're giving $tier_owner: TIER=strict, planning or ci, with TIER_OWNER"
   install -d -m 755 -o root -g root /etc/factory-runner /etc/factory-runner/tiers
   printf '%s\n' "$tier_owner" > "$owner_file"
 fi
@@ -252,15 +295,34 @@ Description=Firewall for the $RUNNER_USER user (blocks host and LAN${DB_PORT:+ e
 DefaultDependencies=no
 Before=network-pre.target
 Wants=network-pre.target
+# nftables.service's stock ruleset starts with 'flush ruleset'. Its reload reloads this table, and its start or
+# restart runs $FW_UNIT-reapply.service (below). Never a restart of this unit: user@ requires it, so that would
+# restart the user's manager and kill its jobs.
+After=nftables.service
+ReloadPropagatedFrom=nftables.service
 
 [Service]
 Type=oneshot
 RemainAfterExit=yes
 ExecStart=/usr/sbin/nft -f $NFT_FILE
+ExecReload=/usr/sbin/nft -f $NFT_FILE
 ExecStop=/usr/sbin/nft delete table inet $NFT_TABLE
 
 [Install]
 WantedBy=multi-user.target
+EOF
+cat > /etc/systemd/system/$FW_UNIT-reapply.service <<EOF
+[Unit]
+Description=Load the $RUNNER_USER firewall table again after nftables.service flushes the ruleset
+DefaultDependencies=no
+After=nftables.service $FW_UNIT.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/sbin/nft -f $NFT_FILE
+
+[Install]
+WantedBy=nftables.service
 EOF
 # The user's systemd manager (and so rootless dockerd) never starts without the firewall.
 install -d "/etc/systemd/system/user@$RUID.service.d"
@@ -270,7 +332,7 @@ Requires=$FW_UNIT.service
 After=$FW_UNIT.service
 EOF
 systemctl daemon-reload
-systemctl enable "$FW_UNIT.service" >/dev/null
+systemctl enable "$FW_UNIT.service" "$FW_UNIT-reapply.service" >/dev/null
 # Reload in place when already active: restarting would stop user@ (Requires=) and kill running jobs.
 if systemctl is-active --quiet "$FW_UNIT.service"; then nft -f "$NFT_FILE"; else systemctl start "$FW_UNIT.service"; fi
 nft list table inet "$NFT_TABLE" >/dev/null || die "firewall table did not load"
@@ -285,6 +347,14 @@ MemoryMax=$MEM_MAX
 CPUQuota=$CPU_QUOTA
 TasksMax=16384
 EOF
+if [[ $TIER == ci ]]; then
+  # Each job's container gets its own CPU, memory and process caps, which rootless Docker applies only when systemd
+  # delegates those controllers to the user's manager.
+  cat > "/etc/systemd/system/user@$RUID.service.d/factory-delegate.conf" <<EOF
+[Service]
+Delegate=cpu cpuset io memory pids
+EOF
+fi
 systemctl daemon-reload
 
 log "4/8 linger + user systemd session"
@@ -316,7 +386,8 @@ After=docker.service
 [Service]
 Type=oneshot
 Environment=DOCKER_HOST=unix://%t/docker.sock
-ExecStart=/usr/bin/docker system prune -af --filter until=168h
+# Never the CI tier's job image (labelled factory.keep): between jobs nothing uses it, and it can't be pulled back.
+ExecStart=/usr/bin/docker system prune -af --filter until=168h --filter label!=factory.keep
 EOF
 sudo -u "$RUNNER_USER" tee "$RUNNER_HOME/.config/systemd/user/docker-prune.timer" >/dev/null <<'EOF'
 [Unit]
@@ -387,11 +458,18 @@ if [[ -n $DB_PORT ]]; then
 fi
 as_runner "docker network rm factory-probe >/dev/null"
 
+if [[ $TIER == ci ]]; then
+  # One disposable runner per job, not registered runners: setup-ci.sh does the rest.
+  # shellcheck source=setup-ci.sh
+  source "$SCRIPT_DIR/setup-ci.sh"
+  log "done"
+  exit 0
+fi
+
 log "7/8 GitHub Actions runner v$RUNNER_VERSION x $RUNNER_COUNT"
 # The runner's libraries (actions/runner v$RUNNER_VERSION, layoutbin/installdependencies.sh's Debian list), from
 # apt as root. Root never runs a file the runner user can write, and the runner's own installdependencies.sh
-# lives in its directory. A group is satisfied by any installed member, else by the first apt knows; nothing
-# installed is upgraded (a library upgrade could restart this host's other services).
+# lives in its directory. A group is satisfied by any installed member, else by the first apt knows.
 runner_deps() {
   local group pkg pick picks=()
   for group in "libkrb5-3" "zlib1g" "liblttng-ust1t64 liblttng-ust1 liblttng-ust0" "libssl3t64 libssl3 libssl1.1" \
@@ -405,21 +483,20 @@ runner_deps() {
     [[ -n $pick ]] || die "apt has no package for the runner's dependency ($group)"
     picks+=("$pick")
   done
-  if ((${#picks[@]})); then apt-get install -y --no-install-recommends --no-upgrade "${picks[@]}"; fi
+  ((${#picks[@]})) || return 0
+  # The picks aren't installed (that's why they're picked), but apt could still upgrade an installed library they
+  # need, and a library upgrade can restart this host's other services. Simulated first, so any upgrade is the
+  # operator's.
+  local upgrades
+  # An upgrade's line names the installed version in brackets straight after the package (every line has an
+  # architecture in brackets later): "Inst libfoo1 [1.2-2] (1.2-3 ...)".
+  upgrades=$(apt-get install -s -y --no-install-recommends "${picks[@]}" | awk '/^Inst / && $3 ~ /^\[/ {print $2}' \
+    | tr '\n' ' ') || die "apt couldn't plan installing the runner's libraries (${picks[*]})"
+  [[ -z $upgrades ]] \
+    || die "installing the runner's libraries (${picks[*]}) would upgrade ${upgrades% }: upgrade those when it suits this host, then run setup again"
+  apt-get install -y --no-install-recommends "${picks[@]}"
 }
 runner_deps
-LIB=/usr/local/lib/factory-runner
-if [[ $TIER == ci ]]; then
-  # Root-owned, outside anything the runner user can write: the docker guard, the job hooks, and the probe the
-  # periodic check runs.
-  DOCKER_BIN=$(command -v docker) || die "the docker CLI is not installed"
-  [[ $DOCKER_BIN == /usr/* ]] || die "docker resolves to $DOCKER_BIN, not a system path"
-  [[ -f $SCRIPT_DIR/docker_guard.py && -f $SCRIPT_DIR/ci_job_hook.sh ]] || die "docker_guard.py and ci_job_hook.sh must sit next to this script"
-  install -d -m 755 -o root -g root "$LIB" "$LIB/$RUNNER_UNIT" "/etc/factory-runner/$RUNNER_UNIT"
-  install -m 644 -o root -g root "$SCRIPT_DIR/docker_guard.py" "$LIB/docker_guard.py"
-  install -m 755 -o root -g root "$SCRIPT_DIR/ci_job_hook.sh" "$LIB/ci_job_hook.sh"
-  printf '%s' "$probe_py" > "$LIB/isolation_probe.py" && chmod 644 "$LIB/isolation_probe.py"
-fi
 token=
 if [[ -s $TOKEN_FILE ]]; then token=$(<"$TOKEN_FILE"); fi
 for i in $(seq "$RUNNER_COUNT"); do
@@ -448,31 +525,10 @@ for i in $(seq "$RUNNER_COUNT"); do
   as_runner "cd '$dir' && touch .env && sed -i '/^\(DOCKER_HOST\|XDG_RUNTIME_DIR\|ACTIONS_RUNNER_REQUIRE_JOB_CONTAINER\)=/d' .env \
     && printf '%s\n' 'DOCKER_HOST=unix:///run/user/$RUID/docker.sock' 'XDG_RUNTIME_DIR=/run/user/$RUID' 'ACTIONS_RUNNER_REQUIRE_JOB_CONTAINER=true' >> .env \
     && cp -f bin/runsvc.sh ./runsvc.sh && chmod 755 runsvc.sh"
-  if [[ $TIER == ci ]]; then
-    # This instance's directories, for the guard; its docker and hooks, first on the runner's PATH. The runner
-    # reads .env at start (Runner.Listener) and resolves docker from PATH once.
-    inst=$LIB/$RUNNER_UNIT/$i conf=/etc/factory-runner/$RUNNER_UNIT/$i.json
-    install -d -m 755 -o root -g root "$inst"
-    python3 -I -c 'import json,sys; print(json.dumps(dict(zip(("docker", "host", "work", "externals"), sys.argv[1:]))))' \
-      "$DOCKER_BIN" "unix:///run/user/$RUID/docker.sock" "$work" "$dir/externals" > "$conf"
-    chmod 644 "$conf"
-    printf '#!/bin/sh\nexec /usr/bin/python3 -I %q %q "$@"\n' "$LIB/docker_guard.py" "$conf" > "$inst/docker"
-    for m in started completed; do
-      printf '#!/bin/bash\nexec /bin/bash %q %q %q %q\n' "$LIB/ci_job_hook.sh" "$m" "$work" "/run/user/$RUID/docker.pid" \
-        > "$inst/job-$m.sh"
-    done
-    chmod 755 "$inst/docker" "$inst/job-started.sh" "$inst/job-completed.sh"
-    as_runner "cd '$dir' && sed -i '/^\(PATH\|ACTIONS_RUNNER_HOOK_JOB_STARTED\|ACTIONS_RUNNER_HOOK_JOB_COMPLETED\)=/d' .env \
-      && printf '%s\n' 'PATH=$inst:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin' \
-         'ACTIONS_RUNNER_HOOK_JOB_STARTED=$inst/job-started.sh' 'ACTIONS_RUNNER_HOOK_JOB_COMPLETED=$inst/job-completed.sh' >> .env"
-  fi
 done
 rm -f "$TOKEN_FILE"
 
 log "8/8 systemd services $RUNNER_UNIT@1..$RUNNER_COUNT"
-# The CI tier starts every runner on an empty work directory (ci_job_hook.sh reset, as root).
-reset_line=
-if [[ $TIER == ci ]]; then reset_line="ExecStartPre=+/bin/bash $LIB/ci_job_hook.sh reset $RUNNER_HOME/_work-%i"; fi
 # One template; the instance number picks the runner directory.
 cat > "/etc/systemd/system/$RUNNER_UNIT@.service" <<EOF
 [Unit]
@@ -484,7 +540,6 @@ Wants=network-online.target
 [Service]
 User=$RUNNER_USER
 WorkingDirectory=$RUNNER_HOME/actions-runner-%i
-$reset_line
 ExecStart=$RUNNER_HOME/actions-runner-%i/runsvc.sh
 Environment=XDG_RUNTIME_DIR=/run/user/$RUID
 NoNewPrivileges=yes
@@ -529,70 +584,6 @@ for i in $(seq "$RUNNER_COUNT"); do
   fi
 done
 systemctl --no-pager --lines=0 status "$RUNNER_UNIT@*" | grep -E '●|Active:' || true
-
-if [[ $TIER == ci ]]; then
-  log "CI tier: isolation check every 6 hours ($RUNNER_UNIT-check.timer); a failure stops the tier's runners"
-  # Root-owned and self-contained: the probe from step 6 (root's copy), the firewall table, the slice caps, and
-  # each instance's guard (it must refuse a mount of the runner's own directory) and .env (guard and hooks).
-  cat > "$LIB/$RUNNER_UNIT-check.sh" <<EOF
-#!/usr/bin/env bash
-# Written by host/setup.sh (TIER=ci). Run by $RUNNER_UNIT-check.service; stops $RUNNER_UNIT@* on any failure.
-set -uo pipefail
-fail() { echo "$RUNNER_UNIT check FAILED: \$*" >&2; systemctl stop '$RUNNER_UNIT@*.service'; exit 1; }
-as_runner() { sudo -u $RUNNER_USER -H env XDG_RUNTIME_DIR=/run/user/$RUID DOCKER_HOST=unix:///run/user/$RUID/docker.sock \\
-  PATH=/usr/bin:/bin bash -c "cd ~ && \$1"; }
-nft list table inet $NFT_TABLE > /dev/null 2>&1 || fail "firewall table $NFT_TABLE is not loaded"
-slice=/sys/fs/cgroup/user.slice/user-$RUID.slice
-[[ -r \$slice/memory.max && \$(cat \$slice/memory.max) != max ]] || fail "no memory cap on \$slice"
-[[ -r \$slice/cpu.max && \$(cut -d' ' -f1 \$slice/cpu.max) != max ]] || fail "no CPU cap on \$slice"
-as_runner "docker network inspect factory-probe > /dev/null 2>&1 || docker network create factory-probe > /dev/null" \\
-  || fail "the rootless daemon doesn't answer"
-# The weekly prune may have removed the probe's image: a failed pull is the network, not isolation.
-as_runner "docker image inspect python:3.12-slim > /dev/null 2>&1 || docker pull -q python:3.12-slim > /dev/null" \\
-  || fail "can't pull the probe image python:3.12-slim (the network, not isolation)"
-as_runner "docker run --rm --network factory-probe -v /var/run/docker.sock:/var/run/docker.sock \\
-  -v $LIB/isolation_probe.py:/probe.py:ro python:3.12-slim python /probe.py '$targets' '$ports'" \\
-  || fail "a job container reached the host, the LAN or the host docker socket, or not the internet"
-for i in \$(seq $RUNNER_COUNT); do
-  inst=$LIB/$RUNNER_UNIT/\$i env=$RUNNER_HOME/actions-runner-\$i/.env
-  [[ -f \$env ]] || continue
-  grep -qx "PATH=\$inst:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin" "\$env" || fail "runner \$i's PATH doesn't start at its docker guard"
-  grep -qx "ACTIONS_RUNNER_HOOK_JOB_STARTED=\$inst/job-started.sh" "\$env" || fail "runner \$i has no job-started hook"
-  grep -qx "ACTIONS_RUNNER_HOOK_JOB_COMPLETED=\$inst/job-completed.sh" "\$env" || fail "runner \$i has no job-completed hook"
-  out=\$(as_runner "\$inst/docker create -v $RUNNER_HOME/actions-runner-\$i:/runner python:3.12-slim true" 2>&1) \\
-    && fail "runner \$i's docker guard let a mount of the runner's directory through"
-  grep -q "docker guard (CI tier): refused" <<< "\$out" || fail "runner \$i's docker guard didn't answer: \$out"
-done
-as_runner "docker network rm factory-probe > /dev/null 2>&1" || true
-echo "$RUNNER_UNIT check: ok"
-EOF
-  chmod 755 "$LIB/$RUNNER_UNIT-check.sh"
-  cat > "/etc/systemd/system/$RUNNER_UNIT-check.service" <<EOF
-[Unit]
-Description=Isolation check for the $RUNNER_USER runners (stops them on failure)
-Requires=user@$RUID.service
-After=user@$RUID.service
-
-[Service]
-Type=oneshot
-ExecStart=$LIB/$RUNNER_UNIT-check.sh
-EOF
-  cat > "/etc/systemd/system/$RUNNER_UNIT-check.timer" <<EOF
-[Unit]
-Description=Isolation check for the $RUNNER_USER runners, every 6 hours
-
-[Timer]
-OnBootSec=15min
-OnUnitActiveSec=6h
-Persistent=true
-
-[Install]
-WantedBy=timers.target
-EOF
-  systemctl daemon-reload
-  systemctl enable --now "$RUNNER_UNIT-check.timer" > /dev/null
-  "$LIB/$RUNNER_UNIT-check.sh" || die "the CI tier's isolation check failed, and its runners are stopped"
-fi
 
 log "done"
 nft list table inet "$NFT_TABLE" | grep counter || true

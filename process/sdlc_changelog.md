@@ -37,6 +37,135 @@ Each entry contains:
 
 ---
 
+## 2026-10-13: The factory CI tier, review round 2
+
+**Origin:** The pilot project's architect and code reviewer reviewed the disposable-runner CI tier ("The factory CI tier runs one disposable runner per job", below). The architect approved it with conditions, both reviewers found the same three launcher defects, and they listed host, configuration and test gaps besides.
+
+**Changes made:**
+
+1. **`bundles/factory/tree/host/ci_launcher.py`**:
+   - **Docker no longer orphans.** Every docker call runs through `setpriv`, which execs, so a timeout kills docker itself. `runuser`'s forked parent left docker running after a timeout. Every call has a timeout. A cycle runs one `docker wait`, which is never killed and returns when the container ends.
+   - **The job-hours limit can't be dodged.** GitHub's view of the runner decides when to kill. A 404 while the container runs (the job is over) kills it, so does offline on two polls after being online, or never online within a grace period. An idle runner is recycled after `CI_IDLE_HOURS`: it is deregistered first, and if GitHub refuses because a job just arrived, the job runs. The container's lifetime is capped at `CI_IDLE_HOURS` + `CI_JOB_HOURS` whatever the API says.
+   - **Backoff.** It counts from GitHub too. A runner still registered after its container ended never ran a job, so it counts as a failure. The installation token is cached in memory until near expiry.
+   - **The check fails closed.** Any exception in it, a hang included, trips the tier (the units' `OnFailure=` runs a new `trip` subcommand that keeps the check's marker).
+   - **The check covers more:**
+     - It re-reads the group's visibility and public-repository setting.
+     - It checks free space.
+     - It runs a host-side probe as the runner user with no Docker, which is where IPv6 is tested.
+     - The default LAN gateway joins the targets, so the blocked set itself is exercised; the host's own addresses all hit the loopback rule.
+     - The container probe runs with a job's own flags and checks the exact `cpu.max`, `memory.max` and `pids.max`.
+     - A listener at a fixed address on a network of its own must be unreachable from a slot-like network.
+   - **Liveness is not isolation.** The internet or GitHub out of reach is logged, not tripped.
+   - **`fwcheck`** checks the firewall table every minute.
+   - **SIGTERM unwinds the cycle**, so the slot's stop removes its container and registration. The runner's ID is kept in `slot-N.runner` before the container starts, and the slot's `stop` and the next cycle deregister a leftover. Each cleanup step runs on its own.
+   - **Transport errors.** `api()` turns every transport and parse error (`http.client.HTTPException`, non-JSON) into one error type, so polling survives them.
+   - **Disk.** Below `CI_MIN_FREE_GB` free under the runner's home, no cycle starts and a running job is killed.
+   - **Container hardening.** Job containers get capped `local` logs and drop `NET_RAW` and `MKNOD`.
+   - **The state directory** must be a directory only root can write.
+   - **Logging.** Probe and API output is logged as printable ASCII only.
+   - **The header** states the App key's reach, and that the JIT config stays readable inside the container until removal (single-use).
+2. **`bundles/factory/tree/host/setup-ci.sh`**:
+   - **The key** is no longer moved from the checkout (see `setup.sh`).
+   - **The launcher's settings** are written whole to a new file, resolved against GitHub, completed with the image, then renamed into place.
+   - **The build context and Dockerfile** must resolve, links included, inside the checkout. They are copied with `cp -RP`, so links stay links.
+   - **The job image** is labelled `factory.keep`, and earlier ones are removed by the runner user.
+   - **The units:**
+     - the gate `Wants=network-online.target`;
+     - the gate and check get `TimeoutStartSec` and `OnFailure=` the trip unit, and the check no longer `Requires=user@`, which restarted the runner user's manager while tripped;
+     - a new firewall check timer runs every minute;
+     - slots run with `KillMode=mixed`.
+   - **Extra slots** are found from the enabled and loaded units, not 1–20.
+   - **A failed image inspect** now dies with its message.
+3. **`bundles/factory/tree/host/setup.sh`** (shared by every tier):
+   - **Tier owner, no longer trust-on-first-use.** A missing owner record is made only when `TIER_OWNER` names this checkout's repository and `TIER` is given too, so a dropped `TIER` can't claim strict.
+   - **The firewall.** Each tier's firewall unit orders after `nftables.service` and reloads with it, and a new `<firewall>-reapply.service`, wanted by `nftables.service`, loads the table again after its start or restart. Its stock ruleset begins with `flush ruleset`. `PartOf=` would have restarted the firewall unit and, through `user@`'s `Requires=`, killed every job.
+   - **The weekly prune** spares `factory.keep` images.
+   - **The runner's apt dependencies** are simulated first, and setup stops if installing them would upgrade an installed package (an `Inst` line with the old version in brackets straight after the name). The comment claimed `--no-upgrade` did that.
+   - **For TIER=ci:**
+     - every setting and the App's key are checked before anything changes;
+     - caps must be above 0, which Docker reads as unlimited;
+     - `CI_MEMORY_HIGH` must cover `CI_RUNNERS` × `CI_JOB_MEMORY` + 2G (default now 14G);
+     - the key must already be at `/etc/factory-runner/<unit>/app.pem`, and a key in the checkout's `host/` directory stops setup;
+     - `CI_CPU_WEIGHT` is removed: a weight on the user's slice only ranks it against other users, never against `system.slice`, so `CI_CPU_QUOTA` is the bound;
+     - new settings `CI_IDLE_HOURS` (24) and `CI_MIN_FREE_GB` (20).
+4. **`bundles/factory/tree/create_app.py`**: `--runners` states the key's reach and prints the root-only install command.
+5. **Seeds:** `host/host.conf`'s CI block (the new settings, the key's place, the memory rule, `RUNNER_HOME_BASE` on its own filesystem). `factory.json`'s `ci._doc` (paths resolve inside the repository; base pinned by digest).
+6. **Tests:** `test_ci_launcher.py` rewritten (23 tests). It covers:
+   - one `docker wait` per cycle, and no docker process left alive;
+   - a 404 while running, offline twice, never online, idle recycling and its race, and the lifetime cap with GitHub failing;
+   - non-JSON and cut-off answers while polling;
+   - low disk;
+   - a real SIGTERM mid-job;
+   - a slot's stop and a leftover registration;
+   - the state directory's owner and mode;
+   - the check passing, tripping on each of ten failures (an exception and a timeout among them), and not tripping on liveness;
+   - the firewall check;
+   - the trip unit keeping a check's marker.
+
+   `test_host_setup.py` follows the settings.
+7. **`process/factory.md`**:
+   - **Enablement step 2:** `ci-app.pem` is gone from the `.gitignore` list.
+   - **Step 8:** `TIER_OWNER` and the reapply unit.
+   - **"The CI tier":** the kill conditions, key handling (straight to `/etc`, never a checkout, out of backups), the build-context rule, the setup order with `TIER_OWNER`, the checks, liveness, capacity (`CI_CPU_QUOTA`, the memory rule, `RUNNER_HOME_BASE` on its own filesystem).
+
+**Not done here:**
+- **A scheduled audit of every organization runner group's members against expected names.** The architect asked for it as a compensating control for the App key. It is CD's decision. Tripping the CI tier wouldn't touch a rogue runner in another group, and the audit must run where the key isn't.
+- **Tests for `setup.sh`'s and `setup-ci.sh`'s heredoc units and the tier-owner logic.** They need root and systemd, so a host run is their first test.
+
+---
+
+## 2026-10-13: The CI tier's App key reaches every runner group
+
+**Origin:** The pilot project's review of the CI tier asked whether a stolen runner-registration key could put runners into the strict tier's group or a production group. GitHub's REST docs for self-hosted runner groups answer it. The App's one permission, `organization_self_hosted_runners`, covers every organization runner endpoint: registering into any group with any labels, moving runners between groups, and changing a group's visibility, public-repository and workflow restrictions.
+
+**What happened:** `process/factory.md` said the key "can register runners and nothing else", which understated its reach.
+
+**Changes made:**
+1. **`process/factory.md`** (Enablement step 10, The CI tier): the runner-registration App's paragraph now states what a holder of its key can do. It notes that it is the first long-lived credential on a host that can register runners. It lists how the key is kept: root-only, the downloaded copy deleted, revoked on doubt, and group drift reported by `bootstrap.py`.
+
+**Rationale:** CD chose disposable runners partly on the App's stated reach, so the stated reach has to be right. `create_app.py`'s docstring and `host/ci_launcher.py`'s header say the same and change with the review's findings.
+
+---
+
+## 2026-10-13: The factory CI tier runs one disposable runner per job
+
+**Origin:** CD's decision (2026-10-13): design A for the held CI tier ("The factory CI tier is held", below). The pilot project's review had shown that a persistent runner hands a job's environment and PATH to its own host-side processes.
+
+**What happened:** The runner itself goes inside the boundary. A launcher on the host registers a just-in-time (JIT) runner for each job and runs it in a fresh rootless container. The job runs in that container, runner and all, and the container is removed after its one job. Checked against actions/runner v2.338.0:
+- `generate-jitconfig` takes an App installation token with the organization's "Self-hosted runners" (write) permission.
+- The runner reads `ACTIONS_RUNNER_INPUT_JITCONFIG` from its environment, masks it, and removes it before any step.
+- `run.sh` exits 0 when a JIT runner has run its job.
+- A JIT runner's settings come from GitHub, so `--disableupdate` can't apply to it. It updates itself, if at all, only inside its throwaway container.
+
+**Changes made:**
+
+1. **`bundles/factory/tree/host/ci_launcher.py`** (new), root-owned:
+   - **`run`, one cycle:** the App's JWT signed by openssl with the root-only key, then an installation token narrowed to the one permission, then a JIT config, then a fresh container started as the runner user with per-job CPU, memory, process and shm caps, `no-new-privileges` and its own network. An idle runner waits as long as it takes. `docker wait` runs in 5-minute rounds, and between rounds GitHub, not the daemon, is asked whether the runner is busy. A job is killed after `CI_JOB_HOURS` of job time, a backstop behind the job's own `timeout-minutes`. Then the cycle removes the container and deregisters the runner with a fresh token. A failing cycle backs off, so `generate-jitconfig` isn't hammered.
+   - **`stop`, `resolve` and `check`.** `resolve` returns the App's installation (it must hold the permission) and the group (selected repositories only, no public ones). `check` covers the firewall table, the slice caps, the delegated controllers, and a probe from a container of the job image: host, LAN and IPv6 closed, the internet open, caps in force. A failure writes a marker no slot starts past and stops the runner user's whole session.
+   - **The rules root keeps.** Root reads only `docker wait`'s integer from the daemon. The JIT config travels in a 0600 file created without following links, in a root-owned directory, and is deleted once the container starts. Every docker call runs as the runner user with a fixed environment.
+2. **`bundles/factory/tree/host/ci-runner.Dockerfile`** (new): the project's toolchain image with the runner on top (pinned version, checked archive, its dependencies installed inside the image), `python3` for the probe, and `RUNNER_ALLOW_RUNASROOT` (container root is an unprivileged host user).
+3. **`bundles/factory/tree/host/setup-ci.sh`** (new), sourced by `setup.sh` after step 6 for `TIER=ci`:
+   - **The key** moves from the checkout's gitignored `host/ci-app.pem` to `/etc/factory-runner/<unit>/app.pem` (root-only).
+   - **Delegation** of the cpu, memory and pids controllers is verified.
+   - **The launcher's settings** are written, and resolved against the App and the group before anything is built.
+   - **The job image** is built as the runner user from root-owned copies of the build contexts.
+   - **The units:** a gate unit runs the check before any slot starts (at boot too), a timer runs it every 6 hours, and `<unit>-slot@N` is started, never restarted, so a job in flight survives a setup run.
+4. **`bundles/factory/tree/host/setup.sh`**:
+   - **The hold is gone.** `TIER=ci` takes steps 1–6, then `setup-ci.sh`.
+   - **The CI tier's settings:** its slice gets a low `CPUWeight` (`CI_CPU_WEIGHT`, 20) and its user's manager delegates cpu, cpuset, io, memory and pids. New settings `CI_APP_CLIENT_ID` and `CI_JOB_*` show in `--print-settings`.
+   - **Removed:** the persistent-runner guard, hooks and their check.
+5. **Removed:** `host/docker_guard.py`, `host/ci_job_hook.sh` and their tests.
+6. **`bundles/factory/tree/workflow_policy.py`**: a job on the CI label runs in its disposable runner. So: no `container:` or `services:` of its own, no `docker://` step, and the container rule doesn't apply to it. The other CI-tier rules stay.
+7. **`bundles/factory/tree/create_app.py`**: `--runners` creates the runner-registration App, whose only permission is `organization_self_hosted_runners: write`, and says where its key and client ID go.
+8. **`bundles/factory/tree/bootstrap.py`**: a runner group that lets public repositories use it is a problem.
+9. **`bundles/factory/tree/render.py`**, **seeds:** `factory.json` gains the `ci` block (`dockerfile`, `context`, `build_args`), which render treats as a run-time setting. `host/host.conf` gains `CI_APP_CLIENT_ID`, `CI_JOB_*` and `CI_CPU_WEIGHT`.
+10. **Tests:** `test_ci_launcher.py` (new) covers a cycle against a fake GitHub with recorded docker calls, the JWT verified with real openssl, failure and non-integer exits, an idle runner never killed, a job killed after its job time, no JIT config, backoff, the env file over a planted link, resolve, and the check passing and tripping. Also `test_host_setup.py`, `test_render.py` (the flipped CI-tier rules), `test_create_app.py` and `test_bootstrap.py`.
+11. **`process/factory.md`**: "The CI tier" rewritten (how it works, the threat model, the App, the image and its version coupling, the setup order, the check, the job shape, capacity, runner versions). Enablement step 2 adds `ci-app.pem` to what `.gitignore` must cover.
+
+**Rationale:** On a persistent runner, the runner's own processes are the job's way to the host. A disposable runner per job puts them inside the job's container, so nothing a job does outlives it, and the runner user's firewall and caps remain the outer boundary.
+
+---
+
 ## 2026-10-13: The factory's verify test runs in its own directory
 
 **Origin:** Handing the pilot's bundle code to the incubator (zsdlc-import-factory --to-incubator).

@@ -402,8 +402,8 @@ needs an organization owner's `gh` login (`admin:org`) for the runner groups and
    reads. The profile is rendered into `factory-image` (it builds that profile's `Dockerfile`), so
    render after choosing it, or CI's render check fails. `.gitignore` must cover the env file and
    `.factory/` (the jobs' working files and the profile's caches): a run that leaves an untracked file
-   isn't published. It must also cover `.github/factory/host/reg-token`, the runner registration token
-   step 8 writes there. Tests that need fixtures from a secret-holding source get them through the
+   isn't published. It must also cover `.github/factory/host/reg-token`, the runner registration
+   token step 8 puts there. Tests that need fixtures from a secret-holding source get them through the
    `fixtures` block (D2 rule 7); leave its `path` empty for none. Write `triage-policy.md` (its
    direction, rules, containers, plan triggers and external sources). The planning tier (D3) is
    required; its database is optional. To give the plan and spec stages one, fill `planning.json` and
@@ -456,10 +456,14 @@ needs an organization owner's `gh` login (`admin:org`) for the runner groups and
    organization, and can serve other organizations too: each one after the first sets `RUNNER_INSTANCE`
    in its `host.conf` and gets its own users, firewall tables and services, isolated from the others'
    as from the host. Setup refuses runners registered to another organization, and a planning database
-   port is only ever the organization's own. Each tier has one designated checkout: the first setup run
-   records the repository whose checkout set the tier up (`/etc/factory-runner/tiers/<unit>`), and
-   refuses a run from another repository's, whose `host.conf` would re-cap or re-label a tier it
-   doesn't own. The firewall rejects all IPv6 for the runner users (a host's global addresses and its
+   port is only ever the organization's own. Each tier has one designated checkout, recorded in
+   `/etc/factory-runner/tiers/<unit>`: setup refuses a run from another repository's, whose `host.conf`
+   would re-cap or re-label a tier it doesn't own. The record is made only when the operator names
+   the repository and the tier, so the first checkout to run doesn't claim a tier by default: the
+   first run for a tier is `sudo TIER=<tier> TIER_OWNER=<owner>/<repository> bash
+   .github/factory/host/setup.sh`, from that repository's checkout. Each tier's firewall table is loaded again whenever
+   `nftables.service` starts or reloads, since its stock ruleset begins with `flush ruleset`.
+   The firewall rejects all IPv6 for the runner users (a host's global addresses and its
    LAN's global prefix would otherwise be reachable), and the isolation test probes IPv6 too. Runners
    never update themselves (`--disableupdate`): they stay at `setup.sh`'s `RUNNER_VERSION`, whose
    checksum it verifies. z-sdlc bumps it within 30 days of each actions/runner release, because GitHub
@@ -496,53 +500,118 @@ needs an organization owner's `gh` login (`admin:org`) for the runner groups and
     A job that needs a secret (a fixture fetch) runs the default branch's code, as the fixtures job
     does (D2 rule 7).
 
-    **The CI tier.** *Held (2026-10-13): not usable until CD decides its design, and `setup.sh`
-    refuses `TIER=ci` until then. A review found that a pull request's job reaches the host as the
-    runner user through the runner's own host-side processes. The docker client and the job hooks
-    start with the job's environment and PATH, which the guard and hooks below can't close.* A
-    project CI job that outgrows GitHub-hosted runners, such as an end-to-end suite, runs on the
-    CI tier: the label `runners.ci` (`factory-ci`) and the runner group
-    `runners.groups.ci` (`factory-ci`).
-    - **Setup order.** `bootstrap.py --apply` creates the group once a workflow uses the label.
-      Run it before `sudo TIER=ci bash .github/factory/host/setup.sh` (step 8), which registers the
-      runners into the group.
-    - **The group is restricted to repositories, not workflows.** A pull request's run comes from
-      its merge ref, which a group's branch-pinned workflow list never matches, so its jobs would
-      wait forever. The runners are the isolation instead: their own user, firewall and caps, and
-      a job container required.
-    - **What the policy holds every job on the label to:** the rules above; a container, with no
-      service containers (a database starts in the job); explicit read-only permissions; never an
-      agent job or a factory workflow. The only token it may hold is the job token, as its
-      container's pull credentials.
-    - **Writing the job.** Write `runs-on: [self-hosted, factory-ci]`, the form bootstrap reads.
-      The factory seccomp profile (`/etc/factory-runner/seccomp-bwrap.json`) is allowed, not
-      required: Docker's default is stricter, and enough for a browser run without its own sandbox
-      (Playwright's default).
-    - **Capacity.** `host.conf`'s `CI_*` settings cap the tier's runners together. Check the
-      jobs' `timeout-minutes` against the first capped runs.
-    - **The threat model.** A pull request's run executes the pull request's own workflow, and
-      no workflow restriction stands in the way. So for a pull request from a branch, the
-      policy is a merge gate, not an execution gate, and the tier holds against a hostile job
-      definition:
-      - **The docker guard.** The runners reach docker only through `host/docker_guard.py`. It
-        passes the runner's own commands and refuses every other mount (the runner's directory and
-        its credentials among them), privilege, namespace and published port. It also refuses
-        `docker run` and `docker build`, which the runner makes mid-job, after the job's code could
-        have planted a symlink in a directory it mounts. **So no `docker://` step and no Dockerfile
-        action runs on the CI tier.** Every container gets `no-new-privileges`.
-      - **The job hooks** (`host/ci_job_hook.sh`) delete what a job leaves in the work directory
-        for the next: the tool cache, the workspaces and the runner's workspace map. The runner
-        deletes its actions and temp directory itself. Every runner start deletes the whole work
-        directory, as root.
-      - **The periodic check.** A root timer re-runs the isolation probe every 6 hours, with the
-        firewall, the caps and each runner's guard and hooks. A failure stops the tier's runners,
-        and they stay stopped until someone fixes the cause and starts them
-        (`systemctl start 'factory-ci@*'`, or setup again).
-      - **No host path.** The tier offers no writable host path a job could share with the next
-        (no tool or browser cache on the host), so bake browsers into the job's image.
+    **The CI tier.** A project CI job that outgrows GitHub-hosted runners, such as an end-to-end
+    suite, runs on the CI tier: one disposable runner per job, on the runner host. The label is
+    `runners.ci` (`factory-ci`) and the runner group `runners.groups.ci` (`factory-ci`), as with
+    CD's decision (2026-10-13).
+    - **How it works.** Each of `CI_RUNNERS` systemd slots runs `host/ci_launcher.py`, one job per
+      cycle:
+      1. It mints a just-in-time runner registration with the runner-registration App.
+      2. It starts a fresh container from the tier's job image, as the runner user. The container
+         has that job's CPU, memory, process and log caps, `NET_RAW` and `MKNOD` dropped, and a
+         network of its own.
+      3. It watches the container until its one job ends. GitHub, never the container, says
+         whether the runner is online and busy. The container is killed when:
+         - its job has run `CI_JOB_HOURS` (the job's own `timeout-minutes` is the first limit);
+         - its runner has idled `CI_IDLE_HOURS` (recycled);
+         - GitHub has removed its runner (the job is over) while the container still runs;
+         - its runner went offline after being online, or never came online;
+         - it is older than `CI_IDLE_HOURS` + `CI_JOB_HOURS`, whatever GitHub says;
+         - free space under the runner's home falls below `CI_MIN_FREE_GB` (no cycle starts below
+           it either).
+      4. It removes the container and the runner's registration. A slot that stops mid-job
+         (setup, a reboot, a trip) cleans up first, and a registration it couldn't remove is
+         removed by its next cycle.
 
-      Ephemeral runners (`--ephemeral`, registered again for every job) would add one more
-      thing: a registration stolen despite the guard would end with its job. They need a
-      credential on the host that can register runners, a permission the factory's App
-      deliberately lacks, so they are CD's call.
+      The job runs inside the container, runner and all, so whatever a pull request's code does
+      there, to the runner's own processes included, ends with the container.
+    - **The threat model.** A pull request's run executes the pull request's own workflow, and
+      the group can't be restricted to workflows (next point). So the policy is a merge gate,
+      not an execution gate, and the boundary is what holds a hostile job:
+      - each job's disposable container;
+      - the runner user's own uid, firewall (no host, no LAN, no IPv6) and caps;
+      - root never running or parsing anything that comes out of a container, beyond its exit
+        status.
+
+      A container escape is a compromise of the runner user, held by that outer boundary as on
+      the strict tier, and it lasts until setup rebuilds the image.
+    - **The group is restricted to repositories, not workflows.** A pull request's run comes from
+      its merge ref, which a group's branch-pinned workflow list never matches. Its jobs would
+      wait forever.
+    - **The runner-registration App** is a second GitHub App. Create it with
+      `create_app.py <org> --runners` and install it on the organization (it needs no
+      repository). Its one permission is the organization's self-hosted runners (write), and
+      GitHub has no narrower credential that can register runners. That permission reaches every
+      runner group in the organization. A holder of the App's key can:
+      - register a runner into any group with any labels, and so take that group's jobs and
+        their secrets, the strict tier's agent jobs among them;
+      - move runners between groups;
+      - change a group's repository and workflow restrictions;
+      - delete runners.
+
+      The launcher narrows each token it mints to that permission, but nothing narrows the key.
+      Before the CI tier, no long-lived credential that can register runners lived on any host
+      (the other tiers register with an hour-long token CD makes), so the key is the most
+      sensitive thing on the runner host:
+      - It goes straight to `/etc/factory-runner/factory-ci/app.pem`, root-only, never into a
+        checkout: `sudo install -D -m 600 -o root -g root <key> /etc/factory-runner/factory-ci/app.pem`.
+        Setup refuses to run while a key sits in the checkout's `host/` directory.
+      - Root on the host already holds every local runner's credentials, so the key adds the
+        groups' settings and other hosts' groups to what root there can reach.
+      - Delete the copy `create_app.py` writes, and every other, once the key is installed. Keep
+        `/etc/factory-runner` out of the host's backups.
+      - On any doubt, revoke the key in the App's settings (Private keys) and install a new one.
+        Revoking it, or uninstalling the App, stops the CI tier and nothing else.
+      - `bootstrap.py` reports a factory group whose visibility, public-repository or workflow
+        restrictions drifted, each time it runs. The CI tier's check re-reads its own group's.
+    - **The job image** is built on the runner host, as the runner user, from a root-owned copy of
+      the build context. The copy keeps links as links, and setup refuses a Dockerfile or context
+      that resolves outside the checkout. The image is the project's toolchain (`factory.json`'s
+      `ci` block: a Dockerfile, its context and static build arguments, on a Debian or Ubuntu base
+      pinned by digest) with `host/ci-runner.Dockerfile`'s runner on top, at `setup.sh`'s
+      `RUNNER_VERSION`. The image is chosen before a job is assigned, so a pull request can't
+      bring its own. Keep versions that pull requests bump (a browser for a test framework, say)
+      out of the image and install them in the job, or run setup again for each change.
+    - **Setup order:**
+      1. `create_app.py <org> --runners`, and install the App on the organization.
+      2. On the runner host: the key installed root-only (above), and `CI_APP_CLIENT_ID` in the
+         owning checkout's `host.conf`.
+      3. The `ci` block in `factory.json`, a workflow on the label, and a commit.
+      4. `bootstrap.py --apply`, which creates the group once a workflow uses the label.
+      5. From the owning checkout, the first time:
+         `sudo TIER=ci TIER_OWNER=<owner>/<repository> bash .github/factory/host/setup.sh` (step 8).
+
+      Setup checks the settings and the key before it changes anything on the host, and the App's
+      installation and the group before it builds anything. Run it again after a toolchain
+      change. A slot running a job keeps it, and every slot's next cycle uses the new image.
+    - **The checks.** `ci_launcher.py check` runs before any slot starts (at boot too) and every
+      6 hours. It checks:
+      - the firewall table, the slice's caps and the delegated controllers that make a container's
+        caps hold;
+      - free space;
+      - the group's settings;
+      - a probe on the host, as the runner user with no Docker: the host, the LAN gateway and
+        IPv6 closed;
+      - a probe from a container of the job image with a job's own flags: the host and LAN
+        closed, the job's exact caps in force, and a listener on another network unreachable,
+        so concurrent jobs can't reach each other.
+
+      A timer checks the firewall table every minute. A failure, or a check that doesn't finish,
+      writes a marker no slot starts past (a reboot included). It stops the slots, the timers and
+      the runner user's whole session, a job mid-run included. The tier stays stopped until
+      someone fixes the cause and runs setup again. The internet or GitHub out of reach is
+      liveness, not isolation, and is only logged.
+    - **Writing the job:** `runs-on: [self-hosted, factory-ci]` (the form bootstrap reads); no
+      `container:` and no `services:`, since the job runs in its runner's container and a database
+      starts in the job; no `docker://` step; explicit read-only permissions;
+      `persist-credentials: false`; no secret and no job token. The policy holds every job on the
+      label to all of that.
+    - **Capacity.** The `CI_JOB_*` settings cap each job. The slice caps them together:
+      `CI_MEMORY_HIGH` must cover `CI_RUNNERS` × `CI_JOB_MEMORY` + 2G, and `CI_CPU_QUOTA` is what
+      leaves the host's own work, production included, its cores. No container's writable layer
+      has a size cap, so put `RUNNER_HOME_BASE` on a filesystem of its own: a full disk then stops
+      only the factory. Check the jobs' `timeout-minutes` against the first capped runs.
+    - **Runner versions.** A just-in-time runner takes its settings from GitHub, so it may update
+      itself when GitHub asks, inside its throwaway container. Bumping `RUNNER_VERSION` (and
+      running setup) keeps that from costing every job a download.
 11. **Smoke.** Run `factory-smoke`; every job must pass before the first issue (D2 rule 5).

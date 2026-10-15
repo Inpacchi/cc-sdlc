@@ -395,11 +395,8 @@ class ProjectWorkflows(unittest.TestCase):
         self.assertIn("OAuth token in env outside an agent job's run step", out)
         self.assertIn("App key outside create-github-app-token's private-key", out)
 
-    CI_JOB = ("  e2e:\n    runs-on: [self-hosted, ci-pool]\n    permissions:\n      contents: read\n      packages: read\n"
-              "    container:\n      image: ghcr.io/other-org/e2e@sha256:" + "c" * 64 + "\n      credentials:\n"
-              "        username: ${{ github.actor }}\n        password: ${{ secrets.GITHUB_TOKEN }}\n"
-              "      options: >-\n        --security-opt seccomp=/etc/factory-runner/seccomp-bwrap.json\n"
-              "        --security-opt systempaths=unconfined\n"
+    # The job runs in its disposable runner container: no container of its own.
+    CI_JOB = ("  e2e:\n    runs-on: [self-hosted, ci-pool]\n    permissions:\n      contents: read\n"
               "    steps:\n      - uses: actions/checkout@v4\n        with:\n          persist-credentials: false\n"
               "      - run: make e2e\n")
 
@@ -409,22 +406,23 @@ class ProjectWorkflows(unittest.TestCase):
         (self.workflows / workflow).write_text(CI.format(jobs=job or self.CI_JOB))
 
     def test_a_ci_tier_job_that_holds_nothing(self):
-        # In a container, read-only, no persisted credentials, the job token only as the image's pull credentials.
+        # No container (it runs in the launcher's), read-only, no persisted credentials, no secret, no job token.
         self.ci_tier()
         self.assertEqual(self.policy(), (0, "workflow policy: 18 workflows, 0 violations\n"))
 
     def test_what_a_ci_tier_job_may_not_do(self):
         cases = [
             (("persist-credentials: false", "fetch-depth: 0"), "checkout sets persist-credentials: false"),
-            (("contents: read\n      packages: read", "contents: write"), "needs explicit read-only permissions"),
+            (("contents: read", "contents: write"), "needs explicit read-only permissions"),
             (("      - run: make e2e\n", "      - run: make e2e\n        env:\n          K: ${{ secrets.ART_KEY }}\n"),
              "holds no secret and no job token"),
             (("      - run: make e2e\n", "      - run: make e2e\n        env:\n          GH_TOKEN: ${{ github.token }}\n"),
              "holds no secret and no job token"),
-            (("        --security-opt seccomp=/etc/factory-runner/seccomp-bwrap.json\n", ""),
-             "systempaths=unconfined comes only with the factory seccomp profile"),
-            (("    container:\n", "    services:\n      pg:\n        image: postgres:16\n    container:\n"),
-             "runs service containers off GitHub-hosted runners"),
+            (("    steps:\n", "    container:\n      image: ghcr.io/other-org/e2e@sha256:" + "c" * 64 + "\n    steps:\n"),
+             "with no container of its own"),
+            (("    steps:\n", "    services:\n      pg:\n        image: postgres:16\n    steps:\n"),
+             "with no service containers of its own"),
+            (("      - run: make e2e\n", "      - uses: docker://alpine:3\n"), "runs no docker:// step"),
             (("      - run: make e2e\n", "      - uses: anthropics/claude-code-action@v1\n"), "no agent job runs on the CI tier"),
         ]
         for (old, new), message in cases:

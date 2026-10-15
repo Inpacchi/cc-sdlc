@@ -350,6 +350,14 @@ class Bootstrap(unittest.TestCase):
         self.assertIn("its merge ref, which the list never matches", out)
         self.assertEqual(self.gh.writes, [])
 
+    def test_a_group_open_to_public_repositories_is_left_to_cd(self):
+        self.gh.set_up()
+        self.pool()["allows_public_repositories"] = True
+        code, out = self.run_it("--apply")
+        self.assertEqual(code, 1)
+        self.assertIn("lets public repositories use it", out)
+        self.assertEqual(self.gh.writes, [])
+
     def test_a_group_open_to_every_workflow_is_left_to_cd(self):
         self.gh.set_up()
         self.pool()["restricted_to_workflows"] = False

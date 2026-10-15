@@ -90,5 +90,11 @@
     "_doc": "Read by workflow_policy.py, which CI runs over every workflow, the project's own included (process/factory.md, Enablement step 10); no template uses these. hosted_labels: the organization's own GitHub-hosted (larger) runner labels, addressed by label, not by runner group; a listed label counts as hosted wherever the policy asks (the container rule, the App key's job, the fixtures job), so never list one a self-hosted runner can carry (self-hosted, linux, x64 and the like are refused) or a factory runner label. self_hosted_exemptions: the project's own CI jobs that may run on a self-hosted runner without the factory container, each {\"workflow\": \"ci.yml\", \"job\": \"<job id>\", \"reason\": \"<how that runner is isolated, and why the job can't run hosted>\"}; never a factory workflow, a job on the factory's runners or an agent job; the factory's secret rules still hold in it; an entry for a job that no longer exists or now runs hosted is a violation. Both empty by default.",
     "hosted_labels": [],
     "self_hosted_exemptions": []
+  },
+  "ci": {
+    "_doc": "The CI tier's job image (process/factory.md, Enablement step 10, The CI tier): host/setup.sh (TIER=ci) builds the project's toolchain from dockerfile with context (paths inside the repository, links included, build_args static), then ci-runner.Dockerfile puts the runner on top. One container of it runs each job, so its toolchain is what every job on the tier gets: the base must be Debian or Ubuntu, pinned by digest, and a toolchain change takes a setup run on the host. Leave dockerfile empty for no CI tier.",
+    "dockerfile": "",
+    "context": "",
+    "build_args": {}
   }
 }

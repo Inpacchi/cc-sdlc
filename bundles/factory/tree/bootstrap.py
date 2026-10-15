@@ -347,6 +347,9 @@ class Bootstrap:
         if group.get("visibility") != "selected":
             self.note("problem", section, f"visibility is {group.get('visibility')}: every repository can use it")
             return
+        if group.get("allows_public_repositories"):
+            # A public repository's pull requests come from forks: anyone's code on this host. CD's call to change.
+            self.note("problem", section, "lets public repositories use it")
         repos = self.list_all(f"{base}/{gid}/repositories", "repositories")
         if repos is None:
             self.note("unchecked", section, "can't read its repositories")

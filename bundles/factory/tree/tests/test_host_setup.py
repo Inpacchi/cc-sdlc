@@ -46,8 +46,15 @@ class HostSettings(unittest.TestCase):
         self.assertEqual((s["RUNNER_USER"], s["RUNNER_UNIT"], s["FW_UNIT"], s["NFT_TABLE"], s["NFT_FILE"]),
                          ("factory-ci", "factory-ci", "factory-ci-firewall", "factory_ci", "/etc/factory-runner/ci-firewall.nft"))
         self.assertEqual((s["RUNNER_COUNT"], s["MEM_HIGH"], s["MEM_MAX"], s["CPU_QUOTA"], s["DB_PORT"]),
-                         ("2", "12G", "16G", "800%", ""))
+                         ("2", "14G", "16G", "800%", ""))
         self.assertEqual(s["RUNNER_NAMES"], "box-ci-1 box-ci-2")
+        # One disposable runner per job: each job's caps and limits, the registration App, and no CPU weight (it
+        # would rank the CI user against other users only; the slice's CPUQuota is the bound).
+        self.assertEqual((s["CI_JOB_CPUS"], s["CI_JOB_MEMORY"], s["CI_JOB_PIDS"], s["CI_JOB_SHM"], s["CI_JOB_HOURS"],
+                          s["CI_IDLE_HOURS"], s["CI_MIN_FREE_GB"]), ("4", "6g", "8192", "1g", "6", "24", "20"))
+        self.assertEqual(s["CI_APP_CLIENT_ID"], "")
+        self.assertNotIn("CPU_WEIGHT", s)
+        self.assertNotIn("CI_JOB_CPUS", self.settings("FACTORY_ORG=acme\n", factory={"runners": runners}))
         # host.conf's caps, factory.json's group, and a second organization's names.
         s = self.settings("FACTORY_ORG=other\nRUNNER_INSTANCE=other\nCI_RUNNERS=3\nCI_CPU_QUOTA=1200%\n", tier="ci",
                           factory={"runners": {**runners, "groups": {"shared": "other-pool", "ci": "other-ci"}}})
@@ -56,16 +63,6 @@ class HostSettings(unittest.TestCase):
                          ("factory-ci-other", "factory-ci-firewall-other", "factory_ci_other"))
         # The other tiers keep the shared pool.
         self.assertEqual(self.settings("FACTORY_ORG=acme\n", factory={"runners": runners})["RUNNER_GROUP"], "factory-pool")
-
-    def test_the_ci_tier_is_held(self):
-        # Until CD decides its design, setup refuses the CI tier before any root work (--print-settings still runs).
-        with tempfile.TemporaryDirectory() as tmp:
-            cfg = pathlib.Path(tmp) / "factory.json"
-            cfg.write_text(json.dumps({"runners": {"strict": "s", "planning": "p", "ci": "c"}}))
-            env = {**os.environ, "HOST_CONF": "/nonexistent", "FACTORY_JSON": str(cfg), "TIER": "ci", "FACTORY_ORG": "acme"}
-            r = subprocess.run(["bash", str(SCRIPT)], capture_output=True, text=True, env=env)
-        self.assertEqual(r.returncode, 1)
-        self.assertIn("the CI tier is held until CD decides its design", r.stderr)
 
     def test_a_factory_json_from_before_the_ci_tier(self):
         with tempfile.TemporaryDirectory() as tmp:

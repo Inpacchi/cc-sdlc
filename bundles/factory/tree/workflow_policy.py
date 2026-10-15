@@ -58,11 +58,11 @@ Allowlists, not blocklists:
   read-only permissions, no `uses:` steps, no secrets and no agent. The production environment is
   for that job only (CD gates run through it too). factory-gate.yml has no agent job.
 - CI tier (factory.json's runners.ci, host/setup.sh TIER=ci): a project's own CI jobs that must run
-  self-hosted, pull requests' code included. A job on its label is in one of the project's own
-  workflows (never a factory-*.yml), runs no agent, runs in a container (the runner requires one; the
-  container rule above), has explicit read-only permissions, checks out without persisted
-  credentials, and holds no secret and no job token: the only one allowed is the job token as its
-  container's pull credentials. systempaths=unconfined comes only with the factory seccomp profile.
+  self-hosted, pull requests' code included, each in a disposable runner container (ci_launcher.py).
+  A job on its label runs in that container, so it names no container or service containers and no
+  docker:// step (the container rule above doesn't apply to it). It is in one of the project's own
+  workflows (never a factory-*.yml), runs no agent, has explicit read-only permissions, checks out
+  without persisted credentials, and holds no secret and no job token.
 - Fixtures (design rule D2 rule 7): a factory workflow's job named `fixtures` is in the implement or
   revise workflow and runs on a GitHub-hosted runner with no agent, container, environment or
   outputs, permissions exactly contents: read, one checkout of the default branch without persisted
@@ -630,48 +630,41 @@ def app_key_failures(name, job, workflow_env, is_agent_job):
 
 
 JOB_TOKEN_REF = re.compile(r"github\.token|secrets\.GITHUB_TOKEN|secrets\[\s*['\"]GITHUB_TOKEN", re.I)
-SECCOMP_OPTION = ("--security-opt", "seccomp=/etc/factory-runner/seccomp-bwrap.json")
-SYSTEMPATHS_OPTION = ("--security-opt", "systempaths=unconfined")
 
 
 def ci_tier_failures(workflow_name, name, job, is_agent_job):
-    """The CI tier: a project's own CI jobs, pull requests' code included, on isolated self-hosted runners.
-    Nothing there for a pull request's code to take: no secret, no job token beyond the container's pull
-    credentials, read-only permissions, checkouts that keep no credentials. (job: its steps expanded.)"""
-    runs_on = job.get("runs-on", [])
-    labels = [runs_on] if isinstance(runs_on, str) else runs_on if isinstance(runs_on, list) else []
-    if not CI_LABEL or CI_LABEL not in labels:
+    """The CI tier: a project's own CI jobs, pull requests' code included, each in a disposable runner container.
+    The job runs in that container: no container or services of its own (the runner image has no Docker), and
+    nothing for a pull request's code to take: no secret, no job token, read-only permissions, checkouts that keep
+    no credentials. (job: its steps expanded.)"""
+    if not on_ci_tier(job):
         return []
     failures = []
     if workflow_name.startswith("factory-"):
         failures.append(f"{name}: only a project's own workflows run on the CI tier ({CI_LABEL})")
     if is_agent_job:
         failures.append(f"{name}: no agent job runs on the CI tier ({CI_LABEL})")
+    for key, what in (("container", "container"), ("services", "service containers")):
+        if job.get(key):
+            failures.append(f"{name}: a CI-tier job runs in its disposable runner, with no {what} of its own")
     perms = job.get("permissions")
     if not isinstance(perms, dict) or any(v not in ("read", "none") for v in perms.values()):
         failures.append(f"{name}: a CI-tier job needs explicit read-only permissions")
     for step in job.get("steps") or []:
-        if str(step.get("uses", "")).startswith("actions/checkout@") \
-                and (step.get("with") or {}).get("persist-credentials") is not False:
+        uses = str(step.get("uses", ""))
+        if uses.startswith("actions/checkout@") and (step.get("with") or {}).get("persist-credentials") is not False:
             failures.append(f"{name}: a CI-tier job's checkout sets persist-credentials: false")
-    container = job.get("container")
-    scanned = dict(job)
-    if isinstance(container, dict):
-        creds = dict(container.get("credentials") or {})
-        if str(creds.get("password", "")).strip() in JOB_TOKENS:
-            creds.pop("password")  # the job token pulls the job's image, and nothing else
-        scanned["container"] = {**container, "credentials": creds}
-        try:
-            words = shlex.split(str(container.get("options", "")))
-            options = set(zip(words[::2], words[1::2]))
-        except ValueError:
-            options = set()
-        if SYSTEMPATHS_OPTION in options and SECCOMP_OPTION not in options:
-            failures.append(f"{name}: systempaths=unconfined comes only with the factory seccomp profile")
-    if SECRET_REF.search(str(scanned)) or JOB_TOKEN_REF.search(str(scanned)):
-        failures.append(f"{name}: a CI-tier job runs pull requests' code, so it holds no secret and no job token "
-                        "(the job token only as its container's pull credentials)")
+        if uses.startswith("docker://"):
+            failures.append(f"{name}: a CI-tier job runs no docker:// step (its runner has no Docker)")
+    if SECRET_REF.search(str(job)) or JOB_TOKEN_REF.search(str(job)):
+        failures.append(f"{name}: a CI-tier job runs pull requests' code, so it holds no secret and no job token")
     return failures
+
+
+def on_ci_tier(job):
+    runs_on = job.get("runs-on", [])
+    labels = [runs_on] if isinstance(runs_on, str) else runs_on if isinstance(runs_on, list) else []
+    return bool(CI_LABEL) and CI_LABEL in labels
 
 
 def fixture_secrets(job):
@@ -771,7 +764,7 @@ def job_failures(name, job, workflow_env, model_input, factory_dir, workflow_nam
     reason = EXEMPTIONS.get((workflow_name, name))
     if reason is not None and used_exemptions is not None:
         used_exemptions.add((workflow_name, name))
-    if not hosted(runs_on) and not on_prod:
+    if not hosted(runs_on) and not on_prod and not on_ci_tier(job):
         if reason is None:
             failures += container_failures(name, job)
         elif is_agent_job or FACTORY_LABELS & set(labels):
@@ -782,7 +775,8 @@ def job_failures(name, job, workflow_env, model_input, factory_dir, workflow_nam
             print(f"::notice::{workflow_name}: {name}: runs on a self-hosted runner without the factory "
                   f"container (factory.json policy.self_hosted_exemptions: {reason})")
     elif reason is not None:
-        failures.append(f"{name}: has an exemption from the container rule it doesn't need (it runs hosted)")
+        where = "on the CI tier's disposable runners" if on_ci_tier(job) else "hosted"
+        failures.append(f"{name}: has an exemption from the container rule it doesn't need (it runs {where})")
     for step in steps:
         uses = str(step.get("uses", ""))
         if "claude" in uses.lower() and not uses.startswith(ACTION):

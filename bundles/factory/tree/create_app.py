@@ -2,6 +2,7 @@
 """Create the factory's GitHub App from its manifest (z-sdlc process/factory.md, Enablement step 5).
 
     python3 .github/factory/create_app.py <organization> [--name NAME] [--key-out PATH]
+    python3 .github/factory/create_app.py <organization> --runners [--name NAME] [--key-out PATH]
 
 Opens GitHub's create-an-App page for the organization with the factory's manifest filled in (a local
 page posts it); you confirm it there. GitHub sends the browser back to this script, which converts the
@@ -10,6 +11,12 @@ outside any checkout) and client ID, writes the App's bot
 user into factory.json, and prints the install link and the commands that store the key and the client
 ID in the factory-writer environment. The App gets exactly the permissions bootstrap.py checks for
 (contents, issues and pull requests write, metadata read) and no webhook. Standard library only.
+
+--runners creates the CI tier's runner-registration App instead (process/factory.md, Enablement step 10, The CI
+tier). Its one permission is the organization's self-hosted runners, and GitHub has no narrower one that registers
+runners: it reaches every runner group in the organization (registering runners into any of them, moving runners,
+changing a group's restrictions). So its key goes to the runner host root-only, never into a checkout, and every
+other copy is deleted. factory.json is left alone.
 """
 import argparse
 import html
@@ -29,13 +36,14 @@ import webbrowser
 FACTORY = pathlib.Path(__file__).resolve().parent
 API = "https://api.github.com"
 PERMISSIONS = {"contents": "write", "issues": "write", "pull_requests": "write", "metadata": "read"}
+RUNNER_PERMISSIONS = {"organization_self_hosted_runners": "write"}
 
 
-def manifest(name, org, port):
-    """The App as the factory needs it: private, no webhook, nothing beyond the four permissions."""
+def manifest(name, org, port, permissions=PERMISSIONS):
+    """The App as the factory needs it: private, no webhook, nothing beyond its permissions."""
     return {"name": name, "url": f"https://github.com/{org}", "public": False,
             "redirect_url": f"http://127.0.0.1:{port}/created",
-            "default_permissions": dict(PERMISSIONS), "default_events": []}
+            "default_permissions": dict(permissions), "default_events": []}
 
 
 def page(org, state, app_manifest):
@@ -76,7 +84,7 @@ def write_app(factory_json, slug, user_id):
     path.write_text(text)
 
 
-def wait_for_code(org, name, open_browser=webbrowser.open):
+def wait_for_code(org, name, open_browser=webbrowser.open, permissions=PERMISSIONS):
     """Serve the page, open it, and wait for GitHub's redirect; returns the conversion code."""
     state, result = secrets.token_urlsafe(16), {}
 
@@ -85,7 +93,7 @@ def wait_for_code(org, name, open_browser=webbrowser.open):
             url = urllib.parse.urlsplit(self.path)
             query = dict(urllib.parse.parse_qsl(url.query))
             if url.path == "/":
-                body = page(org, state, manifest(name, org, self.server.server_port))
+                body = page(org, state, manifest(name, org, self.server.server_port, permissions))
             elif url.path == "/created" and query.get("state") == state and query.get("code"):
                 result["code"] = query["code"]
                 body = "<!doctype html><p>The App is created. Return to the terminal.</p>"
@@ -125,17 +133,21 @@ def main(argv=None):
     ap.add_argument("organization")
     ap.add_argument("--name", help="the App's name (default: <organization>-factory)")
     ap.add_argument("--key-out", help="where to write the private key (default: ~/<name>.private-key.pem)")
+    ap.add_argument("--runners", action="store_true", help="the CI tier's runner-registration App instead")
     args = ap.parse_args(argv)
-    name = args.name or f"{args.organization}-factory"
+    name = args.name or f"{args.organization}-factory{'-runners' if args.runners else ''}"
     # Outside the repository by default, so no `git add` can pick the key up.
     args.key_out = args.key_out or str(pathlib.Path.home() / f"{name}.private-key.pem")
     if pathlib.Path(args.key_out).exists():
         raise SystemExit(f"create_app: {args.key_out} exists; move it or pass --key-out")
-    app = convert(wait_for_code(args.organization, name))
+    app = convert(wait_for_code(args.organization, name,
+                                permissions=RUNNER_PERMISSIONS if args.runners else PERMISSIONS))
     key = pathlib.Path(args.key_out)
     # Created here, readable only by you; an existing file is never overwritten.
     with os.fdopen(os.open(key, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600), "w") as f:
         f.write(app["pem"])
+    if args.runners:
+        return runners_done(app, key)
     user_id = bot_user_id(app["slug"])
     write_app(FACTORY / "factory.json", app["slug"], user_id)
     repo = repository()
@@ -147,6 +159,23 @@ Created {app['slug']} (bot user {user_id}); factory.json's app is set, and its p
      gh secret set FACTORY_APP_PRIVATE_KEY --env factory-writer --repo {repo} < {key}
      gh variable set FACTORY_APP_CLIENT_ID --env factory-writer --repo {repo} --body {app['client_id']}
 3. Run python3 .github/factory/render.py and commit factory.json and the workflows.""")
+    return 0
+
+
+def runners_done(app, key):
+    """The runner-registration App: say where its key and client ID go on the runner host."""
+    granted = app.get("permissions") or {}
+    if granted and {k: v for k, v in granted.items() if k != "metadata"} != RUNNER_PERMISSIONS:
+        print(f"create_app: the App has {granted}, not just {RUNNER_PERMISSIONS}: fix it in its settings before use")
+    print(f"""
+Created {app['slug']}, the CI tier's runner-registration App; its private key is {key}. The key can register
+runners into every runner group in the organization: keep it only where step 2 puts it.
+1. Install it on the organization (it needs no repository): https://github.com/apps/{app['slug']}/installations/new
+2. Copy the key to the runner host and install it root-only, never in a checkout (factory-ci-<instance> for another
+   organization's runners on that host), then delete every other copy, {key} included:
+     sudo install -D -m 600 -o root -g root <the copied key> /etc/factory-runner/factory-ci/app.pem
+3. Set CI_APP_CLIENT_ID={app['client_id']} in the CI tier's checkout's .github/factory/host/host.conf, and run
+   sudo TIER=ci bash .github/factory/host/setup.sh there (process/factory.md, Enablement step 10).""")
     return 0
 
 

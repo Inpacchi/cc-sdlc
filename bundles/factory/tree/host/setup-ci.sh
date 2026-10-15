@@ -1,0 +1,241 @@
+# The CI tier's half of host setup (z-sdlc process/factory.md, Enablement step 10, The CI tier). Sourced by
+# setup.sh for TIER=ci after its step 6: the runner user, its firewall, caps, delegated controllers, rootless
+# Docker and the isolation test are in place, and setup.sh has checked the CI settings and the App's key. This adds
+# the job image, the launcher's settings, the isolation checks (a gate at boot, the whole check every 6 hours, the
+# firewall table every minute) and one systemd slot per concurrent job. Every slot runs ci_launcher.py: one
+# disposable container per job, from a just-in-time runner registration. Root writes only root-owned files here,
+# and builds and runs nothing of the project's: the runner user builds the image, from a root-owned copy of the
+# build context.
+
+LIB=/usr/local/lib/factory-runner
+CONF_DIR=/etc/factory-runner/$RUNNER_UNIT
+STATE=/run/factory-runner/$RUNNER_UNIT
+CONF=$CONF_DIR/launcher.json
+NEW_CONF=$CONF.new
+TRIPPED=$CONF_DIR/tripped
+
+log "7/8 CI tier: the runner-registration App, the runner group and the job image"
+command -v setpriv > /dev/null || die "setpriv (util-linux) is not installed"
+install -d -m 755 -o root -g root "$LIB" "$CONF_DIR"
+install -d -m 711 -o root -g root /run/factory-runner "$STATE"
+printf 'd %s 0711 root root -\nd %s 0711 root root -\n' /run/factory-runner "$STATE" > "/etc/tmpfiles.d/$RUNNER_UNIT.conf"
+install -m 644 -o root -g root "$SCRIPT_DIR/ci_launcher.py" "$LIB/ci_launcher.py"
+
+# The jobs' caps need the cpu, memory and pids controllers delegated to the runner user (step 3 wrote the drop-in).
+controllers=/sys/fs/cgroup/user.slice/user-$RUID.slice/user@$RUID.service/cgroup.controllers
+delegated() { for c in cpu memory pids; do grep -qw "$c" "$controllers" 2> /dev/null || return 1; done; }
+if ! delegated; then
+  echo "Restarting user@$RUID.service for the delegated controllers (its rootless Docker restarts with it)."
+  systemctl restart "user@$RUID.service"
+  for _ in $(seq 30); do as_runner "docker info > /dev/null 2>&1" && break; sleep 1; done
+fi
+delegated || die "the cpu, memory and pids controllers aren't delegated to $RUNNER_USER: the jobs' caps wouldn't hold"
+
+# The launcher's settings: everything a cycle and the checks need, root-owned, nothing secret but the key's path.
+# Written whole to a new file, checked against GitHub and completed with the image, and only then put in place, so a
+# run that fails partway leaves the slots the settings they had.
+write_conf() {
+  python3 -I - "$NEW_CONF" "$@" <<'PY'
+import json, os, sys
+path, pairs = sys.argv[1], sys.argv[2:]
+try:
+    with open(path) as f:
+        conf = json.load(f)
+except FileNotFoundError:
+    conf = {}
+for pair in pairs:
+    key, value = pair.split("=", 1)
+    conf[key] = json.loads(value)
+with open(path + ".tmp", "w") as f:
+    json.dump(conf, f, indent=2)
+os.chmod(path + ".tmp", 0o644)
+os.replace(path + ".tmp", path)
+PY
+}
+json_str() { python3 -I -c 'import json,sys; print(json.dumps(sys.argv[1]))' "$1"; }
+labels=$(python3 -I -c 'import json,sys; print(json.dumps([l.strip() for l in sys.argv[1].split(",") if l.strip()]))' "$RUNNER_LABELS")
+rm -f "$NEW_CONF"
+write_conf "api=\"https://api.github.com\"" "org=$(json_str "$FACTORY_ORG")" "client_id=$(json_str "$CI_APP_CLIENT_ID")" \
+  "key=$(json_str "$CONF_DIR/app.pem")" "group=$(json_str "$RUNNER_GROUP")" "labels=$labels" \
+  "name_prefix=$(json_str "$RUNNER_NAME_PREFIX-ci")" "container=$(json_str "$RUNNER_UNIT")" \
+  "user=$(json_str "$RUNNER_USER")" "uid=$RUID" "gid=$(id -g "$RUNNER_USER")" "home=$(json_str "$RUNNER_HOME")" \
+  "setpriv=$(json_str "$(command -v setpriv)")" "env=\"/usr/bin/env\"" "docker=$(json_str "$(command -v docker)")" \
+  "python=\"/usr/bin/python3\"" "openssl=$(json_str "$(command -v openssl)")" "nft=$(json_str "$(command -v nft)")" \
+  "systemctl=$(json_str "$(command -v systemctl)")" \
+  "job={\"cpus\": $CI_JOB_CPUS, \"memory\": \"$CI_JOB_MEMORY\", \"pids\": $CI_JOB_PIDS, \"shm\": \"$CI_JOB_SHM\", \"hours\": $CI_JOB_HOURS}" \
+  "idle_hours=$CI_IDLE_HOURS" "min_free_gb=$CI_MIN_FREE_GB" \
+  "state_dir=$(json_str "$STATE")" "tripped=$(json_str "$TRIPPED")" "unit=$(json_str "$RUNNER_UNIT")" \
+  "firewall_table=$(json_str "$NFT_TABLE")" "cgroup=$(json_str "/sys/fs/cgroup/user.slice/user-$RUID.slice")" \
+  "probe={\"targets\": $(json_str "$targets"), \"ports\": $(json_str "$ports")}"
+ids=$(python3 -I "$LIB/ci_launcher.py" resolve "$NEW_CONF") || die "the runner-registration App or the runner group isn't ready (above)"
+write_conf "installation_id=$(python3 -I -c 'import json,sys; print(json.loads(sys.argv[1])["installation_id"])' "$ids")" \
+  "group_id=$(python3 -I -c 'import json,sys; print(json.loads(sys.argv[1])["group_id"])' "$ids")"
+
+# The job image: the project's toolchain (factory.json's ci block), then the runner (ci-runner.Dockerfile). Root
+# copies the build context to a root-owned directory the runner user reads; the runner user builds.
+checkout=$(git -C "$SCRIPT_DIR" rev-parse --show-toplevel)
+# Each path resolved, links and all, and refused unless it stays inside the checkout: root copies what it names.
+{ IFS= read -r dockerfile && IFS= read -r context; } < <(python3 -I - "$FACTORY_JSON" "$checkout" <<'PY'
+import json, os, stat, sys
+ci = json.load(open(sys.argv[1])).get("ci") or {}
+root = os.path.realpath(sys.argv[2])
+for key, kind in (("dockerfile", stat.S_ISREG), ("context", stat.S_ISDIR)):
+    path = ci.get(key) or ""
+    if not path or os.path.isabs(path) or any(c.isspace() or not c.isprintable() for c in path):
+        sys.exit(f"factory.json's ci.{key}: a path inside the repository, got {path!r}")
+    real = os.path.realpath(os.path.join(root, path))
+    if os.path.commonpath([real, root]) != root or not os.path.exists(real) or not kind(os.stat(real).st_mode):
+        sys.exit(f"factory.json's ci.{key} ({path}) isn't a {'file' if key == 'dockerfile' else 'directory'} inside "
+                 "the checkout, links resolved")
+    print(real)
+PY
+) || die "factory.json's ci block names no toolchain Dockerfile and context inside the checkout (above)"
+build_args=$(python3 -I - "$FACTORY_JSON" <<'PY'
+import json, re, shlex, sys
+args = (json.load(open(sys.argv[1])).get("ci") or {}).get("build_args") or {}
+for k, v in args.items():
+    if not re.fullmatch(r"[A-Z_][A-Z0-9_]*", k) or not isinstance(v, str) or "\n" in v:
+        sys.exit(f"factory.json's ci.build_args: {k!r}")
+    print(shlex.quote(f"--build-arg={k}={v}"), end=" ")
+PY
+) || die "factory.json's ci.build_args (above)"
+build=$(mktemp -d "$RUNNER_HOME_BASE/ci-build.XXXXXX")
+chmod 755 "$build"
+# -P: a link is copied as a link, never followed, so nothing outside the context comes along. chmod -R skips links.
+cp -RP "$context" "$build/toolchain"
+cp -P "$dockerfile" "$build/toolchain.Dockerfile"
+install -d -m 755 "$build/runner" && cp "$SCRIPT_DIR/ci-runner.Dockerfile" "$build/runner/Dockerfile"
+chown -R -h root:root "$build" && chmod -R a+rX "$build"
+as_runner "docker build -q -f '$build/toolchain.Dockerfile' $build_args -t $RUNNER_UNIT-toolchain:latest '$build/toolchain' > /dev/null" \
+  || { rm -rf "$build"; die "the toolchain image didn't build"; }
+# Labelled factory.keep: the weekly prune never takes the job image, which nothing uses between jobs.
+as_runner "docker build -q --label factory.keep=1 --build-arg BASE=$RUNNER_UNIT-toolchain:latest \
+  --build-arg RUNNER_VERSION=$RUNNER_VERSION --build-arg RUNNER_SHA256=$RUNNER_SHA256 -t $RUNNER_UNIT-runner:latest \
+  '$build/runner' > /dev/null" \
+  || { rm -rf "$build"; die "the runner image didn't build"; }
+rm -rf "$build"
+image=$(as_runner "docker image inspect -f '{{.Id}}' $RUNNER_UNIT-runner:latest") || die "no runner image"
+[[ $image =~ ^sha256:[0-9a-f]{64}$ ]] || die "no runner image"
+# Earlier job images, unless a running job still uses one (the runner user lists and removes them; root reads none).
+as_runner "docker image ls -q --no-trunc --filter label=factory.keep | grep -vx '$image' | xargs -r docker image rm > /dev/null 2>&1" || true
+write_conf "image=$(json_str "$image")"
+mv -f "$NEW_CONF" "$CONF"
+echo "job image: $image"
+
+log "8/8 CI tier: the isolation checks, then $RUNNER_COUNT slot(s)"
+launcher="/usr/bin/python3 -I $LIB/ci_launcher.py"
+# The gate runs the check before any slot starts (at boot too), a timer runs it every 6 hours, and another checks the
+# firewall table every minute. A failure, or a check that doesn't finish, writes $TRIPPED, which no slot starts past,
+# and stops the slots, the timers and the runner user's whole session, a job mid-run included.
+cat > "/etc/systemd/system/$RUNNER_UNIT-trip.service" <<EOF
+[Unit]
+Description=Stop the $RUNNER_USER slots: an isolation check failed or didn't finish
+
+[Service]
+Type=oneshot
+ExecStart=$launcher trip $CONF
+EOF
+cat > "/etc/systemd/system/$RUNNER_UNIT-gate.service" <<EOF
+[Unit]
+Description=Isolation check before the $RUNNER_USER slots start
+Requires=$FW_UNIT.service user@$RUID.service
+Wants=network-online.target
+After=$FW_UNIT.service user@$RUID.service network-online.target
+ConditionPathExists=!$TRIPPED
+OnFailure=$RUNNER_UNIT-trip.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+TimeoutStartSec=30min
+ExecStart=$launcher check $CONF
+
+[Install]
+WantedBy=multi-user.target
+EOF
+# No Requires= on user@: while the tier is tripped, nothing may start the runner user's manager again.
+cat > "/etc/systemd/system/$RUNNER_UNIT-check.service" <<EOF
+[Unit]
+Description=Isolation check for the $RUNNER_USER slots (stops them on failure)
+After=user@$RUID.service
+ConditionPathExists=!$TRIPPED
+OnFailure=$RUNNER_UNIT-trip.service
+
+[Service]
+Type=oneshot
+TimeoutStartSec=30min
+ExecStart=$launcher check $CONF
+EOF
+cat > "/etc/systemd/system/$RUNNER_UNIT-check.timer" <<EOF
+[Unit]
+Description=Isolation check for the $RUNNER_USER slots, every 6 hours
+
+[Timer]
+OnBootSec=6h
+OnUnitActiveSec=6h
+
+[Install]
+WantedBy=timers.target
+EOF
+cat > "/etc/systemd/system/$RUNNER_UNIT-fw.service" <<EOF
+[Unit]
+Description=Firewall table check for the $RUNNER_USER slots (stops them if it's gone)
+ConditionPathExists=!$TRIPPED
+OnFailure=$RUNNER_UNIT-trip.service
+
+[Service]
+Type=oneshot
+TimeoutStartSec=2min
+ExecStart=$launcher fwcheck $CONF
+EOF
+cat > "/etc/systemd/system/$RUNNER_UNIT-fw.timer" <<EOF
+[Unit]
+Description=Firewall table check for the $RUNNER_USER slots, every minute
+
+[Timer]
+OnBootSec=1min
+OnUnitActiveSec=1min
+AccuracySec=5s
+
+[Install]
+WantedBy=timers.target
+EOF
+# SIGTERM goes to the launcher alone (KillMode=mixed), which removes its container and registration before it exits.
+cat > "/etc/systemd/system/$RUNNER_UNIT-slot@.service" <<EOF
+[Unit]
+Description=CI tier slot %i: one disposable runner per job ($RUNNER_USER)
+Requires=$FW_UNIT.service user@$RUID.service $RUNNER_UNIT-gate.service
+After=$FW_UNIT.service user@$RUID.service $RUNNER_UNIT-gate.service network-online.target
+ConditionPathExists=!$TRIPPED
+
+[Service]
+Type=simple
+ExecStart=$launcher run $CONF %i
+ExecStopPost=$launcher stop $CONF %i
+Restart=always
+RestartSec=5
+KillMode=mixed
+TimeoutStopSec=180
+
+[Install]
+WantedBy=multi-user.target
+EOF
+systemctl daemon-reload
+# A run of setup is the operator's say that the cause of a trip is fixed; the check must still pass. It runs here,
+# not by restarting the gate: the slots require the gate, and restarting it would restart them, killing their jobs.
+rm -f "$TRIPPED"
+$launcher check "$CONF" || die "the CI tier's isolation check failed (above): no slot starts"
+systemctl enable --now "$RUNNER_UNIT-gate.service" "$RUNNER_UNIT-check.timer" "$RUNNER_UNIT-fw.timer" > /dev/null
+# Started, never restarted: a slot running a job keeps it, and every slot's next cycle reads the new settings.
+for i in $(seq "$RUNNER_COUNT"); do
+  systemctl enable --now "$RUNNER_UNIT-slot@$i.service" > /dev/null
+done
+# Slots beyond RUNNER_COUNT, enabled or running, are stopped (each removes its container and registration).
+for unit in $({ ls /etc/systemd/system/multi-user.target.wants/ 2> /dev/null
+                systemctl list-units --all --plain --no-legend "$RUNNER_UNIT-slot@*.service" | awk '{print $1}'; } \
+              | grep -E "^$RUNNER_UNIT-slot@[0-9]+\.service$" | sort -u); do
+  n=${unit#"$RUNNER_UNIT-slot@"}
+  n=${n%.service}
+  if ((n > RUNNER_COUNT)); then systemctl disable --now "$unit" > /dev/null 2>&1 || true; fi
+done
+systemctl --no-pager --lines=0 status "$RUNNER_UNIT-slot@*" | grep -E '●|Active:' || true
