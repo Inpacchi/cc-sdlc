@@ -47,7 +47,7 @@ jobs:
       # and drops their results; timeout-minutes is the real backstop.
       CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS: "3600000"
       CONTEXT7_API_KEY: ${{ secrets.CONTEXT7_API_KEY }}
-      # Addresses that must be unreachable from here: the runner host's own (factory.json's
+      # Addresses that must be unreachable from here: the runner host's own and the production machine's (factory.json's
       # smoke.host_probes: its LAN and VPN addresses, its compose networks' gateways) and the
       # default Docker bridge and rootless (slirp) host gateways.
       FACTORY_HOST_PROBES: "%{smoke.host_probes} 172.17.0.1 10.0.2.2"

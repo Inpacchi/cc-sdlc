@@ -34,7 +34,7 @@ CD decided (2026-10-12) that a private project of the organization's, the incuba
 | Seed | `seed` paths: `factory.json`, `planning.json`, `services.json`, `triage-policy.md`, `README.md`, `tests/test_codeowners.py`, `host/host.conf` | Not copied. The bundle keeps its own generic version in `bundles/factory/seed/`; the report says when the bundle's version needs a matching change |
 | Bundle code | Everything else | Compared three ways (quantile now, the bundle now, quantile at the last import): quantile's changes are copied into `bundles/factory/tree/`; z-sdlc's own changes are kept and go to quantile; a file changed on both sides is a conflict. A file z-sdlc's history never had (excluded at the last import, bundle code under today's rules) is added, not z-sdlc's removal |
 
-`free_settings` names JSON seed settings whose keys are the project's own data (`stack.env`'s variable names), which aren't compared. `specific` lists patterns of quantile-specific text the report flags when an import adds them. `last_import` is the quantile commit last imported; the script updates it.
+`free_settings` names JSON seed settings whose keys are the project's own data (`stack.env`'s variable names), which aren't compared. `optional_settings` names JSON seed settings the bundle's code reads only when they're there (`ci`, `fixtures`, `policy`, `runners.ci` in `factory.json`), which the incubator may leave out because it doesn't use them; one the incubator has is still compared. `specific` lists patterns of incubator-specific text the report flags when an import adds them. `last_import` is the incubator commit last imported; the script updates it.
 
 ## Workflow
 
@@ -75,7 +75,7 @@ It writes what z-sdlc is ahead on (bundle code, skills, `process/factory.md`) in
 python3 .claude/skills/zsdlc-import-factory/scripts/import_factory.py ~/Projects/quantile --prove
 ```
 
-It installs the bundle as this import makes it, the way `sdlc-initialize` and `sdlc-migrate` would: quantile's bundle code at the commit, with z-sdlc's own changes kept, plus the bundle's seeds. It proves the import whether or not you've applied it yet. It installs into a clone of quantile at the commit (nothing may change but z-sdlc's own changes quantile hasn't taken yet, and the workflow policy must pass), and into an empty project with an Enablement-shaped CODEOWNERS (every template renders, the policy passes, every test passes). Every check must pass before you commit.
+It installs the bundle as this import makes it, the way `sdlc-initialize` and `sdlc-migrate` would: the incubator's bundle code at the commit, with z-sdlc's own changes kept, plus the bundle's seeds. It proves the import whether or not you've applied it yet. It installs into a clone of the incubator at the commit (nothing may change but z-sdlc's own changes the incubator hasn't taken yet, the workflow policy must pass, and so must the factory's tests with the incubator's own settings, which no seed changes), and into an empty project with an Enablement-shaped CODEOWNERS (every template renders, the policy passes, every test passes). Every check must pass before you commit.
 
 ### 5. Record
 

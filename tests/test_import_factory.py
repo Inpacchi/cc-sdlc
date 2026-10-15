@@ -196,6 +196,17 @@ class ImportFactory(unittest.TestCase):
         code, out = self.run_it("--apply")
         self.assertEqual(code, 0, out)
 
+    def test_an_optional_setting_the_incubator_lacks_is_no_finding(self):
+        seed = {**FACTORY_JSON, "fixtures": {"path": ""}, "runners": {"strict": "f", "ci": "f-ci"}, "extra": 1}
+        self.put(self.z, "bundles/factory/seed/factory.json", json.dumps(seed))
+        rules = json.loads(self.rules.read_text())
+        rules["optional_settings"] = {"factory.json": ["fixtures", "runners.ci"]}
+        self.rules.write_text(json.dumps(rules))
+        code, out = self.run_it()
+        self.assertNotIn("setting fixtures", out)
+        self.assertNotIn("setting runners.ci", out)
+        self.assertIn("[fix first] seed factory.json: the bundle's seed has setting extra and the incubator doesn't", out)
+
     def test_a_changed_text_seed_is_reported_and_needs_accept(self):
         self.run_it("--apply")
         self.put(self.inc, ".github/factory/README.md", "acme notes, more\n")

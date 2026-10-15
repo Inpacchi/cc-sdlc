@@ -1,5 +1,5 @@
 {
-  "_doc": "How zsdlc-import-factory sorts the incubator's .github/factory/ (CD, 2026-10-12: a private project of the organization's, the incubator, incubates the factory and z-sdlc imports it). Every file there is bundle code (copied into bundles/factory/tree/) unless it is a seed (the bundle keeps its own generic version in bundles/factory/seed/) or excluded (the project's own, never imported). free_settings: JSON seed settings whose keys are the project's own data, not compared. specific: patterns that mark incubator-specific text (its name, private and VPN address ranges, home directories), flagged when an import adds them. last_import: the incubator commit the bundle code was last imported from; the tool updates it.",
+  "_doc": "How zsdlc-import-factory sorts the incubator's .github/factory/ (CD, 2026-10-12: a private project of the organization's, the incubator, incubates the factory and z-sdlc imports it). Every file there is bundle code (copied into bundles/factory/tree/) unless it is a seed (the bundle keeps its own generic version in bundles/factory/seed/) or excluded (the project's own, never imported). free_settings: JSON seed settings whose keys are the project's own data, not compared. optional_settings: JSON seed settings the bundle's code reads only when they're there, which the incubator may leave out (it doesn't use them). specific: patterns that mark incubator-specific text (its name, private and VPN address ranges, home directories), flagged when an import adds them. last_import: the incubator commit the bundle code was last imported from; the tool updates it.",
   "bundle": "factory",
   "incubator": "endless-galaxy-studios/quantile",
   "source": ".github/factory",
@@ -29,6 +29,14 @@
       "stack.env"
     ]
   },
+  "optional_settings": {
+    "factory.json": [
+      "ci",
+      "fixtures",
+      "policy",
+      "runners.ci"
+    ]
+  },
   "specific": [
     "quantile",
     "192\\.168\\.",
@@ -38,7 +46,7 @@
     "(?-i:/Users/)[A-Za-z]"
   ],
   "last_import": {
-    "commit": "07d94411c755b9a601d834891ea8371fd8f3b841",
-    "date": "2026-10-12"
+    "commit": "3f43e2691bae3f84ee7f23325ad810345a99b7f6",
+    "date": "2026-10-15"
   }
 }

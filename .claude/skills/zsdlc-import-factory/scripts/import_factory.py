@@ -288,9 +288,15 @@ class Import:
                 for k in sorted(theirs_keys - our_keys):
                     self.needs.append((FIX, f"seed {rel}: the incubator has setting {k}; add it to the bundle's "
                                             "seed with a default"))
+                # An optional setting (one the bundle's code reads only when it's there) can be absent in the
+                # incubator, which may not use it.
+                optional = (self.rules.get("optional_settings") or {}).get(rel, [])
                 for k in sorted(our_keys - theirs_keys):
+                    if any(k == o or k.startswith(o + ".") for o in optional):
+                        continue
                     self.needs.append((FIX, f"seed {rel}: the bundle's seed has setting {k} and the incubator "
-                                            "doesn't: removed there?"))
+                                            "doesn't: removed there? (if it's optional, list it in "
+                                            "import.json's optional_settings)"))
             elif self.last:
                 try:
                     before = self.blob(self.last, path)
@@ -465,6 +471,9 @@ class Import:
                             "\n".join(unexpected) or ("seeded: " + ", ".join(seeded) if seeded else ""))
             code, out = self.run(policy, inc)
             ok &= self.step("workflow policy", code == 0, out)
+            # The incubator's own settings, which a seed never changes: a test that needs a setting only the seed has
+            # fails here, as it would in any project that installed an older seed.
+            ok &= self.tests(inc)
 
             print("\nProof 2: an empty project with an Enablement-shaped CODEOWNERS")
             empty = tmp / "empty"
@@ -481,10 +490,13 @@ class Import:
                                 out)
             code, out = self.run(policy, empty)
             ok &= self.step("workflow policy", code == 0, out)
-            code, out = self.run([sys.executable, "-m", "unittest", "discover", "-s", f"{self.tree_to}/tests"], empty)
-            summary = next((l for l in reversed(out.splitlines()) if l.startswith(("OK", "FAILED", "Ran "))), "")
-            ok &= self.step(f"tests: {summary}", code == 0, out)
+            ok &= self.tests(empty)
         return ok
+
+    def tests(self, project):
+        code, out = self.run([sys.executable, "-m", "unittest", "discover", "-s", f"{self.tree_to}/tests"], project)
+        summary = next((l for l in reversed(out.splitlines()) if l.startswith(("OK", "FAILED", "Ran "))), "")
+        return self.step(f"tests: {summary}", code == 0, out)
 
     @staticmethod
     def step(label, passed, out):

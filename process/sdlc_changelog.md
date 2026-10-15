@@ -37,6 +37,42 @@ Each entry contains:
 
 ---
 
+## 2026-10-15: The factory imported from the incubator (07d9441..3f43e26); optional seed settings
+
+**Origin:** The incubator's migration to v2.1.0. Before z-sdlc's factory changes are copied into the incubator (`--to-incubator`), the import brings the incubator's own since the last import (its production move, 2026-10-14).
+
+**What happened:**
+- **One shared file changed:** the incubator's production move changed one shared file, a comment in `templates/factory-smoke.yml`. Its other changes are in its production tier (excluded) and its own seeds: `README.md` and `host/host.conf`, both naming its hosts, so the bundle's generic seeds need nothing.
+- **The import refused to apply:** the bundle's `factory.json` seed has the pilot project's optional settings (`ci`, `fixtures`, `policy`, `runners.ci`), and the incubator, which uses none of them, doesn't. The import read each as "removed there?", a fix-first item.
+
+**Changes made:**
+1. **`bundles/factory/tree/templates/factory-smoke.yml`:** imported. The host probes also cover the production machine's addresses.
+2. **`.claude/skills/zsdlc-import-factory/import.json`:**
+   - `optional_settings` names the seed settings the bundle's code reads only when they're there, which the incubator may leave out;
+   - one the incubator has is still compared;
+   - `last_import` is `3f43e26`.
+3. **`.claude/skills/zsdlc-import-factory/scripts/import_factory.py`, `SKILL.md`, `tests/test_import_factory.py`:** the rule, its documentation, and a test that a listed setting is no finding while an unlisted one still is.
+
+**Rationale:** A seed setting that's optional for a project is optional for the incubator too. Flagging it on every import would hide a real removal among false ones.
+
+---
+
+## 2026-10-15: The factory's tests pass in a project with no CI tier
+
+**Origin:** The incubator's migration to v2.1.0. With v2.1.0's factory code in the incubator's tree, two of the bundle's tests failed there, and the import's proof hadn't caught it.
+
+**What happened:**
+- **The tests:** two `test_bootstrap.py` tests, a CI tier's group and one restricted to workflows, read the project's own `factory.json` and assumed it names a CI tier (`runners.ci`). The bundle's seed does, so a new project passes. A project upgrading from v2.0.0 keeps its own `factory.json` (a migration never changes a seed), and the incubator's has no CI tier, so both tests failed. Every project upgrading from v2.0.0 without one would see the same.
+- **The proof:** the import's proof ran the tests only in an empty project made from the seeds, never in the incubator with its own settings.
+
+**Changes made:**
+1. **`bundles/factory/tree/tests/test_bootstrap.py`:** the CI-tier tests give their test project a CI tier themselves.
+2. **`.claude/skills/zsdlc-import-factory/scripts/import_factory.py`, `SKILL.md`:** the proof's first step, in a clone of the incubator, also runs the factory's tests there. Without the fix above, it fails on those two tests.
+
+**Rationale:** The seed is what a new project starts from, not what an existing one has. A test that reads the project's settings must hold for every settings file a migration leaves in place.
+
+---
+
 ## 2026-10-15: The runner audit's repository admits no App that can write
 
 **Origin:** The pilot project, setting up its runner audit after v2.1.0. An AI coding assistant's GitHub App was installed on all of its organization's repositories, with workflows, contents, issues and actions write.

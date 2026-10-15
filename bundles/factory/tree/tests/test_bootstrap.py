@@ -312,6 +312,11 @@ class Bootstrap(unittest.TestCase):
         self.assertEqual(self.gh.labels[0]["color"], bootstrap.LABELS[0][1])
 
     def ci_workflow(self):
+        # A project with a CI tier, whether or not this one has one (an upgraded project's factory.json may not).
+        cfg_file = self.root / ".github" / "factory" / "factory.json"
+        cfg = json.loads(cfg_file.read_text())
+        cfg["runners"]["ci"] = "factory-ci"
+        cfg_file.write_text(json.dumps(cfg))
         (self.root / ".github" / "workflows" / "ci.yml").write_text(
             "jobs:\n  t:\n    runs-on: ubuntu-latest\n  e2e:\n    runs-on: [self-hosted, factory-ci]\n")
 
