@@ -37,6 +37,19 @@ Each entry contains:
 
 ---
 
+## 2026-10-15: The import's last commit, after the incubator's history rewrite
+
+**Origin:** The incubator rewrote its own history after its production move. The commit `import.json` recorded as the last import no longer exists there, so the next import would have stopped.
+
+**What happened:** The rewrite changed no file under the incubator's `.github/factory/`. The incubator then committed this release's factory code. Its import report showed all 103 bundle files in sync. Its two own seeds changed, in its database host and a note on its runner host, and the bundle's generic seeds already cover both.
+
+**Changes made:**
+1. **`.claude/skills/zsdlc-import-factory/import.json`:** `last_import` is the incubator's commit that took this release's factory code, applied with the import's own `--apply`.
+
+**Rationale:** An import compares three ways against its last commit. A rewritten history has to give it one that exists, with the same files.
+
+---
+
 ## 2026-10-15: The factory imported from the incubator (07d9441..3f43e26); optional seed settings
 
 **Origin:** The incubator's migration to v2.1.0. Before z-sdlc's factory changes are copied into the incubator (`--to-incubator`), the import brings the incubator's own since the last import (its production move, 2026-10-14).
