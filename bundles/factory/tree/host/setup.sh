@@ -45,10 +45,17 @@ SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 FACTORY_JSON=${FACTORY_JSON:-$SCRIPT_DIR/../factory.json}
 HOST_CONF=${HOST_CONF:-$SCRIPT_DIR/host.conf}
 TOKEN_FILE=${TOKEN_FILE:-$SCRIPT_DIR/reg-token}
+# The tier and its owner are the operator's, on the command line: a claim must name its tier, so whether it did is
+# taken before host.conf is read, and a host.conf that sets either is refused.
+tier_named=${TIER:+yes} env_tier=${TIER-} env_owner=${TIER_OWNER-}
 # host.conf is part of the reviewed checkout (code-owned), like this script.
 if [[ -f $HOST_CONF ]]; then
   # shellcheck source=/dev/null
   source "$HOST_CONF"
+fi
+if [[ ${TIER-} != "$env_tier" || ${TIER_OWNER-} != "$env_owner" ]]; then
+  printf 'ERROR: %s sets TIER or TIER_OWNER: they belong on the command line (sudo TIER=... bash setup.sh)\n' "$HOST_CONF" >&2
+  exit 1
 fi
 setting() { python3 -I -c 'import json,sys; v=json.load(open(sys.argv[1])); [v := v[k] for k in sys.argv[2].split(".")]; print(v)' "$FACTORY_JSON" "$1"; }
 origin_owner() { { git -C "$SCRIPT_DIR" remote get-url origin 2>/dev/null || true; } | sed -E 's#^(https://github\.com/|git@github\.com:)##; s#/.*##'; }
@@ -61,6 +68,7 @@ RUNNER_NAME_PREFIX=${RUNNER_NAME_PREFIX:-$(hostname -s)}
 LAN_DNS=${LAN_DNS:-}
 PROBE_PORTS=${PROBE_PORTS:-22 80 443 3000 5432 6379 8000 8080}
 PLANNING_DB_PORT=${PLANNING_DB_PORT:-}
+PLANNING_DB_HOST=${PLANNING_DB_HOST:-}
 RUNNER_INSTANCE=${RUNNER_INSTANCE:-}
 if [[ -n $RUNNER_INSTANCE && ! $RUNNER_INSTANCE =~ ^[a-z][a-z0-9]{0,11}$ ]]; then
   printf 'ERROR: RUNNER_INSTANCE must be a lowercase letter then up to 11 lowercase letters or digits\n' >&2; exit 1
@@ -68,8 +76,8 @@ fi
 # Names for this organization's runners: plain for the host's first organization, suffixed for another.
 dash=${RUNNER_INSTANCE:+-$RUNNER_INSTANCE} under=${RUNNER_INSTANCE:+_$RUNNER_INSTANCE}
 
-tier_named=${TIER:+yes}
 TIER=${TIER:-strict}
+DB_HOST=
 case $TIER in
   strict)
     RUNNER_USER=factory-runner$dash
@@ -87,8 +95,9 @@ case $TIER in
     DEFAULT_COUNT=${PLANNING_RUNNERS:-2}; MEM_HIGH=${PLANNING_MEMORY_HIGH:-4G}; MEM_MAX=${PLANNING_MEMORY_MAX:-5G}
     CPU_QUOTA=${PLANNING_CPU_QUOTA:-200%}
     RUNNER_GROUP=$(group_setting shared factory-pool)
-    # The one exception D3 allows: a database the planning tier reads, published on this host.
-    DB_PORT=$PLANNING_DB_PORT ;;
+    # The one exception D3 allows: a database the planning tier reads, published on this host, or on the one
+    # address PLANNING_DB_HOST names when production runs on another machine.
+    DB_PORT=$PLANNING_DB_PORT DB_HOST=$PLANNING_DB_HOST ;;
   ci)
     RUNNER_USER=factory-ci$dash
     NFT_TABLE=factory_ci$under; NFT_FILE=/etc/factory-runner/ci-firewall$dash.nft; FW_UNIT=factory-ci-firewall$dash
@@ -107,6 +116,9 @@ case $TIER in
     DB_PORT= ;;
   *) printf 'ERROR: TIER must be strict, planning or ci\n' >&2; exit 1 ;;
 esac
+if [[ -n $DB_HOST ]] && { [[ ! $DB_HOST =~ ^([0-9]{1,3}\.){3}[0-9]{1,3}$ ]] || [[ -z $DB_PORT ]]; }; then
+  printf 'ERROR: PLANNING_DB_HOST must be one IPv4 address, with PLANNING_DB_PORT set\n' >&2; exit 1
+fi
 [[ -n $RUNNER_LABELS && $RUNNER_LABELS != None ]] \
   || { printf 'ERROR: factory.json names no runner label for the %s tier (runners.%s)\n' "$TIER" "$TIER" >&2; exit 1; }
 RUNNER_HOME=$RUNNER_HOME_BASE/$RUNNER_USER
@@ -131,7 +143,7 @@ if [[ ${1:-} == --print-settings ]]; then
   ci_settings=
   [[ $TIER == ci ]] && ci_settings="CI_APP_CLIENT_ID CI_JOB_CPUS CI_JOB_MEMORY CI_JOB_PIDS CI_JOB_SHM CI_JOB_HOURS CI_IDLE_HOURS CI_MIN_FREE_GB"
   for v in TIER FACTORY_ORG RUNNER_URL RUNNER_GROUP RUNNER_LABELS RUNNER_INSTANCE RUNNER_USER RUNNER_HOME RUNNER_UNIT \
-           FW_UNIT NFT_TABLE NFT_FILE RUNNER_COUNT MEM_HIGH MEM_MAX CPU_QUOTA DB_PORT LAN_DNS PROBE_PORTS $ci_settings; do
+           FW_UNIT NFT_TABLE NFT_FILE RUNNER_COUNT MEM_HIGH MEM_MAX CPU_QUOTA DB_PORT DB_HOST LAN_DNS PROBE_PORTS $ci_settings; do
     printf '%s=%s\n' "$v" "${!v}"
   done
   printf 'RUNNER_NAMES=%s\n' "$(for i in $(seq "$RUNNER_COUNT"); do runner_name "$i"; done | tr '\n' ' ' | sed 's/ $//')"
@@ -242,9 +254,9 @@ fi
 host_ips=$(ip -4 -o addr show | awk '{print $4}' | cut -d/ -f1 | grep -v '^127\.' | tr '\n' ' ')
 db_rule=
 if [[ -n $DB_PORT ]]; then
-  db_rule="ip daddr { $(echo $host_ips | tr ' ' ',') } tcp dport $DB_PORT counter accept comment \"production database (D3)\""
+  db_rule="ip daddr { $(if [[ -n $DB_HOST ]]; then echo "$DB_HOST"; else echo $host_ips | tr ' ' ','; fi) } tcp dport $DB_PORT counter accept comment \"production database (D3)\""
 fi
-log "3/8 firewall: $RUNNER_USER may reach the internet, nothing on this host or the LAN${DB_PORT:+ except port $DB_PORT}"
+log "3/8 firewall: $RUNNER_USER may reach the internet, nothing on this host or the LAN${DB_PORT:+ except the database at ${DB_HOST:-this host}:$DB_PORT}"
 install -d -m 755 /etc/factory-runner
 # Seccomp profile for agent jobs that run sandboxed Bash: Docker's default plus the namespace
 # calls bubblewrap needs. Jobs name it with `--security-opt seccomp=/etc/factory-runner/seccomp-bwrap.json`
@@ -331,6 +343,24 @@ cat > "/etc/systemd/system/user@$RUID.service.d/factory-firewall.conf" <<EOF
 Requires=$FW_UNIT.service
 After=$FW_UNIT.service
 EOF
+# And its stop: the stock ExecStop flushes the ruleset, so the table is loaded again straight after. (A flush by
+# hand, `nft flush ruleset`, isn't covered: the CI tier's minute-by-minute firewall check would see it.)
+install -d /etc/systemd/system/nftables.service.d
+cat > "/etc/systemd/system/nftables.service.d/$FW_UNIT.conf" <<EOF
+[Service]
+ExecStopPost=-/usr/sbin/nft -f $NFT_FILE
+EOF
+# Tailscale's local API, a Unix socket no firewall sees, dials tailnet peers as root for any local user (tested
+# 2026-10-14). Deny $RUNNER_USER its directory by user, which holds for the runner, its user manager and its
+# containers alike, and is reapplied whenever tailscaled recreates the directory.
+if command -v tailscaled > /dev/null; then
+  command -v setfacl > /dev/null || apt-get install -y --no-install-recommends acl
+  install -d /etc/systemd/system/tailscaled.service.d
+  # Before tailscaled starts (its RuntimeDirectory exists, the socket doesn't yet) and again after.
+  printf '[Service]\nExecStartPre=-/usr/bin/setfacl -m u:%s:--- /run/tailscale\nExecStartPost=-/usr/bin/setfacl -m u:%s:--- /run/tailscale\n' \
+    "$RUNNER_USER" "$RUNNER_USER" > "/etc/systemd/system/tailscaled.service.d/$FW_UNIT.conf"
+  if [[ -d /run/tailscale ]]; then setfacl -m "u:$RUNNER_USER:---" /run/tailscale; fi
+fi
 systemctl daemon-reload
 systemctl enable "$FW_UNIT.service" "$FW_UNIT-reapply.service" >/dev/null
 # Reload in place when already active: restarting would stop user@ (Requires=) and kill running jobs.
@@ -435,8 +465,11 @@ PY
 host_ips6=$(ip -6 -o addr show scope global 2>/dev/null | awk '{print $4}' | cut -d/ -f1 | tr '\n' ' ')
 targets="127.0.0.1 10.0.2.2 $LAN_DNS $host_ips $host_ips6 2606:4700:4700::1111"
 ports="$PROBE_PORTS"
-# The planning tier may reach the database on the host's own addresses; probe the rest as usual.
-if [[ -n $DB_PORT ]]; then ports=$(echo "$ports" | tr ' ' '\n' | grep -vx "$DB_PORT" | tr '\n' ' '); fi
+# The planning tier may reach the database on the host's own addresses; probe the rest as usual. A database on
+# another machine (DB_HOST) leaves this host's port closed like any other, so it stays in the probe.
+local_db_port=
+if [[ -n $DB_PORT && -z $DB_HOST ]]; then local_db_port=$DB_PORT; fi
+if [[ -n $local_db_port ]]; then ports=$(echo "$ports" | tr ' ' '\n' | grep -vx "$local_db_port" | tr '\n' ' '); fi
 echo "targets: $targets"
 echo "ports:   $ports"
 as_runner "docker pull -q python:3.12-slim" \
@@ -448,15 +481,26 @@ as_runner "docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
 # Same probe on a user-defined network, the way Actions runs job containers.
 as_runner "docker network inspect factory-probe >/dev/null 2>&1 || docker network create factory-probe >/dev/null"
 as_runner "docker run --rm --network factory-probe -v \$HOME/.isolation_probe.py:/probe.py:ro \
-  python:3.12-slim python /probe.py '$targets' '$(echo 5432 6379 | tr ' ' '\n' | grep -vx "${DB_PORT:-none}" | tr '\n' ' ')'" \
+  python:3.12-slim python /probe.py '$targets' '$(echo 5432 6379 | tr ' ' '\n' | grep -vx "${local_db_port:-none}" | tr '\n' ' ')'" \
   || die "isolation test FAILED on a user network"
 if [[ -n $DB_PORT ]]; then
-  first_ip=${host_ips%% *}
+  first_ip=${DB_HOST:-${host_ips%% *}}
   as_runner "docker run --rm --network factory-probe python:3.12-slim python -c \
     \"import socket; socket.create_connection(('$first_ip', $DB_PORT), timeout=5).close(); print('ok        $first_ip:$DB_PORT (database reachable)')\"" \
     || die "the planning tier cannot reach the database at $first_ip:$DB_PORT"
 fi
 as_runner "docker network rm factory-probe >/dev/null"
+# Root connects first, so a probe that can't connect at all doesn't pass for a refusal; then only a permission
+# refusal passes.
+if [[ -S /run/tailscale/tailscaled.sock ]]; then
+  if ! python3 -I -c 'import socket; socket.socket(socket.AF_UNIX).connect("/run/tailscale/tailscaled.sock")'; then
+    echo "WARNING: root can't reach Tailscale's local API either, so the probe for $RUNNER_USER proves nothing"
+  elif ! as_runner "python3 -I -c \"import errno, socket; raise SystemExit(0 if socket.socket(socket.AF_UNIX).connect_ex('/run/tailscale/tailscaled.sock') == errno.EACCES else 1)\""; then
+    die "isolation test FAILED: $RUNNER_USER can reach Tailscale's local API (or wasn't refused for permission)"
+  else
+    echo "blocked   Tailscale's local API (refused for permission)"
+  fi
+fi
 
 if [[ $TIER == ci ]]; then
   # One disposable runner per job, not registered runners: setup-ci.sh does the rest.
@@ -501,7 +545,24 @@ token=
 if [[ -s $TOKEN_FILE ]]; then token=$(<"$TOKEN_FILE"); fi
 for i in $(seq "$RUNNER_COUNT"); do
   dir=$(runner_dir "$i"); work=$(runner_work "$i"); name=$(runner_name "$i")
+  # Runners never update themselves (--disableupdate), so a RUNNER_VERSION bump reaches them here: an installed
+  # runner at another version gets the new one unpacked over it (its registration files aren't in the archive),
+  # unless it's running a job, and the restart below starts it. Unpacking replaces files the running runner holds
+  # open by new ones, so it keeps running the old version until then.
+  installed=
+  if [[ -x $dir/config.sh ]]; then installed=$(as_runner "'$dir/bin/Runner.Listener' --version 2>/dev/null" | tr -d '[:space:]') || installed=; fi
+  fetch=
   if [[ ! -x $dir/config.sh ]]; then
+    fetch=1
+  elif [[ $installed != "$RUNNER_VERSION" ]]; then
+    if pgrep -u "$RUNNER_USER" -f "$dir/bin/Runner.Worker" > /dev/null; then
+      echo "Runner $i is at ${installed:-an unknown version} and running a job: not upgraded to $RUNNER_VERSION. Re-run setup when it's idle."
+    else
+      echo "Runner $i: ${installed:-an unknown version} -> $RUNNER_VERSION"
+      fetch=1
+    fi
+  fi
+  if [[ -n $fetch ]]; then
     as_runner "mkdir -p '$dir' '$work' && cd '$dir' \
       && curl -fsSL -o runner.tgz https://github.com/actions/runner/releases/download/v$RUNNER_VERSION/actions-runner-linux-x64-$RUNNER_VERSION.tar.gz \
       && echo '$RUNNER_SHA256  runner.tgz' | sha256sum -c - && tar xzf runner.tgz && rm runner.tgz"
@@ -517,7 +578,7 @@ for i in $(seq "$RUNNER_COUNT"); do
   fi
   # Never self-update: runners stay at RUNNER_VERSION, whose checksum this script verifies; z-sdlc bumps it
   # within 30 days of each actions/runner release (GitHub stops sending jobs to older runners), and a run of
-  # this setup installs it. A runner registered before this setting gets it in its settings file.
+  # this setup installs it (above). A runner registered before this setting gets it in its settings file.
   if [[ -f $dir/.runner ]]; then
     as_runner "python3 -I -c 'import json,sys; p=sys.argv[1]; d=json.load(open(p, encoding=\"utf-8-sig\")); d[\"disableUpdate\"]=True; json.dump(d, open(p, \"w\"), indent=2)' '$dir/.runner'"
   fi

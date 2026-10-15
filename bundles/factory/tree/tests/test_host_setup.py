@@ -37,7 +37,29 @@ class HostSettings(unittest.TestCase):
         self.assertEqual(s["RUNNER_LABELS"], "plan-pool")
         self.assertEqual(s["RUNNER_USER"], "factory-planner")
         self.assertEqual(s["DB_PORT"], "5433")
+        self.assertEqual(s["DB_HOST"], "")
         self.assertEqual(s["RUNNER_NAMES"], "box-planner-1 box-planner-2")
+        # Production on another machine: the exception names its one address.
+        s = self.settings("FACTORY_ORG=acme\nPLANNING_DB_PORT=5432\nPLANNING_DB_HOST=203.0.113.7\n", tier="planning")
+        self.assertEqual((s["DB_PORT"], s["DB_HOST"]), ("5432", "203.0.113.7"))
+        # The strict tier never gets one.
+        s = self.settings("FACTORY_ORG=acme\nPLANNING_DB_PORT=5432\nPLANNING_DB_HOST=203.0.113.7\n")
+        self.assertEqual((s["DB_PORT"], s["DB_HOST"]), ("", ""))
+
+    def test_a_remote_planning_database_is_one_address_with_a_port(self):
+        for conf in ("PLANNING_DB_PORT=5432\nPLANNING_DB_HOST=db-host\n",
+                     "PLANNING_DB_PORT=5432\nPLANNING_DB_HOST=10.0.0.1,10.0.0.2\n",
+                     "PLANNING_DB_HOST=203.0.113.7\n"):
+            with self.subTest(conf=conf), tempfile.TemporaryDirectory() as tmp:
+                host_conf = pathlib.Path(tmp) / "host.conf"
+                host_conf.write_text("FACTORY_ORG=acme\n" + conf)
+                cfg = pathlib.Path(tmp) / "factory.json"
+                cfg.write_text(json.dumps({"runners": {"strict": "strict-pool", "planning": "plan-pool"}}))
+                r = subprocess.run(["bash", str(SCRIPT), "--print-settings"], capture_output=True, text=True,
+                                   env={**os.environ, "HOST_CONF": str(host_conf), "FACTORY_JSON": str(cfg),
+                                        "TIER": "planning"})
+                self.assertEqual(r.returncode, 1)
+                self.assertIn("PLANNING_DB_HOST must be one IPv4 address, with PLANNING_DB_PORT set", r.stderr)
 
     def test_the_ci_tier(self):
         runners = {"strict": "strict-pool", "planning": "plan-pool", "ci": "ci-pool"}
@@ -136,6 +158,21 @@ class HostSettings(unittest.TestCase):
         self.assertEqual(r.returncode, 1)
         self.assertIn("registered to https://github.com/first-org, not https://github.com/second-org", r.stderr)
         self.assertIn("set RUNNER_INSTANCE", r.stderr)
+
+    def test_host_conf_never_sets_the_tier_or_its_owner(self):
+        # A claim must name its tier on the command line; a host.conf default would claim for it.
+        for line, env in (("TIER=${TIER:-ci}", {}), ("TIER=ci", {"TIER": "strict"}),
+                          ("TIER_OWNER=acme/app", {"TIER": "ci"})):
+            with self.subTest(line=line), tempfile.TemporaryDirectory() as tmp:
+                conf = pathlib.Path(tmp) / "host.conf"
+                conf.write_text(f"FACTORY_ORG=acme\n{line}\n")
+                base = {k: v for k, v in os.environ.items() if k not in ("TIER", "TIER_OWNER")}
+                r = subprocess.run(["bash", str(SCRIPT), "--print-settings"], capture_output=True, text=True,
+                                   env={**base, "HOST_CONF": str(conf), **env})
+                self.assertEqual(r.returncode, 1)
+                self.assertIn("sets TIER or TIER_OWNER: they belong on the command line", r.stderr)
+        # The same value on both is no override.
+        self.assertEqual(self.settings("FACTORY_ORG=acme\nTIER=planning\n", tier="planning")["TIER"], "planning")
 
     def test_an_unknown_tier_is_refused(self):
         env = {**os.environ, "HOST_CONF": "/nonexistent", "TIER": "prod"}

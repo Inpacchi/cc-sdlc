@@ -170,7 +170,7 @@ Spec and plan stages make judgment calls that depend on how the system behaves i
 ### Rules
 
 1. **Two runner tiers.** Implement, execute and revise run on the strict tier (D2, unchanged: no production path). Spec and plan run only on the planning tier: runners under a separate Linux user (`factory-planner`), selected by their own runner label and group. A workflow can't move a code-writing stage onto planning runners without a CODEOWNERS-reviewed edit, and the workflow policy check refuses it.
-2. **One firewall exception.** The planning user may reach the production database port on the host and nothing else on the host or LAN; the strict user's firewall is unchanged.
+2. **One firewall exception.** The planning user may reach the production database port and nothing else on the host or LAN: on the runner host itself, or, when production runs on another machine, on the one address `host.conf`'s `PLANNING_DB_HOST` names (an address that doesn't change, such as the machine's Tailscale address). The strict user's firewall is unchanged.
 3. **The database login is read-only and excludes personal and secret data.** A dedicated role with `SELECT` only, granted per table and per column: everything except fields holding personal data (names, emails, phone numbers, addresses), credentials (password hashes, API keys, tokens, session data) and payment data. The exclusion list is generated from the models and reviewed by CD; a migration that adds a table or column re-runs the check, and anything new and sensitive-looking stays excluded until CD approves it. The role also has a statement timeout and a connection limit. The agent reaches it through a connection proxy outside the sandbox that holds the password; the agent never sees it.
 4. **Services come from a reviewed list.** `.github/factory/services.json` (CODEOWNERS) names each service: its domains, the GitHub secret with its credential, and how the credential attaches. The planning job turns the list into sandbox settings (`credentials.envVars` with `mode: mask`, `injectHosts` set to the service's domains, `network.tlsTerminate`) or into an MCP server entry. Sandboxed commands see a placeholder; the proxy substitutes the real value only on requests to that service. Adding a service is one entry plus one secret, with no workflow edit.
 5. **Open internet for planning.** Planning's sandbox allows general web access for research. What leaks is bounded by what the tier can read: credentials are masked and go only to their own hosts, and the database login can't see personal or secret data.
@@ -462,13 +462,15 @@ needs an organization owner's `gh` login (`admin:org`) for the runner groups and
    the repository and the tier, so the first checkout to run doesn't claim a tier by default: the
    first run for a tier is `sudo TIER=<tier> TIER_OWNER=<owner>/<repository> bash
    .github/factory/host/setup.sh`, from that repository's checkout. Each tier's firewall table is loaded again whenever
-   `nftables.service` starts or reloads, since its stock ruleset begins with `flush ruleset`.
-   The firewall rejects all IPv6 for the runner users (a host's global addresses and its
+   `nftables.service` starts or reloads, since its stock ruleset begins with `flush ruleset`, and after it stops,
+   since its stock `ExecStop` flushes it. On a host running Tailscale, each runner user is denied
+   `/run/tailscale` by an ACL that `tailscaled` reapplies on every start: its local API dials tailnet peers as
+   root for any local user, past a firewall that matches the user. The firewall rejects all IPv6 for the runner users (a host's global addresses and its
    LAN's global prefix would otherwise be reachable), and the isolation test probes IPv6 too. Runners
    never update themselves (`--disableupdate`): they stay at `setup.sh`'s `RUNNER_VERSION`, whose
    checksum it verifies. z-sdlc bumps it within 30 days of each actions/runner release, because GitHub
    stops sending jobs to older runners. After the migration that brings a bump, run each tier's setup
-   again from its checkout.
+   again from its checkout: it upgrades each idle runner in place.
 9. **CODEOWNERS and the `main` ruleset** (D2 rule 6): code owners on `.github/`, `.claude/`,
    `CLAUDE.md` at any depth, `.mcp.json`, `[sdlc-root]/` and the test and build configuration,
    including every file the profile's tools load just because it exists (§ Stack Profiles, What

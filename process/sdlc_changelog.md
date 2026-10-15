@@ -37,6 +37,79 @@ Each entry contains:
 
 ---
 
+## 2026-10-14: Runner users can't reach Tailscale's local API
+
+**Origin:** The incubator's production move to a machine of its own (2026-10-14). The architecture review of its production runner asked whether Tailscale could get around a firewall that matches the user. A test on the production machine showed it could: a non-root user that isn't Tailscale's operator ran `tailscale nc` and got the runner host's SSH banner. Tailscale's local API socket (`/run/tailscale/tailscaled.sock`) is mode 0666, and its dial endpoint connects to any tailnet peer as `tailscaled`, which is root. The connection comes from root, so the runner users' `meta skuid` rules never see it.
+
+**What happened:**
+- The runner tiers' isolation test already proves a job container can't reach the host's Docker socket, so a job probably couldn't mount Tailscale's either.
+- But the runner users have processes on the host: the runner itself and, with linger, a user manager. Nothing stopped those from reaching it, and nothing tested it.
+
+**Changes made:**
+1. **`bundles/factory/tree/host/setup.sh`** — On a host running Tailscale:
+   - Each tier denies its runner user `/run/tailscale` with an ACL (installing `acl` if it's missing).
+   - A `tailscaled.service.d/<firewall unit>.conf` drop-in reapplies the ACL whenever `tailscaled` starts, since its `RuntimeDirectory` is recreated each time. It runs before the socket exists (`ExecStartPre`) and again after (`ExecStartPost`).
+   - The isolation test fails unless the runner user is refused for permission (`EACCES`). Root connects first, so a missing socket can't pass for a refusal.
+   - Matching by user covers the runner, its user manager and its rootless containers alike: inside a container, the user ID is still the runner user's.
+2. **`process/factory.md`** — Enablement step 8 says so. It also notes that the firewall table is reloaded after `nftables` stops, and that a setup run upgrades idle runners.
+
+**Rationale:** The tiers' isolation is a firewall that matches the user. Any root daemon that connects on a local user's behalf goes around it, and Tailscale's does by design. The runner hosts that need this most also run Tailscale.
+
+---
+
+## 2026-10-14: Runners take a version bump; tier firewalls survive nftables stopping
+
+**Origin:** An architecture review of the incubator's production move to a machine of its own (2026-10-14) read the same code in the incubator's `setup-production.sh` and in the bundle.
+
+**What happened:**
+- **Runner upgrades.** Since "factory runner hosts: no IPv6, no self-update" (2026-10-13), runners register with `--disableupdate` and stay at `setup.sh`'s `RUNNER_VERSION`. The comment and `process/factory.md` (Enablement step 8) said "a run of this setup installs it". But setup downloaded a runner only when its directory had none, so a bump never reached an installed runner. GitHub stops sending jobs to runners more than 30 days behind a release.
+- **The firewall after a stop.** Each tier's firewall table was reloaded after `nftables.service` started, restarted or reloaded, but not after it stopped. Its stock `ExecStop` flushes the whole ruleset, so the table was gone while the firewall unit still showed active.
+
+**Changes made:**
+1. **`bundles/factory/tree/host/setup.sh`**:
+   - **Upgrades.** An installed runner at a different version than `RUNNER_VERSION` gets the new archive unpacked over it. Its registration files aren't in the archive. The existing idle-only restart then starts the new version. A runner running a job is left alone, with a message to re-run setup when it's idle.
+   - **Stops.** A drop-in, `nftables.service.d/<firewall unit>.conf`, reloads the tier's table with `ExecStopPost` after nftables stops.
+   - A flush by hand (`nft flush ruleset`) is still not covered. The CI tier's minute-by-minute firewall check would see one.
+
+**Rationale:** Runners that never update themselves are only safe if setup is how they update. A firewall that a routine `systemctl stop` can remove, without anything noticing, isn't a boundary.
+
+---
+
+## 2026-10-14: The planning tier's database can live on another machine
+
+**Origin:** The incubator's production is moving off its factory runner host to a production-only machine (CD, 2026-10-14). The planning tier's one firewall exception (D3 rule 2) admitted only a database port on the runner host's own addresses, so a database elsewhere was out of its reach.
+
+**Changes made:**
+1. **`bundles/factory/tree/host/setup.sh`:**
+   - A new setting, `PLANNING_DB_HOST`: one IPv4 address, refused unless `PLANNING_DB_PORT` is set too.
+   - When set, the planning tier's exception admits that address and port instead of the host's own addresses.
+   - The isolation test then keeps the database port in the probe of this host, which must now be closed like any other, and the final reachability check connects to the remote address.
+   - The setting is empty by default, which keeps today's behavior.
+   - `--print-settings` shows it as `DB_HOST`.
+2. **`bundles/factory/seed/host/host.conf`:** `PLANNING_DB_HOST`, with a note to use an address that doesn't change, such as the machine's Tailscale address. The comment now cites D3 rule 2, not rule 3.
+3. **`bundles/factory/tree/tests/test_host_setup.py`:**
+   - the planning tier with a remote database;
+   - the strict tier never gets one;
+   - a host name, a list, or a host without a port is refused.
+4. **`process/factory.md`:** D3 rule 2 names the remote case.
+
+**Rationale:** Moving production off the runner host is what D2's "Revisit when" anticipates. The planning tier's read-only access to production's database must follow the database to its new machine through the same single, address-pinned exception.
+
+---
+
+## 2026-10-13: The tier and its owner come only from setup's command line
+
+**Origin:** The pilot project's review of round 2 ("The factory CI tier, review round 2", below). `setup.sh` recorded whether `TIER` was given after it had sourced `host.conf`, so a `host.conf` that set `TIER` (the pilot project's did) defeated the rule that a new owner claim names its tier. A `TIER_OWNER` there would have defeated the claim itself.
+
+**Changes made:**
+1. **`bundles/factory/tree/host/setup.sh`**: whether `TIER` was given is taken before `host.conf` is sourced, and setup refuses a `host.conf` that sets `TIER` or `TIER_OWNER` to anything but what the command line gave.
+2. **`bundles/factory/seed/host/host.conf`**: says `TIER` and `TIER_OWNER` never go there. The per-tier defaults line gives the CI tier's new `CI_MEMORY_HIGH` default (14G, not 12G).
+3. **`bundles/factory/tree/tests/test_host_setup.py`**: a `host.conf` that sets either is refused; the same value on both is not an override.
+
+**Rationale:** The claim is the operator's statement at the moment of the first run. A checked-in setting that supplies it for them is the trust-on-first-use the claim replaced.
+
+---
+
 ## 2026-10-13: The factory CI tier, review round 2
 
 **Origin:** The pilot project's architect and code reviewer reviewed the disposable-runner CI tier ("The factory CI tier runs one disposable runner per job", below). The architect approved it with conditions, both reviewers found the same three launcher defects, and they listed host, configuration and test gaps besides.
