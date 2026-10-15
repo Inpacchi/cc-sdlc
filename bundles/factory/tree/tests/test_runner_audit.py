@@ -1,4 +1,4 @@
-"""runner_audit.py: the organization's runner groups compared exactly with the expected state (every kind of
+"""runner_audit.py: the organization's runner groups compared with the expected state (every kind of
 drift), a read that fails closed, the snapshot, the expected state's shape, and the workflow it writes (this script
 and the expected state in it, nothing GitHub would read as an expression). GitHub is a fake organization."""
 import contextlib
@@ -35,7 +35,7 @@ class FakeOrg:
 
     def __init__(self):
         self.groups = [
-            {"id": 1, "name": "Default", "visibility": "all", "allows_public_repositories": False,
+            {"id": 1, "name": "Default", "visibility": "selected", "allows_public_repositories": False,
              "restricted_to_workflows": False, "selected_workflows": [], "default": True},
             {"id": 2, "name": "factory-pool", "visibility": "selected", "allows_public_repositories": False,
              "restricted_to_workflows": True, "selected_workflows": [TRIAGE]},
@@ -44,7 +44,7 @@ class FakeOrg:
             {"id": 7, "name": "factory-ci", "visibility": "selected", "allows_public_repositories": False,
              "restricted_to_workflows": False, "selected_workflows": []},
         ]
-        self.repos = {2: ["acme/app", "acme/game"], 5: ["acme/app"], 7: ["acme/game"]}
+        self.repos = {1: [], 2: ["acme/app", "acme/game"], 5: ["acme/app"], 7: ["acme/game"]}
         self.runners = {1: [], 2: [runner(11, "box-factory", ["factory"]), runner(12, "box-planner-1", ["factory-plan"])],
                         5: [runner(53, "box-production", ["factory-prod"])],
                         7: [runner(901, "box-ci-1-a1b2c3", ["factory-ci"])]}
@@ -74,7 +74,7 @@ def expected_of(org):
     """The fake organization's state as an expected state, the CI tier's group as a pattern."""
     state = ra.snapshot("acme", "tok", call=lambda method, path, token: org.get(path))
     state["factory_labels"] = list(ra.DEFAULT_LABELS)
-    state["groups"]["factory-ci"]["runners"] = {"pattern": r"box-ci-[0-9]+-[0-9a-f]{6}", "max": 2,
+    state["groups"]["factory-ci#7"]["runners"] = {"pattern": r"box-ci-[0-9]+-[0-9a-f]{6}", "max": 2,
                                                 "labels": ["factory-ci"]}
     return ra.load_expected(json.dumps(state))
 
@@ -93,25 +93,26 @@ class Audit(unittest.TestCase):
         # other labels every self-hosted runner has, it's left out of the comparison, and never taken for a hosted one.
         self.org.runners[7][0]["labels"].append({"id": 40, "name": "self-hosted", "type": "custom"})
         self.assertEqual(self.audit()[0], 0)
-        # Repositories are read only for a group open to selected ones; every list is read whole.
-        self.assertNotIn("/orgs/acme/actions/runner-groups/1/repositories?per_page=100&page=1", self.org.paths)
+        # Every list is read whole.
+        self.assertIn("/orgs/acme/actions/runner-groups/1/repositories?per_page=100&page=1", self.org.paths)
 
     def test_every_kind_of_drift(self):
         cases = [
             (lambda o: o.groups.append({"id": 9, "name": "sneaky", "visibility": "selected"}),
-             "group sneaky: not expected (a new group)"),
-            (lambda o: o.groups.pop(2), "group factory-pool-app-prod: expected, but it's gone"),
-            (lambda o: o.groups[2].update(visibility="all"), 'group factory-pool-app-prod: visibility is "all"'),
+             "group sneaky#9: not expected (a new group)"),
+            (lambda o: o.groups.pop(2), "group factory-pool-app-prod#5: expected, but it's gone"),
+            (lambda o: o.groups[2].update(visibility="private"), 'group factory-pool-app-prod#5: visibility is "private"'),
+            (lambda o: o.groups.append({**o.groups[0], "id": 3, "inherited": True}), "group Default#3: not expected"),
             (lambda o: o.groups[2].update(allows_public_repositories=True), "allows_public_repositories is true"),
             (lambda o: o.groups[2].update(restricted_to_workflows=False), "restricted_to_workflows is false"),
             (lambda o: o.groups[2].update(selected_workflows=[GATE, "acme/evil/.github/workflows/x.yml@refs/heads/main"]),
              "selected_workflows has acme/evil/.github/workflows/x.yml@refs/heads/main, not expected"),
             (lambda o: o.groups[1].update(selected_workflows=[]), f"selected_workflows is missing {TRIAGE}"),
-            (lambda o: o.repos[5].append("acme/evil"), "group factory-pool-app-prod: repositories has acme/evil"),
-            (lambda o: o.repos[2].remove("acme/game"), "group factory-pool: repositories is missing acme/game"),
+            (lambda o: o.repos[5].append("acme/evil"), "group factory-pool-app-prod#5: repositories has acme/evil"),
+            (lambda o: o.repos[2].remove("acme/game"), "group factory-pool#2: repositories is missing acme/game"),
             (lambda o: o.runners[5].append(runner(99, "rogue", ["factory-prod"])),
-             "group factory-pool-app-prod: runner rogue (ID 99) not expected"),
-            (lambda o: o.runners[2].pop(), "group factory-pool: runner box-planner-1 expected, but it's gone"),
+             "group factory-pool-app-prod#5: runner rogue (ID 99) not expected"),
+            (lambda o: o.runners[2].pop(), "group factory-pool#2: runner box-planner-1 expected, but it's gone"),
             (lambda o: o.runners[5][0].update(id=54), "runner box-production is registered again (ID 54, expected 53)"),
             (lambda o: o.runners[5][0]["labels"].append({"id": 30, "name": "gpu", "type": "custom"}),
              "runner box-production has labels factory-prod, gpu, expected factory-prod"),
@@ -119,12 +120,12 @@ class Audit(unittest.TestCase):
              r"runner evil-1 doesn't match box-ci-[0-9]+-[0-9a-f]{6}"),
             (lambda o: o.runners[7].extend([runner(902, "box-ci-2-aaaaaa", ["factory-ci"]),
                                             runner(903, "box-ci-1-bbbbbb", ["factory-ci"])]),
-             "group factory-ci: 3 runners, at most 2 expected"),
+             "group factory-ci#7: 3 runners, at most 2 expected"),
             (lambda o: o.runners[7][0]["labels"].append({"id": 31, "name": "factory-prod", "type": "custom"}),
              "runner box-ci-1-a1b2c3 has labels factory-ci, factory-prod, expected factory-ci"),
             (lambda o: o.runners[1].append(runner(77, "box-factory-9", ["factory-prod"])),
-             "group Default: runner box-factory-9 carries the factory label factory-prod, expected only in "
-             "factory-pool-app-prod"),
+             "group Default#1: runner box-factory-9 carries the factory label factory-prod, expected only in "
+             "factory-pool-app-prod#5"),
             (lambda o: o.runners[2][0]["labels"].append({"id": 32, "name": "Ubuntu-Latest", "type": "custom"}),
              "runner box-factory carries Ubuntu-Latest, a GitHub-hosted runner's label"),
         ]
@@ -136,6 +137,53 @@ class Audit(unittest.TestCase):
                 self.assertEqual(status, 1, lines)
                 self.assertTrue(all(line.startswith("DRIFT ") for line in lines), lines)
                 self.assertTrue(any(message in line for line in lines), lines)
+
+    def test_two_groups_can_share_a_name(self):
+        # An organization's own Default group and the one its enterprise shares are both "Default": each is audited.
+        self.org.groups.append({"id": 3, "name": "Default", "visibility": "selected", "allows_public_repositories": False,
+                                "restricted_to_workflows": False, "selected_workflows": [], "inherited": True})
+        self.assertEqual(self.audit()[0], 1)  # a new group, until it's expected
+        self.expected = expected_of(self.org)
+        self.assertEqual(self.audit(), (0, ["ok: 5 runner groups and 4 runners, as expected"]))
+        self.org.runners[1].append(runner(77, "rogue", []))  # in the organization's own Default
+        status, lines = self.audit()
+        self.assertEqual(status, 1)
+        self.assertIn("DRIFT group Default#1: runner rogue (ID 77) not expected", lines)
+        with self.assertRaisesRegex(ValueError, "named <name>#<id>"):
+            ra.load_expected(json.dumps({**json.loads(json.dumps(self.expected)),
+                                         "groups": {"Default": json.loads(json.dumps(self.expected))["groups"]["Default#1"]}}))
+
+    def test_holes_no_expected_state_makes_right(self):
+        # A group every repository may use, or one the audit's own repository may use: drift even when expected.
+        self.org.groups[0]["visibility"] = "all"
+        self.expected = expected_of(self.org)
+        status, lines = self.audit()
+        self.assertEqual(status, 1)
+        self.assertIn("DRIFT group Default#1: visibility all lets repositories it doesn't list use it, this audit's "
+                      "among them: make it selected", lines)
+        self.org.groups[0]["visibility"] = "private"  # every private repository, the audit's too
+        self.expected = expected_of(self.org)
+        self.assertIn("DRIFT group Default#1: visibility private lets repositories it doesn't list use it, this audit's "
+                      "among them: make it selected", self.audit()[1])
+        self.org = FakeOrg()
+        self.expected = expected_of(self.org)
+        status, lines = ra.audit(self.expected, self.org.get, audit_repo="acme/game")
+        self.assertEqual(status, 1)
+        self.assertIn("DRIFT group factory-pool#2: this audit's own repository (acme/game) may use it", lines)
+        self.assertEqual(ra.audit(self.expected, self.org.get, audit_repo="Acme/GAME")[0], 1)  # names ignore case
+        self.assertEqual(ra.audit(self.expected, self.org.get, audit_repo="acme/docs")[0], 0)
+
+    def test_a_list_must_add_up_to_githubs_count(self):
+        real = self.org.get
+        def short(path):
+            status, data = real(path)
+            if "/runner-groups/2/runners" in path:
+                data = {**data, "total_count": data["total_count"] + 150}  # more than the pages hold
+            return status, data
+        self.org.get = short
+        status, lines = self.audit()
+        self.assertEqual(status, 2)
+        self.assertIn("2 items read, but GitHub counts 152", lines[0])
 
     def test_fails_closed(self):
         cases = [
@@ -166,24 +214,67 @@ class Audit(unittest.TestCase):
 
     def test_a_malformed_expected_state_is_refused(self):
         good = json.loads(json.dumps(self.expected))
+        full = {"visibility": "selected", "allows_public_repositories": False, "restricted_to_workflows": False,
+                "inherited": False, "repositories": [], "selected_workflows": []}
+
+        def group(**fields):
+            return {"x#1": {**full, **fields}}
         cases = [
             ({}, "the organization's name"),
             ({**good, "groups": {}}, "groups, by name"),
             ({**good, "factory_labels": "factory"}, "factory_labels"),
-            ({**good, "groups": {"x": {"visibility": "selected"}}}, "group x: runners"),
-            ({**good, "groups": {"x": {"runners": {"pattern": "(", "max": 1, "labels": []}}}}, "regular expression"),
-            ({**good, "groups": {"x": {"runners": {"pattern": "a", "max": 0, "labels": []}}}}, "max (1 or more)"),
-            ({**good, "groups": {"x": {"runners": {"pattern": ".*", "max": 2, "labels": []}}}}, "matches an empty name"),
-            ({**good, "groups": {"x": {"runners": {"r": {"labels": []}}}}}, "each with its id and labels"),
-            ({**good, "groups": {"x": {"runners": {"r": {"id": 1, "labels": ["a", 1]}}}}}, "each with its id and labels"),
-            ({**good, "groups": {"x": {"runners": {"pattern": "a", "max": 1, "labels": [1]}}}}, "max (1 or more)"),
-            ({**good, "groups": {"x": {"visibility": True, "runners": {}}}}, "group x: visibility"),
-            ({**good, "groups": {"x": {"repositories": "acme/app", "runners": {}}}}, "group x: repositories"),
+            ({**good, "groups": group()}, "group x#1: runners"),
+            ({**good, "groups": group(runners={"pattern": "(", "max": 1, "labels": []})}, "regular expression"),
+            ({**good, "groups": group(runners={"pattern": "a", "max": 0, "labels": []})}, "max (1 or more)"),
+            ({**good, "groups": group(runners={"pattern": ".*", "max": 2, "labels": []})}, "matches an empty name"),
+            ({**good, "groups": group(runners={"r": {"labels": []}})}, "each with its id and labels"),
+            ({**good, "groups": group(runners={"r": {"id": 1, "labels": ["a", 1]}})}, "each with its id and labels"),
+            ({**good, "groups": group(runners={"pattern": "a", "max": 1, "labels": [1]})}, "max (1 or more)"),
+            ({**good, "groups": group(visibility=True, runners={})}, "group x#1: visibility"),
+            ({**good, "groups": {"x#1": {k: v for k, v in {**full, "runners": {}}.items() if k != "inherited"}}},
+             "group x#1: inherited"),
+            ({**good, "groups": {"x#1": {k: v for k, v in {**full, "runners": {}}.items() if k != "repositories"}}},
+             "group x#1: repositories, a list"),
+            ({**good, "groups": group(repositories="acme/app", runners={})}, "group x#1: repositories"),
         ]
         for state, message in cases:
             with self.subTest(message=message):
                 with self.assertRaisesRegex(ValueError, re.escape(message)):
                     ra.load_expected(json.dumps(state))
+
+
+class Http(unittest.TestCase):
+    """api() itself: what GitHub or the network can answer, and what the audit makes of it."""
+
+    def answer(self, effect):
+        with mock.patch.object(ra.urllib.request, "urlopen", side_effect=effect):
+            return ra.api("GET", "/orgs/acme/actions/runner-groups?per_page=100&page=1", "tok")
+
+    def body(self, status, text):
+        response = mock.MagicMock()
+        response.__enter__.return_value = response
+        response.status, response.read.return_value = status, text.encode()
+        return lambda *a, **k: response
+
+    def test_answers(self):
+        self.assertEqual(self.answer(self.body(200, '{"total_count": 0, "runner_groups": []}')),
+                         (200, {"total_count": 0, "runner_groups": []}))
+        self.assertEqual(self.answer(self.body(200, "[1, 2]")), (200, None))  # not an object: nothing to read
+        self.assertEqual(self.answer(self.body(200, "<html>")), (200, None))
+        error = ra.urllib.error.HTTPError("https://api.github.com/x", 403, "Forbidden", {}, None)
+        self.assertEqual(self.answer(error), (403, None))
+
+    def test_anything_short_of_an_answer_is_unreadable(self):
+        for effect in (ra.urllib.error.URLError("timed out"), ra.http.client.IncompleteRead(b"{"),
+                       ConnectionResetError("reset")):
+            with self.subTest(effect=type(effect).__name__), self.assertRaises(ra.Unreadable):
+                self.answer(effect)
+
+    def test_a_list_that_isnt_an_object_fails_the_audit_closed(self):
+        expected = expected_of(FakeOrg())
+        status, lines = ra.audit(expected, lambda path: (200, None))  # what api() returns for a 200 that isn't an object
+        self.assertEqual(status, 2)
+        self.assertIn("couldn't read the organization's runner groups", lines[0])
 
 
 class Workflow(unittest.TestCase):
@@ -223,7 +314,7 @@ class Workflow(unittest.TestCase):
 
     def test_the_expected_state_goes_in_as_ascii_json(self):
         state = json.loads(self.expected_text)
-        state["groups"]["factory-pool"]["repositories"].append("acme/\u2028line")
+        state["groups"]["factory-pool#2"]["repositories"].append("acme/\u2028line")
         text = ra.workflow(json.dumps(state, ensure_ascii=False), self.script)
         self.assertTrue(text.isascii())
         self.assertEqual(json.loads(self.embedded(text, ra.EXPECTED_END)), state)
@@ -233,7 +324,7 @@ class Workflow(unittest.TestCase):
     def test_what_the_workflow_refuses(self):
         expression = "$" + "{{ secrets.X }}"
         state = json.loads(self.expected_text)
-        state["groups"]["factory-pool"]["selected_workflows"].append(expression)
+        state["groups"]["factory-pool#2"]["selected_workflows"].append(expression)
         with self.assertRaisesRegex(ValueError, "the expected state can't contain a dollar sign"):
             ra.workflow(json.dumps(state), self.script)
         with self.assertRaisesRegex(ValueError, "the script can't contain"):
@@ -263,7 +354,7 @@ class Alarm(unittest.TestCase):
                       'if [[ $1 == issue && $2 == list ]]; then echo "$LIST_OUT"; fi\n'
                       'if [[ $1 == issue && $2 == comment ]]; then exit "${COMMENT_RC:-0}"; fi\n')
         gh.chmod(0o755)
-        (self.root / "report.txt").write_text("DRIFT group factory-pool: runner rogue (ID 99) not expected\n")
+        (self.root / "report.txt").write_text("DRIFT group factory-pool#2: runner rogue (ID 99) not expected\n")
 
     def tearDown(self):
         self.tmp.cleanup()
@@ -318,7 +409,8 @@ class Check(unittest.TestCase):
 
     def check(self, env=None):
         out = io.StringIO()
-        env = {"AUDIT_APP_CLIENT_ID": "Iv23audit", "AUDIT_APP_KEY": "key"} if env is None else env
+        env = {"AUDIT_APP_CLIENT_ID": "Iv23audit", "AUDIT_APP_KEY": "key", "GITHUB_REPOSITORY": "acme/docs"} \
+            if env is None else env
         with mock.patch.dict(os.environ, env, clear=False), contextlib.redirect_stdout(out), \
                 mock.patch.object(ra, "installation_token", return_value="tok") as token, \
                 mock.patch.object(ra, "api", side_effect=lambda method, path, bearer: self.org.get(path)):
@@ -333,17 +425,21 @@ class Check(unittest.TestCase):
         self.org.runners[5].append(runner(99, "rogue", ["factory-prod"]))
         status, out, _ = self.check()
         self.assertEqual(status, 1)
-        self.assertIn("DRIFT group factory-pool-app-prod: runner rogue (ID 99) not expected", out)
+        self.assertIn("DRIFT group factory-pool-app-prod#5: runner rogue (ID 99) not expected", out)
 
     def test_no_credentials_or_no_token_fails_closed(self):
-        with mock.patch.dict(os.environ, {"AUDIT_APP_CLIENT_ID": "", "AUDIT_APP_KEY": ""}):
+        with mock.patch.dict(os.environ, {"GITHUB_REPOSITORY": ""}):
+            status, out, _ = self.check(env={"AUDIT_APP_CLIENT_ID": "Iv23audit", "AUDIT_APP_KEY": "key"})
+        self.assertEqual(status, 2)  # without it, the check for the audit's own repository would be skipped
+        self.assertIn("no GITHUB_REPOSITORY", out)
+        with mock.patch.dict(os.environ, {"AUDIT_APP_CLIENT_ID": "", "AUDIT_APP_KEY": "", "GITHUB_REPOSITORY": "acme/docs"}):
             status, out, _ = self.check(env={})
         self.assertEqual(status, 2)
         self.assertIn("no audit App client ID or key", out)
         with mock.patch.object(ra, "installation_token", side_effect=ra.Unreadable("the audit App isn't installed")):
             out = io.StringIO()
-            with mock.patch.dict(os.environ, {"AUDIT_APP_CLIENT_ID": "Iv23audit", "AUDIT_APP_KEY": "key"}), \
-                    contextlib.redirect_stdout(out):
+            with mock.patch.dict(os.environ, {"AUDIT_APP_CLIENT_ID": "Iv23audit", "AUDIT_APP_KEY": "key",
+                                              "GITHUB_REPOSITORY": "acme/docs"}), contextlib.redirect_stdout(out):
                 self.assertEqual(ra.main(["check", str(self.path)]), 2)
         self.assertIn("isn't installed", out.getvalue())
         self.path.write_text("{not json")

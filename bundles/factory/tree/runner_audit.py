@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""The organization's runner audit: every runner group, compared exactly with what's expected (z-sdlc
+"""The organization's runner audit: every runner group, compared with what's expected (z-sdlc
 process/factory.md, Enablement step 12, The runner audit).
 
     python3 .github/factory/runner_audit.py snapshot <organization> > expected.json
@@ -10,7 +10,7 @@ Why: the CI tier's runner-registration App (organization self-hosted runners: wr
 any group and change any group's repositories and workflows, and its key is on the runner host. The audit runs off
 that host, on GitHub-hosted runners, with a read-only App of its own (create_app.py --auditor), and every hour
 compares:
-- the set of runner groups;
+- the set of runner groups, each by its name and ID (two groups can share a name: an enterprise's shared groups);
 - each group's visibility, whether public repositories may use it, its repositories, whether it's restricted to
   selected workflows, and those workflows;
 - each group's runners: their names, IDs and custom labels. A group of just-in-time runners (the CI tier, whose
@@ -22,7 +22,8 @@ a run that can't read all of it, which fails closed: a revoked or narrowed key r
 What it doesn't see:
 - anything done and undone between two runs: a runner registered into a group that takes one job and goes (a
   just-in-time one removes itself), or a group opened to another repository or workflow for one job and restored.
-  The organization's audit log would see both (its REST API needs GitHub Enterprise Cloud): the upgrade;
+  The organization's audit log would see both (its REST API, GET orgs/<org>/audit-log, needs an Enterprise plan),
+  and records each runner's registration: the upgrade;
 - a runner in the CI tier's group that fits its name pattern and most-at-once (its jobs hold read-only tokens);
 - repository-level runners, which belong to each repository's settings;
 - a run that never happens: silence isn't an all-clear, so look at the workflow's runs now and then. GitHub turns
@@ -33,8 +34,10 @@ What it doesn't see:
   audit's repository out of every group (the default one included). Each run's job names the runner that took it.
 
 `workflow` writes this script and the expected state into the workflow file itself. Neither App the factory uses
-has the workflows permission, so neither can change what the audit expects, or the audit. Regenerate the file to
-change either; never edit it by hand.
+has the workflows permission, so neither can change what the audit expects, or the audit. That holds only while no
+other App that can write workflows, contents, issues or actions is installed on the audit's repository, one installed
+on all of the organization's repositories included (Enablement step 12). Regenerate the file to change either; never
+edit it by hand.
 
 Exit 0: as expected. 1: drift. 2: couldn't read the organization, or a usage or settings error. Standard library and
 openssl only.
@@ -56,7 +59,7 @@ import urllib.request
 API = "https://api.github.com"
 ACCEPT = "application/vnd.github+json"
 API_VERSION = "2022-11-28"
-FIELDS = ("visibility", "allows_public_repositories", "restricted_to_workflows")
+FIELDS = ("visibility", "allows_public_repositories", "restricted_to_workflows", "inherited")
 LISTS = ("repositories", "selected_workflows")
 DEFAULT_LABELS = ("factory", "factory-plan", "factory-prod", "factory-ci")
 # A self-hosted runner carrying one of these could take a job meant for GitHub's own runners, the audit's included.
@@ -65,7 +68,7 @@ HOSTED_STYLE = re.compile(r"(ubuntu|windows|macos)(-.*)?", re.I)
 # with self-hosted itself, which may then come back as a custom label): left out of the comparison by name.
 DEFAULT_LABELS_OF_RUNNERS = {"self-hosted", "linux", "windows", "macos", "x64", "x86", "arm", "arm64"}
 # Hourly: an hour's gap between a change and its alarm, for about 12 hosted minutes a day. Tighten it here (and
-# regenerate) if that gap is too long; the audit log closes it entirely.
+# regenerate) if that gap is too long; reading the audit log would close it, which this doesn't do yet.
 CRON = "17 * * * *"
 # The heredocs' ends in the workflow, built so this file, written into one of them, never contains either.
 SCRIPT_END, EXPECTED_END = "RUNNER_AUDIT_" + "SCRIPT_END", "RUNNER_AUDIT_" + "EXPECTED_END"
@@ -137,15 +140,20 @@ def installation_token(org, client_id, key_text, call=api):
 
 
 def paged(get, path, key):
-    items, page = [], 1
+    """Every item of a paged list, checked against GitHub's own count: a short page isn't proof the list ended."""
+    items, page, total = [], 1, None
     while True:
         status, data = get(f"{path}?per_page=100&page={page}")
         if status != 200 or not data or not isinstance(data.get(key), list):
             raise Unreadable(f"{path}: HTTP {status}")
+        total = data.get("total_count", total)
         items += data[key]
         if len(data[key]) < 100:
-            return items
+            break
         page += 1
+    if not isinstance(total, int) or len(items) != total:
+        raise Unreadable(f"{path}: {len(items)} items read, but GitHub counts {total}")
+    return items
 
 
 def current(org, get):
@@ -156,6 +164,7 @@ def current(org, get):
             raise Unreadable("a runner group without an ID or a name")
         base = f"/orgs/{org}/actions/runner-groups/{g['id']}"
         entry = {f: g.get(f) for f in FIELDS}
+        entry["inherited"] = bool(g.get("inherited"))  # shared by the organization's enterprise
         entry["selected_workflows"] = sorted(g.get("selected_workflows") or [])
         # A group open to every repository has no list of them.
         entry["repositories"] = (sorted(str(r.get("full_name")) for r in paged(get, f"{base}/repositories", "repositories")
@@ -169,7 +178,9 @@ def current(org, get):
                 str(label.get("name")) for label in r.get("labels") or []
                 if isinstance(label, dict) and str(label.get("name")).lower() not in DEFAULT_LABELS_OF_RUNNERS)}
         entry["runners"] = runners
-        groups[g["name"]] = entry
+        # Keyed by name and ID: names needn't be unique (an organization's own Default group and one its enterprise
+        # shares are both "Default"), and a group deleted and made again under its name is a different group.
+        groups[f"{g['name']}#{g['id']}"] = entry
     return groups
 
 
@@ -184,6 +195,10 @@ def load_expected(text):
     def bad(what):
         raise ValueError(f"the expected state: {what}")
 
+    def key_ok(name):
+        head, _, gid = name.rpartition("#")
+        return bool(head) and gid.isdigit()
+
     if not isinstance(expected, dict) or not isinstance(expected.get("organization"), str):
         bad("an object with the organization's name")
     if not isinstance(expected.get("groups"), dict) or not expected["groups"]:
@@ -192,13 +207,16 @@ def load_expected(text):
     if not isinstance(labels, list) or not all(isinstance(x, str) for x in labels):
         bad("factory_labels, a list of labels")
     for name, group in expected["groups"].items():
+        if not key_ok(name):
+            bad(f"group {name}: named <name>#<id>, as a snapshot writes it")
         if not isinstance(group, dict):
             bad(f"group {name}: an object")
+        # Every field and list, as a snapshot writes them: one missing would be a check silently skipped.
         for f in FIELDS:
-            if f in group and not isinstance(group[f], (str if f == "visibility" else bool)):
+            if not isinstance(group.get(f), (str if f == "visibility" else bool)):
                 bad(f"group {name}: {f}")
         for f in LISTS:
-            if f in group and not (isinstance(group[f], list) and all(isinstance(x, str) for x in group[f])):
+            if not (isinstance(group.get(f), list) and all(isinstance(x, str) for x in group[f])):
                 bad(f"group {name}: {f}, a list")
         runners = group.get("runners")
         if isinstance(runners, dict) and "pattern" in runners:
@@ -237,13 +255,12 @@ def drift(expected, groups):
     for name in sorted(set(want) & set(groups)):
         w, h = want[name], groups[name]
         for f in FIELDS:
-            if f in w and h.get(f) != w[f]:
+            if h.get(f) != w[f]:
                 out.append(f"group {name}: {f} is {json.dumps(h.get(f))}, expected {json.dumps(w[f])}")
         for f in LISTS:
-            if f in w:
-                extra, missing = sorted(set(h[f]) - set(w[f])), sorted(set(w[f]) - set(h[f]))
-                out += [f"group {name}: {f} has {x}, not expected" for x in extra]
-                out += [f"group {name}: {f} is missing {x}" for x in missing]
+            extra, missing = sorted(set(h[f]) - set(w[f])), sorted(set(w[f]) - set(h[f]))
+            out += [f"group {name}: {f} has {x}, not expected" for x in extra]
+            out += [f"group {name}: {f} is missing {x}" for x in missing]
         out += runner_drift(name, w["runners"], h["runners"])
     homes = label_homes(expected)
     for name, group in sorted(groups.items()):
@@ -283,13 +300,27 @@ def runner_drift(group, want, have):
     return out
 
 
-def audit(expected, get):
+def holes(groups, audit_repo):
+    """What no expected state makes right: a group open beyond the repositories it lists (visibility all, or private:
+    every private repository), or one the audit's own repository may use. A runner registered into either with a
+    GitHub-hosted label could take the audit's job and answer for it."""
+    out = []
+    for name, group in sorted(groups.items()):
+        if group.get("visibility") != "selected":
+            out.append(f"group {name}: visibility {group.get('visibility')} lets repositories it doesn't list use it, "
+                       "this audit's among them: make it selected")
+        elif audit_repo and audit_repo.lower() in {r.lower() for r in group.get("repositories", [])}:
+            out.append(f"group {name}: this audit's own repository ({audit_repo}) may use it")
+    return out
+
+
+def audit(expected, get, audit_repo=None):
     """(exit status, report lines)."""
     try:
         groups = current(expected["organization"], get)
     except Unreadable as e:
         return 2, [f"couldn't read the organization's runner groups: {e}"]
-    found = drift(expected, groups)
+    found = drift(expected, groups) + holes(groups, audit_repo)
     if found:
         return 1, [f"DRIFT {line}" for line in found]
     runners = sum(len(g["runners"]) for g in groups.values())
@@ -331,13 +362,14 @@ def workflow(expected_text, script_text, cron=CRON):
     expected_text = json.dumps(json.loads(expected_text), indent=2, ensure_ascii=True) + "\n"
     return f"""# The organization's runner audit, generated by z-sdlc's runner_audit.py (process/factory.md, Enablement step
 # 12). Regenerate it; never edit it by hand. The expected state and the audit itself are in this file because only
-# someone who may change workflows can change it: neither App the factory uses can.
+# someone who may change workflows can change it: neither App the factory uses can, and no App that can write
+# workflows, contents, issues or actions may be installed on this repository.
 name: factory-runner-audit
 
 on:
   schedule:
     # Hourly: an hour's gap between a change and its alarm, for about 12 hosted minutes a day. Tighten it with
-    # runner_audit.py workflow --cron; the organization's audit log would close the gap entirely.
+    # runner_audit.py workflow --cron; reading the organization's audit log would close the gap (not done yet).
     - cron: "{cron}"
   workflow_dispatch:
 
@@ -417,6 +449,11 @@ def main(argv=None):
             print(workflow(pathlib.Path(argv[1]).read_text(), pathlib.Path(__file__).read_text(), cron), end="")
             return 0
         expected = load_expected(pathlib.Path(argv[1]).read_text())
+        audit_repo = os.environ.get("GITHUB_REPOSITORY", "")
+        if not audit_repo:
+            print("couldn't check: no GITHUB_REPOSITORY, the repository the audit runs in (set by GitHub Actions; set it "
+                  "by hand to run the check elsewhere)")
+            return 2
         client_id, key = os.environ.get("AUDIT_APP_CLIENT_ID", ""), os.environ.get("AUDIT_APP_KEY", "")
         if not client_id or not key:
             print("couldn't read the organization's runner groups: no audit App client ID or key (the repository's "
@@ -427,10 +464,10 @@ def main(argv=None):
         except Unreadable as e:
             print(f"couldn't read the organization's runner groups: {e}")
             return 2
-        status, lines = audit(expected, lambda path: api("GET", path, token))
+        status, lines = audit(expected, lambda path: api("GET", path, token), audit_repo)
         print("\n".join(lines))
         return status
-    except (OSError, ValueError, IndexError, subprocess.SubprocessError) as e:
+    except (OSError, ValueError, IndexError, subprocess.SubprocessError, Unreadable) as e:
         print(f"runner_audit: {printable(e)}", file=sys.stderr)
         return 2
 

@@ -34,8 +34,9 @@
 #   sudo TIER=planning bash setup.sh            (planning tier)
 #   sudo TIER=ci bash setup.sh                  (CI tier)
 #   bash setup.sh --print-settings              (show the resolved settings and stop; no root needed)
-# The first run for a tier also names the repository whose checkout owns it, which must be this one's:
-#   sudo TIER_OWNER=<owner>/<repository> bash setup.sh
+# The first run for a tier (every tier, strict too) names it and the repository whose checkout owns it, which must be
+# this one's:
+#   sudo TIER=<strict|planning|ci> TIER_OWNER=<owner>/<repository> bash setup.sh
 # Idempotent: safe to re-run. Runner registration happens only when a registration token file exists
 # (default: <this dir>/reg-token, mode 600). One token registers every new instance (it stays valid for
 # an hour); the file is deleted after use.
@@ -122,10 +123,15 @@ if [[ -n $DB_HOST ]] && { [[ ! $DB_HOST =~ ^([0-9]{1,3}\.){3}[0-9]{1,3}$ ]] || [
     || ! python3 -I -c 'import ipaddress,sys; ipaddress.IPv4Address(sys.argv[1])' "$DB_HOST" 2>/dev/null; }; then
   printf 'ERROR: PLANNING_DB_HOST must be one IPv4 address, with PLANNING_DB_PORT set\n' >&2; exit 1
 fi
-# At least one label beyond commas and spaces: a runner registered with none of the factory's could take any job that
-# asks only for self-hosted, from every repository its group lets in.
-[[ -n $RUNNER_LABELS && $RUNNER_LABELS != None && $RUNNER_LABELS =~ [^,[:space:]] ]] \
-  || { printf 'ERROR: factory.json names no runner label for the %s tier (runners.%s)\n' "$TIER" "$TIER" >&2; exit 1; }
+# At least one label of the tier's own, beyond the ones every self-hosted runner can have (self-hosted, its OS and
+# architecture): a runner registered with none of the factory's could take any job that asks only for self-hosted,
+# from every repository its group lets in.
+[[ -n $RUNNER_LABELS && $RUNNER_LABELS != None ]] && python3 -I -c '
+import sys
+defaults = {"self-hosted", "linux", "windows", "macos", "x64", "x86", "arm", "arm64"}
+labels = [l.strip().lower() for l in sys.argv[1].split(",") if l.strip()]
+sys.exit(0 if [l for l in labels if l not in defaults] else 1)' "$RUNNER_LABELS" \
+  || { printf 'ERROR: factory.json names no runner label of its own for the %s tier (runners.%s)\n' "$TIER" "$TIER" >&2; exit 1; }
 RUNNER_HOME=$RUNNER_HOME_BASE/$RUNNER_USER
 RUNNER_COUNT=${RUNNER_COUNT:-$DEFAULT_COUNT}
 # The slice's process cap. The CI tier's jobs each have CI_JOB_PIDS, and the runner user's manager, rootless dockerd

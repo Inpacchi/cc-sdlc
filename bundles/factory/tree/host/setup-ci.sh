@@ -18,11 +18,9 @@ TRIPPED=$CONF_DIR/tripped
 log "7/8 CI tier: the runner-registration App, the runner group and the job image"
 install -d -m 755 -o root -g root "$LIB" "$CONF_DIR"
 install -d -m 711 -o root -g root /var/lib/factory-runner "$STATE"
-# The state was on tmpfs before: a registration a cycle there left is carried over, for its slot to remove.
+# The state was on tmpfs before (a pre-release CI tier): its tmpfiles entry goes; its records move just before the
+# slots restart, below.
 rm -f "/etc/tmpfiles.d/$RUNNER_UNIT.conf"
-for f in /run/factory-runner/"$RUNNER_UNIT"/slot-*.runner; do
-  if [[ -f $f && ! -L $f ]]; then cp -n "$f" "$STATE/" && rm -f "$f"; fi
-done
 install -m 644 -o root -g root "$SCRIPT_DIR/ci_launcher.py" "$LIB/ci_launcher.py"
 
 # The jobs' caps need the cpu, memory and pids controllers delegated to the runner user (step 3 wrote the drop-in).
@@ -58,7 +56,6 @@ PY
 }
 json_str() { python3 -I -c 'import json,sys; print(json.dumps(sys.argv[1]))' "$1"; }
 labels=$(python3 -I -c 'import json,sys; print(json.dumps([l.strip() for l in sys.argv[1].split(",") if l.strip()]))' "$RUNNER_LABELS")
-[[ $labels != "[]" ]] || die "no runner label for the CI tier (factory.json's runners.ci): its runners would take any self-hosted job"
 rm -f "$NEW_CONF"
 # The tier's table as loaded, for the checks: flushing a chain or a set leaves the table there, changed.
 fw_print=$(python3 -I "$SCRIPT_DIR/ci_launcher.py" fingerprint "$NFT_TABLE") \
@@ -260,12 +257,30 @@ systemctl daemon-reload
 rm -f "$TRIPPED"
 $launcher check "$CONF" || die "the CI tier's isolation check failed (above): no slot starts"
 systemctl enable --now "$RUNNER_UNIT-gate.service" "$RUNNER_UNIT-check.timer" "$RUNNER_UNIT-fw.timer" > /dev/null
+# Records a cycle left on the old tmpfs state (a host upgrading from a pre-release CI tier) move into the state as
+# leftovers, which the slots' cycles, their stop and retire all read. Moved only now, once the slots' settings name the
+# new state, so no cycle started from here on writes there; one a cycle started earlier writes later is read where it
+# is (the launcher looks there too). As leftovers, never over a slot's current record.
+for f in /run/factory-runner/"$RUNNER_UNIT"/slot-*.runner; do
+  [[ -f $f && ! -L $f ]] || continue
+  id=$(<"$f") n=${f##*/slot-}
+  n=${n%.runner}
+  if [[ $id =~ ^[0-9]+$ && $n =~ ^[0-9]+$ ]]; then mv -f "$f" "$STATE/slot-$n.leftover-$id"; else rm -f "$f"; fi
+done
 # A slot running a job keeps it, and takes this run's launcher and settings at its next cycle. A slot whose runner
 # isn't running one is restarted, so it takes them now: an idle runner's next cycle can be CI_IDLE_HOURS away (and a
-# runner registered with an old label set would wait for it). A runner GitHub can't answer for counts as busy.
+# runner registered with an old label set would wait for it). retire asks GitHub about each registration the slot
+# holds and deregisters an idle one, which GitHub also refuses once it has a job, and answers 10 only when they're all
+# gone: any other answer, an error's included, leaves the slot alone and says why.
 for i in $(seq "$RUNNER_COUNT"); do
-  if systemctl is-active --quiet "$RUNNER_UNIT-slot@$i.service" && ! $launcher busy "$CONF" "$i"; then
-    systemctl restart "$RUNNER_UNIT-slot@$i.service"
+  if systemctl is-active --quiet "$RUNNER_UNIT-slot@$i.service"; then
+    idle=0
+    $launcher retire "$CONF" "$i" || idle=$?
+    if ((idle == 10)); then
+      systemctl restart "$RUNNER_UNIT-slot@$i.service"
+    else
+      echo "Slot $i is running a job, or its runner couldn't be retired: not restarted. It takes this run's launcher and settings at its next cycle."
+    fi
   fi
   systemctl enable --now "$RUNNER_UNIT-slot@$i.service" > /dev/null
 done

@@ -6,6 +6,7 @@ the real one with a generated key."""
 
 import base64
 import contextlib
+import errno
 import http.server
 import io
 import json
@@ -241,6 +242,7 @@ class Launcher(unittest.TestCase):
             "setpriv": str(self.bin / "setpriv"), "env": shutil.which("env"), "docker": str(self.bin / "docker"),
             "python": str(self.bin / "python"), "nft": str(self.bin / "nft"), "systemctl": str(self.bin / "systemctl"),
             "loginctl": str(self.bin / "loginctl"), "wants_dir": str(self.wants), "fw_retry_seconds": 0,
+            "legacy_state_dir": str(root / "legacy"),
             "job": {"cpus": 4, "memory": "8g", "pids": 8192, "shm": "1g", "hours": 6},
             "idle_hours": 24, "min_free_gb": 0, "tick_seconds": 0.05, "poll_seconds": 0.1, "gone_checks": 2,
             "gone_delay": 0, "docker_wait_seconds": 0, "state_owner": os.getuid(),
@@ -334,23 +336,110 @@ class Launcher(unittest.TestCase):
         opts = dict(flags[i + 1].split("=", 1) for i, flag in enumerate(flags) if flag == "--log-opt")
         self.assertEqual(opts, {"max-size": "20m", "max-file": "1", "compress": "false"})
 
-    def test_setup_restarts_only_a_slot_whose_runner_is_idle(self):
-        def busy(slot=1):
-            return launcher.busy(self.conf, slot)
-        self.assertFalse(busy())  # no runner yet: between cycles
-        (self.state / "slot-1.runner").write_text("42")
-        FakeGitHub.view = [lambda: ONLINE]
-        self.assertFalse(busy())
-        FakeGitHub.view = [lambda: BUSY]
-        self.assertTrue(busy())
-        FakeGitHub.view = [lambda: 500]
-        self.assertTrue(busy())  # GitHub can't say: counted busy, never restarted
+    def test_setup_restarts_only_a_slot_whose_runner_is_retired(self):
         conf_file = pathlib.Path(self.tmp.name) / "launcher.json"
         conf_file.write_text(json.dumps(self.conf))
-        FakeGitHub.view = [lambda: ONLINE]
-        self.assertEqual(launcher.main(["ci_launcher.py", "busy", str(conf_file), "1"]), 1)
+        def retire(conf=str(conf_file), slot="1"):
+            with contextlib.redirect_stderr(io.StringIO()):
+                return launcher.main(["ci_launcher.py", "retire", conf, slot])
+        self.assertEqual(retire(), launcher.IDLE)  # no runner: between cycles
+        (self.state / "slot-1.runner").write_text("42")
+        self.assertEqual(retire(), launcher.IDLE)  # deregistered (204): nothing can be assigned to it now
+        self.assertIn(42, FakeGitHub.deleted)
+        FakeGitHub.deleted, FakeGitHub.delete_status = set(), 422  # GitHub: it's running a job
+        self.assertEqual(retire(), 0)
+        FakeGitHub.delete_status = 500
+        self.assertEqual(retire(), 0)
+        FakeGitHub.delete_status = 204
+        self.state.chmod(0o777)  # a state that isn't root's alone: unknown, so not idle
+        self.assertEqual(retire(), 0)
+        self.state.chmod(0o711)
+        self.assertEqual(retire(str(conf_file) + ".missing"), 0)
+        self.assertEqual(retire(slot="x"), 0)
+
+    def test_retire_asks_github_before_it_deregisters(self):
+        conf_file = pathlib.Path(self.tmp.name) / "launcher.json"
+        conf_file.write_text(json.dumps(self.conf))
+        def retire():
+            with contextlib.redirect_stderr(io.StringIO()):
+                return launcher.main(["ci_launcher.py", "retire", str(conf_file), "1"])
+        (self.state / "slot-1.runner").write_text("42")
+        FakeGitHub.view = [lambda: BUSY]  # GitHub says it's running a job: no removal tried
+        self.assertEqual(retire(), 0)
+        self.assertNotIn("DELETE", [m for m, _ in self.github()])
+        FakeGitHub.view = [lambda: 404]  # gone already
+        self.assertEqual(retire(), launcher.IDLE)
+        # A record on the state's old place (a pre-release CI tier) counts, and a busy one keeps the slot.
+        legacy = pathlib.Path(self.conf["legacy_state_dir"])
+        legacy.mkdir(mode=0o711)
+        (legacy / "slot-1.runner").write_text("43")
         FakeGitHub.view = [lambda: BUSY]
-        self.assertEqual(launcher.main(["ci_launcher.py", "busy", str(conf_file), "1"]), 0)
+        self.assertEqual(retire(), 0)
+        (legacy / "slot-1.runner").unlink()
+        # A cycle that registered a new runner while retire removed the old one: not idle.
+        FakeGitHub.view = [lambda: ONLINE]
+        real = launcher.Tokens.call
+        def call(tokens, method, path, body=None):
+            result = real(tokens, method, path, body)
+            if method == "DELETE":
+                (self.state / "slot-1.runner").write_text("99")
+            return result
+        with mock.patch.object(launcher.Tokens, "call", call):
+            self.assertEqual(retire(), 0)
+        # A state directory that's missing is unknown, not idle.
+        missing = {**self.conf, "state_dir": str(pathlib.Path(self.tmp.name) / "gone")}
+        conf_file.write_text(json.dumps(missing))
+        self.assertEqual(retire(), 0)
+
+    def test_a_leftover_github_no_longer_has_is_dropped(self):
+        (self.state / "slot-1.leftover-55").write_text("55")
+        FakeGitHub.delete_status = 500
+        FakeGitHub.view = [lambda: 404]
+        with contextlib.redirect_stderr(io.StringIO()):
+            launcher.stop(self.conf, 1)
+        self.assertFalse((self.state / "slot-1.leftover-55").exists())
+        # One on the state's old place that won't go yet is kept in the state, for a later cycle. The old place is
+        # on tmpfs and the state on disk, so no rename may cross from one directory to the other.
+        legacy = pathlib.Path(self.conf["legacy_state_dir"])
+        legacy.mkdir(mode=0o711)
+        (legacy / "slot-1.runner").write_text("56")
+        FakeGitHub.view = [lambda: ONLINE]
+        real_replace = os.replace
+        def replace(src, dst):
+            if pathlib.Path(src).parent != pathlib.Path(dst).parent:
+                raise OSError(errno.EXDEV, "Invalid cross-device link")
+            return real_replace(src, dst)
+        with mock.patch.object(launcher.os, "replace", replace), contextlib.redirect_stderr(io.StringIO()):
+            self.assertEqual(launcher.stop(self.conf, 1), 0)
+        self.assertEqual((self.state / "slot-1.leftover-56").read_text(), "56")
+        self.assertFalse((legacy / "slot-1.runner").exists())
+
+    def test_the_old_state_is_looked_for_where_a_pre_release_tier_kept_it(self):
+        conf = {k: v for k, v in self.conf.items() if k != "legacy_state_dir"}
+        seen, real = [], launcher.state_dir
+        def state_dir(c):
+            seen.append(c["state_dir"])
+            return real(c)
+        with mock.patch.object(launcher, "state_dir", state_dir):
+            self.assertEqual(launcher.record_files(conf, 1), [self.state / "slot-1.runner"])  # not there: nothing more
+        self.assertEqual(seen[-1], "/run/factory-runner/factory-ci")
+
+    def test_two_groups_of_the_tiers_name_are_refused(self):
+        with mock.patch.object(FakeGitHub, "groups", [FakeGitHub.groups[0], {**FakeGitHub.groups[0], "id": 6}]):
+            with self.assertRaisesRegex(launcher.Failed, "2 runner groups are named factory-ci"):
+                launcher.resolve(self.conf)
+
+    def test_a_registration_github_wont_remove_doesnt_stop_the_cycle(self):
+        (self.state / "slot-1.runner").write_text("77")
+        FakeGitHub.delete_status = 422  # a dead runner GitHub still calls busy
+        with contextlib.redirect_stderr(io.StringIO()):
+            self.assertEqual(launcher.run(self.conf, 1), 0)  # the cycle ran its job all the same
+        self.assertEqual((self.state / "slot-1.leftover-77").read_text(), "77")
+        self.assertEqual(self.fails(), "0")
+        FakeGitHub.delete_status = 204
+        launcher.stop(self.conf, 1)
+        self.assertFalse((self.state / "slot-1.leftover-77").exists())
+        self.assertIn(77, FakeGitHub.deleted)
 
     @unittest.skipUnless(os.environ.get("FACTORY_DOCKER_SMOKE") == "1" and shutil.which("docker"),
                          "FACTORY_DOCKER_SMOKE=1 where a Docker daemon runs (a GitHub-hosted runner)")
@@ -395,6 +484,9 @@ class Launcher(unittest.TestCase):
                          ["self-hosted", "factory-ci"])
         self.assertEqual(launcher.jit_labels({**self.conf, "labels": ["Self-Hosted", "factory-ci"]}),
                          ["self-hosted", "factory-ci"])  # GitHub's labels ignore case
+        for labels in (["self-hosted"], ["Linux", "X64"], []):  # no label of the tier's own: any job would do
+            with self.subTest(labels=labels), self.assertRaisesRegex(launcher.Failed, "no runner label of its own"):
+                launcher.jit_labels({**self.conf, "labels": labels})
 
     def test_one_wait_per_cycle_and_no_docker_left_behind(self):
         self.control("wait_sleep", 0.6)  # a dozen ticks

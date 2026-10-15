@@ -37,6 +37,86 @@ Each entry contains:
 
 ---
 
+## 2026-10-15: The runner audit's repository admits no App that can write
+
+**Origin:** The pilot project, setting up its runner audit after v2.1.0. An AI coding assistant's GitHub App was installed on all of its organization's repositories, with workflows, contents, issues and actions write.
+
+**What happened:** Enablement step 12 and `runner_audit.py` reasoned that no App can change the audit, because neither of the factory's Apps has the workflows permission. Any other App installed on the audit's repository breaks that, an organization-wide installation included. Such an App could rewrite the expected state or the audit, close its alarm issues, or disable the workflow.
+
+**Changes made:**
+1. **`process/factory.md`:** Enablement step 12:
+   - the premise holds only while no other App that can write is installed on the audit's repository;
+   - setup step 2 says to check the repository's installed Apps, counting organization-wide ones, and to narrow any App that can write workflows, contents, issues or actions to selected repositories, without this one.
+2. **`bundles/factory/tree/runner_audit.py`:** the docstring and the generated workflow's header say the same.
+
+**Rationale:** The audit's guarantee rests on who can change one file. Every App installed on its repository is someone.
+
+---
+
+## 2026-10-15: The release review's second round
+
+**Origin:** The pilot project's second review of this release (three fresh reviewers: code and tests, architecture, host operations) closed the first round's three blockers and found three more, with cheap hardening around them.
+
+**What happened:**
+- **The audit missed a group open to every private repository.** A runner group's visibility is `selected`, `all` or `private`, and the audit flagged only `all`. It records repositories only for a `selected` group, so a `private` group admitted the audit's own (private) repository unseen.
+- **Upgrading a pre-release CI tier could kill a job.** Setup moved the old `/run` state's records into the new state before it installed the slots' new settings, minutes earlier, while the image built. A cycle starting in that window wrote its record to the old place, so `retire` found nothing there and answered idle. A re-run after an abort could also delete a live record.
+- **The upgrade notes missed what stops a v2.0.0 host's first run:**
+  - every tier's claim;
+  - the label refusal;
+  - IPv6;
+  - `TasksMax` at the defaults;
+  - a pre-release audit's expected state.
+
+**Changes made:**
+1. **`bundles/factory/tree/runner_audit.py`:**
+   - any visibility but `selected` is drift, whatever the expected state says;
+   - the audit's own repository is matched without case;
+   - `check` refuses to run (2) without `GITHUB_REPOSITORY`, which a hand run would otherwise skip;
+   - an empty token is a clean 2.
+2. **`bundles/factory/tree/host/ci_launcher.py`:**
+   - **`retire`:**
+     - asks GitHub about each registration the slot holds (its record, its leftovers, and any record on the old `/run` state) before removing an idle one, so it no longer depends on GitHub refusing to remove a busy runner;
+     - treats a record that changes meanwhile, or a missing state directory, as not idle;
+     - says why it isn't restarting a slot.
+   - **A leftover GitHub no longer has** is dropped rather than kept forever.
+   - **The tier's group** must be the only one with its name.
+3. **`bundles/factory/tree/host/setup-ci.sh`:** the old state's records move in as leftovers, never over a current record, only once the slots' new settings are in place, just before the restarts.
+4. **`bundles/factory/tree/host/setup.sh`:** the usage line's first run names the tier too, as the claim requires.
+5. **Tests:**
+   - `private` visibility;
+   - case;
+   - no `GITHUB_REPOSITORY`;
+   - `retire` asking first, a busy old-state record, a new record meanwhile, a missing state directory;
+   - a leftover GitHub no longer has;
+   - the old state's default path;
+   - two groups with the tier's name;
+   - the carry-over's order in `setup-ci.sh`.
+6. **`process/factory.md`:**
+   - step 12 says `private` is as open as `all`, and lists `inherited` among the compared fields;
+   - the audit log is GitHub Enterprise Cloud's, and isn't read yet;
+   - step 10 says setup's restart asks GitHub first.
+7. **This changelog:**
+   - "Upgrading a project from v2.0.0" is rewritten: every tier's claim and label rule, IPv6, self-update, the planning database, and the CI tier and audit framed as a pre-release host's;
+   - item 12 no longer names a `setup-ci.sh` label check;
+   - Enterprise Cloud is named the same way throughout.
+8. **`CLAUDE.md`:**
+   - check 6 fails closed when the names file is missing or empty, or a scan errors;
+   - pushes name `master` and the tag, never `--all`;
+   - "no absolute home path".
+9. **`docs/current_work/ideas/factory-ci-tier-follow-ups_handoff.md`** (new): the minors that follow the tag.
+10. **The third round** (ship; no critical or major findings), before the tag:
+    - **`ci_launcher.py`:** a record on the old `/run` state (tmpfs) that GitHub won't remove yet is written into the state as a leftover, then removed, rather than renamed across filesystems, which failed (`EXDEV`) on a real host. The test now refuses a rename between directories, as a real host does.
+    - **The follow-ups:**
+      - added: a renamed group read as one gone and one new; a sunset for the pre-release migration code; a loose old-state directory skipped silently; a 404 from the wrong organization read as "gone";
+      - corrected: where the label lists live, and that the firewall check already fingerprints `nft -j`'s JSON;
+      - dropped: `read < <(python3 …)` failing silently (those sites stop setup).
+    - **`CLAUDE.md` check 6:** fails when `origin/master` can't be read, which the scans' exits don't show.
+    - **The upgrade notes:** why the release is minor, the apt refusal, and the planning tier's error without `PLANNING_DB_HOST`.
+
+**Rationale:** Both blockers were the same mistake as the first round's: a check that passes when it can't see. An unknown visibility or a record in the wrong place now counts as the unsafe answer.
+
+---
+
 ## 2026-10-15: z-sdlc names no private project, host or path
 
 **Origin:** CD (2026-10-15), preparing this release: z-sdlc is public, and its unpushed commits named the pilot project, two of the organization's machines and a tailnet address.
@@ -116,7 +196,7 @@ Each entry contains:
 1. **`bundles/factory/tree/host/ci_launcher.py`**:
    - **Tokens:**
      - their lifetime is counted on the monotonic clock;
-     - a 401 or 403 drops the cached token and retries once with a new one (`Tokens.call`).
+     - a 401 drops the cached token and retries once with a new one (`Tokens.call`); a 403 doesn't (item 9).
    - **GitHub's answers:** `api()` returns only JSON objects. A success with anything else is `Failed`, and an error's body is its message. A JIT answer without a runner ID is `Failed`.
    - **Idle runners:** a failed removal of an idle runner asks GitHub again. The runner counts as busy only on GitHub's word, and otherwise the next poll retries the removal.
    - **Backoff:** `job-hours` is neutral, like a recycle.
@@ -179,7 +259,7 @@ Each entry contains:
      - the doc names the failed-run email as the channel no App can touch, and asks for a private repository the factory's App isn't installed on.
    - **Patterns:** an expected pattern that matches an empty name is refused, and the doc gives the CI tier's exact one.
    - **"Not seen" says what it is:**
-     - a runner that takes one job and goes, and a group opened for one job and restored (the audit log, on Enterprise Cloud, would see both);
+     - a runner that takes one job and goes, and a group opened for one job and restored (the audit log, on GitHub Enterprise Cloud, would see both);
      - a rogue runner within the CI pattern and most-at-once;
      - repository-level runners;
      - a run that never happens.
@@ -196,6 +276,15 @@ Each entry contains:
      - a failed issue search still opens an issue;
      - the audit step has its own timeout under the job's, so the alarm step runs after it.
    - **The home-base warning:** it walks the resolved path.
+   - **Tests:**
+     - a trip's steps in order;
+     - a 403 that mints nothing, and a token refused twice;
+     - a flushed chain and a flushed set, against unchanged counters and handles;
+     - setup's fingerprint;
+     - hosted-style labels and non-string labels;
+     - ASCII embedding;
+     - a failed search;
+     - a symlinked base.
 10. **The pilot project's pre-merge review of the vendored `setup.sh`** (at `b73589a`), all applied to `setup.sh`:
     - **One setup at a time per host:** an `flock` on `/run/factory-runner/setup.lock`, in a directory only root can write.
     - **The tier claim** prints git's own error, naming `safe.directory`, instead of "no origin remote".
@@ -204,6 +293,13 @@ Each entry contains:
     - **`PLANNING_DB_HOST`** must be a real IPv4 address (no octet above 255).
     - **`host.conf`:** any `TIER` or `TIER_OWNER` assignment in it is refused, even one equal to the command line's, as its seed and setup's message say.
     - **The polkit rule** stays the incubator's: it denies `logind` to its production runner, whose sandbox is its unit's. The bundle's runner users already run user managers by design (rootless Docker), and their Tailscale deny is by user, so it holds there.
+11. **The pilot project's two further notes**, applied:
+    - **The CI slice's `TasksMax`:** it was a fixed 16384, exactly `CI_RUNNERS` × `CI_JOB_PIDS` at the defaults, leaving no room for the user manager, rootless dockerd and rootlesskit in the same slice. It's now `CI_RUNNERS` × `CI_JOB_PIDS` + 4096 (`SLICE_TASKS` in `--print-settings`); the other tiers stay at 16384.
+    - **Enablement step 10's Capacity:**
+      - every tier's ceilings are limits, not reservations, and can add up past the host;
+      - jobs don't swap, so memory pressure ends in OOM kills (exit 137);
+      - compare the tiers' ceilings with the host's memory and other tenants, and use `CI_RUNNERS=1` as the lever.
+    - **Step 10, the busy-runner refusal:** a safe way to see GitHub's 422 on removing a busy runner on a new tier (a sleep-only job dispatched on the label), and what happens if it ever didn't.
 12. **After the CI tier's first real run** (the pilot project on its runner host, 2026-10-14), beyond its two hotfixes (the log driver, `self-hosted`; their own entries):
     - **Idle slots restart:** a setup run restarts each slot whose runner isn't running a job (`ci_launcher.py busy`; a runner GitHub can't answer for counts as busy). It used to leave a running slot alone, so an idle runner kept the old launcher, and an old label set, until its `CI_IDLE_HOURS` recycle.
     - **The audit:** it leaves out the labels every self-hosted runner has (`self-hosted`, the OS and architecture) by name, whatever type GitHub reports, so a just-in-time runner's own `self-hosted` is neither drift nor a hosted-style label.
@@ -211,8 +307,11 @@ Each entry contains:
     - **Docs:** step 10 says a JIT runner gets only the labels it's given.
     - **The pilot project's review of the label hotfix** (two lows):
       - `self-hosted` is matched regardless of case;
-      - a runner label setting of only commas or spaces (`","`) is refused for every tier, as an empty one was (`setup.sh`), and an empty CI label list in `setup-ci.sh`. Otherwise a runner would register with none of the factory's labels and could take any job asking only for `self-hosted`.
+      - a runner label setting of only commas or spaces (`","`) is refused for every tier, the CI tier's included, as an empty one was (`setup.sh`). Otherwise a runner would register with none of the factory's labels and could take any job asking only for `self-hosted`.
     - **A flaky test:** `test_a_runner_that_never_ran_its_job_backs_off` asserted exactly one `time.sleep`, under a patch of the whole time module that `subprocess`'s own wait loop also calls. It now checks that the first sleep is the backoff.
+13. **The first run's report** (the tier live on its runner host: runners registered with `self-hosted,factory-ci`, busy within 40 s, job caps read live from the containers):
+    - **The job image:** every setup run built a new one (a new image ID each time, since package steps resolve again), churning the prune. Setup now fingerprints the image's inputs (`ci_launcher.py inputs`: the copied context and Dockerfiles, by path, mode and contents or link target, plus the build arguments and the runner's version). It keeps the image while they're unchanged and it's still there. `CI_REBUILD=1` on setup's command line rebuilds anyway, for upstream updates.
+    - **Enablement step 10:** cancel runs still queued for the label a moved job used before (they'd wait a day), and the image reuse.
 14. **What the first real e2e runs needed** (the pilot project's experiment, 2026-10-15). No code: per-slot CPU pins were prepared and dropped.
     - **The cause:** the tier's e2e jobs timed out at 8 CPUs where they passed uncapped on the same host. The cause was CPU itself: Chromium's software WebGL (SwiftShader) wants about 7 CPUs a browser.
     - **The experiment**, in a replica of the job container:
@@ -223,31 +322,45 @@ Each entry contains:
     - **Two container differences mattered too:**
       - Playwright's default `--disable-dev-shm-usage` puts Chromium's shared memory in the container's `/tmp`, which made each round of a test take 4–5 s instead of 0.4 s. A 1 GB `/dev/shm` crashed; 4 GB peaked near 900 MB.
       - The bare image's fallback font broke two hover tests.
-    - **The pilot project's fix is its own settings:** `CI_RUNNERS=1`, `CI_JOB_CPUS=24`, `CI_CPU_QUOTA=2400%`, `CI_JOB_SHM=4g`, `CI_MEMORY_HIGH=10G`, `CI_MEMORY_MAX=12G`, plus its Playwright config and fonts in its image.
+    - **The pilot project's fix is its own settings:** `CI_RUNNERS=1`, `CI_JOB_CPUS=24`, `CI_CPU_QUOTA=2600%`, `CI_JOB_SHM=4g`, `CI_MEMORY_HIGH=10G`, `CI_MEMORY_MAX=12G`, plus its Playwright config and fonts in its image.
     - **`process/factory.md`, Enablement step 10's Capacity:**
       - browser suites need far more CPU than their test count suggests, so size `CI_JOB_CPUS` from a measured run and expect one at a time;
       - a quota a CPU-bound job outgrows can't be offset by pinning: measure;
       - give Chromium a real `/dev/shm` and turn off `--disable-dev-shm-usage`;
       - put the fonts in the image.
-13. **The first run's report** (the tier live on its runner host: runners registered with `self-hosted,factory-ci`, busy within 40 s, job caps read live from the containers):
-    - **The job image:** every setup run built a new one (a new image ID each time, since package steps resolve again), churning the prune. Setup now fingerprints the image's inputs (`ci_launcher.py inputs`: the copied context and Dockerfiles, by path, mode and contents or link target, plus the build arguments and the runner's version). It keeps the image while they're unchanged and it's still there. `CI_REBUILD=1` on setup's command line rebuilds anyway, for upstream updates.
-    - **Enablement step 10:** cancel runs still queued for the label a moved job used before (they'd wait a day), and the image reuse.
-11. **The pilot project's two further notes**, applied:
-    - **The CI slice's `TasksMax`:** it was a fixed 16384, exactly `CI_RUNNERS` × `CI_JOB_PIDS` at the defaults, leaving no room for the user manager, rootless dockerd and rootlesskit in the same slice. It's now `CI_RUNNERS` × `CI_JOB_PIDS` + 4096 (`SLICE_TASKS` in `--print-settings`); the other tiers stay at 16384.
-    - **Enablement step 10's Capacity:**
-      - every tier's ceilings are limits, not reservations, and can add up past the host;
-      - jobs don't swap, so memory pressure ends in OOM kills (exit 137);
-      - compare the tiers' ceilings with the host's memory and other tenants, and use `CI_RUNNERS=1` as the lever.
-    - **Step 10, the busy-runner refusal:** a safe way to see GitHub's 422 on removing a busy runner on a new tier (a sleep-only job dispatched on the label), and what happens if it ever didn't.
-   - **Tests:**
-     - a trip's steps in order;
-     - a 403 that mints nothing, and a token refused twice;
-     - a flushed chain and a flushed set, against unchanged counters and handles;
-     - setup's fingerprint;
-     - hosted-style labels and non-string labels;
-     - ASCII embedding;
-     - a failed search;
-     - a symlinked base.
+15. **The pilot project's review of the release** (three reviewers), applied:
+    - **Critical, the audit keyed groups by name.** An organization can have two groups of the same name: its own `Default` (visibility `all`, which every repository can target) and one its enterprise shares, which GitHub lists last. So the organization's own dropped out of both the snapshot and the check. Groups are now keyed `<name>#<id>`, whether a group is the enterprise's (`inherited`) is compared, and an expected state keyed otherwise is refused.
+    - **Restarting an idle slot could kill a job.** `ci_launcher.py busy` answered "idle" on any local error, and asking then restarting raced a job assigned in between. `retire` replaces it: it deregisters the slot's runner first, which GitHub refuses while it runs a job (422), and answers 10 only when the runner is gone or there was none. `setup-ci.sh` restarts a slot on 10 alone, and says when it doesn't.
+    - **A tier labelled only `self-hosted`** (or with the OS and architecture, in any case) passed every guard, so its runners would take any job asking only for `self-hosted`. `setup.sh` refuses a tier without a label of its own, and `jit_labels()` won't register one.
+    - **The audit reads every list in full:** it checks GitHub's `total_count`, so a short page isn't taken for the end.
+    - **An expected state has every field and list of every group.** One missing used to skip that check silently.
+    - **No expected state makes two holes right:** a group every repository may use (visibility `all`), and one the audit's own repository may use. Either lets a runner registered there take the audit's job and answer for it. Enablement step 12's setup now says to close both.
+    - **`api()`'s failure paths are tested:** an HTTP error, a network error, a truncated read, and a success that isn't an object.
+    - **A registration GitHub won't remove** (a dead runner it still calls busy) no longer stops the cycle. It's kept as `slot-N.leftover-<id>` and retried by later cycles and the slot's stop.
+    - **The docs say what the code does:**
+      - a 401 drops a token, a 403 doesn't;
+      - the CI tier's group is compared by pattern, count and labels;
+      - the audit log's REST API is on GitHub Enterprise Cloud;
+      - the items here are in order.
+
+**Upgrading a project from v2.0.0.** Migrating copies the bundle; nothing on a host changes until each tier's setup runs again, as root, from the project's checkout. It's a minor release because each change below either needs no action or stops setup with a message that names the fix:
+- **Every tier:**
+  - **the first run claims the tier,** the strict tier's included: `sudo TIER=<strict|planning|ci> TIER_OWNER=<owner>/<repository> bash setup.sh`, naming the checkout's own repository. Without both, setup stops ("no checkout owns the … tier"). Later runs need neither for strict and `TIER` alone for the others, and another repository's checkout is refused. Remove any `TIER`/`TIER_OWNER` from `host.conf`: it's refused. One setup runs at a time per host;
+  - **labels:** a tier whose labels are only defaults GitHub gives every self-hosted runner (`self-hosted`, an OS, an architecture) is refused. The factory's own labels pass;
+  - **the firewall** rejects all IPv6 for the runner users, gets its `nftables` stop drop-in, and, where Tailscale runs, denies the runner users `/run/tailscale`;
+  - **runners** no longer update themselves (`--disableupdate`; existing ones get it in their settings), and an idle one upgrades to `RUNNER_VERSION`;
+  - **the runner's libraries** come from apt, and setup stops rather than upgrade or remove an installed package for them ("would upgrade …", "would remove …"): resolve that by hand, then run setup again;
+  - setup warns on every run while `RUNNER_HOME_BASE`'s directories aren't root's alone.
+- **The planning tier:** if production's database is on another machine, set `PLANNING_DB_HOST` (its one IPv4 address) with `PLANNING_DB_PORT` in `host.conf`. Unset, the exception stays on this host's own addresses, as before, and setup stops with "the planning tier cannot reach the database at <address>:<port>".
+- **A host on a pre-release CI tier** (v2.0.0 has none; a project setting one up now follows Enablement step 10):
+  - claim it as above, with `TIER=ci`;
+  - the job image rebuilds once, then is kept while its inputs are unchanged (`CI_REBUILD=1` rebuilds);
+  - the slice's `TasksMax` becomes `CI_RUNNERS` × `CI_JOB_PIDS` + 4096: 20480 at the defaults (2 × 8192 + 4096);
+  - slot state moves from `/run/factory-runner/<unit>` to `/var/lib/factory-runner/<unit>`. The registrations cycles left on the old state move in as leftovers just before the slots restart, to be removed. The backoff counts start again, and the tmpfiles entry is removed;
+  - idle slots restart: setup asks GitHub about each slot's registrations and restarts a slot only when they're gone, or idle and removed;
+  - a runner audit's `expected.json` made before the release (groups keyed by name alone) is refused: snapshot again, review it, and regenerate the workflow.
+- **The project's CI:** with a CI tier, run the bundle's tests on a GitHub-hosted runner with `FACTORY_DOCKER_SMOKE=1`.
+- **The runner audit:** set it up before the CI tier takes jobs (Enablement step 12), with every runner group's visibility `selected`.
 
 **Rationale:**
 - **The audit:** the runner-registration key is the most powerful credential the factory keeps on a host, and production's runner group is one PATCH away from it. An alarm off the host, with a read-only credential and an expected state that neither factory App can edit, is the least that makes misuse visible.

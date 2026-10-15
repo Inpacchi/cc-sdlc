@@ -110,11 +110,11 @@ class HostSettings(unittest.TestCase):
             env = {**os.environ, "HOST_CONF": "/nonexistent", "FACTORY_JSON": str(cfg), "TIER": "ci"}
             r = subprocess.run(["bash", str(SCRIPT), "--print-settings"], capture_output=True, text=True, env=env)
         self.assertEqual(r.returncode, 1)
-        self.assertIn("factory.json names no runner label for the ci tier (runners.ci)", r.stderr)
+        self.assertIn("factory.json names no runner label of its own for the ci tier (runners.ci)", r.stderr)
 
     def test_a_tier_needs_a_label_of_its_own(self):
         # A runner with none of the factory's labels would take any job asking only for self-hosted.
-        for label in (",", " , ", ""):
+        for label in (",", " , ", "", "self-hosted", "Self-Hosted, ,", "self-hosted,Linux,X64"):
             with self.subTest(label=label), tempfile.TemporaryDirectory() as tmp:
                 conf, cfg = pathlib.Path(tmp) / "host.conf", pathlib.Path(tmp) / "factory.json"
                 conf.write_text("FACTORY_ORG=acme\n")
@@ -122,7 +122,7 @@ class HostSettings(unittest.TestCase):
                 r = subprocess.run(["bash", str(SCRIPT), "--print-settings"], capture_output=True, text=True,
                                    env={**os.environ, "HOST_CONF": str(conf), "FACTORY_JSON": str(cfg), "TIER": "strict"})
                 self.assertEqual(r.returncode, 1)
-                self.assertIn("names no runner label for the strict tier", r.stderr)
+                self.assertIn("names no runner label of its own for the strict tier", r.stderr)
 
     def test_host_conf_overrides(self):
         s = self.settings("FACTORY_ORG=acme\nRUNNER_HOME_BASE=/srv/f\nLAN_DNS=10.1.1.1\n"
@@ -348,8 +348,13 @@ class SetupParts(unittest.TestCase):
         slot = units["slot@.service"]
         self.assertIn("Requires=$FW_UNIT.service user@$RUID.service $RUNNER_UNIT-gate.service", slot)
         self.assertIn("ExecStopPost=$launcher stop $CONF %i", slot)
-        # A setup run restarts a slot whose runner isn't running a job, so it takes the new launcher now.
-        self.assertIn('systemctl is-active --quiet "$RUNNER_UNIT-slot@$i.service" && ! $launcher busy "$CONF" "$i"', text)
+        # A setup run restarts a slot whose runner isn't running a job, so it takes the new launcher now: only when retire
+        # deregistered it (10), since an error, or GitHub's refusal, means it's busy or can't tell.
+        self.assertIn('$launcher retire "$CONF" "$i" || idle=$?', text)
+        self.assertIn("if ((idle == 10)); then", text)
+        # Records on the old tmpfs state move in as leftovers only after the slots' new settings are in place.
+        self.assertLess(text.index('mv -f "$NEW_CONF" "$CONF"'), text.index('mv -f "$f" "$STATE/slot-$n.leftover-$id"'))
+        self.assertLess(text.index('mv -f "$f" "$STATE/slot-$n.leftover-$id"'), text.index('$launcher retire'))
         self.assertIn("KillMode=mixed", slot)
         # Longer than the launcher's worst cleanup: docker rm, a token (openssl, the API) and the registration's
         # removal, the token and the removal twice over for a refused token minted again.

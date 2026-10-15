@@ -8,8 +8,8 @@ Usage: python3 -I ci_launcher.py run <launcher.json> <slot>     one cycle; the s
        python3 -I ci_launcher.py trip <launcher.json>           the kill switch, for a check that failed or hung
        python3 -I ci_launcher.py fingerprint <table>            the firewall table's fingerprint (setup records it)
        python3 -I ci_launcher.py inputs <dir> [<arg>...]           the job image's build inputs' fingerprint
-       python3 -I ci_launcher.py busy <launcher.json> <slot>    exit 0 when the slot's runner is running a job (or GitHub
-                                                                can't say), 1 when setup may restart the slot
+       python3 -I ci_launcher.py retire <launcher.json> <slot>  for setup: exit 10 when the slot may restart (its runner
+                                                                is deregistered, or it has none), anything else when not
 
 A cycle mints a just-in-time (JIT) runner config with the runner-registration App. The App's one permission, the
 organization's self-hosted runners, reaches every runner group in the organization, so its key (root-only, read by
@@ -80,6 +80,8 @@ REASONS = {
 }
 # A recycle or an overrun, not a failure of the slot: the backoff counter stays as it is.
 NEUTRAL = ("idle", "lifetime", "job-hours")
+# The labels every self-hosted runner can have without asking: a tier's own label must be something else.
+SELF_HOSTED_DEFAULTS = {"self-hosted", "linux", "windows", "macos", "x64", "x86", "arm", "arm64"}
 
 # The isolation probe: every target closed; with expected caps (in a job's container), cpu.max, memory.max and
 # pids.max set to them. Exit 1 on any of those, else exit 2 if the internet is out of reach (liveness, not
@@ -249,7 +251,10 @@ class Tokens:
 def jit_labels(conf):
     """The runner's labels. A just-in-time runner gets only the labels it's registered with, never the self-hosted
     one config.sh adds, and every job on the tier asks for [self-hosted, <label>]: so self-hosted comes first."""
-    return ["self-hosted"] + [label for label in conf["labels"] if label.lower() != "self-hosted"]  # labels ignore case
+    own = [label for label in conf["labels"] if label.lower() not in SELF_HOSTED_DEFAULTS]  # labels ignore case
+    if not own:
+        raise Failed("the tier has no runner label of its own: its runners would take any self-hosted job")
+    return ["self-hosted"] + [label for label in conf["labels"] if label.lower() != "self-hosted"]
 
 
 def jitconfig(conf, tokens, name):
@@ -343,6 +348,22 @@ def state_dir(conf):
     return path
 
 
+def record_files(conf, slot):
+    """Every record of a registration the slot may hold: its current one, any an earlier cycle couldn't remove
+    (slot-N.leftover-<id>), and one a cycle left on the state's old place, tmpfs, on a host upgrading from a pre-release
+    CI tier (read only from a directory root alone can write)."""
+    state = state_dir(conf)
+    files = [state / f"slot-{slot}.runner", *sorted(state.glob(f"slot-{slot}.leftover-*"))]
+    legacy = pathlib.Path(conf.get("legacy_state_dir", f"/run/factory-runner/{conf['unit']}"))
+    if legacy != state:
+        try:
+            state_dir({**conf, "state_dir": str(legacy)})
+            files.append(legacy / f"slot-{slot}.runner")
+        except (FileNotFoundError, Failed):
+            pass
+    return files
+
+
 def low_disk(conf):
     st = os.statvfs(conf["home"])
     return st.f_bavail * st.f_frsize < float(conf.get("min_free_gb", 20)) * 2 ** 30
@@ -367,17 +388,35 @@ def record_runner(path, runner_id):
     os.replace(new, path)
 
 
-def deregister_leftover(conf, path, tokens):
-    """A registration a stopped or killed cycle left behind."""
-    try:
-        runner_id = int(path.read_text())
-    except FileNotFoundError:
-        return
-    except ValueError:
-        path.unlink()
-        return
-    deregister(conf, runner_id, tokens)
-    path.unlink(missing_ok=True)
+def deregister_leftover(conf, slot, tokens):
+    """Registrations a stopped or killed cycle left behind (record_files). One GitHub won't remove now (it can still
+    call a dead runner busy for a while) is kept as slot-N.leftover-<id> in the state for a later cycle, never a reason
+    to stop this one; one GitHub no longer has is dropped."""
+    state = state_dir(conf)
+    for path in record_files(conf, slot):
+        try:
+            runner_id = int(path.read_text())
+        except FileNotFoundError:
+            continue
+        except ValueError:
+            path.unlink()
+            continue
+        try:
+            deregister(conf, runner_id, tokens)
+            path.unlink(missing_ok=True)
+            continue
+        except Failed as e:
+            print(f"slot {slot}: {e}; kept for a later cycle", file=sys.stderr)
+        with contextlib.suppress(Failed):
+            if runner_state(conf, runner_id, tokens) is None:  # gone after all
+                path.unlink(missing_ok=True)
+                continue
+        leftover = state / f"slot-{slot}.leftover-{runner_id}"
+        if path != leftover:
+            # Written in the state, then the old record removed: the old state is on tmpfs, so a rename from there
+            # would cross filesystems (EXDEV).
+            record_runner(leftover, runner_id)
+            path.unlink(missing_ok=True)
 
 
 def run(conf, slot):
@@ -399,7 +438,7 @@ def run(conf, slot):
     with contextlib.suppress(FileNotFoundError):
         os.unlink(state / f"slot-{slot}.env")  # a JIT config a crashed cycle left on disk
     try:
-        deregister_leftover(conf, runner_file, tokens)
+        deregister_leftover(conf, slot, tokens)
         docker(conf, "rm", "-f", "-v", name)  # a container a crash left behind
         if docker(conf, "network", "inspect", network).returncode:
             docker(conf, "network", "create", "--label", "factory-ci", network)
@@ -525,20 +564,38 @@ def cleanup(conf, slot, name, runner_file, runner_id, tokens, removed):
         print(f"slot {slot}: {e}", file=sys.stderr)
 
 
-def busy(conf, slot):
-    """Whether the slot's runner is running a job, for setup: it restarts a slot that isn't, so the slot takes setup's
-    launcher and settings now, not at its next cycle (an idle runner's can be CI_IDLE_HOURS away). Unknown is busy."""
-    try:
-        runner_id = int((state_dir(conf) / f"slot-{slot}.runner").read_text())
-    except FileNotFoundError:
-        return False  # between cycles, or never started
-    except ValueError:
-        return False
-    try:
-        runner = runner_state(conf, runner_id, Tokens(conf))
-    except (Failed, OSError, KeyError, ValueError):
-        return True
-    return bool(runner and runner["busy"])
+IDLE = 10  # retire's one answer that lets setup restart a slot: every other exit, an error's included, means don't
+
+
+def retire(conf, slot):
+    """For setup, which restarts a slot whose runner isn't running a job, so it takes setup's launcher and settings now
+    and not at its next cycle (an idle runner's can be CI_IDLE_HOURS away). Returns (idle, why not). Each registration
+    the slot holds (record_files) must be gone, or idle and then deregistered: GitHub's word that it's busy, its refusal
+    to remove it (422), or a new cycle's record turning up meanwhile all mean not idle. Deregistering before the restart
+    means no job can be assigned between the look and the restart."""
+    state = state_dir(conf)  # missing, or not root's alone: an error, so not idle
+    tokens = Tokens(conf)
+    current = state / f"slot-{slot}.runner"
+    before = current.read_text() if current.exists() else None
+    for path in record_files(conf, slot):
+        try:
+            runner_id = int(path.read_text())
+        except FileNotFoundError:
+            continue
+        runner = runner_state(conf, runner_id, tokens)
+        if runner is None:
+            continue
+        if runner["busy"]:
+            return False, f"runner {runner_id} is running a job"
+        status, _ = tokens.call("DELETE", f"/orgs/{conf['org']}/actions/runners/{runner_id}")
+        if status == 422:
+            return False, f"GitHub won't remove runner {runner_id}: it took a job"
+        if status not in (204, 404):
+            return False, f"removing runner {runner_id}: HTTP {status}"
+    after = current.read_text() if current.exists() else None
+    if after not in (None, before):
+        return False, "a new cycle registered a runner meanwhile"
+    return True, ""
 
 
 def stop(conf, slot):
@@ -547,12 +604,14 @@ def stop(conf, slot):
     docker(conf, "rm", "-f", "-v", names(conf, slot)[0])
     with contextlib.suppress(FileNotFoundError):
         os.unlink(state / f"slot-{slot}.env")
-    deregister_leftover(conf, state / f"slot-{slot}.runner", Tokens(conf))
+    deregister_leftover(conf, slot, Tokens(conf))
     return 0
 
 
 def find_group(conf, token):
-    page = 1
+    """The runner group by its name, which must be one group's alone: an organization can share a name with a group
+    its enterprise shares."""
+    page, found = 1, []
     while True:
         status, groups = api(conf, "GET", f"/orgs/{conf['org']}/actions/runner-groups?per_page=100&page={page}", token)
         if status != 200 or not isinstance(groups, dict):
@@ -560,13 +619,16 @@ def find_group(conf, token):
         items = groups.get("runner_groups")
         if not isinstance(items, list):
             raise Failed("runner groups: no list in GitHub's answer")
-        found = [g for g in items if isinstance(g, dict) and g.get("name") == conf["group"]]
-        if found:
-            return found[0]
+        found += [g for g in items if isinstance(g, dict) and g.get("name") == conf["group"]]
         if len(items) < 100:
-            raise Failed(f"no runner group {conf['group']}: bootstrap.py --apply creates it once a workflow uses the "
-                         "label")
+            break
         page += 1
+    if not found:
+        raise Failed(f"no runner group {conf['group']}: bootstrap.py --apply creates it once a workflow uses the label")
+    if len(found) > 1:
+        raise Failed(f"{len(found)} runner groups are named {conf['group']} (IDs "
+                     f"{', '.join(str(g.get('id')) for g in found)}): give the tier's a name of its own")
+    return found[0]
 
 
 def group_problem(group, name):
@@ -811,10 +873,18 @@ def trip(conf, problems, keep=False):
 
 
 def main(argv):
-    commands = ("run", "stop", "resolve", "check", "fwcheck", "trip", "fingerprint", "busy", "inputs")
-    if len(argv) < 3 or argv[1] not in commands or (argv[1] in ("run", "stop", "busy") and len(argv) < 4):
+    commands = ("run", "stop", "resolve", "check", "fwcheck", "trip", "fingerprint", "retire", "inputs")
+    if len(argv) < 3 or argv[1] not in commands or (argv[1] in ("run", "stop", "retire") and len(argv) < 4):
         print(__doc__.split("\n\n")[1], file=sys.stderr)
         return 2
+    if argv[1] == "retire":
+        try:
+            idle, why = retire(load(argv[2]), int(argv[3]))
+        except Exception as e:  # noqa: BLE001 - unknown: the slot stays as it is
+            idle, why = False, f"{type(e).__name__}: {e}"
+        if not idle:
+            print(f"ci_launcher retire: slot {printable(argv[3])} not idle: {printable(why)}", file=sys.stderr)
+        return IDLE if idle else 0
     if argv[1] == "inputs":
         print(build_inputs(argv[2], *argv[3:]))
         return 0
@@ -833,8 +903,6 @@ def main(argv):
             return run(conf, int(argv[3]))
         if argv[1] == "stop":
             return stop(conf, int(argv[3]))
-        if argv[1] == "busy":
-            return 0 if busy(conf, int(argv[3])) else 1
         if argv[1] == "resolve":
             print(json.dumps(resolve(conf)))
             return 0

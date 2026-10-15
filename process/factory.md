@@ -535,7 +535,7 @@ needs an organization owner's `gh` login (`admin:org`) for the runner groups and
 
       While GitHub can't be read (an outage, a revoked key), every limit that needs its answer
       waits: the lifetime cap and the disk floor are what bound a container then. A token GitHub
-      refuses is minted again at once.
+      refuses (401) is minted again at once; a 403, which is also its rate limit, isn't.
 
       The job runs inside the container, runner and all, so whatever a pull request's code does
       there, to the runner's own processes included, ends with the container.
@@ -545,7 +545,9 @@ needs an organization owner's `gh` login (`admin:org`) for the runner groups and
       new tier without risking a real job, dispatch a job on the label that only sleeps (no
       checkout, no secret), and while it runs, `gh api -X DELETE orgs/<org>/actions/runners/<id>`
       its runner: expect 422, then let it finish. If GitHub ever removed it instead, that one job
-      would lose its runner and fail, and the launcher's handling would hold the rest.
+      would lose its runner and fail, and the launcher's handling would hold the rest. Setup's
+      restart of an idle slot asks GitHub first and leaves a busy runner alone, so only that
+      window between a poll and the removal depends on the 422.
     - **The threat model.** A pull request's run executes the pull request's own workflow, and
       the group can't be restricted to workflows (next point). So the policy is a merge gate,
       not an execution gate, and the boundary is what holds a hostile job:
@@ -585,7 +587,8 @@ needs an organization owner's `gh` login (`admin:org`) for the runner groups and
         Revoking it, or uninstalling the App, stops the CI tier and nothing else.
       - `bootstrap.py` reports a factory group whose visibility, public-repository or workflow
         restrictions drifted, each time it runs. The CI tier's check re-reads its own group's.
-        The runner audit (step 12) compares every group exactly, every hour, off the host: set
+        The runner audit (step 12) compares every group, every hour, off the host (exactly, but
+        the CI tier's by its runners' name pattern, most-at-once and labels): set
         it up before the CI tier takes jobs.
     - **The job image** is built on the runner host, as the runner user, from a root-owned copy of
       the build context. The copy keeps links as links, and setup refuses a Dockerfile or context
@@ -672,8 +675,10 @@ needs an organization owner's `gh` login (`admin:org`) for the runner groups and
 12. **The runner audit,** required with a CI tier, from before its App's key goes on the runner host
     (step 10), and worth having without one. That key can change any runner group. `runner_audit.py`
     compares the organization's runner groups, every hour, with an expected state:
-    - the set of groups, and each group's visibility, public-repository setting, repositories,
-      workflow restriction and workflows;
+    - the set of groups, each by its name and ID (`<name>#<id>`: an enterprise's shared groups
+      can have the same name as the organization's own, such as two `Default` groups), and each
+      group's visibility, public-repository setting, whether it's the enterprise's
+      (`inherited`), repositories, workflow restriction and workflows;
     - each group's runners, with their IDs and labels. The CI tier's group is a name pattern, a
       most-at-once and labels, since its runners come and go;
     - the factory's labels on any runner outside the groups that carry them.
@@ -684,11 +689,13 @@ needs an organization owner's `gh` login (`admin:org`) for the runner groups and
     channel no App can touch. It runs from one private repository per organization, on GitHub-hosted
     runners only, with its own App: read access to the organization's self-hosted runners and
     nothing else. The expected state and the audit itself are written into the workflow file, since
-    neither of the factory's Apps can change a workflow. Choose a repository the factory's App
+    neither of the factory's Apps can change a workflow. That holds only while no other App that
+    can is installed on the audit's repository (setup step 2). Choose a repository the factory's App
     isn't installed on if you can: a factory token can close or bury issues where it is. Not seen:
     - anything done and undone between two runs: a runner registered into a group that takes one
       job and goes, or a group opened to another repository or workflow for one job and restored.
-      The organization's audit log would see both (its REST API needs GitHub Enterprise Cloud);
+      The organization's audit log would see both: its REST API (`GET orgs/<org>/audit-log`, on
+      GitHub Enterprise Cloud) records each runner's registration. The audit doesn't read it yet;
     - a runner in the CI tier's group that fits its pattern and most-at-once (its jobs hold
       read-only tokens);
     - repository-level runners;
@@ -696,14 +703,23 @@ needs an organization owner's `gh` login (`admin:org`) for the runner groups and
       then;
     - the audit's own job, taken by a runner the key's holder registers with a GitHub-hosted label
       (`ubuntu-latest`) just before a run and removes after it: that runner answers for the audit.
-      A runner left with such a label is drift, and so is a group opened to the audit's repository,
-      so keep that repository out of every group, the default one included. Each run's job record
-      names the runner that took it.
+      A runner left with such a label is drift, and so is a group open beyond the repositories it
+      lists (visibility `all`, or `private`: every private repository) or one the audit's own
+      repository may use (setup step 2). Each run's job record names the runner that took it.
 
     Setup:
     1. `create_app.py <org> --auditor`, installed on the organization for the audit's repository.
     2. In that repository, the variable `RUNNER_AUDIT_APP_CLIENT_ID`, the secret
        `RUNNER_AUDIT_APP_KEY` and, optionally, `RUNNER_AUDIT_NOTIFY`; then delete the key file.
+       Keep that repository out of every runner group, the default one included, and make every
+       group's visibility `selected` (the default group's is `all` until changed; `private`, every
+       private repository, is as open): the audit reports either as drift whatever the expected
+       state says, since a runner there could take the audit's own job and answer for it.
+       Check the repository's installed Apps too (its settings → GitHub Apps): none may write
+       workflows, contents, issues or actions, and an App installed on all of the organization's
+       repositories counts (a coding assistant's App, say). Narrow such an installation to
+       selected repositories, without this one. An App that can write there can rewrite the
+       expected state or the audit, close its alarm issues, or disable the workflow.
     3. From your own machine (it reads with your `gh` login, an organization owner's; never on a
        runner host): `runner_audit.py snapshot <org> > expected.json`, reviewed, so that every
        group and runner in it is one the organization means to have. Turn the CI tier's group's
