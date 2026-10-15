@@ -441,7 +441,8 @@ class Verify(unittest.TestCase):
         self.tmp.cleanup()
 
     def verify(self, *args):
-        return subprocess.run(["bash", str(self.dir / "verify"), *args], capture_output=True, text=True)
+        # In the temp directory: verify's directories are relative, and a checkout may have its own (web/).
+        return subprocess.run(["bash", str(self.dir / "verify"), *args], capture_output=True, text=True, cwd=self.dir)
 
     def test_print_shows_the_commands(self):
         r = self.verify("--print")

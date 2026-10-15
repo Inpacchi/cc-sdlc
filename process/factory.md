@@ -456,7 +456,15 @@ needs an organization owner's `gh` login (`admin:org`) for the runner groups and
    organization, and can serve other organizations too: each one after the first sets `RUNNER_INSTANCE`
    in its `host.conf` and gets its own users, firewall tables and services, isolated from the others'
    as from the host. Setup refuses runners registered to another organization, and a planning database
-   port is only ever the organization's own.
+   port is only ever the organization's own. Each tier has one designated checkout: the first setup run
+   records the repository whose checkout set the tier up (`/etc/factory-runner/tiers/<unit>`), and
+   refuses a run from another repository's, whose `host.conf` would re-cap or re-label a tier it
+   doesn't own. The firewall rejects all IPv6 for the runner users (a host's global addresses and its
+   LAN's global prefix would otherwise be reachable), and the isolation test probes IPv6 too. Runners
+   never update themselves (`--disableupdate`): they stay at `setup.sh`'s `RUNNER_VERSION`, whose
+   checksum it verifies. z-sdlc bumps it within 30 days of each actions/runner release, because GitHub
+   stops sending jobs to older runners. After the migration that brings a bump, run each tier's setup
+   again from its checkout.
 9. **CODEOWNERS and the `main` ruleset** (D2 rule 6): code owners on `.github/`, `.claude/`,
    `CLAUDE.md` at any depth, `.mcp.json`, `[sdlc-root]/` and the test and build configuration,
    including every file the profile's tools load just because it exists (§ Stack Profiles, What

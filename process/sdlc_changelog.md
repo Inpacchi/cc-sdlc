@@ -37,6 +37,41 @@ Each entry contains:
 
 ---
 
+## 2026-10-13: The factory's verify test runs in its own directory
+
+**Origin:** Handing the pilot's bundle code to the incubator (zsdlc-import-factory --to-incubator).
+
+**What happened:** `test_agent_job.py`'s `Verify` test assumes its profile's directories (`api`, `web`) don't exist, but it ran `verify` in the current directory. Run from a checkout whose `web/` has `node_modules` (the incubator's), the node checks really ran and passed, and the test failed.
+
+**Changes made:**
+
+1. **`bundles/factory/tree/tests/test_agent_job.py`**: `Verify` (and `VerifyDotnetNode`) run `verify` in the test's temp directory.
+
+**Rationale:** A test that depends on where it is run from fails on a developer's machine and passes in CI, which hides real failures.
+
+---
+
+## 2026-10-13: Factory runner hosts: no IPv6, no self-update, one checkout per tier
+
+**Origin:** The pilot project's review of the CI tier raised three findings that hold for every tier. CD approved all three proposals (2026-10-13).
+
+**What happened:**
+- **IPv6.** The firewall rejected private IPv4 ranges and a few IPv6 ones (loopback, unique-local, link-local, multicast), and the isolation test probed only IPv4. A host's own global IPv6 addresses and its LAN's global prefix were reachable from jobs.
+- **Self-update.** Runners updated themselves, away from the version setup.sh verifies by checksum.
+- **Checkouts.** Any checkout's `host.conf` could re-run any tier's setup, re-capping or re-labelling a tier another project set up. A dropped `TIER` falls through to `strict`.
+
+**Changes made:**
+
+1. **`bundles/factory/tree/host/setup.sh`**:
+   - **IPv6:** the runner users' chain rejects all IPv6 (everything a job needs answers over IPv4), and the IPv6 blocked set is gone. The isolation test also probes the host's global IPv6 addresses and a public one, and must find them closed.
+   - **Self-update:** new registrations pass `--disableupdate`, and runners already registered get `disableUpdate` in their settings file (the runner reports it when its session starts).
+   - **Tier ownership:** the first run records the repository whose checkout set the tier up, in `/etc/factory-runner/tiers/<unit>`, and a run from another repository's checkout is refused (remove the file to hand the tier over).
+2. **`process/factory.md`** Enablement step 8 says all three. z-sdlc bumps `RUNNER_VERSION` within 30 days of each actions/runner release, since GitHub stops sending jobs to older runners, and each tier's setup runs again from its checkout after the migration that brings the bump.
+
+**Rationale:** The firewall's job is that no factory job reaches the host or the LAN. An address family it didn't cover, a runner binary nobody verified, and a tier any checkout could reconfigure were three ways around it.
+
+---
+
 ## 2026-10-13: The factory CI tier is held; host setup never runs a runner-writable file as root
 
 **Origin:** The pilot project's review of the CI tier (software-architect, devops, code-review). The architect rejected running `sudo TIER=ci setup.sh`. Its premise: assume a pull request's code reaches the host as the runner user. Two findings, confirmed against actions/runner v2.338.0, make that premise true:

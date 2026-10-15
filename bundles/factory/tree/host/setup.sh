@@ -158,6 +158,21 @@ command -v nft >/dev/null || die "nft is not installed"
 [[ $RUNNER_COUNT =~ ^[1-9][0-9]?$ ]] || die "RUNNER_COUNT must be 1-99"
 [[ $FACTORY_ORG =~ ^[A-Za-z0-9-]+$ ]] || die "set FACTORY_ORG in host.conf (the GitHub organization the runners register to)"
 
+# One designated checkout per tier: the first setup run records the repository whose checkout set the tier up,
+# and a run from another repository's checkout is refused, so its host.conf can't re-cap or re-label a tier it
+# doesn't own (a dropped TIER would otherwise fall through to strict).
+tier_owner=$({ git -C "$SCRIPT_DIR" remote get-url origin 2>/dev/null || true; } \
+  | sed -E 's#^(https://github\.com/|git@github\.com:)##; s#\.git$##')
+[[ -n $tier_owner ]] || die "can't tell which repository this checkout is (no origin remote)"
+owner_file=/etc/factory-runner/tiers/$RUNNER_UNIT
+if [[ -f $owner_file ]]; then
+  [[ $(<"$owner_file") == "$tier_owner" ]] \
+    || die "the $TIER tier ($RUNNER_UNIT) is set up from $(<"$owner_file")'s checkout: run setup there, or remove $owner_file to hand the tier to $tier_owner"
+else
+  install -d -m 755 -o root -g root /etc/factory-runner /etc/factory-runner/tiers
+  printf '%s\n' "$tier_owner" > "$owner_file"
+fi
+
 log "1/8 packages: uidmap, dbus-user-session"
 missing=()
 for p in uidmap dbus-user-session; do dpkg -s "$p" >/dev/null 2>&1 || missing+=("$p"); done
@@ -214,10 +229,6 @@ table inet $NFT_TABLE {
     elements = { 0.0.0.0/8, 10.0.0.0/8, 100.64.0.0/10, 127.0.0.0/8, 169.254.0.0/16,
                  172.16.0.0/12, 192.168.0.0/16, 224.0.0.0/4 }
   }
-  set blocked6 {
-    type ipv6_addr; flags interval
-    elements = { ::1/128, fc00::/7, fe80::/10, ff00::/8 }
-  }
   chain output {
     # Before NAT (-100) so published-port DNAT can't rewrite the destination first.
     # Positive match + jump: socketless kernel packets (ICMP, RST) never enter runner_out.
@@ -226,10 +237,12 @@ table inet $NFT_TABLE {
   }
   chain runner_out {
     ip daddr { 127.0.0.53${LAN_DNS:+, $LAN_DNS} } meta l4proto { tcp, udp } th dport 53 accept
+    # No IPv6 at all: a host's global addresses and its LAN's global prefix are in no blocked set, and
+    # everything a job needs answers over IPv4.
+    meta nfproto ipv6 counter reject comment "no IPv6"
     $db_rule
     oifname "lo" counter reject comment "host-local services"
     ip daddr @blocked4 counter reject
-    ip6 daddr @blocked6 counter reject
   }
 }
 EOF
@@ -321,7 +334,7 @@ for _ in $(seq 30); do as_runner "docker info >/dev/null 2>&1" && break; sleep 1
 as_runner "docker info --format '{{.SecurityOptions}} root={{.DockerRootDir}}'"
 as_runner "docker info --format '{{.SecurityOptions}}' | grep -q rootless" || die "daemon is not rootless"
 
-log "6/8 isolation test from inside a container (every probe must be BLOCKED${DB_PORT:+, except the database})"
+log "6/8 isolation test from inside a container (every probe must be BLOCKED${DB_PORT:+, except the database}; IPv6 always)"
 probe_py=$(cat <<'PY'
 import socket, sys
 targets = sys.argv[1].split()
@@ -347,7 +360,9 @@ except OSError as e:
 sys.exit(1 if bad else 0)
 PY
 )
-targets="127.0.0.1 10.0.2.2 $LAN_DNS $host_ips"
+# IPv6 too: this host's global addresses and a public one, all of which the firewall rejects.
+host_ips6=$(ip -6 -o addr show scope global 2>/dev/null | awk '{print $4}' | cut -d/ -f1 | tr '\n' ' ')
+targets="127.0.0.1 10.0.2.2 $LAN_DNS $host_ips $host_ips6 2606:4700:4700::1111"
 ports="$PROBE_PORTS"
 # The planning tier may reach the database on the host's own addresses; probe the rest as usual.
 if [[ -n $DB_PORT ]]; then ports=$(echo "$ports" | tr ' ' '\n' | grep -vx "$DB_PORT" | tr '\n' ' '); fi
@@ -418,10 +433,16 @@ for i in $(seq "$RUNNER_COUNT"); do
     if [[ -n $token ]]; then
       as_runner "cd '$dir' && ./config.sh --unattended --replace \
         --url '$RUNNER_URL' --token '$token' --runnergroup '$RUNNER_GROUP' \
-        --name '$name' --labels '$RUNNER_LABELS' --work '$work'"
+        --name '$name' --labels '$RUNNER_LABELS' --work '$work' --disableupdate"
     else
       echo "No registration token at $TOKEN_FILE: runner $i installed but NOT registered. Re-run with the token file."
     fi
+  fi
+  # Never self-update: runners stay at RUNNER_VERSION, whose checksum this script verifies; z-sdlc bumps it
+  # within 30 days of each actions/runner release (GitHub stops sending jobs to older runners), and a run of
+  # this setup installs it. A runner registered before this setting gets it in its settings file.
+  if [[ -f $dir/.runner ]]; then
+    as_runner "python3 -I -c 'import json,sys; p=sys.argv[1]; d=json.load(open(p, encoding=\"utf-8-sig\")); d[\"disableUpdate\"]=True; json.dump(d, open(p, \"w\"), indent=2)' '$dir/.runner'"
   fi
   # Runner environment: talk to the rootless daemon; refuse any job without a container (F4).
   as_runner "cd '$dir' && touch .env && sed -i '/^\(DOCKER_HOST\|XDG_RUNTIME_DIR\|ACTIONS_RUNNER_REQUIRE_JOB_CONTAINER\)=/d' .env \
