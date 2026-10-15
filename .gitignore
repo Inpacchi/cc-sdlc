@@ -36,3 +36,6 @@ docs/current_work/audits/
 
 .obsidian/
 __pycache__/
+
+# Private names the public-content scan looks for (CLAUDE.md, check 6): never committed
+.claude/private-names.txt

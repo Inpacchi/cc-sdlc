@@ -37,6 +37,26 @@ Each entry contains:
 
 ---
 
+## 2026-10-15: z-sdlc names no private project, host or path
+
+**Origin:** CD (2026-10-15), preparing this release: z-sdlc is public, and its unpushed commits named the pilot project, two of the organization's machines and a tailnet address.
+
+**What happened:** The import's `specific` patterns keep hosts and home paths out of code imported from the incubator, but nothing checked z-sdlc's own changelog, docs, tests and commit messages. The pilot project's name, and the names of the runner host and the production machine, had spread through this release's entries.
+
+**Changes made:**
+1. **`CLAUDE.md`** (this repository's):
+   - z-sdlc's commits, their messages and the files they change name no project of the organization's, no host, no home path and no private address;
+   - consistency check 6 scans what's unpushed before every push, against names kept in an untracked, git-ignored `.claude/private-names.txt`.
+2. **This release's commits**, before their first push:
+   - reworded: "the pilot project", "the runner host", "the production machine", documentation addresses in tests;
+   - the pilot project's intake note is renamed `pilot-v2-migration-upstream-issues_handoff.md`;
+   - published history is left as it is.
+3. **`CLAUDE.md`, `.claude/skills/zsdlc-import-factory/SKILL.md`:** "the pilot project first" for the pilot rule.
+
+**Rationale:** A public framework's history is permanent. Naming a private project or a machine in it tells anyone how the organization is built, and the only cheap moment to keep it out is before the push.
+
+---
+
 ## 2026-10-14: CI tier runners take their jobs (a label hotfix)
 
 **Origin:** The pilot project's second first-run attempt on its runner host, with the log-driver hotfix (the entry below). Setup passed, the check was ok, and both JIT runners came online in the CI group, but neither took a queued job.
