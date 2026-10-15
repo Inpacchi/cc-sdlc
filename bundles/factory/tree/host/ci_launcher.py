@@ -6,6 +6,7 @@ Usage: python3 -I ci_launcher.py run <launcher.json> <slot>     one cycle; the s
        python3 -I ci_launcher.py check <launcher.json>          the tier's isolation check; on failure, its kill switch
        python3 -I ci_launcher.py fwcheck <launcher.json>        the firewall table alone (every minute)
        python3 -I ci_launcher.py trip <launcher.json>           the kill switch, for a check that failed or hung
+       python3 -I ci_launcher.py fingerprint <table>            the firewall table's fingerprint (setup records it)
 
 A cycle mints a just-in-time (JIT) runner config with the runner-registration App. The App's one permission, the
 organization's self-hosted runners, reaches every runner group in the organization, so its key (root-only, read by
@@ -18,6 +19,8 @@ online and busy, and the container is killed when:
   never came online;
 - it is older than CI_IDLE_HOURS + CI_JOB_HOURS, whatever GitHub says;
 - the runner home's free space falls below CI_MIN_FREE_GB (and no cycle starts below it).
+While GitHub can't be read (an outage, a revoked key), the gone, offline, never-online, idle and job-hours limits all
+wait on an answer: the lifetime cap and the disk floor are what bound a container then.
 Then it removes the container and the runner's registration. The job runs inside the container, runner and all:
 whatever a pull request's code does there, to the runner's own processes included, ends with the container.
 
@@ -39,6 +42,7 @@ import base64
 import contextlib
 import datetime
 import fcntl
+import hashlib
 import http.client
 import ipaddress
 import json
@@ -71,7 +75,8 @@ REASONS = {
     "never-online": "the runner never came online",
     "disk": "free space under the runner home fell below CI_MIN_FREE_GB",
 }
-NEUTRAL = ("idle", "lifetime")  # a recycle, not a failure: the backoff counter stays as it is
+# A recycle or an overrun, not a failure of the slot: the backoff counter stays as it is.
+NEUTRAL = ("idle", "lifetime", "job-hours")
 
 # The isolation probe: every target closed; with expected caps (in a job's container), cpu.max, memory.max and
 # pids.max set to them. Exit 1 on any of those, else exit 2 if the internet is out of reach (liveness, not
@@ -172,26 +177,32 @@ def app_jwt(conf, now=None):
 
 
 def api(conf, method, path, bearer, body=None):
-    """GitHub's answer, as (HTTP status, JSON or None). Anything short of an answer is Failed."""
+    """GitHub's answer, as (HTTP status, a JSON object or None). Every endpoint used here answers with an object: a
+    success whose body is anything else is Failed, like anything short of an answer, and an error's is its message."""
     request = urllib.request.Request(conf["api"] + path, method=method,
                                      data=None if body is None else json.dumps(body).encode(),
                                      headers={"Accept": ACCEPT, "X-GitHub-Api-Version": API_VERSION,
                                               "Authorization": f"Bearer {bearer}", "User-Agent": "z-sdlc-factory-ci"})
     try:
         with urllib.request.urlopen(request, timeout=30) as r:
-            text = r.read().decode()
-            return r.status, (json.loads(text) if text else None)
+            status, text = r.status, r.read().decode()
     except urllib.error.HTTPError as e:
+        status = e.code
         try:
             text = e.read().decode(errors="replace")
         except (OSError, http.client.HTTPException):
             text = ""
-        try:
-            return e.code, json.loads(text) if text else None
-        except ValueError:
-            return e.code, {"message": printable(text, 200)}
     except (OSError, ValueError, http.client.HTTPException) as e:
         raise Failed(f"{method} {path}: {type(e).__name__}: {printable(e, 200)}") from None
+    try:
+        data = json.loads(text) if text else None
+    except ValueError:
+        data = text
+    if data is None or isinstance(data, dict):
+        return status, data
+    if status < 300:
+        raise Failed(f"{method} {path}: HTTP {status}, but not a JSON object: {printable(text, 200)}")
+    return status, {"message": printable(text, 200)}
 
 
 def installation_token(conf):
@@ -208,30 +219,45 @@ def installation_token(conf):
 
 
 class Tokens:
-    """A cycle's installation token, in memory only, minted again five minutes before it expires."""
+    """A cycle's installation token, in memory only, minted again five minutes before it expires, and at once when
+    GitHub refuses it. How long it lasts is counted on the monotonic clock, so a step of the wall clock can't keep a
+    dead token in use."""
 
     def __init__(self, conf):
         self.conf, self.token, self.until = conf, None, 0.0
 
     def get(self):
-        if self.token is None or time.time() > self.until:
+        if self.token is None or time.monotonic() > self.until:
             self.token, expires = installation_token(self.conf)
-            self.until = expires - 300
+            self.until = time.monotonic() + max(0.0, expires - time.time() - 300)
         return self.token
 
+    def call(self, method, path, body=None):
+        """api() with the token. A 401 drops it (revoked, or expired early) and tries once more with a new one: a
+        cached dead token would otherwise fail every poll, and every limit that waits on one, for an hour. Not a 403,
+        which is also GitHub's rate limit: minting more then only adds calls."""
+        status, data = api(self.conf, method, path, self.get(), body)
+        if status == 401:
+            self.token = None
+            status, data = api(self.conf, method, path, self.get(), body)
+        return status, data
 
-def jitconfig(conf, token, name):
-    status, data = api(conf, "POST", f"/orgs/{conf['org']}/actions/runners/generate-jitconfig", token,
-                       {"name": name, "runner_group_id": conf["group_id"], "labels": conf["labels"],
-                        "work_folder": "_work"})
+
+def jitconfig(conf, tokens, name):
+    status, data = tokens.call("POST", f"/orgs/{conf['org']}/actions/runners/generate-jitconfig",
+                               {"name": name, "runner_group_id": conf["group_id"], "labels": conf["labels"],
+                                "work_folder": "_work"})
     if status != 201 or not isinstance(data, dict) or not data.get("encoded_jit_config"):
         raise Failed(f"JIT config: HTTP {status} {printable((data or {}).get('message', ''))}")
-    return int(data["runner"]["id"]), data["encoded_jit_config"]
+    runner = data.get("runner")
+    if not isinstance(runner, dict) or not isinstance(runner.get("id"), int):
+        raise Failed("JIT config: no runner ID in GitHub's answer")
+    return runner["id"], data["encoded_jit_config"]
 
 
 def runner_state(conf, runner_id, tokens):
     """GitHub's view of the runner, {"online", "busy"}; None once GitHub has removed it."""
-    status, data = api(conf, "GET", f"/orgs/{conf['org']}/actions/runners/{runner_id}", tokens.get())
+    status, data = tokens.call("GET", f"/orgs/{conf['org']}/actions/runners/{runner_id}")
     if status == 404:
         return None
     if status != 200 or not isinstance(data, dict):
@@ -255,7 +281,7 @@ def ran_its_job(conf, runner_id, tokens):
 
 def deregister(conf, runner_id, tokens):
     """Remove the runner's registration. 404: already gone. GitHub refuses a busy runner."""
-    status, data = api(conf, "DELETE", f"/orgs/{conf['org']}/actions/runners/{runner_id}", tokens.get())
+    status, data = tokens.call("DELETE", f"/orgs/{conf['org']}/actions/runners/{runner_id}")
     if status not in (204, 404):
         raise Failed(f"deregister runner {runner_id}: HTTP {status} {printable((data or {}).get('message', ''))}")
 
@@ -279,7 +305,10 @@ def names(conf, slot):
 
 
 def memory_bytes(text):
-    return int(text[:-1]) * 1024 ** "kmg".index(text[-1].lower()) * 1024
+    """A size as memory.max holds it: the kernel rounds a cap down to whole pages (6001k isn't a whole number of
+    pages), so the check compares against what it keeps, not what was asked."""
+    page = os.sysconf("SC_PAGE_SIZE")
+    return int(text[:-1]) * 1024 ** "kmg".index(text[-1].lower()) * 1024 // page * page
 
 
 def job_flags(conf):
@@ -355,6 +384,8 @@ def run(conf, slot):
     tokens = Tokens(conf)
     name, network = names(conf, slot)
     outcome, runner_id = "failed", None
+    with contextlib.suppress(FileNotFoundError):
+        os.unlink(state / f"slot-{slot}.env")  # a JIT config a crashed cycle left on disk
     try:
         deregister_leftover(conf, runner_file, tokens)
         docker(conf, "rm", "-f", "-v", name)  # a container a crash left behind
@@ -362,7 +393,7 @@ def run(conf, slot):
             docker(conf, "network", "create", "--label", "factory-ci", network)
         if low_disk(conf):
             raise Failed(f"less than CI_MIN_FREE_GB free under {conf['home']}: no job starts")
-        runner_id, jit = jitconfig(conf, tokens.get(), f"{conf['name_prefix']}-{slot}-{secrets.token_hex(3)}")
+        runner_id, jit = jitconfig(conf, tokens, f"{conf['name_prefix']}-{slot}-{secrets.token_hex(3)}")
         record_runner(runner_file, runner_id)
         env_file = state / f"slot-{slot}.env"
         write_env_file(conf, env_file, jit)
@@ -444,8 +475,16 @@ def watch(conf, slot, name, runner_id, tokens):
                     try:
                         deregister(conf, runner_id, tokens)  # first, so GitHub assigns it nothing meanwhile
                         reason = "idle"
-                    except Failed:
-                        busy_since = now  # it took a job after all
+                    except Failed as e:
+                        # GitHub refuses to remove a busy runner, but a failure to reach it says nothing: ask again,
+                        # and count it busy only on GitHub's word. Otherwise the next poll tries the removal again.
+                        print(f"slot {slot}: {e}", file=sys.stderr)
+                        with contextlib.suppress(Failed):
+                            runner = runner_state(conf, runner_id, tokens)
+                            if runner is None:
+                                reason = "gone"
+                            elif runner["busy"]:
+                                busy_since = now
         print(f"slot {slot}: {REASONS[reason]}; killing its container", file=sys.stderr)
         docker(conf, "kill", name)
         with contextlib.suppress(subprocess.TimeoutExpired):
@@ -478,6 +517,8 @@ def stop(conf, slot):
     """After a slot stops (its unit's ExecStopPost): its container and any registration its cycle left."""
     state = state_dir(conf)
     docker(conf, "rm", "-f", "-v", names(conf, slot)[0])
+    with contextlib.suppress(FileNotFoundError):
+        os.unlink(state / f"slot-{slot}.env")
     deregister_leftover(conf, state / f"slot-{slot}.runner", Tokens(conf))
     return 0
 
@@ -488,10 +529,13 @@ def find_group(conf, token):
         status, groups = api(conf, "GET", f"/orgs/{conf['org']}/actions/runner-groups?per_page=100&page={page}", token)
         if status != 200 or not isinstance(groups, dict):
             raise Failed(f"runner groups: HTTP {status}")
-        found = [g for g in groups.get("runner_groups", []) if g.get("name") == conf["group"]]
+        items = groups.get("runner_groups")
+        if not isinstance(items, list):
+            raise Failed("runner groups: no list in GitHub's answer")
+        found = [g for g in items if isinstance(g, dict) and g.get("name") == conf["group"]]
         if found:
             return found[0]
-        if len(groups.get("runner_groups", [])) < 100:
+        if len(items) < 100:
             raise Failed(f"no runner group {conf['group']}: bootstrap.py --apply creates it once a workflow uses the "
                          "label")
         page += 1
@@ -518,9 +562,37 @@ def resolve(conf):
     return {"installation_id": conf["installation_id"], "group_id": int(group["id"])}
 
 
-def firewall_loaded(conf):
-    return subprocess.run([conf["nft"], "list", "table", "inet", conf["firewall_table"]], capture_output=True,
-                          timeout=30).returncode == 0
+def fingerprint(listing):
+    """The table as `nft -j` lists it, without what changes on its own (handles, counters, nft's own version): its
+    chains, rules and sets, set elements included. Flushing a chain, or a set like the blocked addresses, leaves the
+    table in place and changes this."""
+    def clean(node):
+        if isinstance(node, dict):
+            return {k: (None if k == "counter" else clean(v)) for k, v in node.items() if k != "handle"}
+        if isinstance(node, list):
+            return [clean(x) for x in node]
+        return node
+    items = [clean(item) for item in json.loads(listing)["nftables"] if "metainfo" not in item]
+    return hashlib.sha256(json.dumps(items, sort_keys=True).encode()).hexdigest()
+
+
+def firewall_problem(conf):
+    """None when the tier's table is loaded as setup loaded it, else what's wrong. The table's presence alone isn't
+    enough: setup records its fingerprint."""
+    r = subprocess.run([conf["nft"], "-j", "list", "table", "inet", conf["firewall_table"]], capture_output=True,
+                       text=True, timeout=30)
+    if r.returncode:
+        return f"firewall table {conf['firewall_table']} isn't loaded"
+    want = conf.get("firewall_fingerprint")
+    if want is None:  # settings from before the fingerprint
+        return None
+    try:
+        have = fingerprint(r.stdout)
+    except (ValueError, KeyError, TypeError, AttributeError):
+        return f"firewall table {conf['firewall_table']}: nft's listing isn't readable"
+    if have != want:
+        return f"firewall table {conf['firewall_table']} isn't what setup loaded (a chain or set flushed or changed)"
+    return None
 
 
 def gateway(conf):
@@ -539,8 +611,8 @@ def gateway(conf):
 
 def check(conf):
     """The outer boundary, every few hours and before any slot starts. Anything that stops the check finishing
-    counts as a failure. On failure: a tripped marker the slot units won't start past (a reboot included), the
-    slots and timers stopped, and the runner user's whole session stopped (its daemon and every container)."""
+    counts as a failure. On failure, trip(): a tripped marker the slot units won't start past, and the tier stopped
+    and disabled down to the runner user's session, so a reboot brings none of it back. Only setup does."""
     problems, notes = [], []
     try:
         with open(state_dir(conf) / "check.lock", "w") as lock:
@@ -558,8 +630,9 @@ def check(conf):
 
 
 def inspect(conf, problems, notes):
-    if not firewall_loaded(conf):
-        problems.append(f"firewall table {conf['firewall_table']} isn't loaded")
+    problem = firewall_problem(conf)
+    if problem:
+        problems.append(problem)
     cgroup = pathlib.Path(conf["cgroup"])
     for name in ("memory.max", "cpu.max"):
         if (cgroup / name).read_text().split()[0] == "max":
@@ -569,7 +642,8 @@ def inspect(conf, problems, notes):
         if c not in controllers:
             problems.append(f"the {c} controller isn't delegated to the runner user")
     if low_disk(conf):
-        problems.append(f"less than CI_MIN_FREE_GB free under {conf['home']}")
+        # Liveness, not isolation: no cycle starts below the floor and a running job is killed, so it needs no trip.
+        notes.append(f"less than CI_MIN_FREE_GB free under {conf['home']}: no job starts until there's room")
     # The group as setup found it. GitHub out of reach is liveness, not isolation: noted, not tripped.
     try:
         status, group = api(conf, "GET", f"/orgs/{conf['org']}/actions/runner-groups/{conf['group_id']}",
@@ -598,8 +672,9 @@ def inspect(conf, problems, notes):
     # On the host, as the runner user, with no Docker in the way: the firewall itself, IPv6 included.
     host_probe = runner_argv(conf, conf["python"], "-I", "-c", PROBE, " ".join(targets), " ".join(ports), "")
     judge("the host-side probe", subprocess.run(host_probe, capture_output=True, text=True, timeout=300))
-    # At boot the gate can run before the runner user's daemon is up.
-    deadline = time.monotonic() + float(conf.get("docker_wait_seconds", 90))
+    # At boot the gate can run before the runner user's daemon is up: it gets ten minutes (the gate's own timeout is
+    # 30), and a daemon that hasn't answered by then is a failure.
+    deadline = time.monotonic() + float(conf.get("docker_wait_seconds", 600))
     while docker(conf, "info", timeout=15).returncode:
         if time.monotonic() > deadline:
             problems.append("the runner user's Docker daemon doesn't answer")
@@ -636,11 +711,18 @@ def inspect(conf, problems, notes):
 
 
 def fwcheck(conf):
-    """Every minute: the firewall table, which anything that flushes the ruleset would drop."""
+    """Every minute: the firewall table, which anything that flushes the ruleset would drop. nftables.service's own
+    restart flushes it for a moment, until the reapply unit loads it again, so a problem is looked at again a few
+    seconds on before it trips the tier."""
     try:
-        if firewall_loaded(conf):
+        problem = firewall_problem(conf)
+        for _ in range(int(conf.get("fw_retries", 3))):
+            if problem is None:
+                return 0
+            time.sleep(float(conf.get("fw_retry_seconds", 2)))
+            problem = firewall_problem(conf)
+        if problem is None:
             return 0
-        problem = f"firewall table {conf['firewall_table']} isn't loaded"
     except Exception as e:  # noqa: BLE001 - a check that can't finish has failed
         problem = f"the firewall check couldn't finish: {type(e).__name__}: {printable(e)}"
     trip(conf, [problem])
@@ -656,21 +738,39 @@ def trip(conf, problems, keep=False):
     except OSError as e:
         print(f"couldn't write {tripped}: {e}", file=sys.stderr)
     print("CI tier check FAILED:\n  " + "\n  ".join(printable(p, 1000) for p in problems), file=sys.stderr)
-    unit = conf["unit"]
-    # The slots first (their stop removes their containers and registrations), then the timers, so nothing starts
-    # the runner user's manager again, then that manager: its daemon and every container in it, a job included.
-    for args in (["stop", f"{unit}-slot@*.service"], ["stop", f"{unit}-check.timer", f"{unit}-fw.timer"],
-                 ["stop", f"user@{conf['uid']}.service"]):
+    unit, systemctl = conf["unit"], conf["systemctl"]
+    # The slots first (their stop removes their containers and registrations). Then everything that would start the
+    # runner user's manager again is disabled: a unit's condition doesn't stop its Requires= from starting, so at boot
+    # an enabled slot or gate would bring the manager back, and linger would too. The gate is only disabled, never
+    # stopped here: a trip can be running inside it (its own check failed), and stopping the manager stops it anyway.
+    # Then that manager: its daemon and every container in it, a job included. Setup enables all of it again.
+    wants = pathlib.Path(conf.get("wants_dir", "/etc/systemd/system/multi-user.target.wants"))
+    slots = sorted(p.name for p in wants.glob(f"{unit}-slot@*.service"))
+    steps = [[systemctl, "stop", f"{unit}-slot@*.service"]]
+    steps += [[systemctl, "disable", *slots]] if slots else []
+    steps += [[systemctl, "disable", f"{unit}-gate.service", f"{unit}-check.timer", f"{unit}-fw.timer"],
+              [systemctl, "stop", f"{unit}-check.timer", f"{unit}-fw.timer"],
+              [conf.get("loginctl", "/usr/bin/loginctl"), "disable-linger", conf["user"]],
+              [systemctl, "stop", f"user@{conf['uid']}.service"]]
+    for argv in steps:
         with contextlib.suppress(OSError, subprocess.TimeoutExpired):
-            subprocess.run([conf["systemctl"], *args], capture_output=True, timeout=300)
-    print(f"{unit}: stopped, and held by {tripped} until someone fixes the cause and runs setup", file=sys.stderr)
+            subprocess.run(argv, capture_output=True, timeout=300)
+    print(f"{unit}: stopped and disabled, and held by {tripped} until someone fixes the cause and runs setup",
+          file=sys.stderr)
 
 
 def main(argv):
-    commands = ("run", "stop", "resolve", "check", "fwcheck", "trip")
+    commands = ("run", "stop", "resolve", "check", "fwcheck", "trip", "fingerprint")
     if len(argv) < 3 or argv[1] not in commands or (argv[1] in ("run", "stop") and len(argv) < 4):
         print(__doc__.split("\n\n")[1], file=sys.stderr)
         return 2
+    if argv[1] == "fingerprint":
+        r = subprocess.run(["nft", "-j", "list", "table", "inet", argv[2]], capture_output=True, text=True, timeout=30)
+        if r.returncode:
+            print(f"ci_launcher fingerprint: no table inet {printable(argv[2])}", file=sys.stderr)
+            return 1
+        print(fingerprint(r.stdout))
+        return 0
     if argv[1] == "run":
         signal.signal(signal.SIGTERM, on_sigterm)
     try:

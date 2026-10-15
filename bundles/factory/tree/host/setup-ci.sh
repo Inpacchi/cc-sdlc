@@ -9,16 +9,20 @@
 
 LIB=/usr/local/lib/factory-runner
 CONF_DIR=/etc/factory-runner/$RUNNER_UNIT
-STATE=/run/factory-runner/$RUNNER_UNIT
+# On disk, not tmpfs: slot-N.runner names a registration a killed cycle left, and a reboot must not forget it.
+STATE=/var/lib/factory-runner/$RUNNER_UNIT
 CONF=$CONF_DIR/launcher.json
 NEW_CONF=$CONF.new
 TRIPPED=$CONF_DIR/tripped
 
 log "7/8 CI tier: the runner-registration App, the runner group and the job image"
-command -v setpriv > /dev/null || die "setpriv (util-linux) is not installed"
 install -d -m 755 -o root -g root "$LIB" "$CONF_DIR"
-install -d -m 711 -o root -g root /run/factory-runner "$STATE"
-printf 'd %s 0711 root root -\nd %s 0711 root root -\n' /run/factory-runner "$STATE" > "/etc/tmpfiles.d/$RUNNER_UNIT.conf"
+install -d -m 711 -o root -g root /var/lib/factory-runner "$STATE"
+# The state was on tmpfs before: a registration a cycle there left is carried over, for its slot to remove.
+rm -f "/etc/tmpfiles.d/$RUNNER_UNIT.conf"
+for f in /run/factory-runner/"$RUNNER_UNIT"/slot-*.runner; do
+  if [[ -f $f && ! -L $f ]]; then cp -n "$f" "$STATE/" && rm -f "$f"; fi
+done
 install -m 644 -o root -g root "$SCRIPT_DIR/ci_launcher.py" "$LIB/ci_launcher.py"
 
 # The jobs' caps need the cpu, memory and pids controllers delegated to the runner user (step 3 wrote the drop-in).
@@ -55,18 +59,21 @@ PY
 json_str() { python3 -I -c 'import json,sys; print(json.dumps(sys.argv[1]))' "$1"; }
 labels=$(python3 -I -c 'import json,sys; print(json.dumps([l.strip() for l in sys.argv[1].split(",") if l.strip()]))' "$RUNNER_LABELS")
 rm -f "$NEW_CONF"
+# The tier's table as loaded, for the checks: flushing a chain or a set leaves the table there, changed.
+fw_print=$(python3 -I "$SCRIPT_DIR/ci_launcher.py" fingerprint "$NFT_TABLE") \
+  || die "can't fingerprint firewall table $NFT_TABLE"
 write_conf "api=\"https://api.github.com\"" "org=$(json_str "$FACTORY_ORG")" "client_id=$(json_str "$CI_APP_CLIENT_ID")" \
   "key=$(json_str "$CONF_DIR/app.pem")" "group=$(json_str "$RUNNER_GROUP")" "labels=$labels" \
   "name_prefix=$(json_str "$RUNNER_NAME_PREFIX-ci")" "container=$(json_str "$RUNNER_UNIT")" \
   "user=$(json_str "$RUNNER_USER")" "uid=$RUID" "gid=$(id -g "$RUNNER_USER")" "home=$(json_str "$RUNNER_HOME")" \
   "setpriv=$(json_str "$(command -v setpriv)")" "env=\"/usr/bin/env\"" "docker=$(json_str "$(command -v docker)")" \
   "python=\"/usr/bin/python3\"" "openssl=$(json_str "$(command -v openssl)")" "nft=$(json_str "$(command -v nft)")" \
-  "systemctl=$(json_str "$(command -v systemctl)")" \
+  "systemctl=$(json_str "$(command -v systemctl)")" "loginctl=$(json_str "$(command -v loginctl)")" \
   "job={\"cpus\": $CI_JOB_CPUS, \"memory\": \"$CI_JOB_MEMORY\", \"pids\": $CI_JOB_PIDS, \"shm\": \"$CI_JOB_SHM\", \"hours\": $CI_JOB_HOURS}" \
   "idle_hours=$CI_IDLE_HOURS" "min_free_gb=$CI_MIN_FREE_GB" \
   "state_dir=$(json_str "$STATE")" "tripped=$(json_str "$TRIPPED")" "unit=$(json_str "$RUNNER_UNIT")" \
   "firewall_table=$(json_str "$NFT_TABLE")" "cgroup=$(json_str "/sys/fs/cgroup/user.slice/user-$RUID.slice")" \
-  "probe={\"targets\": $(json_str "$targets"), \"ports\": $(json_str "$ports")}"
+  "probe={\"targets\": $(json_str "$targets"), \"ports\": $(json_str "$ports")}" "firewall_fingerprint=$(json_str "$fw_print")"
 ids=$(python3 -I "$LIB/ci_launcher.py" resolve "$NEW_CONF") || die "the runner-registration App or the runner group isn't ready (above)"
 write_conf "installation_id=$(python3 -I -c 'import json,sys; print(json.loads(sys.argv[1])["installation_id"])' "$ids")" \
   "group_id=$(python3 -I -c 'import json,sys; print(json.loads(sys.argv[1])["group_id"])' "$ids")"
@@ -99,7 +106,9 @@ for k, v in args.items():
     print(shlex.quote(f"--build-arg={k}={v}"), end=" ")
 PY
 ) || die "factory.json's ci.build_args (above)"
-build=$(mktemp -d "$RUNNER_HOME_BASE/ci-build.XXXXXX")
+# Under /var/lib/factory-runner, root's all the way up: under RUNNER_HOME_BASE, whoever owns a directory above it could
+# swap the context between root's copy and the build.
+build=$(mktemp -d /var/lib/factory-runner/ci-build.XXXXXX)
 chmod 755 "$build"
 # -P: a link is copied as a link, never followed, so nothing outside the context comes along. chmod -R skips links.
 cp -RP "$context" "$build/toolchain"
@@ -126,7 +135,9 @@ log "8/8 CI tier: the isolation checks, then $RUNNER_COUNT slot(s)"
 launcher="/usr/bin/python3 -I $LIB/ci_launcher.py"
 # The gate runs the check before any slot starts (at boot too), a timer runs it every 6 hours, and another checks the
 # firewall table every minute. A failure, or a check that doesn't finish, writes $TRIPPED, which no slot starts past,
-# and stops the slots, the timers and the runner user's whole session, a job mid-run included.
+# and stops the slots, the timers and the runner user's whole session, a job mid-run included. It disables the slots,
+# the gate, the timers and the runner user's linger too, so a reboot starts none of it: this run of setup enables
+# them again (below, and step 4's linger).
 cat > "/etc/systemd/system/$RUNNER_UNIT-trip.service" <<EOF
 [Unit]
 Description=Stop the $RUNNER_USER slots: an isolation check failed or didn't finish
@@ -153,7 +164,8 @@ ExecStart=$launcher check $CONF
 [Install]
 WantedBy=multi-user.target
 EOF
-# No Requires= on user@: while the tier is tripped, nothing may start the runner user's manager again.
+# No Requires= on user@: the timer's check is skipped while the tier is tripped, and must not start the runner user's
+# manager either way (a unit's condition doesn't stop its Requires= from starting).
 cat > "/etc/systemd/system/$RUNNER_UNIT-check.service" <<EOF
 [Unit]
 Description=Isolation check for the $RUNNER_USER slots (stops them on failure)
@@ -215,7 +227,9 @@ ExecStopPost=$launcher stop $CONF %i
 Restart=always
 RestartSec=5
 KillMode=mixed
-TimeoutStopSec=180
+# Above the launcher's worst-case cleanup: docker rm (120 s), then the token (openssl 30 s, the API 30 s) and the
+# registration's removal (30 s), all of it twice over for a refused token minted again: 300 s, with room.
+TimeoutStopSec=360
 
 [Install]
 WantedBy=multi-user.target

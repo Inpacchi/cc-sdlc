@@ -32,6 +32,20 @@ class Manifest(unittest.TestCase):
         self.assertEqual((m["public"], m["default_events"]), (False, []))
         self.assertNotIn("hook_attributes", m)
 
+    def test_the_runner_audits_app_only_reads_runners(self):
+        m = create_app.manifest("acme-factory-runner-audit", "acme", 4343, create_app.AUDITOR_PERMISSIONS)
+        self.assertEqual(m["default_permissions"], {"organization_self_hosted_runners": "read"})
+        self.assertEqual((m["public"], m["default_events"]), (False, []))
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            create_app.auditor_done({"slug": "acme-factory-runner-audit", "client_id": "Iv23audit",
+                                     "permissions": {"organization_self_hosted_runners": "write", "metadata": "read"}},
+                                    pathlib.Path("/home/me/k.pem"), "acme")
+        text = out.getvalue()
+        self.assertIn("not just {'organization_self_hosted_runners': 'read'}", text)  # a write grant is called out
+        self.assertIn("gh secret set RUNNER_AUDIT_APP_KEY --repo acme/<repo> < /home/me/k.pem", text)
+        self.assertIn("runner_audit.py workflow expected.json", text)
+
     def test_the_page_posts_to_the_organizations_form(self):
         html = create_app.page("acme", "st4te", create_app.manifest("acme-factory", "acme", 4321))
         self.assertIn('action="https://github.com/organizations/acme/settings/apps/new?state=st4te"', html)

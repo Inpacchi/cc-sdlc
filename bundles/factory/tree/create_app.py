@@ -3,6 +3,7 @@
 
     python3 .github/factory/create_app.py <organization> [--name NAME] [--key-out PATH]
     python3 .github/factory/create_app.py <organization> --runners [--name NAME] [--key-out PATH]
+    python3 .github/factory/create_app.py <organization> --auditor [--name NAME] [--key-out PATH]
 
 Opens GitHub's create-an-App page for the organization with the factory's manifest filled in (a local
 page posts it); you confirm it there. GitHub sends the browser back to this script, which converts the
@@ -17,6 +18,11 @@ tier). Its one permission is the organization's self-hosted runners, and GitHub 
 runners: it reaches every runner group in the organization (registering runners into any of them, moving runners,
 changing a group's restrictions). So its key goes to the runner host root-only, never into a checkout, and every
 other copy is deleted. factory.json is left alone.
+
+--auditor creates the runner audit's App instead (process/factory.md, Enablement step 12, The runner audit): read
+access to the organization's self-hosted runners, nothing else. runner_audit.py's workflow uses it from one
+repository, on GitHub-hosted runners only, so its key goes into that repository's secrets and nowhere else.
+factory.json is left alone.
 """
 import argparse
 import html
@@ -37,6 +43,7 @@ FACTORY = pathlib.Path(__file__).resolve().parent
 API = "https://api.github.com"
 PERMISSIONS = {"contents": "write", "issues": "write", "pull_requests": "write", "metadata": "read"}
 RUNNER_PERMISSIONS = {"organization_self_hosted_runners": "write"}
+AUDITOR_PERMISSIONS = {"organization_self_hosted_runners": "read"}
 
 
 def manifest(name, org, port, permissions=PERMISSIONS):
@@ -133,21 +140,26 @@ def main(argv=None):
     ap.add_argument("organization")
     ap.add_argument("--name", help="the App's name (default: <organization>-factory)")
     ap.add_argument("--key-out", help="where to write the private key (default: ~/<name>.private-key.pem)")
-    ap.add_argument("--runners", action="store_true", help="the CI tier's runner-registration App instead")
+    kind = ap.add_mutually_exclusive_group()
+    kind.add_argument("--runners", action="store_true", help="the CI tier's runner-registration App instead")
+    kind.add_argument("--auditor", action="store_true", help="the runner audit's read-only App instead")
     args = ap.parse_args(argv)
-    name = args.name or f"{args.organization}-factory{'-runners' if args.runners else ''}"
+    suffix = "-runners" if args.runners else "-runner-audit" if args.auditor else ""
+    name = args.name or f"{args.organization}-factory{suffix}"
     # Outside the repository by default, so no `git add` can pick the key up.
     args.key_out = args.key_out or str(pathlib.Path.home() / f"{name}.private-key.pem")
     if pathlib.Path(args.key_out).exists():
         raise SystemExit(f"create_app: {args.key_out} exists; move it or pass --key-out")
-    app = convert(wait_for_code(args.organization, name,
-                                permissions=RUNNER_PERMISSIONS if args.runners else PERMISSIONS))
+    permissions = RUNNER_PERMISSIONS if args.runners else AUDITOR_PERMISSIONS if args.auditor else PERMISSIONS
+    app = convert(wait_for_code(args.organization, name, permissions=permissions))
     key = pathlib.Path(args.key_out)
     # Created here, readable only by you; an existing file is never overwritten.
     with os.fdopen(os.open(key, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600), "w") as f:
         f.write(app["pem"])
     if args.runners:
         return runners_done(app, key)
+    if args.auditor:
+        return auditor_done(app, key, args.organization)
     user_id = bot_user_id(app["slug"])
     write_app(FACTORY / "factory.json", app["slug"], user_id)
     repo = repository()
@@ -175,7 +187,33 @@ runners into every runner group in the organization: keep it only where step 2 p
    organization's runners on that host), then delete every other copy, {key} included:
      sudo install -D -m 600 -o root -g root <the copied key> /etc/factory-runner/factory-ci/app.pem
 3. Set CI_APP_CLIENT_ID={app['client_id']} in the CI tier's checkout's .github/factory/host/host.conf, and run
-   sudo TIER=ci bash .github/factory/host/setup.sh there (process/factory.md, Enablement step 10).""")
+   sudo TIER=ci TIER_OWNER=<owner>/<repository> bash .github/factory/host/setup.sh there; TIER_OWNER names that
+   checkout's repository, and only the first run needs it (process/factory.md, Enablement step 10).""")
+    return 0
+
+
+def auditor_done(app, key, org):
+    """The runner audit's App: where its key and client ID go, and how the audit's workflow is made."""
+    granted = app.get("permissions") or {}
+    if granted and {k: v for k, v in granted.items() if k != "metadata"} != AUDITOR_PERMISSIONS:
+        print(f"create_app: the App has {granted}, not just {AUDITOR_PERMISSIONS}: fix it in its settings before use")
+    print(f"""
+Created {app['slug']}, the runner audit's App (read access to the organization's self-hosted runners); its
+private key is {key}. Pick the one repository the audit runs in, <repo> below: a private one, its alarms are
+issues there, so ideally one the factory's App isn't installed on (a factory token could otherwise close or bury
+them; a failed run also emails whoever last changed its schedule). Never a runner host for its key.
+1. Install it on the organization, for that repository only: https://github.com/apps/{app['slug']}/installations/new
+2. Store its client ID and key in that repository, then delete the key file:
+     gh variable set RUNNER_AUDIT_APP_CLIENT_ID --repo {org}/<repo> --body {app['client_id']}
+     gh secret set RUNNER_AUDIT_APP_KEY --repo {org}/<repo> < {key}
+   and, optionally, who an alarm mentions: gh variable set RUNNER_AUDIT_NOTIFY --repo {org}/<repo> --body "<logins>"
+3. From your own machine (snapshot reads with your gh login, never a runner host's), take the organization's runner
+   groups as they are, review them (and turn the CI tier's group's runners into a pattern, such as
+   ^<prefix>-ci-[0-9]+-[0-9a-f]{{6}}$, a most-at-once and labels), then write the workflow and commit it to <repo>:
+     python3 .github/factory/runner_audit.py snapshot {org} > expected.json
+     python3 .github/factory/runner_audit.py workflow expected.json > .github/workflows/factory-runner-audit.yml
+   (in <repo>'s checkout for the second), and run it once: gh workflow run factory-runner-audit.yml --repo {org}/<repo>
+   (process/factory.md, Enablement step 12).""")
     return 0
 
 

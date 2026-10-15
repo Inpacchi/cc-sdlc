@@ -53,7 +53,9 @@ if [[ -f $HOST_CONF ]]; then
   # shellcheck source=/dev/null
   source "$HOST_CONF"
 fi
-if [[ ${TIER-} != "$env_tier" || ${TIER_OWNER-} != "$env_owner" ]]; then
+# Refused for any assignment it makes, even one equal to the command line's, and for any change of value.
+if { [[ -f $HOST_CONF ]] && grep -Eq '^[[:space:]]*(export[[:space:]]+|declare[[:space:]]+[^=]*)?(TIER|TIER_OWNER)=' "$HOST_CONF"; } \
+    || [[ ${TIER-} != "$env_tier" || ${TIER_OWNER-} != "$env_owner" ]]; then
   printf 'ERROR: %s sets TIER or TIER_OWNER: they belong on the command line (sudo TIER=... bash setup.sh)\n' "$HOST_CONF" >&2
   exit 1
 fi
@@ -116,13 +118,20 @@ case $TIER in
     DB_PORT= ;;
   *) printf 'ERROR: TIER must be strict, planning or ci\n' >&2; exit 1 ;;
 esac
-if [[ -n $DB_HOST ]] && { [[ ! $DB_HOST =~ ^([0-9]{1,3}\.){3}[0-9]{1,3}$ ]] || [[ -z $DB_PORT ]]; }; then
+if [[ -n $DB_HOST ]] && { [[ ! $DB_HOST =~ ^([0-9]{1,3}\.){3}[0-9]{1,3}$ ]] || [[ -z $DB_PORT ]] \
+    || ! python3 -I -c 'import ipaddress,sys; ipaddress.IPv4Address(sys.argv[1])' "$DB_HOST" 2>/dev/null; }; then
   printf 'ERROR: PLANNING_DB_HOST must be one IPv4 address, with PLANNING_DB_PORT set\n' >&2; exit 1
 fi
 [[ -n $RUNNER_LABELS && $RUNNER_LABELS != None ]] \
   || { printf 'ERROR: factory.json names no runner label for the %s tier (runners.%s)\n' "$TIER" "$TIER" >&2; exit 1; }
 RUNNER_HOME=$RUNNER_HOME_BASE/$RUNNER_USER
 RUNNER_COUNT=${RUNNER_COUNT:-$DEFAULT_COUNT}
+# The slice's process cap. The CI tier's jobs each have CI_JOB_PIDS, and the runner user's manager, rootless dockerd
+# and rootlesskit live in the same slice: room for all the jobs at their caps, and those besides.
+SLICE_TASKS=16384
+if [[ $TIER == ci && $RUNNER_COUNT =~ ^[0-9]+$ && ${CI_JOB_PIDS:-} =~ ^[0-9]+$ ]]; then
+  SLICE_TASKS=$((RUNNER_COUNT * CI_JOB_PIDS + 4096))
+fi
 RUNNER_URL=https://github.com/$FACTORY_ORG
 # The first organization's strict runner 1 keeps the paths and name from before there were several, so
 # its registration carries over.
@@ -143,7 +152,7 @@ if [[ ${1:-} == --print-settings ]]; then
   ci_settings=
   [[ $TIER == ci ]] && ci_settings="CI_APP_CLIENT_ID CI_JOB_CPUS CI_JOB_MEMORY CI_JOB_PIDS CI_JOB_SHM CI_JOB_HOURS CI_IDLE_HOURS CI_MIN_FREE_GB"
   for v in TIER FACTORY_ORG RUNNER_URL RUNNER_GROUP RUNNER_LABELS RUNNER_INSTANCE RUNNER_USER RUNNER_HOME RUNNER_UNIT \
-           FW_UNIT NFT_TABLE NFT_FILE RUNNER_COUNT MEM_HIGH MEM_MAX CPU_QUOTA DB_PORT DB_HOST LAN_DNS PROBE_PORTS $ci_settings; do
+           FW_UNIT NFT_TABLE NFT_FILE RUNNER_COUNT MEM_HIGH MEM_MAX CPU_QUOTA SLICE_TASKS DB_PORT DB_HOST LAN_DNS PROBE_PORTS $ci_settings; do
     printf '%s=%s\n' "$v" "${!v}"
   done
   printf 'RUNNER_NAMES=%s\n' "$(for i in $(seq "$RUNNER_COUNT"); do runner_name "$i"; done | tr '\n' ' ' | sed 's/ $//')"
@@ -166,7 +175,68 @@ for i in $(seq 99); do
   fi
 done
 
+# The runner-registration App's key ($1) reaches every runner group in the organization: root-only, never in a
+# checkout.
+check_ci_key() {
+  local ci_key=$1
+  if [[ -e $SCRIPT_DIR/ci-app.pem ]]; then
+    die "a key at $SCRIPT_DIR/ci-app.pem: the runner-registration App's key never goes in a checkout. Install it with sudo install -D -m 600 -o root -g root <key> $ci_key, then delete every other copy"
+  fi
+  [[ -f $ci_key && ! -L $ci_key ]] \
+    || die "install the runner-registration App's private key first: sudo install -D -m 600 -o root -g root <key> $ci_key (then delete every other copy)"
+  chown root:root "$ci_key" && chmod 600 "$ci_key"
+}
+
+# One designated checkout per tier: the repository whose checkout sets the tier up is recorded (in $1), and a run
+# from another repository's checkout is refused, so its host.conf can't re-cap or re-label a tier it doesn't own (a
+# dropped TIER would otherwise fall through to strict). The record is made only when the operator names that
+# repository (TIER_OWNER): the first checkout to run doesn't get a tier by default.
+claim_tier() {
+  local tiers=$1 origin tier_owner owner_file
+  # git's own words when it can't say: no origin, or a checkout another user owns, which root reads only under sudo
+  # from that user (git's safe.directory check).
+  origin=$(git -C "$SCRIPT_DIR" remote get-url origin 2>&1) \
+    || die "can't tell which repository this checkout is: git says: $(printf '%s' "$origin" | tr '\n' ' ')(no origin remote, or a checkout another user owns: run setup with sudo from that user, see git's safe.directory)"
+  tier_owner=$(sed -E 's#^(https://github\.com/|git@github\.com:)##; s#\.git$##' <<< "$origin")
+  [[ -n $tier_owner ]] || die "can't tell which repository this checkout is (its origin remote is empty)"
+  owner_file=$tiers/$RUNNER_UNIT
+  if [[ -f $owner_file ]]; then
+    [[ $(<"$owner_file") == "$tier_owner" ]] \
+      || die "the $TIER tier ($RUNNER_UNIT) is set up from $(<"$owner_file")'s checkout: run setup there, or remove $owner_file to hand the tier to $tier_owner"
+  else
+    [[ ${TIER_OWNER:-} == "$tier_owner" ]] \
+      || die "no checkout owns the $TIER tier ($RUNNER_UNIT) yet: if $tier_owner's should, run again with TIER=$TIER TIER_OWNER=$tier_owner"
+    # A claim names its tier too: a dropped TIER would claim strict.
+    [[ -n $tier_named ]] || die "name the tier you're giving $tier_owner: TIER=strict, planning or ci, with TIER_OWNER"
+    install -d -m 755 -o root -g root "$(dirname "$tiers")" "$tiers"
+    printf '%s\n' "$tier_owner" > "$owner_file"
+  fi
+}
+
+# The runner homes' base ($1), and every directory above it, should be root's alone: whoever owns one of them, or can
+# write it, can move a runner's home aside and put another in its place, image build directories included. A warning,
+# not a refusal: a base under a person's own directory works, but trusts that person (and whatever runs as them).
+warn_home_base() {
+  local d d_uid d_mode
+  d=$(python3 -I -c 'import os,sys; print(os.path.realpath(sys.argv[1]))' "$1")  # the directories actually walked
+  while :; do
+    if [[ -d $d ]]; then
+      read -r d_uid d_mode < <(python3 -I -c 'import os,sys; st = os.stat(sys.argv[1]); print(st.st_uid, st.st_mode & 0o7777)' "$d")
+      if [[ $d_uid != 0 ]] || ((d_mode & 8#022)); then
+        echo "WARNING: $d (at or above RUNNER_HOME_BASE) is owned by uid $d_uid with mode $(printf '%o' "$d_mode"): whoever owns or can write it can replace $RUNNER_USER's home. Prefer a base owned by root, not group- or world-writable, all the way up."
+      fi
+    fi
+    [[ $d == / || $d == . ]] && break
+    d=$(dirname "$d")
+  done
+}
+
 [[ $EUID -eq 0 ]] || die "run as root (sudo bash $0)"
+# One setup at a time on a host: a retry over ssh, or a second operator, would otherwise interleave two. The lock is in
+# a directory only root can write, so no one can plant a link where root opens it.
+install -d -m 711 -o root -g root /run/factory-runner
+exec 9> /run/factory-runner/setup.lock
+flock -n 9 || die "another setup is running on this host (it holds /run/factory-runner/setup.lock): let it finish first"
 command -v dockerd-rootless-setuptool.sh >/dev/null || die "docker-ce-rootless-extras is not installed"
 command -v nft >/dev/null || die "nft is not installed"
 [[ -f "$SCRIPT_DIR/seccomp-bwrap.json" ]] || die "seccomp-bwrap.json must sit next to this script"
@@ -175,6 +245,8 @@ command -v nft >/dev/null || die "nft is not installed"
 if [[ $TIER == ci ]]; then
   # Everything the CI tier needs, checked before anything on this host changes.
   for f in setup-ci.sh ci_launcher.py ci-runner.Dockerfile; do [[ -f $SCRIPT_DIR/$f ]] || die "$f must sit next to this script"; done
+  command -v setpriv > /dev/null || die "setpriv (util-linux) is not installed"
+  command -v loginctl > /dev/null || die "loginctl (systemd) is not installed"
   [[ $CI_APP_CLIENT_ID =~ ^[A-Za-z0-9.]+$ ]] \
     || die "set CI_APP_CLIENT_ID in host.conf: the runner-registration App's client ID (create_app.py --runners)"
   # Zero means unlimited to Docker, so every cap must be positive.
@@ -198,39 +270,18 @@ if high < need or top < high:
     sys.exit(f"CI_MEMORY_HIGH ({sys.argv[3]}) must be at least CI_RUNNERS x CI_JOB_MEMORY + 2G ({need // 1024 ** 2}M), "
              f"and CI_MEMORY_MAX ({sys.argv[4]}) at least CI_MEMORY_HIGH")
 PY
-  # The runner-registration App's key reaches every runner group in the organization: root-only, never in a checkout.
-  ci_key=/etc/factory-runner/$RUNNER_UNIT/app.pem
-  if [[ -e $SCRIPT_DIR/ci-app.pem ]]; then
-    die "a key at $SCRIPT_DIR/ci-app.pem: the runner-registration App's key never goes in a checkout. Install it with sudo install -D -m 600 -o root -g root <key> $ci_key, then delete every other copy"
-  fi
-  [[ -f $ci_key && ! -L $ci_key ]] \
-    || die "install the runner-registration App's private key first: sudo install -D -m 600 -o root -g root <key> $ci_key (then delete every other copy)"
-  chown root:root "$ci_key" && chmod 600 "$ci_key"
+  check_ci_key "/etc/factory-runner/$RUNNER_UNIT/app.pem"
 fi
 
-# One designated checkout per tier: the repository whose checkout sets the tier up is recorded, and a run from
-# another repository's checkout is refused, so its host.conf can't re-cap or re-label a tier it doesn't own (a
-# dropped TIER would otherwise fall through to strict). The record is made only when the operator names that
-# repository (TIER_OWNER): the first checkout to run doesn't get a tier by default.
-tier_owner=$({ git -C "$SCRIPT_DIR" remote get-url origin 2>/dev/null || true; } \
-  | sed -E 's#^(https://github\.com/|git@github\.com:)##; s#\.git$##')
-[[ -n $tier_owner ]] || die "can't tell which repository this checkout is (no origin remote)"
-owner_file=/etc/factory-runner/tiers/$RUNNER_UNIT
-if [[ -f $owner_file ]]; then
-  [[ $(<"$owner_file") == "$tier_owner" ]] \
-    || die "the $TIER tier ($RUNNER_UNIT) is set up from $(<"$owner_file")'s checkout: run setup there, or remove $owner_file to hand the tier to $tier_owner"
-else
-  [[ ${TIER_OWNER:-} == "$tier_owner" ]] \
-    || die "no checkout owns the $TIER tier ($RUNNER_UNIT) yet: if $tier_owner's should, run again with TIER=$TIER TIER_OWNER=$tier_owner"
-  # A claim names its tier too: a dropped TIER would claim strict.
-  [[ -n $tier_named ]] || die "name the tier you're giving $tier_owner: TIER=strict, planning or ci, with TIER_OWNER"
-  install -d -m 755 -o root -g root /etc/factory-runner /etc/factory-runner/tiers
-  printf '%s\n' "$tier_owner" > "$owner_file"
-fi
+claim_tier /etc/factory-runner/tiers
+warn_home_base "$RUNNER_HOME_BASE"
 
-log "1/8 packages: uidmap, dbus-user-session"
+log "1/8 packages: uidmap, dbus-user-session (and acl where Tailscale runs)"
 missing=()
-for p in uidmap dbus-user-session; do dpkg -s "$p" >/dev/null 2>&1 || missing+=("$p"); done
+packages=(uidmap dbus-user-session)
+# setfacl, for the Tailscale deny (step 3), where Tailscale runs.
+if command -v tailscaled > /dev/null; then packages+=(acl); fi
+for p in "${packages[@]}"; do dpkg -s "$p" >/dev/null 2>&1 || missing+=("$p"); done
 if ((${#missing[@]})); then apt-get update -qq && apt-get install -y --no-install-recommends "${missing[@]}"; fi
 
 log "2/8 user $RUNNER_USER (home $RUNNER_HOME)"
@@ -354,7 +405,7 @@ EOF
 # 2026-10-14). Deny $RUNNER_USER its directory by user, which holds for the runner, its user manager and its
 # containers alike, and is reapplied whenever tailscaled recreates the directory.
 if command -v tailscaled > /dev/null; then
-  command -v setfacl > /dev/null || apt-get install -y --no-install-recommends acl
+  command -v setfacl > /dev/null || die "setfacl isn't installed (the acl package, step 1)"
   install -d /etc/systemd/system/tailscaled.service.d
   # Before tailscaled starts (its RuntimeDirectory exists, the socket doesn't yet) and again after.
   printf '[Service]\nExecStartPre=-/usr/bin/setfacl -m u:%s:--- /run/tailscale\nExecStartPost=-/usr/bin/setfacl -m u:%s:--- /run/tailscale\n' \
@@ -366,6 +417,23 @@ systemctl enable "$FW_UNIT.service" "$FW_UNIT-reapply.service" >/dev/null
 # Reload in place when already active: restarting would stop user@ (Requires=) and kill running jobs.
 if systemctl is-active --quiet "$FW_UNIT.service"; then nft -f "$NFT_FILE"; else systemctl start "$FW_UNIT.service"; fi
 nft list table inet "$NFT_TABLE" >/dev/null || die "firewall table did not load"
+# The CI tier's checks compare the table with the fingerprint its settings hold: a table this run changed gets its new
+# fingerprint at once, or the minute check would trip the tier (jobs and all) before setup reaches its settings.
+ci_conf=/etc/factory-runner/$RUNNER_UNIT/launcher.json
+if [[ $TIER == ci && -f $ci_conf ]]; then
+  fw_print=$(python3 -I "$SCRIPT_DIR/ci_launcher.py" fingerprint "$NFT_TABLE") || die "can't fingerprint firewall table $NFT_TABLE"
+  python3 -I - "$ci_conf" "$fw_print" <<'PY' || die "couldn't record the firewall's fingerprint in $ci_conf"
+import json, os, sys
+path, value = sys.argv[1], sys.argv[2]
+conf = json.load(open(path))
+conf.pop("firewall_rules", None)
+conf["firewall_fingerprint"] = value
+with open(path + ".tmp", "w") as f:
+    json.dump(conf, f, indent=2)
+os.chmod(path + ".tmp", 0o644)
+os.replace(path + ".tmp", path)
+PY
+fi
 
 # Cap what factory jobs can take from everything else on this host. Rootless dockerd and every job
 # container live in the user's slice; the runner itself is a system service (capped below).
@@ -375,7 +443,7 @@ cat > "/etc/systemd/system/user-$RUID.slice.d/factory-limits.conf" <<EOF
 MemoryHigh=$MEM_HIGH
 MemoryMax=$MEM_MAX
 CPUQuota=$CPU_QUOTA
-TasksMax=16384
+TasksMax=$SLICE_TASKS
 EOF
 if [[ $TIER == ci ]]; then
   # Each job's container gets its own CPU, memory and process caps, which rootless Docker applies only when systemd
@@ -531,11 +599,15 @@ runner_deps() {
   # The picks aren't installed (that's why they're picked), but apt could still upgrade an installed library they
   # need, and a library upgrade can restart this host's other services. Simulated first, so any upgrade is the
   # operator's.
-  local upgrades
+  local plan upgrades removals
+  plan=$(apt-get install -s -y --no-install-recommends "${picks[@]}") \
+    || die "apt couldn't plan installing the runner's libraries (${picks[*]})"
   # An upgrade's line names the installed version in brackets straight after the package (every line has an
-  # architecture in brackets later): "Inst libfoo1 [1.2-2] (1.2-3 ...)".
-  upgrades=$(apt-get install -s -y --no-install-recommends "${picks[@]}" | awk '/^Inst / && $3 ~ /^\[/ {print $2}' \
-    | tr '\n' ' ') || die "apt couldn't plan installing the runner's libraries (${picks[*]})"
+  # architecture in brackets later): "Inst libfoo1 [1.2-2] (1.2-3 ...)". A removal's line starts "Remv".
+  upgrades=$(awk '/^Inst / && $3 ~ /^\[/ {print $2}' <<< "$plan" | tr '\n' ' ')
+  removals=$(awk '/^Remv / {print $2}' <<< "$plan" | tr '\n' ' ')
+  [[ -z $removals ]] \
+    || die "installing the runner's libraries (${picks[*]}) would remove ${removals% }: never done for you; resolve it by hand, then run setup again"
   [[ -z $upgrades ]] \
     || die "installing the runner's libraries (${picks[*]}) would upgrade ${upgrades% }: upgrade those when it suits this host, then run setup again"
   apt-get install -y --no-install-recommends "${picks[@]}"
@@ -546,9 +618,9 @@ if [[ -s $TOKEN_FILE ]]; then token=$(<"$TOKEN_FILE"); fi
 for i in $(seq "$RUNNER_COUNT"); do
   dir=$(runner_dir "$i"); work=$(runner_work "$i"); name=$(runner_name "$i")
   # Runners never update themselves (--disableupdate), so a RUNNER_VERSION bump reaches them here: an installed
-  # runner at another version gets the new one unpacked over it (its registration files aren't in the archive),
-  # unless it's running a job, and the restart below starts it. Unpacking replaces files the running runner holds
-  # open by new ones, so it keeps running the old version until then.
+  # runner at another version is stopped, unless it's running a job, and the new one unpacked over it (its
+  # registration files aren't in the archive); the restart below starts it. Stopped first, so no job starts on a
+  # half-unpacked runner.
   installed=
   if [[ -x $dir/config.sh ]]; then installed=$(as_runner "'$dir/bin/Runner.Listener' --version 2>/dev/null" | tr -d '[:space:]') || installed=; fi
   fetch=
@@ -559,6 +631,7 @@ for i in $(seq "$RUNNER_COUNT"); do
       echo "Runner $i is at ${installed:-an unknown version} and running a job: not upgraded to $RUNNER_VERSION. Re-run setup when it's idle."
     else
       echo "Runner $i: ${installed:-an unknown version} -> $RUNNER_VERSION"
+      systemctl stop "$RUNNER_UNIT@$i.service" 2> /dev/null || true
       fetch=1
     fi
   fi

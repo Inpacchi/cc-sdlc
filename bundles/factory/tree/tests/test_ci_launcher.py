@@ -5,7 +5,9 @@ answers follow the fake container's state, docker a script that records its call
 the real one with a generated key."""
 
 import base64
+import contextlib
 import http.server
+import io
 import json
 import os
 import pathlib
@@ -32,8 +34,13 @@ BUSY = {"status": "online", "busy": True}
 class FakeGitHub(http.server.BaseHTTPRequestHandler):
     calls = []
     jit_status = 201
+    jit_answer = None  # a 201's body in place of the usual one
+    jit_delay = 0
     delete_status = 204
+    delete_body = {"message": "refused"}
     deleted = set()
+    minted = 0
+    revoked = set()  # tokens GitHub answers 401 to
     # [callable]: the runner's GET answer, a dict, an HTTP status, "garbage" (a 200 that isn't JSON) or "short"
     # (a body cut off).
     view = [lambda: 404]
@@ -42,11 +49,14 @@ class FakeGitHub(http.server.BaseHTTPRequestHandler):
 
     def reply(self, status, body=None):
         data = b"" if body is None else json.dumps(body).encode()
-        self.send_response(status)
-        self.send_header("Content-Type", "application/json")
-        self.send_header("Content-Length", str(len(data)))
-        self.end_headers()
-        self.wfile.write(data)
+        try:
+            self.send_response(status)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(data)))
+            self.end_headers()
+            self.wfile.write(data)
+        except (BrokenPipeError, ConnectionResetError):
+            pass  # the launcher stopped mid-call
 
     def raw(self, data, length):
         self.send_response(200)
@@ -60,16 +70,22 @@ class FakeGitHub(http.server.BaseHTTPRequestHandler):
         FakeGitHub.calls.append((method, self.path, self.headers.get("Authorization"), body))
         runner = re.fullmatch(r"/orgs/acme/actions/runners/(\d+)", self.path)
         if method == "POST" and self.path == "/app/installations/9/access_tokens":
-            return self.reply(201, {"token": "inst-token", "expires_at": "2099-01-01T00:00:00Z"})
+            FakeGitHub.minted += 1
+            token = "inst-token" if FakeGitHub.minted == 1 else f"inst-token-{FakeGitHub.minted}"
+            return self.reply(201, {"token": token, "expires_at": "2099-01-01T00:00:00Z"})
+        if (self.headers.get("Authorization") or "").removeprefix("Bearer ") in FakeGitHub.revoked:
+            return self.reply(401, {"message": "Bad credentials"})
         if method == "POST" and self.path == "/orgs/acme/actions/runners/generate-jitconfig":
+            if FakeGitHub.jit_delay:  # never time.sleep(0): tests patch the time module's sleep
+                time.sleep(FakeGitHub.jit_delay)
             if FakeGitHub.jit_status != 201:
                 return self.reply(FakeGitHub.jit_status, {"message": "nope"})
-            return self.reply(201, {"runner": {"id": 42}, "encoded_jit_config": "SklUQ09ORklH"})
+            return self.reply(201, FakeGitHub.jit_answer or {"runner": {"id": 42}, "encoded_jit_config": "SklUQ09ORklH"})
         if runner and method == "DELETE":
             if FakeGitHub.delete_status == 204:
                 FakeGitHub.deleted.add(int(runner.group(1)))
                 return self.reply(204)
-            return self.reply(FakeGitHub.delete_status, {"message": "refused"})
+            return self.reply(FakeGitHub.delete_status, FakeGitHub.delete_body)
         if runner and method == "GET":
             if int(runner.group(1)) in FakeGitHub.deleted:
                 return self.reply(404, {"message": "Not Found"})
@@ -78,6 +94,8 @@ class FakeGitHub(http.server.BaseHTTPRequestHandler):
                 return self.raw(b"<html>", 6)
             if answer == "short":
                 return self.raw(b'{"id"', 100)
+            if answer == "list":
+                return self.reply(200, [{"status": "online"}])
             if isinstance(answer, int):
                 return self.reply(answer, {"message": "no"})
             return self.reply(200, {"id": int(runner.group(1)), **answer})
@@ -126,6 +144,10 @@ if args[:1] == ["rm"] and "-check-" not in args[-1]:
             os.unlink(path(marker))
 if args[:1] == ["kill"]:
     open(path("killed"), "w").close()
+if args[:1] == ["run"] and "-d" in args and "--entrypoint" not in args:
+    time.sleep(float(control("run_sleep")))
+if args[:2] == ["network", "create"] and "--subnet" in args:
+    sys.exit(int(control("netcreate_rc")))
 if args[:1] == ["wait"]:
     end = time.time() + float(control("wait_sleep"))
     while time.time() < end and not os.path.exists(path("killed")):
@@ -153,8 +175,10 @@ with open(os.path.join(d, "python.jsonl"), "a") as log:
 p = os.path.join(d, "host_rc")
 sys.exit(int(open(p).read()) if os.path.exists(p) else 0)
 '''
-# nft and systemctl: record their arguments, exit <name>.rc.
+# nft, systemctl and loginctl: record their arguments, print <name>.out, exit <name>.rc.
 FAKE_RECORDER = ('#!/usr/bin/env bash\nprintf "%s\\n" "$*" >> "$(dirname "$0")/$(basename "$0").log"\n'
+                 'printf "%s %s\\n" "$(basename "$0")" "$*" >> "$(dirname "$0")/all.log"\n'
+                 'cat "$(dirname "$0")/$(basename "$0").out" 2>/dev/null\n'
                  'exit "$(cat "$(dirname "$0")/$(basename "$0").rc" 2>/dev/null || echo 0)"\n')
 ROUTES = ("Iface\tDestination\tGateway \tFlags\tRefCnt\tUse\tMetric\tMask\t\tMTU\tWindow\tIRTT\n"
           "eth0\t0002A8C0\t00000000\t0001\t0\t0\t100\t00FFFFFF\t0\t0\t0\n"
@@ -180,15 +204,20 @@ class Launcher(unittest.TestCase):
     def setUp(self):
         FakeGitHub.calls = []
         FakeGitHub.jit_status = 201
+        FakeGitHub.jit_answer = None
+        FakeGitHub.jit_delay = 0
         FakeGitHub.delete_status = 204
+        FakeGitHub.delete_body = {"message": "refused"}
         FakeGitHub.deleted = set()
+        FakeGitHub.minted = 0
+        FakeGitHub.revoked = set()
         FakeGitHub.view = [self.container_view]
         self.tmp = tempfile.TemporaryDirectory()
         root = pathlib.Path(self.tmp.name)
         self.bin = root / "bin"
         self.bin.mkdir()
         for name, text in (("docker", FAKE_DOCKER), ("setpriv", FAKE_SETPRIV), ("python", FAKE_PYTHON),
-                           ("nft", FAKE_RECORDER), ("systemctl", FAKE_RECORDER)):
+                           ("nft", FAKE_RECORDER), ("systemctl", FAKE_RECORDER), ("loginctl", FAKE_RECORDER)):
             (self.bin / name).write_text(text)
             (self.bin / name).chmod(0o755)
         self.state = root / "state"
@@ -200,6 +229,10 @@ class Launcher(unittest.TestCase):
         (self.cgroup / "cpu.max").write_text("800000 100000\n")
         (self.cgroup / f"user@{os.getuid()}.service" / "cgroup.controllers").write_text("cpuset cpu io memory pids\n")
         (root / "route").write_text(ROUTES)
+        self.wants = root / "wants"
+        self.wants.mkdir()
+        for name in ("factory-ci-slot@1.service", "factory-ci-slot@2.service", "other.service"):
+            (self.wants / name).touch()
         self.conf = {
             "api": f"http://127.0.0.1:{self.server.server_address[1]}", "org": "acme", "client_id": "Iv23abc",
             "key": str(self.key), "openssl": OPENSSL, "installation_id": 9, "group": "factory-ci", "group_id": 5,
@@ -207,6 +240,7 @@ class Launcher(unittest.TestCase):
             "user": "factory-ci", "uid": os.getuid(), "gid": os.getgid(), "home": str(root),
             "setpriv": str(self.bin / "setpriv"), "env": shutil.which("env"), "docker": str(self.bin / "docker"),
             "python": str(self.bin / "python"), "nft": str(self.bin / "nft"), "systemctl": str(self.bin / "systemctl"),
+            "loginctl": str(self.bin / "loginctl"), "wants_dir": str(self.wants), "fw_retry_seconds": 0,
             "job": {"cpus": 4, "memory": "8g", "pids": 8192, "shm": "1g", "hours": 6},
             "idle_hours": 24, "min_free_gb": 0, "tick_seconds": 0.05, "poll_seconds": 0.1, "gone_checks": 2,
             "gone_delay": 0, "docker_wait_seconds": 0, "state_owner": os.getuid(),
@@ -244,6 +278,14 @@ class Launcher(unittest.TestCase):
 
     def fails(self, slot=1):
         return (self.state / f"slot-{slot}.fails").read_text()
+
+    def trip_steps(self):
+        """systemctl's part of a trip: the slots stopped, then the slots, the gate and the timers disabled (nothing
+        starts the runner user's manager at boot), then that manager stopped."""
+        return ["stop factory-ci-slot@*.service", "disable factory-ci-slot@1.service factory-ci-slot@2.service",
+                "disable factory-ci-gate.service factory-ci-check.timer factory-ci-fw.timer",
+                "stop factory-ci-check.timer factory-ci-fw.timer",
+                f"stop user@{os.getuid()}.service"]
 
     def test_a_cycle(self):
         with mock.patch.dict(os.environ, {"LAUNCHER_ONLY": "secret"}):
@@ -324,9 +366,10 @@ class Launcher(unittest.TestCase):
         answers = [ONLINE, BUSY]
         FakeGitHub.view = [lambda: answers.pop(0) if answers else OFFLINE if (self.bin / "killed").exists() else BUSY]
         self.conf["job"]["hours"] = 0.0001
-        launcher.run(self.conf, 1)
+        self.assertEqual(launcher.run(self.conf, 1), 0)
         self.assertEqual(self.argvs("kill"), [["kill", "factory-ci-1"]])
         self.assertIn(("DELETE", "/orgs/acme/actions/runners/42"), self.github())
+        self.assertEqual(self.fails(), "0")  # an overrun is the job's, not a failure of the slot: no backoff
 
     def test_a_container_that_outlives_its_runner_is_killed(self):
         # The job ended inside one poll (never seen busy), and its container stays up: GitHub's 404 ends it.
@@ -392,7 +435,7 @@ class Launcher(unittest.TestCase):
 
     def test_strange_answers_while_polling_are_survived(self):
         self.control("wait_sleep", 0.6)
-        answers = ["garbage", "short", 502, ONLINE]
+        answers = ["garbage", "short", 502, "list", ONLINE]
         FakeGitHub.view = [lambda: answers.pop(0) if answers else self.container_view()]
         self.assertEqual(launcher.run(self.conf, 1), 0)
         self.assertEqual(self.kills_while_running(), [])
@@ -508,6 +551,7 @@ class Launcher(unittest.TestCase):
             ("host_rc", "1", "the host-side probe"),
             ("reach_rc", "1", "can't be reached on its own network"),
             ("info_rc", "1", "Docker daemon doesn't answer"),
+            ("netcreate_rc", "1", "couldn't create the check's network"),
             (controllers, "pids\n", "the cpu controller isn't delegated"),
             (self.cgroup / "memory.max", None, "the check couldn't finish: FileNotFoundError"),
             ("groups", [{**FakeGitHub.groups[0], "visibility": "all"}], "open beyond its selected"),
@@ -516,7 +560,8 @@ class Launcher(unittest.TestCase):
         ]
         for what, value, message in cases:
             with self.subTest(message=message):
-                for name in ("nft.rc", "probe_rc", "host_rc", "reach_rc", "info_rc", "systemctl.log"):
+                for name in ("nft.rc", "probe_rc", "host_rc", "reach_rc", "info_rc", "netcreate_rc", "systemctl.log",
+                             "loginctl.log"):
                     (self.bin / name).unlink(missing_ok=True)
                 (self.state / "tripped").unlink(missing_ok=True)
                 controllers.write_text("cpuset cpu io memory pids\n")
@@ -540,9 +585,8 @@ class Launcher(unittest.TestCase):
                     for p in patches:
                         p.stop()
                 self.assertIn(message, (self.state / "tripped").read_text())
-                self.assertEqual((self.bin / "systemctl.log").read_text().splitlines(),
-                                 ["stop factory-ci-slot@*.service", "stop factory-ci-check.timer factory-ci-fw.timer",
-                                  f"stop user@{os.getuid()}.service"])
+                self.assertEqual((self.bin / "systemctl.log").read_text().splitlines(), self.trip_steps())
+                self.assertEqual((self.bin / "loginctl.log").read_text().splitlines(), ["disable-linger factory-ci"])
 
     def test_liveness_isnt_isolation(self):
         # No internet from either probe, and GitHub out of reach: noted, not tripped.
@@ -566,10 +610,195 @@ class Launcher(unittest.TestCase):
     def test_the_firewall_check(self):
         self.assertEqual(launcher.fwcheck(self.conf), 0)
         self.assertFalse((self.bin / "systemctl.log").exists())
+        self.assertEqual((self.bin / "nft.log").read_text().splitlines(), ["-j list table inet factory_ci"])
         self.control("nft.rc", 1)
         self.assertEqual(launcher.fwcheck(self.conf), 1)
         self.assertIn("firewall table factory_ci isn't loaded", (self.state / "tripped").read_text())
-        self.assertIn("stop factory-ci-slot@*.service", (self.bin / "systemctl.log").read_text())
+        self.assertEqual((self.bin / "systemctl.log").read_text().splitlines(), self.trip_steps())
+        self.assertEqual(len((self.bin / "nft.log").read_text().splitlines()), 1 + 4)  # looked at again 3 times
+
+    def test_the_firewall_check_rides_out_nftables_restarting(self):
+        # nftables.service's restart flushes the ruleset until the reapply unit loads the table again.
+        answers = ["firewall table factory_ci isn't loaded", None]
+        with mock.patch.object(launcher, "firewall_problem", side_effect=lambda conf: answers.pop(0)):
+            self.assertEqual(launcher.fwcheck(self.conf), 0)
+        self.assertFalse((self.state / "tripped").exists())
+
+    def listing(self, elements=("10.0.0.0/8",), rules=2, packets=0, handle=1):
+        """A table as `nft -j` lists it: a set of blocked addresses and a chain whose rules reject them."""
+        rule = {"family": "inet", "table": "factory_ci", "chain": "output", "handle": handle,
+                "expr": [{"match": {"op": "==", "left": {"meta": {"key": "skuid"}}, "right": 1001}},
+                         {"counter": {"packets": packets, "bytes": packets * 60}}, {"reject": None}]}
+        return json.dumps({"nftables": [
+            {"metainfo": {"version": "1.0.9", "release_name": "Old Doc Yak #3", "json_schema_version": 1}},
+            {"table": {"family": "inet", "name": "factory_ci", "handle": handle}},
+            {"set": {"family": "inet", "name": "blocked4", "table": "factory_ci", "type": "ipv4_addr",
+                     "handle": handle, "flags": ["interval"], "elem": [{"prefix": {"addr": e.split("/")[0], "len": 8}}
+                                                                       for e in elements]}},
+            {"chain": {"family": "inet", "table": "factory_ci", "name": "output", "handle": handle}},
+        ] + [{"rule": rule}] * rules})
+
+    def test_a_flushed_chain_or_set_is_a_lost_firewall(self):
+        self.control("nft.out", self.listing())
+        self.conf["firewall_fingerprint"] = launcher.fingerprint(self.listing())
+        self.assertEqual(launcher.fwcheck(self.conf), 0)
+        self.assertEqual(launcher.check(self.conf), 0)
+        # Counters, handles and nft's own version change on their own: the same table.
+        self.control("nft.out", self.listing(packets=99, handle=7).replace("1.0.9", "1.1.1"))
+        self.assertEqual(launcher.fwcheck(self.conf), 0)
+        for changed in (self.listing(rules=0), self.listing(elements=())):  # nft flush chain; nft flush set
+            with self.subTest(changed=changed[-80:]):
+                (self.state / "tripped").unlink(missing_ok=True)
+                self.control("nft.out", changed)
+                self.assertEqual(launcher.fwcheck(self.conf), 1)
+                self.assertIn("isn't what setup loaded", (self.state / "tripped").read_text())
+        (self.state / "tripped").unlink()
+        self.control("nft.out", "not json")
+        self.assertEqual(launcher.fwcheck(self.conf), 1)
+        self.assertIn("listing isn't readable", (self.state / "tripped").read_text())
+
+    def test_setup_fingerprints_the_table_it_loaded(self):
+        self.control("nft.out", self.listing())
+        out = io.StringIO()
+        with mock.patch.dict(os.environ, {"PATH": f"{self.bin}:{os.environ['PATH']}"}), \
+                contextlib.redirect_stdout(out):
+            self.assertEqual(launcher.main(["ci_launcher.py", "fingerprint", "factory_ci"]), 0)
+        self.assertEqual(out.getvalue().strip(), launcher.fingerprint(self.listing()))
+        self.assertIn("-j list table inet factory_ci", (self.bin / "nft.log").read_text())
+
+    def test_a_refused_token_is_minted_again(self):
+        # Revoked, or expired early: a 401 drops the cached token, and the call is made again with a new one.
+        FakeGitHub.revoked = {"inst-token"}
+        self.assertEqual(launcher.run(self.conf, 1), 0)
+        self.assertEqual(self.github()[:4], [("POST", "/app/installations/9/access_tokens"),
+                                             ("POST", "/orgs/acme/actions/runners/generate-jitconfig"),
+                                             ("POST", "/app/installations/9/access_tokens"),
+                                             ("POST", "/orgs/acme/actions/runners/generate-jitconfig")])
+        self.assertEqual(FakeGitHub.calls[3][2], "Bearer inst-token-2")
+        self.assertEqual(self.fails(), "0")
+
+    def test_a_rate_limit_mints_no_token(self):
+        # GitHub answers 403 to a rate limit too: no new token for it, and the cycle backs off as for any refusal.
+        FakeGitHub.jit_status = 403
+        self.assertEqual(launcher.run(self.conf, 1), 1)
+        self.assertEqual(FakeGitHub.minted, 1)
+        self.assertEqual(self.fails(), "1")
+
+    def test_a_token_refused_twice_fails_the_call(self):
+        FakeGitHub.revoked = {"inst-token", "inst-token-2"}
+        self.assertEqual(launcher.run(self.conf, 1), 1)
+        self.assertEqual(FakeGitHub.minted, 2)  # once again, not without end
+        self.assertEqual(self.argvs("run"), [])
+
+    def test_a_trip_runs_its_steps_in_order(self):
+        launcher.trip(self.conf, ["a check failed"])
+        self.assertEqual((self.bin / "all.log").read_text().splitlines(),
+                         [f"systemctl {step}" for step in self.trip_steps()[:-1]]
+                         + ["loginctl disable-linger factory-ci", f"systemctl {self.trip_steps()[-1]}"])
+
+    def test_the_token_lasts_by_the_monotonic_clock(self):
+        tokens = launcher.Tokens(self.conf)
+        tokens.get()
+        with mock.patch.object(launcher.time, "time", return_value=4102444800 + 10 ** 6):  # the wall clock jumps
+            tokens.get()
+        self.assertEqual(FakeGitHub.minted, 1)
+
+    def test_answers_that_arent_objects_end_no_cycle_badly(self):
+        # A runner that isn't an object: no container, a failure counted.
+        FakeGitHub.jit_answer = {"runner": "42", "encoded_jit_config": "SklUQ09ORklH"}
+        self.assertEqual(launcher.run(self.conf, 1), 1)
+        self.assertEqual(self.argvs("run"), [])
+        self.assertEqual(self.fails(), "1")
+        # A refusal whose body is a list: the cleanup still reports, and the failure is still counted.
+        FakeGitHub.jit_answer = None
+        FakeGitHub.view = [lambda: OFFLINE]
+        FakeGitHub.delete_status, FakeGitHub.delete_body = 500, [1, 2]
+        self.control("wait_out", 3)
+        with mock.patch.object(launcher.time, "sleep"):
+            self.assertEqual(launcher.run(self.conf, 1), 1)
+        self.assertEqual(self.fails(), "2")
+        self.assertEqual((self.state / "slot-1.runner").read_text(), "42")
+
+    def test_github_out_of_reach_doesnt_make_an_idle_runner_busy(self):
+        self.control("wait_sleep", 30)
+        self.conf["idle_hours"] = 0.0001
+        real = launcher.deregister
+        failures = [launcher.Failed("DELETE /orgs/acme/actions/runners/42: URLError: timed out")]
+
+        def deregister(conf, runner_id, tokens):
+            if failures:
+                raise failures.pop()
+            return real(conf, runner_id, tokens)
+
+        started = time.monotonic()
+        with mock.patch.object(launcher, "deregister", side_effect=deregister):
+            self.assertEqual(launcher.run(self.conf, 1), 0)
+        self.assertLess(time.monotonic() - started, 10)  # recycled at the next poll, not left to CI_JOB_HOURS
+        self.assertEqual(self.argvs("kill"), [["kill", "factory-ci-1"]])
+        self.assertIn(42, FakeGitHub.deleted)
+        self.assertEqual(self.fails(), "0")
+
+    def test_polls_that_fail_through_the_grace_window_kill_nothing(self):
+        # never-online needs GitHub's word: with every poll failing, only the lifetime cap holds.
+        self.control("wait_sleep", 1)
+        FakeGitHub.view = [lambda: 500]
+        self.conf["start_grace_seconds"] = 0.2
+        self.assertEqual(launcher.run(self.conf, 1), 1)  # its end unconfirmed, the cycle counts as failed
+        self.assertEqual(self.kills_while_running(), [])
+
+    def test_low_disk_is_noted_by_the_check_not_tripped(self):
+        with mock.patch.object(launcher, "low_disk", return_value=True):
+            self.assertEqual(launcher.check(self.conf), 0)
+        self.assertFalse((self.state / "tripped").exists())
+
+    def test_a_memory_cap_is_whole_pages(self):
+        page = os.sysconf("SC_PAGE_SIZE")
+        self.assertEqual(launcher.memory_bytes("8g"), 8 * 1024 ** 3)
+        odd = launcher.memory_bytes("6001k")
+        self.assertEqual(odd % page, 0)
+        self.assertTrue(6001 * 1024 - page < odd <= 6001 * 1024)
+
+    def test_a_leftover_jit_config_is_removed(self):
+        (self.state / "slot-1.env").write_text("ACTIONS_RUNNER_INPUT_JITCONFIG=old\n")
+        FakeGitHub.jit_status = 422
+        launcher.run(self.conf, 1)
+        self.assertFalse((self.state / "slot-1.env").exists())
+        (self.state / "slot-2.env").write_text("ACTIONS_RUNNER_INPUT_JITCONFIG=old\n")
+        launcher.stop(self.conf, 2)
+        self.assertFalse((self.state / "slot-2.env").exists())
+
+    def sigterm_during(self, ready):
+        """Runs a cycle in its own process, sends it SIGTERM once ready() holds, and checks it cleaned up."""
+        conf_file = pathlib.Path(self.tmp.name) / "launcher.json"
+        conf_file.write_text(json.dumps(self.conf))
+        p = subprocess.Popen([sys.executable, "-I", str(HOST / "ci_launcher.py"), "run", str(conf_file), "1"],
+                             stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        deadline = time.monotonic() + 20
+        while not ready() and time.monotonic() < deadline:
+            time.sleep(0.05)
+        self.assertTrue(ready(), "the cycle never got there")
+        p.send_signal(signal.SIGTERM)
+        out, err = p.communicate(timeout=30)
+        self.assertEqual(p.returncode, 0, err)
+        self.assertEqual(self.argvs("rm")[-1], ["rm", "-f", "-v", "factory-ci-1"])
+        self.assertEqual(self.fails(), "0")
+        self.assertEqual(list(self.state.glob("*.env")), [])
+        for call in self.calls():
+            with self.assertRaises(ProcessLookupError):
+                os.kill(call["pid"], 0)
+
+    def test_sigterm_during_docker_run_cleans_up(self):
+        self.control("run_sleep", 30)
+        self.sigterm_during(lambda: bool(self.argvs("run")))
+        self.assertIn(42, FakeGitHub.deleted)  # registered before its container started
+        self.assertFalse((self.state / "slot-1.runner").exists())
+
+    def test_sigterm_during_an_api_call_cleans_up(self):
+        FakeGitHub.jit_delay = 2
+        self.sigterm_during(lambda: ("POST", "/orgs/acme/actions/runners/generate-jitconfig") in self.github())
+        self.assertEqual(self.argvs("run"), [])
+        self.assertNotIn("DELETE", [m for m, _ in self.github()])
+        time.sleep(FakeGitHub.jit_delay)  # the fake's reply goes nowhere
 
 
 if __name__ == "__main__":

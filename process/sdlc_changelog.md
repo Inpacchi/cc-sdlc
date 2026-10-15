@@ -37,6 +37,144 @@ Each entry contains:
 
 ---
 
+## 2026-10-14: The CI tier, review round 3; the runner audit
+
+**Origin:** The pilot project's review of the CI tier's round 2 (`8575c31`; 2026-10-14) passed with minor findings, and CD left the calls on them to that project, which asked for all of them before the minor release. The same review found that the runner-registration App's key, now on a runner host that no longer runs production, is the main bridge to production's runner group, and asked for an alarm off that host. Scope from the pilot project (CD's delegate): lean, state-only, hourly.
+
+**What happened:**
+- **`ci_launcher.py`:**
+  - A token GitHub refused stayed cached until its expiry by the wall clock, so a revoked token or a clock step failed every poll, silently disabling every limit that waits on GitHub's answer.
+  - A JSON answer that wasn't an object raised past the cycle's handlers and skipped the backoff counter's write.
+  - A network failure on the idle runner's removal counted as "busy".
+  - A job that overran `CI_JOB_HOURS` added to the backoff.
+  - Low disk and a slow rootless Docker daemon at boot each tripped the whole tier.
+  - The firewall check only tested that the table existed, and a tick during `nftables.service`'s own restart could trip.
+  - "Nothing may start the runner user's manager again" was false: linger, and the enabled gate and slots' `Requires=user@` (a unit's condition doesn't stop its dependencies from starting), brought it back at boot while tripped.
+  - A memory cap that isn't a whole number of pages (`6001k`) never matched `memory.max`, so the check would trip forever.
+- **`setup-ci.sh`:**
+  - The slots' state was on tmpfs, so a reboot forgot the registrations a killed cycle left.
+  - `setpriv` was checked after the host had changed.
+  - `TimeoutStopSec=180` was under the launcher's worst-case cleanup (about 210 s).
+- **`setup.sh`:** the apt plan ignored removals, and nothing warned about a `RUNNER_HOME_BASE` whose directories someone other than root owns (the pilot project's host condition c3).
+- **`create_app.py`:** step 3 for `--runners` left out `TIER_OWNER`.
+- **Tests:** nothing covered setup's owner logic, its key refusal, its apt plan or the units.
+- **The runner-registration App's key** (organization self-hosted runners: write) can register a runner into any group and change any group's repositories and workflows. Nothing would notice if it did.
+
+**Changes made:**
+1. **`bundles/factory/tree/host/ci_launcher.py`**:
+   - **Tokens:**
+     - their lifetime is counted on the monotonic clock;
+     - a 401 or 403 drops the cached token and retries once with a new one (`Tokens.call`).
+   - **GitHub's answers:** `api()` returns only JSON objects. A success with anything else is `Failed`, and an error's body is its message. A JIT answer without a runner ID is `Failed`.
+   - **Idle runners:** a failed removal of an idle runner asks GitHub again. The runner counts as busy only on GitHub's word, and otherwise the next poll retries the removal.
+   - **Backoff:** `job-hours` is neutral, like a recycle.
+   - **Memory caps:** they're compared as the kernel keeps them, rounded down to whole pages.
+   - **The firewall check:** it compares the table's fingerprint with what setup loaded (`nft -j`, without handles, counters and nft's version; chains, rules and set elements). The minute check looks again three times, 2 s apart, before it trips.
+   - **Low disk:** in the check, it's a note, not a trip.
+   - **The boot gate:** it waits up to 10 minutes for the runner user's daemon.
+   - **A trip:** it also disables the slots, the gate and the timers, and turns off the runner user's linger, so a reboot brings nothing back. Setup enables them all again.
+   - **JIT configs:** one a crashed cycle left is removed at the next cycle and at the slot's stop.
+   - **The docstring:** it says what bounds a container while GitHub can't be read (the lifetime cap and the disk floor).
+2. **`bundles/factory/tree/host/setup-ci.sh`**:
+   - The state moves to `/var/lib/factory-runner/<unit>`. Registrations left in the old `/run` state are carried over, and the tmpfiles entry is removed.
+   - The settings get `loginctl`'s path and the table's fingerprint (`ci_launcher.py fingerprint`).
+   - `TimeoutStopSec=360`.
+   - The units' comments say what a trip disables.
+3. **`bundles/factory/tree/host/setup.sh`**:
+   - `setpriv` and `loginctl` are checked in the CI preflight, before anything changes.
+   - The apt plan refuses removals as well as upgrades.
+   - **`warn_home_base`** warns when `RUNNER_HOME_BASE`, or any directory above it, isn't root-owned or is writable by group or other.
+   - The key check, the tier claim and the warning are functions (`check_ci_key`, `claim_tier`, `warn_home_base`), so they can be tested.
+4. **`bundles/factory/tree/runner_audit.py`** (new): the runner audit.
+   - `snapshot` takes the organization's runner groups as an expected state.
+   - `workflow` writes a self-contained, hourly, GitHub-hosted workflow, with the script and the expected state inside it. Neither factory App can edit a workflow, so neither can change what the audit expects. It refuses content GitHub would read as an expression.
+   - `check` compares exactly:
+     - the groups, and each group's visibility, public-repository setting, repositories, workflow restriction and workflows;
+     - each group's runners, with their IDs and labels. The CI tier's group is a pattern, a most-at-once and labels;
+     - factory labels outside their groups.
+   - It fails closed: exit 2 when anything can't be read. A failing run opens or updates an issue through the workflow's own `GITHUB_TOKEN`.
+   - No audit-log check: a change made and reverted between two runs goes unseen, and the doc names the audit log as the upgrade.
+5. **`bundles/factory/tree/create_app.py`**:
+   - `--auditor` makes the audit's App: organization self-hosted runners: read, nothing else. Its printed steps put the key in the audit repository's secrets.
+   - `--runners`' step 3 names `TIER_OWNER`.
+6. **Tests:**
+   - **`test_ci_launcher.py`** (13 new):
+     - a token minted again after a 401, and a token's life counted on the monotonic clock;
+     - answers that aren't objects;
+     - GitHub out of reach during an idle removal, and polls failing through the grace window;
+     - an overrun counted as neutral, and low disk as a note;
+     - memory pages, and a JIT config left behind;
+     - SIGTERM during `docker run` and during an API call;
+     - the check network's collision;
+     - a flushed chain, and the nftables restart window;
+     - the trip's disabling steps.
+   - **`test_host_setup.py`** (5 new): the apt plan, tier claims, the CI key, the home-base warning, and the CI units as text.
+   - **`test_runner_audit.py`** (new, 11): every kind of drift, failing closed, pagination, the expected state's shape, the workflow (YAML, the embedded script byte-identical, its expressions, its refusals), and `check` end to end.
+   - **`test_create_app.py`**: the audit App's one read permission.
+7. **`process/factory.md`**:
+   - **Enablement step 8:** the `RUNNER_HOME_BASE` ownership warning.
+   - **Step 10:** the slots' state on disk, what bounds a container during an outage, the firewall rule count and second look, low disk as a note, the boot wait, and what a trip disables.
+   - **Step 12 (new), the runner audit:** what it compares, where it runs, what it doesn't see, and its setup.
+8. **A fresh architecture review of this batch**, all applied:
+   - **The setup self-trip:** `setup.sh` writes the CI table's new rule count into the live settings right after the table loads. Before, the minute check compared a table this run had just changed with the old count until `setup-ci.sh` wrote settings, tripping the tier under setup.
+   - **The build context:** it's copied into `/var/lib/factory-runner/ci-build.*`, root's all the way up, not under `RUNNER_HOME_BASE`, whose ancestors' owner could swap it.
+   - **A trip inside the gate:** a trip only disables the gate. A trip running inside the gate would otherwise stop itself before turning off linger.
+   - **The `/run` state:** registrations carried over from it are removed there.
+   - **The alarm:**
+     - it comments only on an open issue the workflow opened itself, and opens a new one when there's none or the comment is refused, so a planted or locked decoy can't swallow it;
+     - it mentions `RUNNER_AUDIT_NOTIFY`'s logins;
+     - it fires on a cancelled run (a timeout) as well as a failed one;
+     - the doc names the failed-run email as the channel no App can touch, and asks for a private repository the factory's App isn't installed on.
+   - **Patterns:** an expected pattern that matches an empty name is refused, and the doc gives the CI tier's exact one.
+   - **"Not seen" says what it is:**
+     - a runner that takes one job and goes, and a group opened for one job and restored (the audit log, on Enterprise Cloud, would see both);
+     - a rogue runner within the CI pattern and most-at-once;
+     - repository-level runners;
+     - a run that never happens.
+   - **Snapshot:** it's taken from an operator's machine, never a runner host.
+9. **A fresh code review of this batch**, all applied (its two majors were the architect's 1 and 2 above):
+   - **401 only:** a 403 is also GitHub's rate limit, so it no longer mints a new token.
+   - **The firewall fingerprint:** it replaces the rule count, because `nft flush set … blocked4` keeps the count but opens the LAN.
+   - **Stopping:** `TimeoutStopSec=360` covers a cleanup whose refused token is minted again.
+   - **The audit:**
+     - a runner carrying a GitHub-hosted-style label is drift, and the doc names the limit: a runner registered with `ubuntu-latest` just before a run can answer for the audit;
+     - labels must be strings;
+     - the expected state is embedded as ASCII-only JSON;
+     - `IncompleteRead` exits 2;
+     - a failed issue search still opens an issue;
+     - the audit step has its own timeout under the job's, so the alarm step runs after it.
+   - **The home-base warning:** it walks the resolved path.
+10. **The pilot project's pre-merge review of the vendored `setup.sh`** (at `b73589a`), all applied to `setup.sh`:
+    - **One setup at a time per host:** an `flock` on `/run/factory-runner/setup.lock`, in a directory only root can write.
+    - **The tier claim** prints git's own error, naming `safe.directory`, instead of "no origin remote".
+    - **`acl`** installs with step 1's packages where Tailscale runs, instead of an un-updated `apt-get install` after the units were written.
+    - **An idle runner** is stopped before its new version is unpacked, so no job starts on a half-unpacked runner.
+    - **`PLANNING_DB_HOST`** must be a real IPv4 address (no octet above 255).
+    - **`host.conf`:** any `TIER` or `TIER_OWNER` assignment in it is refused, even one equal to the command line's, as its seed and setup's message say.
+    - **The polkit rule** stays the incubator's: it denies `logind` to its production runner, whose sandbox is its unit's. The bundle's runner users already run user managers by design (rootless Docker), and their Tailscale deny is by user, so it holds there.
+11. **The pilot project's two further notes**, applied:
+    - **The CI slice's `TasksMax`:** it was a fixed 16384, exactly `CI_RUNNERS` × `CI_JOB_PIDS` at the defaults, leaving no room for the user manager, rootless dockerd and rootlesskit in the same slice. It's now `CI_RUNNERS` × `CI_JOB_PIDS` + 4096 (`SLICE_TASKS` in `--print-settings`); the other tiers stay at 16384.
+    - **Enablement step 10's Capacity:**
+      - every tier's ceilings are limits, not reservations, and can add up past the host;
+      - jobs don't swap, so memory pressure ends in OOM kills (exit 137);
+      - compare the tiers' ceilings with the host's memory and other tenants, and use `CI_RUNNERS=1` as the lever.
+    - **Step 10, the busy-runner refusal:** a safe way to see GitHub's 422 on removing a busy runner on a new tier (a sleep-only job dispatched on the label), and what happens if it ever didn't.
+   - **Tests:**
+     - a trip's steps in order;
+     - a 403 that mints nothing, and a token refused twice;
+     - a flushed chain and a flushed set, against unchanged counters and handles;
+     - setup's fingerprint;
+     - hosted-style labels and non-string labels;
+     - ASCII embedding;
+     - a failed search;
+     - a symlinked base.
+
+**Rationale:**
+- **The audit:** the runner-registration key is the most powerful credential the factory keeps on a host, and production's runner group is one PATCH away from it. An alarm off the host, with a read-only credential and an expected state that neither factory App can edit, is the least that makes misuse visible.
+- **Round 3:** each fix keeps a failure from looking like something else: a dead token like a quiet runner, a slow daemon like an isolation failure, a flushed chain like a loaded firewall.
+
+---
+
 ## 2026-10-14: Runner users can't reach Tailscale's local API
 
 **Origin:** The incubator's production move to a machine of its own (2026-10-14). The architecture review of its production runner asked whether Tailscale could get around a firewall that matches the user. A test on the production machine showed it could: a non-root user that isn't Tailscale's operator ran `tailscale nc` and got the runner host's SSH banner. Tailscale's local API socket (`/run/tailscale/tailscaled.sock`) is mode 0666, and its dial endpoint connects to any tailnet peer as `tailscaled`, which is root. The connection comes from root, so the runner users' `meta skuid` rules never see it.

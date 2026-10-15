@@ -470,7 +470,10 @@ needs an organization owner's `gh` login (`admin:org`) for the runner groups and
    never update themselves (`--disableupdate`): they stay at `setup.sh`'s `RUNNER_VERSION`, whose
    checksum it verifies. z-sdlc bumps it within 30 days of each actions/runner release, because GitHub
    stops sending jobs to older runners. After the migration that brings a bump, run each tier's setup
-   again from its checkout: it upgrades each idle runner in place.
+   again from its checkout: it upgrades each idle runner in place. Put `RUNNER_HOME_BASE` where root
+   owns every directory from it up to `/`, writable by no one else: whoever owns or can write a
+   directory above a runner's home can move the home aside and put another in its place. Setup warns
+   when that isn't so (a base under a person's own directory works, but trusts that person).
 9. **CODEOWNERS and the `main` ruleset** (D2 rule 6): code owners on `.github/`, `.claude/`,
    `CLAUDE.md` at any depth, `.mcp.json`, `[sdlc-root]/` and the test and build configuration,
    including every file the profile's tools load just because it exists (§ Stack Profiles, What
@@ -523,10 +526,22 @@ needs an organization owner's `gh` login (`admin:org`) for the runner groups and
            it either).
       4. It removes the container and the runner's registration. A slot that stops mid-job
          (setup, a reboot, a trip) cleans up first, and a registration it couldn't remove is
-         removed by its next cycle.
+         removed by its next cycle: the slot keeps it in `/var/lib/factory-runner/<unit>`, which
+         outlives a reboot.
+
+      While GitHub can't be read (an outage, a revoked key), every limit that needs its answer
+      waits: the lifetime cap and the disk floor are what bound a container then. A token GitHub
+      refuses is minted again at once.
 
       The job runs inside the container, runner and all, so whatever a pull request's code does
       there, to the runner's own processes included, ends with the container.
+
+      Recycling an idle runner relies on GitHub refusing to remove a busy one (it answers 422): a
+      job assigned between the last poll and the removal then keeps its runner. To see that on a
+      new tier without risking a real job, dispatch a job on the label that only sleeps (no
+      checkout, no secret), and while it runs, `gh api -X DELETE orgs/<org>/actions/runners/<id>`
+      its runner: expect 422, then let it finish. If GitHub ever removed it instead, that one job
+      would lose its runner and fail, and the launcher's handling would hold the rest.
     - **The threat model.** A pull request's run executes the pull request's own workflow, and
       the group can't be restricted to workflows (next point). So the policy is a merge gate,
       not an execution gate, and the boundary is what holds a hostile job:
@@ -566,6 +581,8 @@ needs an organization owner's `gh` login (`admin:org`) for the runner groups and
         Revoking it, or uninstalling the App, stops the CI tier and nothing else.
       - `bootstrap.py` reports a factory group whose visibility, public-repository or workflow
         restrictions drifted, each time it runs. The CI tier's check re-reads its own group's.
+        The runner audit (step 12) compares every group exactly, every hour, off the host: set
+        it up before the CI tier takes jobs.
     - **The job image** is built on the runner host, as the runner user, from a root-owned copy of
       the build context. The copy keeps links as links, and setup refuses a Dockerfile or context
       that resolves outside the checkout. The image is the project's toolchain (`factory.json`'s
@@ -588,9 +605,11 @@ needs an organization owner's `gh` login (`admin:org`) for the runner groups and
       change. A slot running a job keeps it, and every slot's next cycle uses the new image.
     - **The checks.** `ci_launcher.py check` runs before any slot starts (at boot too) and every
       6 hours. It checks:
-      - the firewall table, the slice's caps and the delegated controllers that make a container's
-        caps hold;
-      - free space;
+      - the firewall table (loaded, and as setup loaded it, by fingerprint: flushing a chain or a
+        set leaves the table there, changed), the slice's caps and the delegated controllers that
+        make a container's caps hold;
+      - free space (logged, not tripped: below the floor no cycle starts, and a running job is
+        killed);
       - the group's settings;
       - a probe on the host, as the runner user with no Docker: the host, the LAN gateway and
         IPv6 closed;
@@ -598,22 +617,74 @@ needs an organization owner's `gh` login (`admin:org`) for the runner groups and
         closed, the job's exact caps in force, and a listener on another network unreachable,
         so concurrent jobs can't reach each other.
 
-      A timer checks the firewall table every minute. A failure, or a check that doesn't finish,
-      writes a marker no slot starts past (a reboot included). It stops the slots, the timers and
-      the runner user's whole session, a job mid-run included. The tier stays stopped until
-      someone fixes the cause and runs setup again. The internet or GitHub out of reach is
-      liveness, not isolation, and is only logged.
+      At boot the check waits up to ten minutes for the runner user's Docker daemon. A timer
+      checks the firewall table every minute, and looks again a few seconds on before it trips,
+      since `nftables.service`'s own restart flushes the table for a moment. A failure, or a check
+      that doesn't finish, writes a marker no slot starts past. It stops the slots, the timers and
+      the runner user's whole session, a job mid-run included, and disables the slots, the gate,
+      the timers and the runner user's linger, so a reboot brings none of it back. The tier stays
+      stopped until someone fixes the cause and runs setup again, which enables them all. The
+      internet or GitHub out of reach is liveness, not isolation, and is only logged.
     - **Writing the job:** `runs-on: [self-hosted, factory-ci]` (the form bootstrap reads); no
       `container:` and no `services:`, since the job runs in its runner's container and a database
       starts in the job; no `docker://` step; explicit read-only permissions;
       `persist-credentials: false`; no secret and no job token. The policy holds every job on the
       label to all of that.
     - **Capacity.** The `CI_JOB_*` settings cap each job. The slice caps them together:
-      `CI_MEMORY_HIGH` must cover `CI_RUNNERS` × `CI_JOB_MEMORY` + 2G, and `CI_CPU_QUOTA` is what
-      leaves the host's own work, production included, its cores. No container's writable layer
+      `CI_MEMORY_HIGH` must cover `CI_RUNNERS` × `CI_JOB_MEMORY` + 2G, `CI_CPU_QUOTA` is what
+      leaves the host's own work its cores, and the slice's process cap is `CI_RUNNERS` ×
+      `CI_JOB_PIDS` + 4096 (the runner user's manager and daemon live there too). Every tier's
+      ceilings are limits, not reservations: together they can come to more than the host has.
+      Jobs don't swap (`--memory-swap` equals `--memory`), so memory pressure ends in OOM kills (exit
+      137 in a slot's journal). Compare the tiers' ceilings together with the host's memory and its
+      other tenants; `CI_RUNNERS=1` is the lever. No container's writable layer
       has a size cap, so put `RUNNER_HOME_BASE` on a filesystem of its own: a full disk then stops
       only the factory. Check the jobs' `timeout-minutes` against the first capped runs.
     - **Runner versions.** A just-in-time runner takes its settings from GitHub, so it may update
       itself when GitHub asks, inside its throwaway container. Bumping `RUNNER_VERSION` (and
       running setup) keeps that from costing every job a download.
 11. **Smoke.** Run `factory-smoke`; every job must pass before the first issue (D2 rule 5).
+12. **The runner audit,** required with a CI tier, from before its App's key goes on the runner host
+    (step 10), and worth having without one. That key can change any runner group. `runner_audit.py`
+    compares the organization's runner groups, every hour, with an expected state:
+    - the set of groups, and each group's visibility, public-repository setting, repositories,
+      workflow restriction and workflows;
+    - each group's runners, with their IDs and labels. The CI tier's group is a name pattern, a
+      most-at-once and labels, since its runners come and go;
+    - the factory's labels on any runner outside the groups that carry them.
+
+    Anything different, or a run that can't read all of it or runs out of time, fails the run and
+    opens or updates an issue (mentioning the logins in the repository's `RUNNER_AUDIT_NOTIFY`
+    variable). A failed scheduled run also emails whoever last changed the schedule: the one
+    channel no App can touch. It runs from one private repository per organization, on GitHub-hosted
+    runners only, with its own App: read access to the organization's self-hosted runners and
+    nothing else. The expected state and the audit itself are written into the workflow file, since
+    neither of the factory's Apps can change a workflow. Choose a repository the factory's App
+    isn't installed on if you can: a factory token can close or bury issues where it is. Not seen:
+    - anything done and undone between two runs: a runner registered into a group that takes one
+      job and goes, or a group opened to another repository or workflow for one job and restored.
+      The organization's audit log would see both (its REST API needs GitHub Enterprise Cloud);
+    - a runner in the CI tier's group that fits its pattern and most-at-once (its jobs hold
+      read-only tokens);
+    - repository-level runners;
+    - a run that never happens: silence isn't an all-clear, so look at the workflow's runs now and
+      then;
+    - the audit's own job, taken by a runner the key's holder registers with a GitHub-hosted label
+      (`ubuntu-latest`) just before a run and removes after it: that runner answers for the audit.
+      A runner left with such a label is drift, and so is a group opened to the audit's repository,
+      so keep that repository out of every group, the default one included. Each run's job record
+      names the runner that took it.
+
+    Setup:
+    1. `create_app.py <org> --auditor`, installed on the organization for the audit's repository.
+    2. In that repository, the variable `RUNNER_AUDIT_APP_CLIENT_ID`, the secret
+       `RUNNER_AUDIT_APP_KEY` and, optionally, `RUNNER_AUDIT_NOTIFY`; then delete the key file.
+    3. From your own machine (it reads with your `gh` login, an organization owner's; never on a
+       runner host): `runner_audit.py snapshot <org> > expected.json`, reviewed, so that every
+       group and runner in it is one the organization means to have. Turn the CI tier's group's
+       runners into `{"pattern": "^<prefix>-ci-[0-9]+-[0-9a-f]{6}$", "max": <CI_RUNNERS>,
+       "labels": ["factory-ci"]}`, with the host's runner name prefix.
+    4. `runner_audit.py workflow expected.json > .github/workflows/factory-runner-audit.yml` in the
+       audit's repository, committed; run it once by hand. After any intended change to the
+       groups or their runners (a new runner, a re-registration, a new project's workflows),
+       regenerate it the same way. The schedule is hourly; `--cron` tightens it.
