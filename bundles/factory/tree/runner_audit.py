@@ -61,6 +61,9 @@ LISTS = ("repositories", "selected_workflows")
 DEFAULT_LABELS = ("factory", "factory-plan", "factory-prod", "factory-ci")
 # A self-hosted runner carrying one of these could take a job meant for GitHub's own runners, the audit's included.
 HOSTED_STYLE = re.compile(r"(ubuntu|windows|macos)(-.*)?", re.I)
+# The labels every self-hosted runner has (GitHub gives them to a config.sh runner; a just-in-time one is registered
+# with self-hosted itself, which may then come back as a custom label): left out of the comparison by name.
+DEFAULT_LABELS_OF_RUNNERS = {"self-hosted", "linux", "windows", "macos", "x64", "x86", "arm", "arm64"}
 # Hourly: an hour's gap between a change and its alarm, for about 12 hosted minutes a day. Tighten it here (and
 # regenerate) if that gap is too long; the audit log closes it entirely.
 CRON = "17 * * * *"
@@ -164,7 +167,7 @@ def current(org, get):
                 raise Unreadable(f"group {g['name']}: a runner without an ID or a name")
             runners[r["name"]] = {"id": r["id"], "labels": sorted(
                 str(label.get("name")) for label in r.get("labels") or []
-                if isinstance(label, dict) and label.get("type") == "custom")}
+                if isinstance(label, dict) and str(label.get("name")).lower() not in DEFAULT_LABELS_OF_RUNNERS)}
         entry["runners"] = runners
         groups[g["name"]] = entry
     return groups

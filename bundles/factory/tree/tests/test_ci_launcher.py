@@ -296,7 +296,9 @@ class Launcher(unittest.TestCase):
                                          ("GET", "/orgs/acme/actions/runners/42")])
         self.assertEqual(FakeGitHub.calls[0][3], {"permissions": {"organization_self_hosted_runners": "write"}})
         jit_body = FakeGitHub.calls[1][3]
-        self.assertEqual((jit_body["runner_group_id"], jit_body["labels"]), (5, ["factory-ci"]))
+        # self-hosted too: a just-in-time runner gets only the labels it's registered with, and the tier's jobs ask
+        # for [self-hosted, factory-ci].
+        self.assertEqual((jit_body["runner_group_id"], jit_body["labels"]), (5, ["self-hosted", "factory-ci"]))
         self.assertRegex(jit_body["name"], r"^box-ci-1-[0-9a-f]{6}$")
         self.assertEqual(FakeGitHub.calls[1][2], "Bearer inst-token")
         run = [c for c in self.calls() if c["argv"][:1] == ["run"]][0]
@@ -323,6 +325,77 @@ class Launcher(unittest.TestCase):
         self.assertEqual(self.fails(), "0")
         self.assertFalse((self.state / "slot-1.runner").exists())
 
+    def test_the_log_options_are_ones_the_local_driver_takes(self):
+        # One log file, uncompressed: the local driver compresses rotated files by default, which takes at least two,
+        # and refuses max-file=1 with it (Docker 29: "compression cannot be enabled when max file count is 1"). Job
+        # containers and the check's own take the same flags.
+        flags = launcher.job_flags(self.conf)
+        self.assertEqual(flags[flags.index("--log-driver") + 1], "local")
+        opts = dict(flags[i + 1].split("=", 1) for i, flag in enumerate(flags) if flag == "--log-opt")
+        self.assertEqual(opts, {"max-size": "20m", "max-file": "1", "compress": "false"})
+
+    def test_setup_restarts_only_a_slot_whose_runner_is_idle(self):
+        def busy(slot=1):
+            return launcher.busy(self.conf, slot)
+        self.assertFalse(busy())  # no runner yet: between cycles
+        (self.state / "slot-1.runner").write_text("42")
+        FakeGitHub.view = [lambda: ONLINE]
+        self.assertFalse(busy())
+        FakeGitHub.view = [lambda: BUSY]
+        self.assertTrue(busy())
+        FakeGitHub.view = [lambda: 500]
+        self.assertTrue(busy())  # GitHub can't say: counted busy, never restarted
+        conf_file = pathlib.Path(self.tmp.name) / "launcher.json"
+        conf_file.write_text(json.dumps(self.conf))
+        FakeGitHub.view = [lambda: ONLINE]
+        self.assertEqual(launcher.main(["ci_launcher.py", "busy", str(conf_file), "1"]), 1)
+        FakeGitHub.view = [lambda: BUSY]
+        self.assertEqual(launcher.main(["ci_launcher.py", "busy", str(conf_file), "1"]), 0)
+
+    @unittest.skipUnless(os.environ.get("FACTORY_DOCKER_SMOKE") == "1" and shutil.which("docker"),
+                         "FACTORY_DOCKER_SMOKE=1 where a Docker daemon runs (a GitHub-hosted runner)")
+    def test_a_real_daemon_takes_the_job_flags(self):
+        # The fakes can't refuse a flag the way a daemon does: the log options that stopped every job on the first
+        # real run (2026-10-14) passed every test here.
+        conf = {**self.conf, "job": {"cpus": 1, "memory": "256m", "pids": 256, "shm": "64m", "hours": 1}}
+        r = subprocess.run(["docker", "run", "--rm", *launcher.job_flags(conf), "busybox:1.36", "true"],
+                           capture_output=True, text=True, timeout=300)
+        self.assertEqual(r.returncode, 0, r.stderr)
+
+    def test_the_job_images_inputs_are_fingerprinted(self):
+        def tree(root):
+            (root / "ctx" / "sub").mkdir(parents=True)
+            (root / "ctx" / "sub" / "a.txt").write_text("a")
+            (root / "ctx" / "b.sh").write_text("b")
+            (root / "ctx" / "b.sh").chmod(0o755)
+            (root / "ctx" / "link").symlink_to("b.sh")
+            (root / "Dockerfile").write_text("FROM x\n")
+            return root
+        one = tree(pathlib.Path(self.tmp.name) / "one")
+        two = tree(pathlib.Path(self.tmp.name) / "two")  # the same inputs, wherever setup copied them
+        fingerprint = launcher.build_inputs(str(one), "--build-arg=A=1", "2.338.0")
+        self.assertEqual(launcher.build_inputs(str(two), "--build-arg=A=1", "2.338.0"), fingerprint)
+        changes = [
+            lambda: (two / "ctx" / "sub" / "a.txt").write_text("A"),
+            lambda: (two / "ctx" / "b.sh").chmod(0o644),
+            lambda: ((two / "ctx" / "link").unlink(), (two / "ctx" / "link").symlink_to("sub")),
+            lambda: (two / "ctx" / "new").write_text(""),
+        ]
+        for change in changes:
+            with self.subTest(change=change):
+                two = tree(pathlib.Path(tempfile.mkdtemp(dir=self.tmp.name)))
+                change()
+                self.assertNotEqual(launcher.build_inputs(str(two), "--build-arg=A=1", "2.338.0"), fingerprint)
+        self.assertNotEqual(launcher.build_inputs(str(one), "--build-arg=A=2", "2.338.0"), fingerprint)
+        self.assertNotEqual(launcher.build_inputs(str(one), "--build-arg=A=1", "2.339.0"), fingerprint)
+
+    def test_self_hosted_is_registered_once(self):
+        self.assertEqual(launcher.jit_labels({**self.conf, "labels": ["factory-ci"]}), ["self-hosted", "factory-ci"])
+        self.assertEqual(launcher.jit_labels({**self.conf, "labels": ["factory-ci", "self-hosted"]}),
+                         ["self-hosted", "factory-ci"])
+        self.assertEqual(launcher.jit_labels({**self.conf, "labels": ["Self-Hosted", "factory-ci"]}),
+                         ["self-hosted", "factory-ci"])  # GitHub's labels ignore case
+
     def test_one_wait_per_cycle_and_no_docker_left_behind(self):
         self.control("wait_sleep", 0.6)  # a dozen ticks
         self.assertEqual(launcher.run(self.conf, 1), 0)
@@ -341,7 +414,9 @@ class Launcher(unittest.TestCase):
         FakeGitHub.deleted = set()
         with mock.patch.object(launcher.time, "sleep") as sleep:
             self.assertEqual(launcher.run(self.conf, 2), 1)
-        sleep.assert_called_once_with(20)
+        # The backoff is the cycle's first sleep. (The patch is the time module's, so subprocess's own wait loop can add
+        # short sleeps after it: count only the first.)
+        self.assertEqual(sleep.call_args_list[0], mock.call(20))
         self.assertEqual(self.argvs("rm")[-1], ["rm", "-f", "-v", "factory-ci-2"])
         self.assertIn(42, FakeGitHub.deleted)
         self.assertEqual(self.fails(2), "2")

@@ -58,6 +58,7 @@ PY
 }
 json_str() { python3 -I -c 'import json,sys; print(json.dumps(sys.argv[1]))' "$1"; }
 labels=$(python3 -I -c 'import json,sys; print(json.dumps([l.strip() for l in sys.argv[1].split(",") if l.strip()]))' "$RUNNER_LABELS")
+[[ $labels != "[]" ]] || die "no runner label for the CI tier (factory.json's runners.ci): its runners would take any self-hosted job"
 rm -f "$NEW_CONF"
 # The tier's table as loaded, for the checks: flushing a chain or a set leaves the table there, changed.
 fw_print=$(python3 -I "$SCRIPT_DIR/ci_launcher.py" fingerprint "$NFT_TABLE") \
@@ -115,19 +116,38 @@ cp -RP "$context" "$build/toolchain"
 cp -P "$dockerfile" "$build/toolchain.Dockerfile"
 install -d -m 755 "$build/runner" && cp "$SCRIPT_DIR/ci-runner.Dockerfile" "$build/runner/Dockerfile"
 chown -R -h root:root "$build" && chmod -R a+rX "$build"
-as_runner "docker build -q -f '$build/toolchain.Dockerfile' $build_args -t $RUNNER_UNIT-toolchain:latest '$build/toolchain' > /dev/null" \
-  || { rm -rf "$build"; die "the toolchain image didn't build"; }
-# Labelled factory.keep: the weekly prune never takes the job image, which nothing uses between jobs.
-as_runner "docker build -q --label factory.keep=1 --build-arg BASE=$RUNNER_UNIT-toolchain:latest \
-  --build-arg RUNNER_VERSION=$RUNNER_VERSION --build-arg RUNNER_SHA256=$RUNNER_SHA256 -t $RUNNER_UNIT-runner:latest \
-  '$build/runner' > /dev/null" \
-  || { rm -rf "$build"; die "the runner image didn't build"; }
-rm -rf "$build"
-image=$(as_runner "docker image inspect -f '{{.Id}}' $RUNNER_UNIT-runner:latest") || die "no runner image"
-[[ $image =~ ^sha256:[0-9a-f]{64}$ ]] || die "no runner image"
-# Earlier job images, unless a running job still uses one (the runner user lists and removes them; root reads none).
-as_runner "docker image ls -q --no-trunc --filter label=factory.keep | grep -vx '$image' | xargs -r docker image rm > /dev/null 2>&1" || true
-write_conf "image=$(json_str "$image")"
+# The job image is kept while its inputs are unchanged (the context and Dockerfiles as copied, the build arguments, the
+# runner's version) and it's still there: rebuilding the same inputs still makes a new image, whose package steps
+# resolve again, and churns the prune. CI_REBUILD=1 on setup's command line rebuilds anyway, for the base image's and
+# packages' updates: sudo CI_REBUILD=1 TIER=ci bash .github/factory/host/setup.sh
+inputs=$(python3 -I "$SCRIPT_DIR/ci_launcher.py" inputs "$build" "$build_args" "$RUNNER_VERSION" "$RUNNER_SHA256") \
+  || { rm -rf "$build"; die "can't fingerprint the job image's inputs"; }
+read -r old_inputs old_image < <(python3 -I -c 'import json,sys
+try:
+    conf = json.load(open(sys.argv[1]))
+except (OSError, ValueError):
+    conf = {}
+print(conf.get("image_inputs") or "-", conf.get("image") or "-")' "$CONF")
+if [[ ${CI_REBUILD:-} != 1 && $inputs == "$old_inputs" && $old_image =~ ^sha256:[0-9a-f]{64}$ ]] \
+    && as_runner "docker image inspect '$old_image' > /dev/null 2>&1"; then
+  rm -rf "$build"
+  image=$old_image
+  echo "job image kept (its inputs are unchanged; CI_REBUILD=1 rebuilds it)"
+else
+  as_runner "docker build -q -f '$build/toolchain.Dockerfile' $build_args -t $RUNNER_UNIT-toolchain:latest '$build/toolchain' > /dev/null" \
+    || { rm -rf "$build"; die "the toolchain image didn't build"; }
+  # Labelled factory.keep: the weekly prune never takes the job image, which nothing uses between jobs.
+  as_runner "docker build -q --label factory.keep=1 --build-arg BASE=$RUNNER_UNIT-toolchain:latest \
+    --build-arg RUNNER_VERSION=$RUNNER_VERSION --build-arg RUNNER_SHA256=$RUNNER_SHA256 -t $RUNNER_UNIT-runner:latest \
+    '$build/runner' > /dev/null" \
+    || { rm -rf "$build"; die "the runner image didn't build"; }
+  rm -rf "$build"
+  image=$(as_runner "docker image inspect -f '{{.Id}}' $RUNNER_UNIT-runner:latest") || die "no runner image"
+  [[ $image =~ ^sha256:[0-9a-f]{64}$ ]] || die "no runner image"
+  # Earlier job images, unless a running job still uses one (the runner user lists and removes them; root reads none).
+  as_runner "docker image ls -q --no-trunc --filter label=factory.keep | grep -vx '$image' | xargs -r docker image rm > /dev/null 2>&1" || true
+fi
+write_conf "image=$(json_str "$image")" "image_inputs=$(json_str "$inputs")"
 mv -f "$NEW_CONF" "$CONF"
 echo "job image: $image"
 
@@ -240,8 +260,13 @@ systemctl daemon-reload
 rm -f "$TRIPPED"
 $launcher check "$CONF" || die "the CI tier's isolation check failed (above): no slot starts"
 systemctl enable --now "$RUNNER_UNIT-gate.service" "$RUNNER_UNIT-check.timer" "$RUNNER_UNIT-fw.timer" > /dev/null
-# Started, never restarted: a slot running a job keeps it, and every slot's next cycle reads the new settings.
+# A slot running a job keeps it, and takes this run's launcher and settings at its next cycle. A slot whose runner
+# isn't running one is restarted, so it takes them now: an idle runner's next cycle can be CI_IDLE_HOURS away (and a
+# runner registered with an old label set would wait for it). A runner GitHub can't answer for counts as busy.
 for i in $(seq "$RUNNER_COUNT"); do
+  if systemctl is-active --quiet "$RUNNER_UNIT-slot@$i.service" && ! $launcher busy "$CONF" "$i"; then
+    systemctl restart "$RUNNER_UNIT-slot@$i.service"
+  fi
   systemctl enable --now "$RUNNER_UNIT-slot@$i.service" > /dev/null
 done
 # Slots beyond RUNNER_COUNT, enabled or running, are stopped (each removes its container and registration).

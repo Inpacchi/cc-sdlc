@@ -122,7 +122,9 @@ if [[ -n $DB_HOST ]] && { [[ ! $DB_HOST =~ ^([0-9]{1,3}\.){3}[0-9]{1,3}$ ]] || [
     || ! python3 -I -c 'import ipaddress,sys; ipaddress.IPv4Address(sys.argv[1])' "$DB_HOST" 2>/dev/null; }; then
   printf 'ERROR: PLANNING_DB_HOST must be one IPv4 address, with PLANNING_DB_PORT set\n' >&2; exit 1
 fi
-[[ -n $RUNNER_LABELS && $RUNNER_LABELS != None ]] \
+# At least one label beyond commas and spaces: a runner registered with none of the factory's could take any job that
+# asks only for self-hosted, from every repository its group lets in.
+[[ -n $RUNNER_LABELS && $RUNNER_LABELS != None && $RUNNER_LABELS =~ [^,[:space:]] ]] \
   || { printf 'ERROR: factory.json names no runner label for the %s tier (runners.%s)\n' "$TIER" "$TIER" >&2; exit 1; }
 RUNNER_HOME=$RUNNER_HOME_BASE/$RUNNER_USER
 RUNNER_COUNT=${RUNNER_COUNT:-$DEFAULT_COUNT}

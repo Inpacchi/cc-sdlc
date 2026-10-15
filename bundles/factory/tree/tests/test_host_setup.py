@@ -112,6 +112,18 @@ class HostSettings(unittest.TestCase):
         self.assertEqual(r.returncode, 1)
         self.assertIn("factory.json names no runner label for the ci tier (runners.ci)", r.stderr)
 
+    def test_a_tier_needs_a_label_of_its_own(self):
+        # A runner with none of the factory's labels would take any job asking only for self-hosted.
+        for label in (",", " , ", ""):
+            with self.subTest(label=label), tempfile.TemporaryDirectory() as tmp:
+                conf, cfg = pathlib.Path(tmp) / "host.conf", pathlib.Path(tmp) / "factory.json"
+                conf.write_text("FACTORY_ORG=acme\n")
+                cfg.write_text(json.dumps({"runners": {"strict": label, "planning": "p"}}))
+                r = subprocess.run(["bash", str(SCRIPT), "--print-settings"], capture_output=True, text=True,
+                                   env={**os.environ, "HOST_CONF": str(conf), "FACTORY_JSON": str(cfg), "TIER": "strict"})
+                self.assertEqual(r.returncode, 1)
+                self.assertIn("names no runner label for the strict tier", r.stderr)
+
     def test_host_conf_overrides(self):
         s = self.settings("FACTORY_ORG=acme\nRUNNER_HOME_BASE=/srv/f\nLAN_DNS=10.1.1.1\n"
                           "STRICT_RUNNERS=1\nSTRICT_MEMORY_HIGH=2G\nPROBE_PORTS=\"22 5432\"\n")
@@ -336,10 +348,15 @@ class SetupParts(unittest.TestCase):
         slot = units["slot@.service"]
         self.assertIn("Requires=$FW_UNIT.service user@$RUID.service $RUNNER_UNIT-gate.service", slot)
         self.assertIn("ExecStopPost=$launcher stop $CONF %i", slot)
+        # A setup run restarts a slot whose runner isn't running a job, so it takes the new launcher now.
+        self.assertIn('systemctl is-active --quiet "$RUNNER_UNIT-slot@$i.service" && ! $launcher busy "$CONF" "$i"', text)
         self.assertIn("KillMode=mixed", slot)
         # Longer than the launcher's worst cleanup: docker rm, a token (openssl, the API) and the registration's
         # removal, the token and the removal twice over for a refused token minted again.
         self.assertGreater(int(re.search(r"TimeoutStopSec=(\d+)", slot).group(1)), 120 + 2 * (30 + 30 + 30))
+        # The job image is kept while its inputs are, unless CI_REBUILD=1.
+        self.assertIn('if [[ ${CI_REBUILD:-} != 1 && $inputs == "$old_inputs"', text)
+        self.assertIn('"image_inputs=$(json_str "$inputs")"', text)
         # The slots' state outlives a reboot.
         self.assertRegex(text, r"(?m)^STATE=/var/lib/factory-runner/\$RUNNER_UNIT$")
 

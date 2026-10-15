@@ -37,6 +37,38 @@ Each entry contains:
 
 ---
 
+## 2026-10-14: CI tier runners take their jobs (a label hotfix)
+
+**Origin:** The pilot project's second first-run attempt on its runner host, with the log-driver hotfix (the entry below). Setup passed, the check was ok, and both JIT runners came online in the CI group, but neither took a queued job.
+
+**What happened:**
+- The runners' labels were only `factory-ci`.
+- A `config.sh` registration gets `self-hosted`, plus the OS and architecture, by itself. `generate-jitconfig` gives a runner only the labels it's passed.
+- Every job on the tier asks for `[self-hosted, factory-ci]`, and the workflow policy requires exactly that.
+- The pilot project confirmed with the tier's App that GitHub accepts `self-hosted` in a JIT label list.
+
+**Changes made:**
+1. **`bundles/factory/tree/host/ci_launcher.py`** — `jit_labels()` registers each runner with `self-hosted` first, then the tier's labels (without a second `self-hosted`).
+2. **`bundles/factory/tree/tests/test_ci_launcher.py`** — the JIT request's labels are `["self-hosted", "factory-ci"]`, and `self-hosted` appears once however the settings list it.
+
+**Rationale:** The launcher's tests fake GitHub, so a label set GitHub routes differently can only show on a real tier. The label list is now pinned to what the jobs ask for.
+
+---
+
+## 2026-10-14: CI tier job containers start (a log-driver hotfix)
+
+**Origin:** The pilot project's first `TIER=ci` setup on its runner host at `b73589a` (2026-10-14). Steps 1–7 passed, but step 8's check tripped: "the check's listener container didn't start".
+
+**What happened:** On Docker 29.4.0's rootless daemon, `docker run` failed with "failed to initialize logging driver: compression cannot be enabled when max file count is 1". `job_flags()` passes `--log-driver local --log-opt max-size=20m --log-opt max-file=1`, and the `local` driver compresses rotated files by default, which takes at least two. Every job container, and every check container, took those flags. The tests' fake docker can't see a daemon's refusal.
+
+**Changes made:**
+1. **`bundles/factory/tree/host/ci_launcher.py`** — `job_flags()` adds `--log-opt compress=false`: one log file, uncompressed.
+2. **`bundles/factory/tree/tests/test_ci_launcher.py`** — the job's log options are exactly `max-size=20m`, `max-file=1` and `compress=false`, on the `local` driver.
+
+**Rationale:** A cap on a job's logs that the daemon refuses stops every job. The test pins the one combination the local driver accepts.
+
+---
+
 ## 2026-10-14: The CI tier, review round 3; the runner audit
 
 **Origin:** The pilot project's review of the CI tier's round 2 (`8575c31`; 2026-10-14) passed with minor findings, and CD left the calls on them to that project, which asked for all of them before the minor release. The same review found that the runner-registration App's key, now on a runner host that no longer runs production, is the main bridge to production's runner group, and asked for an alarm off that host. Scope from the pilot project (CD's delegate): lean, state-only, hourly.
@@ -152,6 +184,34 @@ Each entry contains:
     - **`PLANNING_DB_HOST`** must be a real IPv4 address (no octet above 255).
     - **`host.conf`:** any `TIER` or `TIER_OWNER` assignment in it is refused, even one equal to the command line's, as its seed and setup's message say.
     - **The polkit rule** stays the incubator's: it denies `logind` to its production runner, whose sandbox is its unit's. The bundle's runner users already run user managers by design (rootless Docker), and their Tailscale deny is by user, so it holds there.
+12. **After the CI tier's first real run** (the pilot project on its runner host, 2026-10-14), beyond its two hotfixes (the log driver, `self-hosted`; their own entries):
+    - **Idle slots restart:** a setup run restarts each slot whose runner isn't running a job (`ci_launcher.py busy`; a runner GitHub can't answer for counts as busy). It used to leave a running slot alone, so an idle runner kept the old launcher, and an old label set, until its `CI_IDLE_HOURS` recycle.
+    - **The audit:** it leaves out the labels every self-hosted runner has (`self-hosted`, the OS and architecture) by name, whatever type GitHub reports, so a just-in-time runner's own `self-hosted` is neither drift nor a hosted-style label.
+    - **A real-Docker test:** `test_a_real_daemon_takes_the_job_flags` runs the job flags on a real Docker daemon when `FACTORY_DOCKER_SMOKE=1` (Enablement step 10's CI says to set it on a GitHub-hosted runner). The fakes passed the log options that stopped every job.
+    - **Docs:** step 10 says a JIT runner gets only the labels it's given.
+    - **The pilot project's review of the label hotfix** (two lows):
+      - `self-hosted` is matched regardless of case;
+      - a runner label setting of only commas or spaces (`","`) is refused for every tier, as an empty one was (`setup.sh`), and an empty CI label list in `setup-ci.sh`. Otherwise a runner would register with none of the factory's labels and could take any job asking only for `self-hosted`.
+    - **A flaky test:** `test_a_runner_that_never_ran_its_job_backs_off` asserted exactly one `time.sleep`, under a patch of the whole time module that `subprocess`'s own wait loop also calls. It now checks that the first sleep is the backoff.
+14. **What the first real e2e runs needed** (the pilot project's experiment, 2026-10-15). No code: per-slot CPU pins were prepared and dropped.
+    - **The cause:** the tier's e2e jobs timed out at 8 CPUs where they passed uncapped on the same host. The cause was CPU itself: Chromium's software WebGL (SwiftShader) wants about 7 CPUs a browser.
+    - **The experiment**, in a replica of the job container:
+      - `--cpus 8`: throttled in 75–80% of periods, failed;
+      - pinned to 8 CPUs with no quota: no throttling, but only about 4 CPUs used, failed;
+      - `--cpus 16`: failed;
+      - `--cpus 24`, with Chromium on a 4 GB `/dev/shm` and fonts added: 32/32 in 10.0 minutes, matching the uncapped runner.
+    - **Two container differences mattered too:**
+      - Playwright's default `--disable-dev-shm-usage` puts Chromium's shared memory in the container's `/tmp`, which made each round of a test take 4–5 s instead of 0.4 s. A 1 GB `/dev/shm` crashed; 4 GB peaked near 900 MB.
+      - The bare image's fallback font broke two hover tests.
+    - **The pilot project's fix is its own settings:** `CI_RUNNERS=1`, `CI_JOB_CPUS=24`, `CI_CPU_QUOTA=2400%`, `CI_JOB_SHM=4g`, `CI_MEMORY_HIGH=10G`, `CI_MEMORY_MAX=12G`, plus its Playwright config and fonts in its image.
+    - **`process/factory.md`, Enablement step 10's Capacity:**
+      - browser suites need far more CPU than their test count suggests, so size `CI_JOB_CPUS` from a measured run and expect one at a time;
+      - a quota a CPU-bound job outgrows can't be offset by pinning: measure;
+      - give Chromium a real `/dev/shm` and turn off `--disable-dev-shm-usage`;
+      - put the fonts in the image.
+13. **The first run's report** (the tier live on its runner host: runners registered with `self-hosted,factory-ci`, busy within 40 s, job caps read live from the containers):
+    - **The job image:** every setup run built a new one (a new image ID each time, since package steps resolve again), churning the prune. Setup now fingerprints the image's inputs (`ci_launcher.py inputs`: the copied context and Dockerfiles, by path, mode and contents or link target, plus the build arguments and the runner's version). It keeps the image while they're unchanged and it's still there. `CI_REBUILD=1` on setup's command line rebuilds anyway, for upstream updates.
+    - **Enablement step 10:** cancel runs still queued for the label a moved job used before (they'd wait a day), and the image reuse.
 11. **The pilot project's two further notes**, applied:
     - **The CI slice's `TasksMax`:** it was a fixed 16384, exactly `CI_RUNNERS` × `CI_JOB_PIDS` at the defaults, leaving no room for the user manager, rootless dockerd and rootlesskit in the same slice. It's now `CI_RUNNERS` × `CI_JOB_PIDS` + 4096 (`SLICE_TASKS` in `--print-settings`); the other tiers stay at 16384.
     - **Enablement step 10's Capacity:**

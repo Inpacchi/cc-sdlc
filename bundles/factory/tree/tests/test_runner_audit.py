@@ -89,6 +89,10 @@ class Audit(unittest.TestCase):
 
     def test_as_expected(self):
         self.assertEqual(self.audit(), (0, ["ok: 4 runner groups and 4 runners, as expected"]))
+        # A just-in-time runner is registered with self-hosted itself, which may come back as a custom label: like the
+        # other labels every self-hosted runner has, it's left out of the comparison, and never taken for a hosted one.
+        self.org.runners[7][0]["labels"].append({"id": 40, "name": "self-hosted", "type": "custom"})
+        self.assertEqual(self.audit()[0], 0)
         # Repositories are read only for a group open to selected ones; every list is read whole.
         self.assertNotIn("/orgs/acme/actions/runner-groups/1/repositories?per_page=100&page=1", self.org.paths)
 

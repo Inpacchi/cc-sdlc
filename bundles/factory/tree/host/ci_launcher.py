@@ -7,6 +7,9 @@ Usage: python3 -I ci_launcher.py run <launcher.json> <slot>     one cycle; the s
        python3 -I ci_launcher.py fwcheck <launcher.json>        the firewall table alone (every minute)
        python3 -I ci_launcher.py trip <launcher.json>           the kill switch, for a check that failed or hung
        python3 -I ci_launcher.py fingerprint <table>            the firewall table's fingerprint (setup records it)
+       python3 -I ci_launcher.py inputs <dir> [<arg>...]           the job image's build inputs' fingerprint
+       python3 -I ci_launcher.py busy <launcher.json> <slot>    exit 0 when the slot's runner is running a job (or GitHub
+                                                                can't say), 1 when setup may restart the slot
 
 A cycle mints a just-in-time (JIT) runner config with the runner-registration App. The App's one permission, the
 organization's self-hosted runners, reaches every runner group in the organization, so its key (root-only, read by
@@ -243,9 +246,15 @@ class Tokens:
         return status, data
 
 
+def jit_labels(conf):
+    """The runner's labels. A just-in-time runner gets only the labels it's registered with, never the self-hosted
+    one config.sh adds, and every job on the tier asks for [self-hosted, <label>]: so self-hosted comes first."""
+    return ["self-hosted"] + [label for label in conf["labels"] if label.lower() != "self-hosted"]  # labels ignore case
+
+
 def jitconfig(conf, tokens, name):
     status, data = tokens.call("POST", f"/orgs/{conf['org']}/actions/runners/generate-jitconfig",
-                               {"name": name, "runner_group_id": conf["group_id"], "labels": conf["labels"],
+                               {"name": name, "runner_group_id": conf["group_id"], "labels": jit_labels(conf),
                                 "work_folder": "_work"})
     if status != 201 or not isinstance(data, dict) or not data.get("encoded_jit_config"):
         raise Failed(f"JIT config: HTTP {status} {printable((data or {}).get('message', ''))}")
@@ -316,7 +325,10 @@ def job_flags(conf):
     job = conf["job"]
     flags = ["--cpus", str(job["cpus"]), "--memory", job["memory"], "--memory-swap", job["memory"],
              "--pids-limit", str(job["pids"]), "--shm-size", job["shm"], "--security-opt", "no-new-privileges",
-             "--log-driver", "local", "--log-opt", f"max-size={LOG_MAX}", "--log-opt", "max-file=1"]
+             "--log-driver", "local", "--log-opt", f"max-size={LOG_MAX}", "--log-opt", "max-file=1",
+             # The local driver compresses rotated files by default, which takes at least two of them: with one, Docker
+             # refuses to start the container ("compression cannot be enabled when max file count is 1").
+             "--log-opt", "compress=false"]
     for cap in DROPPED_CAPS:
         flags += ["--cap-drop", cap]
     return flags
@@ -513,6 +525,22 @@ def cleanup(conf, slot, name, runner_file, runner_id, tokens, removed):
         print(f"slot {slot}: {e}", file=sys.stderr)
 
 
+def busy(conf, slot):
+    """Whether the slot's runner is running a job, for setup: it restarts a slot that isn't, so the slot takes setup's
+    launcher and settings now, not at its next cycle (an idle runner's can be CI_IDLE_HOURS away). Unknown is busy."""
+    try:
+        runner_id = int((state_dir(conf) / f"slot-{slot}.runner").read_text())
+    except FileNotFoundError:
+        return False  # between cycles, or never started
+    except ValueError:
+        return False
+    try:
+        runner = runner_state(conf, runner_id, Tokens(conf))
+    except (Failed, OSError, KeyError, ValueError):
+        return True
+    return bool(runner and runner["busy"])
+
+
 def stop(conf, slot):
     """After a slot stops (its unit's ExecStopPost): its container and any registration its cycle left."""
     state = state_dir(conf)
@@ -574,6 +602,29 @@ def fingerprint(listing):
         return node
     items = [clean(item) for item in json.loads(listing)["nftables"] if "metainfo" not in item]
     return hashlib.sha256(json.dumps(items, sort_keys=True).encode()).hexdigest()
+
+
+def build_inputs(root, *args):
+    """The fingerprint of an image's build inputs: setup's copy of the context and Dockerfiles (each entry's path, mode,
+    and contents or link target, wherever the copy is) and the build's arguments. Setup keeps the job image while this
+    is unchanged: a rebuild of the same inputs still makes a new image (package steps resolve again)."""
+    h = hashlib.sha256()
+    for arg in args:
+        h.update(arg.encode() + b"\0")
+    for dirpath, dirnames, filenames in os.walk(root):  # links to directories are listed, never followed
+        dirnames.sort()
+        for name in sorted(dirnames + filenames):
+            path = os.path.join(dirpath, name)
+            st = os.lstat(path)
+            h.update(f"{os.path.relpath(path, root)}\0{st.st_mode:o}\0".encode())
+            if stat.S_ISLNK(st.st_mode):
+                h.update(os.readlink(path).encode())
+            elif stat.S_ISREG(st.st_mode):
+                with open(path, "rb") as f:
+                    for chunk in iter(lambda: f.read(1 << 20), b""):
+                        h.update(chunk)
+            h.update(b"\0")
+    return h.hexdigest()
 
 
 def firewall_problem(conf):
@@ -760,10 +811,13 @@ def trip(conf, problems, keep=False):
 
 
 def main(argv):
-    commands = ("run", "stop", "resolve", "check", "fwcheck", "trip", "fingerprint")
-    if len(argv) < 3 or argv[1] not in commands or (argv[1] in ("run", "stop") and len(argv) < 4):
+    commands = ("run", "stop", "resolve", "check", "fwcheck", "trip", "fingerprint", "busy", "inputs")
+    if len(argv) < 3 or argv[1] not in commands or (argv[1] in ("run", "stop", "busy") and len(argv) < 4):
         print(__doc__.split("\n\n")[1], file=sys.stderr)
         return 2
+    if argv[1] == "inputs":
+        print(build_inputs(argv[2], *argv[3:]))
+        return 0
     if argv[1] == "fingerprint":
         r = subprocess.run(["nft", "-j", "list", "table", "inet", argv[2]], capture_output=True, text=True, timeout=30)
         if r.returncode:
@@ -779,6 +833,8 @@ def main(argv):
             return run(conf, int(argv[3]))
         if argv[1] == "stop":
             return stop(conf, int(argv[3]))
+        if argv[1] == "busy":
+            return 0 if busy(conf, int(argv[3])) else 1
         if argv[1] == "resolve":
             print(json.dumps(resolve(conf)))
             return 0

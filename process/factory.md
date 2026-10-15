@@ -484,7 +484,9 @@ needs an organization owner's `gh` login (`admin:org`) for the runner groups and
    profile's list, its source paths).
 10. **CI**, required on `main`: `python .github/factory/render.py --check`, then
     `python .github/factory/workflow_policy.py .github/workflows`, then
-    `python -m unittest discover -s .github/factory/tests` (with PyYAML). The policy reads every
+    `python -m unittest discover -s .github/factory/tests` (with PyYAML; with a CI tier, on a
+    GitHub-hosted runner, and `FACTORY_DOCKER_SMOKE=1`, so the tier's job flags are tried on a real
+    Docker daemon, which the tests' fakes can't stand in for). The policy reads every
     workflow, the project's own included, and scans the local composite actions they use: run it
     before making it required. A CI job on the organization's own GitHub-hosted (larger) runners
     needs its label in `factory.json`'s `policy.hosted_labels`. A job that must stay on a
@@ -511,7 +513,9 @@ needs an organization owner's `gh` login (`admin:org`) for the runner groups and
     CD's decision (2026-10-13).
     - **How it works.** Each of `CI_RUNNERS` systemd slots runs `host/ci_launcher.py`, one job per
       cycle:
-      1. It mints a just-in-time runner registration with the runner-registration App.
+      1. It mints a just-in-time runner registration with the runner-registration App, labelled
+         `self-hosted` and the tier's label: a just-in-time runner gets only the labels it's given,
+         never the ones `config.sh` adds.
       2. It starts a fresh container from the tier's job image, as the runner user. The container
          has that job's CPU, memory, process and log caps, `NET_RAW` and `MKNOD` dropped, and a
          network of its own.
@@ -599,10 +603,17 @@ needs an organization owner's `gh` login (`admin:org`) for the runner groups and
       4. `bootstrap.py --apply`, which creates the group once a workflow uses the label.
       5. From the owning checkout, the first time:
          `sudo TIER=ci TIER_OWNER=<owner>/<repository> bash .github/factory/host/setup.sh` (step 8).
+      6. A job moved onto the tier from another runner leaves its earlier runs queued for the old
+         label, for up to a day: cancel them.
 
       Setup checks the settings and the key before it changes anything on the host, and the App's
       installation and the group before it builds anything. Run it again after a toolchain
-      change. A slot running a job keeps it, and every slot's next cycle uses the new image.
+      change or a launcher update. A slot whose runner isn't running a job restarts at once; one
+      that is keeps its job, and takes the new image and launcher at its next cycle. Setup keeps
+      the job image while its inputs are unchanged (the toolchain's Dockerfile and context, the
+      build arguments, the runner's version): a rebuild of the same inputs still makes a new
+      image. `sudo CI_REBUILD=1 TIER=ci bash .github/factory/host/setup.sh` rebuilds it anyway,
+      for the base image's and packages' updates.
     - **The checks.** `ci_launcher.py check` runs before any slot starts (at boot too) and every
       6 hours. It checks:
       - the firewall table (loaded, and as setup loaded it, by fingerprint: flushing a chain or a
@@ -637,7 +648,21 @@ needs an organization owner's `gh` login (`admin:org`) for the runner groups and
       ceilings are limits, not reservations: together they can come to more than the host has.
       Jobs don't swap (`--memory-swap` equals `--memory`), so memory pressure ends in OOM kills (exit
       137 in a slot's journal). Compare the tiers' ceilings together with the host's memory and its
-      other tenants; `CI_RUNNERS=1` is the lever. No container's writable layer
+      other tenants; `CI_RUNNERS=1` is the lever.
+    - **Browser suites need more than their test count suggests.** Chromium in a container renders
+      WebGL in software (SwiftShader), at about 7 CPUs a browser before it stops being latency-bound.
+      The pilot project's 32 two-browser tests, which pass in 10 minutes uncapped, timed out at 8 and
+      16 CPUs and passed at 24 (2026-10-15). Size `CI_JOB_CPUS` from a measured run, and expect one
+      such job at a time (`CI_RUNNERS=1`).
+      - **CPU:** a CPU quota a CPU-bound job outgrows stalls it, and pinning it to as many CPUs
+        removes the stalls but not the shortage (the same run, pinned to 8, used 4), so measure
+        rather than pin.
+      - **Shared memory:** give Chromium a real `/dev/shm` (`CI_JOB_SHM`, 4g for that suite) and turn
+        off Playwright's default `--disable-dev-shm-usage` (`ignoreDefaultArgs`). Otherwise
+        Chromium's shared memory lands in the container's `/tmp`, inside its memory cap, and every
+        round of a test slows tenfold.
+      - **Fonts:** put the project's fonts in its toolchain image: a bare image's fallback font
+        changes layouts that tests hover over. No container's writable layer
       has a size cap, so put `RUNNER_HOME_BASE` on a filesystem of its own: a full disk then stops
       only the factory. Check the jobs' `timeout-minutes` against the first capped runs.
     - **Runner versions.** A just-in-time runner takes its settings from GitHub, so it may update
