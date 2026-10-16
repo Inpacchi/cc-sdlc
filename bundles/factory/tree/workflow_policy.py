@@ -53,7 +53,9 @@ Allowlists, not blocklists:
   planning runners, and their agent jobs must; only jobs there may use the planning
   environment, which holds the read-only database password. The one exception is the planning
   stages' sandbox probe (PLANNING_PROBES: factory-smoke.yml's planning-sandbox job, D2 rule 5),
-  which runs in their tier and job setup, service credential slots included.
+  which runs in their tier and job setup, service credential slots included. Only that job may
+  judge its probe by the planning tier's open internet (sandbox_check.py's `open`): every other
+  sandbox probe is held to the allowlist.
 - Production tier (design rule D4): only factory-gate.yml's `execute` job runs on the production
   runner. It runs on the host with no container (it only talks to the root broker's socket), so the
   container rule doesn't apply; instead it has the production environment (CD's approval), exactly
@@ -283,6 +285,17 @@ def tier_failures(workflow_name, name, job, is_agent_job):
     if environment == PLANNING_ENVIRONMENT and not on_planning:
         failures.append(f"{name}: the {PLANNING_ENVIRONMENT} environment is for planning-tier jobs only")
     return failures
+
+
+OPEN_VERDICT = re.compile(r'sandbox_check\.py"?\s+agent\b[^\n|]*\sopen\b')
+
+
+def probe_network_failures(workflow_name, name, job):
+    """Only the planning stages' probe is judged by the planning tier's open internet (D3 rule 5)."""
+    if (workflow_name, name) in PLANNING_PROBES:
+        return []
+    return [f"{name}: only the planning stages' sandbox probe may be judged by the open internet (`open`)"
+            for step in job.get("steps") or [] if OPEN_VERDICT.search(str(step.get("run", "")))]
 
 
 def hosted(runs_on):
@@ -791,6 +804,7 @@ def job_failures(name, job, workflow_env, model_input, factory_dir, workflow_nam
         if DIRECT_CLAUDE.search(str(step.get("run", ""))):
             failures.append(f"{name} / {step.get('name', 'run')}: runs Claude Code outside the action")
     failures += tier_failures(workflow_name, name, job, is_agent_job)
+    failures += probe_network_failures(workflow_name, name, job)
     failures += production_failures(workflow_name, name, job, is_agent_job)
     failures += fixtures_failures(workflow_name, name, job, is_agent_job)
     failures += ci_tier_failures(workflow_name, name, job, is_agent_job)

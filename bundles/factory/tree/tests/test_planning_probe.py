@@ -51,6 +51,19 @@ class PlanningProbe(unittest.TestCase):
         self.assertTrue(any("only the planning workflows may run on" in f for f in failures), failures)
         self.assertTrue(any("FACTORY_SVC_1 reaches the agent" in f for f in failures), failures)
 
+    def test_only_the_planning_probe_is_judged_by_the_open_internet(self):
+        verdict = lambda job: next(str(s.get("run")) for s in job["steps"]  # noqa: E731
+                                   if 'sandbox_check.py" agent' in str(s.get("run", "")))
+        self.assertRegex(verdict(self.probe), r"planning-probe\.services\" open \|\|")
+        self.assertNotRegex(verdict(self.jobs["bash-sandbox"]), r"\sopen\b")
+        # The policy refuses `open` anywhere else, the strict tier's probe included.
+        opened = {**self.jobs["bash-sandbox"], "steps": [
+            {**s, "run": str(s.get("run", "")).replace('/services" || bad=1', '/services" open || bad=1')}
+            for s in self.jobs["bash-sandbox"]["steps"]]}
+        self.assertRegex(verdict(opened), r"\sopen \|\|")
+        failures = self.failures("bash-sandbox", opened)
+        self.assertTrue(any("may be judged by the open internet" in f for f in failures), failures)
+
     def test_the_probe_must_run_on_the_planning_tier(self):
         moved = {**self.probe, "runs-on": ["self-hosted", self.jobs["bash-sandbox"]["runs-on"][1]]}
         failures = self.failures("planning-sandbox", moved)

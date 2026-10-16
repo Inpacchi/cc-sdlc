@@ -37,6 +37,24 @@ Each entry contains:
 
 ---
 
+## 2026-10-16: Only the planning probe may be judged by the open internet; no socket may answer the sandbox
+
+**Origin:** The pilot project's review of v2.1.4. Two findings, neither blocking:
+- **Major:** nothing held `bash-sandbox` to the allowlist. Adding `open` to its verdict, in the template and the rendered workflow together, would pass `render.py --check` and the workflow policy, leaving only CODEOWNERS review. The sandbox would still enforce its allowlist, but smoke would stop proving it.
+- **Minor, from before v2.1.4:** the probe reports every Unix socket it finds, but the verdict failed only on the Docker socket. Any other socket that answered would pass silently.
+
+**Changes made:**
+1. **`workflow_policy.py`:** a sandbox probe's verdict may pass `open` only in `PLANNING_PROBES` (the planning stages' `planning-sandbox`). The check runs in every project's CI over its actual workflows.
+2. **`sandbox_check.py`:** from inside the sandbox, any Unix socket the probe finds that accepts a connection fails the verdict, whatever it serves. The sandbox refuses Unix sockets, so no allowlist is needed. The control, outside the sandbox, still reaches the job's own sockets.
+3. **Tests:**
+   - `test_planning_probe.py`: the rendered `bash-sandbox` verdict passes no `open` and `planning-sandbox`'s does, and the policy refuses `open` in `bash-sandbox`;
+   - `test_sandbox_check.py`: a socket that answers fails the agent's verdict and not the control's.
+4. **`process/factory.md`:** D2 rule 5 lists the socket rule, and says only the planning probe may use `open`.
+
+**Checked against live runs:** the incubator's passing strict-tier and planning-tier probe output (2026-10-16) both pass under the new rules. Every socket they found from inside the sandbox was blocked: the Docker socket, the runtime's own sockets and the test services' sockets.
+
+---
+
 ## 2026-10-15: The planning probe judges the planning tier's open internet
 
 **Origin:** The new `planning-sandbox` smoke job's first live run, in the incubator (2026-10-16, its planning tier, with a production database):

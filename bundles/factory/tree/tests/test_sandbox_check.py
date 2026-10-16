@@ -69,6 +69,13 @@ class Services(unittest.TestCase):
         around = [l.replace("noproxy https://example.com/ 000", "noproxy https://example.com/ 200") for l in lines]
         self.assertEqual(net(check.judge_agent(around, [], [], "open")), ["reached a host without the sandbox proxy"])
 
+    def test_from_inside_the_sandbox_no_unix_socket_may_answer(self):
+        lines = ["unixsock-found /tmp/claude-http-1.sock blocked", "unixsock-found /run/other.sock connected"]
+        self.assertEqual(check.found_sockets(lines), ["a Unix socket accepts connections: /run/other.sock"])
+        self.assertIn("a Unix socket accepts connections: /run/other.sock", check.judge_agent(lines, [], []))
+        # The control runs outside the sandbox: it reaches the job's own sockets, as it should.
+        self.assertNotIn("a Unix socket accepts connections: /run/other.sock", check.judge_control(lines, []))
+
     def test_a_missing_or_malformed_list_fails_the_job(self):
         self.assertEqual(check.sockets(["localsvc db connected", "unixsock docker refused"], None),
                          ["the stack profile's services file is missing or malformed"])

@@ -11,7 +11,8 @@ control: the probe ran unsandboxed with the real secrets in its environment and 
          must stay unreadable and unwritable.
 agent:   the probe ran as sandboxed agent Bash. It must find no secret anywhere, no credential
          variable by name, a PID namespace other than the control's, unlistable runner mounts,
-         unwritable protected paths, the allowed registries reachable through the proxy, every
+         unwritable protected paths, no Unix socket it finds that accepts a connection (the test
+         services' answer through the proxy), the allowed registries reachable through the proxy, every
          other host blocked, and no route that bypasses the proxy. With `open`, the planning tier's
          network (design rule D3 rule 5: WebFetch(domain:*) opens the sandbox's proxy to every host),
          any host may answer through the proxy; nothing may still bypass it.
@@ -70,6 +71,13 @@ def sockets(lines, services):
     return failures
 
 
+def found_sockets(lines):
+    """From inside the sandbox, no Unix socket the probe finds may accept a connection: the sandbox refuses them
+    all, so one that answers is a hole, whatever it serves (the control, outside it, reaches its own)."""
+    return [f"a Unix socket accepts connections: {l[len('unixsock-found '):].rsplit(' ', 1)[0]}" for l in lines
+            if l.startswith("unixsock-found ") and l.endswith(" connected")]
+
+
 def kernel_files(lines):
     failures = []
     if "kcore unreadable" not in lines:
@@ -108,7 +116,7 @@ def judge_control(lines, services):
 
 
 def judge_agent(lines, control, services, network="allowlist"):
-    failures = kernel_files(lines) + sockets(lines, services)
+    failures = kernel_files(lines) + sockets(lines, services) + found_sockets(lines)
     failures += [f"credential visible: {l}" for l in lines if l.startswith("secret ")]
     names = {l.split(" ", 1)[1] for l in lines if l.startswith("env-name ")}
     failures += [f"credential variable present: {n}" for n in sorted(names & CREDENTIAL_NAMES)]
