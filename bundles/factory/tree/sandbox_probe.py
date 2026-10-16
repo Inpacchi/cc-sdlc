@@ -8,9 +8,10 @@ and reports matches by label: its environment, every process's environment, and 
 strings in readable files (raw, and inside base64 such as a git extraheader). It prints names,
 counts and labels only, never a value. It also reports its PID namespace, which runner mounts
 it can list, which protected paths it can write, the kernel files `systempaths=unconfined`
-unmasks, which Unix sockets it can connect to (the test services a stage starts before the agent,
-listed in a `sockets` file beside the hash file, plus the Docker socket), and what it can reach
-through the sandbox proxy and directly. sandbox_check.py judges the output.
+unmasks, which of the stage's test services answer on the job container's loopback (the stack
+profile's `services` file, frozen beside the hash file), whether the Docker socket accepts
+connections, and what it can reach through the sandbox proxy and directly. sandbox_check.py judges
+the output.
 """
 
 import base64
@@ -38,6 +39,26 @@ PROXIED = [
 ]
 WRITE_TESTS = [".git/hooks/factory-probe", ".git/config", ".claude/settings.local.json"]
 DOCKER_SOCKET = "/var/run/docker.sock"
+SERVICE_LINE = re.compile(r"([a-z][a-z0-9-]*) ([1-9][0-9]{0,4})")
+
+
+def read_services(path):
+    """The stack profile's test services, "<label> <port>" a line ('#' starts a comment): [] when it lists none,
+    None when the file is missing or a line is malformed."""
+    try:
+        text = open(path).read()
+    except OSError:
+        return None
+    services = []
+    for line in text.splitlines():
+        line = line.split("#", 1)[0].strip()
+        if not line:
+            continue
+        m = SERVICE_LINE.fullmatch(line)
+        if not m or int(m[2]) > 65535:
+            return None
+        services.append((m[1], int(m[2])))
+    return services
 
 
 def short_hash(value):
@@ -139,8 +160,13 @@ def main():
             out.append(f"procwrite {path} unwritable")
 
     # The stage's test services on the job container's loopback must answer (through the sandbox
-    # proxy, which allows `localhost`); the Docker socket must not.
-    for label, port in (("db", 5432), ("redis", 6379)):
+    # proxy, which allows `localhost`); the Docker socket must not. Which services: the profile's.
+    services = read_services(os.path.join(os.path.dirname(os.path.abspath(sys.argv[1])), "services"))
+    if services is None:
+        out.append("localsvc-list unreadable")
+    elif not services:
+        out.append("localsvc none")
+    for label, port in services or []:
         out.append(f"localsvc {label} {connect_local(port)}")
     out.append(f"unixsock docker {connect_unix(DOCKER_SOCKET)}")
     # Every Unix socket it can find (report only).

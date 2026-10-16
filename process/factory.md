@@ -332,7 +332,7 @@ The factory owns every label starting `factory:`. `bootstrap.py` creates these a
 A stack profile is how the factory builds, installs and checks one kind of project:
 `.github/factory/profiles/<name>/`, chosen by `factory.json`'s `stack.profile`. Every job runs in the
 profile's image, and the stages run the profile's commands, never the project's own scripts, which an
-agent could have edited. A profile has five files:
+agent could have edited. A profile has six files:
 
 | File | Run by | Does |
 |---|---|---|
@@ -340,6 +340,7 @@ agent could have edited. A profile has five files:
 | `install.sh <stack.python> <stack.node>` | The job, outside the sandbox, after secrets are out of the environment | Installs the project's dependencies: the implement sandbox has no network. |
 | `test-services.sh <socket-dir> <database>` | The job, as root, before the agent | Starts throwaway test services on the job container's loopback, with logins that can't run code, and prints their settings for the project's env file. |
 | `with-test-services <command>` | Commands inside the sandbox | Runs a command with the test services' ports reachable through the sandbox's proxy. |
+| `services` | `factory-smoke`'s `bash-sandbox` job | The test services `test-services.sh` starts and `with-test-services` forwards, `<label> <port>` a line: the sandbox probe requires each to answer from sandboxed Bash. A missing or malformed file fails the job. |
 | `verify [<area> ...\|probe]` | The stages and smoke | The project's checks (tests, lint, type check, build), in the profile's own areas, which `--print` lists; `probe` proves the toolchain and the test database work. Reads its directories from `verify.conf`. |
 
 The interface is the first profile's shape: `agent_job.sh` passes `stack.python` and `stack.node` as

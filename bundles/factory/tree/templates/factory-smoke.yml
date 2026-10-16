@@ -227,6 +227,9 @@ jobs:
           .github/factory/agent_job.sh freeze bash-sandbox.settings.json
           install -d -m 700 "$RUNNER_TEMP/canary"
           install -m 644 .github/factory/sandbox_probe.py "$PROBE_DIR/"
+          # The stack profile's test services, which both probes must reach: freeze copied the profile out
+          # of the agent's reach for the verdict; the probe reads its copy beside the hash file.
+          install -m 644 "$CHECKS/profiles/%{stack.profile}/services" "$PROBE_DIR/services"
           echo "FACTORY_TOOL_ARGS=$(tr '\n' ' ' < .github/factory/bash-probe-tools.args)" >> "$GITHUB_ENV"
           # The test services a Bash stage starts before its agent: sandboxed Bash must reach them
           # through the sandbox proxy (and must still not reach the Docker socket).
@@ -253,7 +256,7 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
         run: |
           /usr/local/bin/python3 -I "$PROBE_DIR/sandbox_probe.py" "$PROBE_DIR/secret-hashes" > "$CHECKS/control.txt"
-          /usr/local/bin/python3 -I "$CHECKS/sandbox_check.py" control "$CHECKS/control.txt"
+          /usr/local/bin/python3 -I "$CHECKS/sandbox_check.py" control "$CHECKS/control.txt" "$CHECKS/profiles/%{stack.profile}/services"
 
       # --settings makes the sandbox admin-required, so the repository's settings can't loosen it;
       # the same file at user scope (the action's settings input) carries the user-scope-only keys.
@@ -310,7 +313,7 @@ jobs:
           c = results.get(uses[0]["id"], {}).get("content")
           print(c if isinstance(c, str) else "\n".join(x.get("text", "") for x in c or []))
           PY
-          [ "$bad" = 0 ] && { /usr/local/bin/python3 -I "$CHECKS/sandbox_check.py" agent "$CHECKS/agent.txt" "$CHECKS/control.txt" || bad=1; }
+          [ "$bad" = 0 ] && { /usr/local/bin/python3 -I "$CHECKS/sandbox_check.py" agent "$CHECKS/agent.txt" "$CHECKS/control.txt" "$CHECKS/profiles/%{stack.profile}/services" || bad=1; }
           for v in "$OAUTH" "$GHTOKEN" "$CONTEXT7_API_KEY"; do
             if [ -n "$v" ] && grep -qF -- "$v" "$EXEC"; then echo "::error::a raw token is in the transcript"; bad=1; fi
           done

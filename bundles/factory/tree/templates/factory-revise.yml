@@ -218,7 +218,7 @@ jobs:
           "$CHECKS/agent_job.sh" revise-context "$merge_base"
           gh issue view "$ISSUE_NUMBER" -R "$GITHUB_REPOSITORY" --json number,title,body,url > "$GITHUB_WORKSPACE/.factory/issue-context.json"
 
-          # The stack profile's test services (Postgres and Redis) on the container's loopback; sandboxed Bash
+          # The stack profile's test services (its profiles/<profile>/services) on the container's loopback; sandboxed Bash
           # reaches them through /opt/factory/with-test-services. Their settings go in the project's env file.
           "$CHECKS/agent_job.sh" services
           "$CHECKS/agent_job.sh" workspace

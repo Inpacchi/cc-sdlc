@@ -61,10 +61,11 @@ class Freeze(AgentJob):
         self.assertNotIn("planning-sandbox.settings.json", frozen)
         self.assertEqual(stat.S_IMODE(self.checks.stat().st_mode), 0o700)
         self.assertTrue(os.access(self.checks / "git_guard.sh", os.X_OK))
-        # The project's stack profile, at the same path as in the repository.
+        # The project's stack profile, at the same path as in the repository: its services list among it, which
+        # the sandbox check reads out of the agent's reach.
         profile = self.checks / "profiles" / PROFILE
         self.assertEqual(sorted(p.name for p in profile.iterdir()),
-                         ["Dockerfile", "install.sh", "test-services.sh", "verify", "with-test-services"])
+                         ["Dockerfile", "install.sh", "services", "test-services.sh", "verify", "with-test-services"])
         for name in ("install.sh", "test-services.sh", "verify", "with-test-services"):
             self.assertTrue(os.access(profile / name, os.X_OK), name)
         self.assertEqual(stat.S_IMODE((self.checks / "run_metrics.py").stat().st_mode), 0o644)

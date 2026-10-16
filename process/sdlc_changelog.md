@@ -37,6 +37,41 @@ Each entry contains:
 
 ---
 
+## 2026-10-15: The sandbox probe checks the profile's own test services
+
+**Origin:** The pilot project's first `factory-smoke` run on z-sdlc v2.1.0 (2026-10-15): 7 of 8 jobs passed, and `bash-sandbox` failed in its control probe with "test service unreachable: redis". D2 rule 5 lets no stage have Bash until that job passes, so the pilot project's agent workflows stay disabled until it does.
+
+**What happened:** `sandbox_probe.py` probed Postgres (5432) and Redis (6379), and `sandbox_check.py` required both (`SERVICE_SOCKETS`). Those are the `python-node` profile's services. The `dotnet-node` profile starts Postgres alone, so its control could never pass. The probe's docstring already described a services list beside its hash file, which was never built. Unchanged since v2.0.0.
+
+**Changes made:**
+1. **`bundles/factory/tree/profiles/*/services`** (new, a profile's sixth file): its test services, `<label> <port>` a line. `python-node`: `db 5432`, `redis 6379`; `dotnet-node`: `db 5432`.
+2. **`sandbox_probe.py`:**
+   - probes the services listed in the `services` file beside its hash file, so the agent's command (which the job compares word for word) is unchanged;
+   - reports `localsvc none` for a profile with none, and `localsvc-list unreadable` for a missing or malformed list, which fails the required-line check.
+3. **`sandbox_check.py`:**
+   - takes the profile's frozen `services` file as its last argument and requires each listed service to answer;
+   - a missing or malformed file is a failure;
+   - the Docker socket must still refuse.
+4. **`templates/factory-smoke.yml`:**
+   - the check reads the copy `agent_job.sh freeze` made of the profile, out of the agent's reach;
+   - the probe gets its own copy beside its hash file.
+5. **`templates/factory-implement.yml`, `factory-revise.yml`:** a comment no longer says the test services are Postgres and Redis.
+6. **`bundles/factory/tree/tests/test_sandbox_check.py`** (new):
+   - a profile without Redis passes on its Postgres;
+   - a listed service must answer, and the Docker socket must not;
+   - a missing or malformed list fails;
+   - the probe and the check parse a list alike;
+   - every profile's list names only ports its `with-test-services` forwards.
+
+   `test_agent_job.py`'s freeze test lists `services` among the profile files frozen for the check.
+7. **`process/factory.md`:** a profile has six files, `services` among them.
+
+**Upgrading:** take the bundle code, re-render (`render.py`), and run `factory-smoke`. A project with its own profile adds a `services` file listing what its `test-services.sh` starts.
+
+**Rationale:** The services a probe requires belong to the profile that starts them. A fixed list is right for one stack and impossible for the next.
+
+---
+
 ## 2026-10-15: The factory owns its labels
 
 **Origin:** The incubator's compliance audit after its migration to v2.1.0 flagged all 13 of the factory's `factory:*` labels as label sprawl. CD asked how two z-sdlc bundles could disagree, and for the best fix, shipped as a patch (CD, 2026-10-15: v2.1.1).
