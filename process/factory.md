@@ -121,6 +121,8 @@ Agent jobs run on self-hosted runners, and a runner host may also run production
      - unwritable protected paths;
      - the allowed registries reachable through the proxy, every other host refused, and no route around the proxy.
    - **The assertion judges** only the output of the one expected command.
+   - **On the planning tier** (job `planning-sandbox`), before the plan, spec and revise-doc stages get Bash: the same probe, in the job those stages run. That means their runners and firewall exception, the read-only database password pgbouncer holds, their service credential slots, and the sandbox settings `services.py` builds for them. Sandboxed Bash must find none of those secrets, and must reach the planning database through the proxy. The job's isolation probes run from that tier too, with the planning database as their one exception (D3 rule 2), so `planning.json`'s database host must be written as in `smoke.host_probes`. The probe recognises the reader password in a file only when it's token-like (20 or more letters, digits, `-` or `_`), as a generated one is.
+   - **Tool policies:** smoke probes triage's and implement's. `plan-tools.args` is implement's plus WebFetch (D3 rule 5), and `improve-tools.args` is no wider than triage's: unit tests pin both, so neither has a probe of its own.
 
    Re-run smoke on every action, image or tool-policy change.
 6. **Workflow edits are trusted only through review.** The boundary against a malicious workflow change is:
@@ -149,6 +151,21 @@ Agent jobs run on self-hosted runners, and a runner host may also run production
 - Denying `/github` hides the job's `HOME` from Bash; Bash stages point pip and npm caches at the temp directory.
 - WebSearch and Context7 queries still leave the job, to fixed services.
 - The seccomp profile tracks Docker's default; re-check on Docker or bubblewrap upgrades.
+
+### Leaves open
+
+- **`CONTEXT7_API_KEY`:** whether it reaches sandboxed Bash is exercised only in a project that sets the key. It's denied by name either way.
+- **Hooks and settings in a checkout of another branch** (the revise stages check out pull requests' branches): `disableAllHooks` and admin-required sandboxing cover hooks and sandbox loosening. A branch's project skills and `CLAUDE.md` are still agent instructions from that branch.
+- **Ephemeral runners for the strict and planning tiers.** The CI tier's are just-in-time; these tiers' runners keep a workspace between jobs, which every job cleans first.
+- **Gaps in the static workflow check** (rule 6). Each needs a workflow edit CD reviews under CODEOWNERS:
+  - `--json-schema` and `--mcp-config` values aren't shape-checked, and an `env.*` value written at runtime can carry extra flags;
+  - lines a step writes to `$GITHUB_ENV` or `$GITHUB_PATH` aren't checked, and `FACTORY_TOOL_ARGS` can be set by a heredoc, extended after the `tr`, or read from a rewritten `.args` file;
+  - environment keys are blocklisted, not allowlisted, and `secrets['X']` or `toJSON(secrets)` aren't caught;
+  - actions in agent jobs aren't allowlisted;
+  - a `git checkout` in a `run:` step after the pinned checkout isn't caught;
+  - the direct-Claude pattern misses `import claude_agent_sdk` and `$(which claude)`.
+
+  The structural answer is a design item: every agent run going through one reusable workflow, with a frozen step right before the agent that checks the actual environment, arguments and tool policy at runtime.
 
 ### Revisit when
 

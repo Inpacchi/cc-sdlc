@@ -67,7 +67,7 @@ It writes the bundle code and records the commit in `import.json`, and later rep
 python3 .claude/skills/zsdlc-import-factory/scripts/import_factory.py ~/Projects/quantile --to-incubator
 ```
 
-It writes what z-sdlc is ahead on (bundle code, skills, `process/factory.md`) into quantile's working tree, at the commit you imported, and refuses if quantile has uncommitted changes in those files. Commit them in quantile with a quantile changelog entry and let its CI pass; the next report shows them in sync.
+It writes what z-sdlc is ahead on (bundle code, skills, `process/factory.md`) into the incubator's working tree, at the commit you imported, and refuses if the incubator has uncommitted changes in those files. Commit them in the incubator with its changelog entry and let its CI pass; the next report shows them in sync. Then record that commit with `--apply --commit <it>` (nothing is copied; `last_import` moves to it). Until then, the next z-sdlc change to a handed-back file reads as changed on both sides, a conflict, and the proof installs the incubator's copy without it.
 
 ### 4. Prove
 

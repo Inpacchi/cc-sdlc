@@ -51,7 +51,9 @@ Allowlists, not blocklists:
 - Agent jobs set CLAUDE_CODE_DISABLE_BACKGROUND_TASKS: "1" (headless runs dispatch in the foreground).
 - Runner tiers (design rule D3): only the planning workflows (PLANNING_WORKFLOWS) run on the
   planning runners, and their agent jobs must; only jobs there may use the planning
-  environment, which holds the read-only database password.
+  environment, which holds the read-only database password. The one exception is the planning
+  stages' sandbox probe (PLANNING_PROBES: factory-smoke.yml's planning-sandbox job, D2 rule 5),
+  which runs in their tier and job setup, service credential slots included.
 - Production tier (design rule D4): only factory-gate.yml's `execute` job runs on the production
   runner. It runs on the host with no container (it only talks to the root broker's socket), so the
   container rule doesn't apply; instead it has the production environment (CD's approval), exactly
@@ -136,6 +138,8 @@ DIRECT_CLAUDE = re.compile(r"@anthropic-ai/|claude-agent-sdk|(^|[\s;&|(/])claude
 SERVICE_SLOTS = {f"FACTORY_SVC_{n}" for n in range(1, 5)}
 SERVICES_RUN = re.compile(r"python3 -I \.github/factory/services\.py \.github/factory/services\.json ")
 PLANNING_WORKFLOWS = {"factory-plan.yml", "factory-spec.yml", "factory-revise-doc.yml"}
+# The planning stages' sandbox probe (D2 rule 5): proven in their tier and job setup, so it runs where they run.
+PLANNING_PROBES = {("factory-smoke.yml", "planning-sandbox")}
 PRODUCTION_WORKFLOW = "factory-gate.yml"
 PRODUCTION_JOBS = {"execute": "runner"}
 PRODUCTION_PERMISSIONS = {"actions": "read", "contents": "read", "issues": "read", "pull-requests": "read"}
@@ -270,8 +274,10 @@ def tier_failures(workflow_name, name, job, is_agent_job):
     environment = job.get("environment")
     environment = environment.get("name") if isinstance(environment, dict) else environment
     failures = []
-    if on_planning and workflow_name not in PLANNING_WORKFLOWS:
+    if on_planning and workflow_name not in PLANNING_WORKFLOWS and (workflow_name, name) not in PLANNING_PROBES:
         failures.append(f"{name}: only the planning workflows may run on {PLANNING_LABEL} runners")
+    if (workflow_name, name) in PLANNING_PROBES and not on_planning:
+        failures.append(f"{name}: the planning stages' sandbox probe must run on {PLANNING_LABEL} runners")
     if workflow_name in PLANNING_WORKFLOWS and is_agent_job and not on_planning:
         failures.append(f"{name}: a planning agent job must run on {PLANNING_LABEL} runners")
     if environment == PLANNING_ENVIRONMENT and not on_planning:
@@ -556,8 +562,9 @@ def agent_failures(name, job, workflow_env, model_input, factory_dir, workflow_n
     builds_services = any(SERVICES_RUN.search(str(s.get("run", ""))) for s in steps[:first_agent])
     for where, env in envs:
         for key, value in env.items():
+            planning = workflow_name in PLANNING_WORKFLOWS or (workflow_name, name) in PLANNING_PROBES
             if (key in SERVICE_SLOTS and str(value).strip() == f"${{{{ secrets.{key} }}}}"
-                    and where not in ("workflow", "job") and workflow_name in PLANNING_WORKFLOWS and builds_services):
+                    and where not in ("workflow", "job") and planning and builds_services):
                 continue
             refs = set(re.findall(r"secrets\.(\w+)", str(value)))
             if ENV_NAME.search(key) or refs - {"CONTEXT7_API_KEY"}:

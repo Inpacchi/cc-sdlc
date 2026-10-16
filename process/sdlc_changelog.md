@@ -37,6 +37,64 @@ Each entry contains:
 
 ---
 
+## 2026-10-15: The public-content scan stops a push
+
+**Origin:** This release's first push. Check 6 found an added line naming the incubator, but its last command was an `echo`, so it exited 0. The push chained after it ran, and the release went out with the line. CD had it re-cut.
+
+**Changes made:**
+1. **`CLAUDE.md`** (this repository's), check 6: the scan exits non-zero on a missing names file, a missing `origin/master`, a match or a grep error, and prints `check 6: clean` only when there's none. A push chained after it stops before it runs.
+2. **`.claude/skills/zsdlc-import-factory/SKILL.md`:** step 3's line, which this release changed, says "the incubator".
+
+**Rationale:** A check whose exit status always says "pass" depends on someone reading its output, which a chained command never does.
+
+---
+
+## 2026-10-15: Smoke probes the planning stages' sandbox
+
+**Origin:** The pilot project's review after its move to v2.1.2. Its plan and revise-doc stages grant Bash (`plan-tools.args`) under `planning-sandbox.settings.json` on the planning runners, while all of `factory-smoke`'s jobs ran on the strict runners. D2 rule 5 ("Before any stage gets Bash, smoke carries that stage's sandbox probe") would then keep Bash from both stages even after a green smoke. CD asked for the fix, shipped as a patch (v2.1.3).
+
+**What happened:**
+- **The planning job differs from the strict one.** The planning sandbox's settings are implement's plus a WebFetch permission, but its job doesn't match the strict job the probe ran in:
+  - pgbouncer holds the read-only database login's password on the job container's loopback;
+  - the service credential slots are wired in;
+  - the runners run as their own user, behind a firewall with the database exception.
+
+  None of that had been probed. The incubator had run both stages that way since the planning tier began.
+- **Two doc errors:**
+  - D2 rule 6 pointed to a "Leaves open" list that `factory.md` didn't have;
+  - the design record said smoke probed every stage's tools but improve's, which plan's and revise-doc's weren't.
+
+**Changes made:**
+1. **`templates/factory-smoke.yml`:** a ninth job, `planning-sandbox`, on the planning runners with the planning environment. It runs the planning stages' setup:
+   - the profile's test services, and pgbouncer with the reader password when `planning.json` names a database;
+   - the sandbox settings `services.py` builds for the plan stage, with their service slots in the agent step's environment.
+
+   It then runs the sandbox probe:
+   - the probe looks for the reader password and the service credentials too, besides the tokens and the canary;
+   - it must reach the planning database through the proxy (`planning-db`, beside the profile's services);
+   - the transcript is checked for each raw value.
+
+   The isolation probes run from that tier as well, with the planning database (`planning.json`'s host and port) as their one exception.
+2. **`workflow_policy.py`:**
+   - `PLANNING_PROBES` lets that one job, and no other outside the planning workflows, use the planning runners, environment and service slots;
+   - the job must run on the planning runners.
+3. **`tests/test_planning_probe.py`** (new):
+   - the job runs where the planning stages run, and the policy admits it;
+   - no other smoke job may use the planning tier, and the probe may not leave it;
+   - `plan-tools.args` is `implement-tools.args` (which smoke probes) plus WebFetch, with the same deny rules, so the planning tool policy needs no probe of its own, as with improve's.
+4. **`process/factory.md`:**
+   - D2 rule 5 names the planning probe and the two pinned tool policies;
+   - D2 gains its Leaves open list (the static check's known gaps and the rest), which rule 6 points to.
+5. **`.claude/skills/zsdlc-import-factory/`:**
+   - `import.json` records the incubator's commit that took v2.1.2 (`--apply`; nothing copied);
+   - `SKILL.md` step 3 says to record each hand-back's commit that way. Until then, the next change here to a handed-back file reads as changed on both sides, and the proof installs the incubator's copy without it, which is how this release's proof first failed.
+
+**Upgrading:** take the bundle code, re-render, and run `factory-smoke`. All nine jobs must pass before the plan, spec and revise-doc stages are relied on. The planning job needs the planning environment's secrets as the planning stages have them, and `planning.json`'s database host written as in `smoke.host_probes`.
+
+**Rationale:** A probe proves the boundary in the job it ran in. The planning stages hold a credential and a network path the strict job never had, so their sandbox is proven where they run.
+
+---
+
 ## 2026-10-15: The sandbox probe checks the profile's own test services
 
 **Origin:** The pilot project's first `factory-smoke` run on z-sdlc v2.1.0 (2026-10-15): 7 of 8 jobs passed, and `bash-sandbox` failed in its control probe with "test service unreachable: redis". D2 rule 5 lets no stage have Bash until that job passes, so the pilot project's agent workflows stay disabled until it does.

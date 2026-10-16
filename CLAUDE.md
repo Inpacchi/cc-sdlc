@@ -127,13 +127,14 @@ Ignore hits in `sdlc-migrate` and `sdlc-initialize` (source path documentation) 
 
 **6. Public-content scan** — before pushing, nothing unpushed may name a private project, host or path. The names themselves live in `.claude/private-names.txt` (one per line, untracked and git-ignored, since this file is public): create it from the organization's project and host names if it's missing.
 ```bash
-names=.claude/private-names.txt
-test -s "$names" || echo "FAIL: $names is missing or empty"
-git rev-parse -q --verify origin/master > /dev/null || echo "FAIL: no origin/master (fetch it first)"
-git log -p origin/master..master | grep '^+' | grep -inFf "$names"; echo "exit $?"
-git log --format=%B origin/master..master | grep -inFf "$names"; echo "exit $?"
-git log -p origin/master..master | grep -nE '^\+.*\b100\.(6[4-9]|[7-9][0-9]|1[01][0-9]|12[0-7])\.'; echo "exit $?"
+names=.claude/private-names.txt fail=0
+test -s "$names" || { echo "FAIL: $names is missing or empty"; fail=1; }
+git rev-parse -q --verify origin/master > /dev/null || { echo "FAIL: no origin/master (fetch it first)"; fail=1; }
+git log -p origin/master..master | grep '^+' | grep -inFf "$names"; [ $? = 1 ] || fail=1
+git log --format=%B origin/master..master | grep -inFf "$names"; [ $? = 1 ] || fail=1
+git log -p origin/master..master | grep -nE '^\+.*\b100\.(6[4-9]|[7-9][0-9]|1[01][0-9]|12[0-7])\.'; [ $? = 1 ] || fail=1
+[ "$fail" = 0 ] && echo "check 6: clean"
 ```
-It passes only when nothing prints but three `exit 1` lines: a `FAIL` line, a match, or grep's `exit 2` is never a pass. (A git failure inside a scan doesn't show in its exit, even under `pipefail`, since grep's 1 comes last: the `origin/master` line is what catches a range that can't be read.) Only added lines count: a diff's context can quote what's already public. An absolute home path names its user, so the names file catches it; the last scan catches tailnet addresses. A hit in a commit not yet pushed is reworded before the push, history included (`git filter-branch` over `origin/master..master`).
+It passes only when it prints `check 6: clean` and nothing else, and its last line then exits 0. A `FAIL` line, a match, or grep's error (exit 2) fails it, and the block exits non-zero, so a push chained after it (`bash check6.sh && git push …`) stops before it runs. (A git failure inside a scan doesn't show in its exit, even under `pipefail`, since grep's 1 comes last: the `origin/master` line is what catches a range that can't be read.) Only added lines count: a diff's context can quote what's already public. An absolute home path names its user, so the names file catches it; the last scan catches tailnet addresses. A hit in a commit not yet pushed is reworded before the push, history included (`git filter-branch` over `origin/master..master`).
 
 If any check fails, fix it before committing. Do not present the summary until all checks pass.

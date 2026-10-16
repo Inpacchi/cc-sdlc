@@ -4,8 +4,9 @@
 #   - the z-sdlc skills, the .claude/agents definitions and Context7 load
 #     (asserted from the runtime's init event, not self-report);
 # and reports the run's cost. The bash-sandbox job proves sandboxed agent Bash is credential-free
-# (required before any stage gets Bash). The lost-session job proves an agent step killed at its time
-# limit still leaves its session for session_log.sh. Re-run after every action, image or tool-policy change.
+# (required before any stage gets Bash), and the planning-sandbox job proves it on the planning tier, in
+# the planning stages' job setup. The lost-session job proves an agent step killed at its time limit still
+# leaves its session for session_log.sh. Re-run after every action, image or tool-policy change.
 name: factory-smoke
 
 on:
@@ -316,6 +317,211 @@ jobs:
           [ "$bad" = 0 ] && { /usr/local/bin/python3 -I "$CHECKS/sandbox_check.py" agent "$CHECKS/agent.txt" "$CHECKS/control.txt" "$CHECKS/profiles/%{stack.profile}/services" || bad=1; }
           for v in "$OAUTH" "$GHTOKEN" "$CONTEXT7_API_KEY"; do
             if [ -n "$v" ] && grep -qF -- "$v" "$EXEC"; then echo "::error::a raw token is in the transcript"; bad=1; fi
+          done
+          exit $bad
+
+      # Checkout's post step runs git in this workspace; the agent could have left files in .git for it.
+      - name: Remove the agent's repository
+        if: always()
+        shell: bash
+        run: rm -rf "$GITHUB_WORKSPACE/.git"
+
+  # Required before the plan, spec and revise-doc stages run (D2 rule 5, D3): the same probe, on the planning
+  # tier, in the job those stages run: their runners, user and firewall exception, the read-only database
+  # login's password held by pgbouncer, their service credential slots, and the sandbox settings services.py
+  # builds for them. Sandboxed Bash must find none of those secrets, and reach the planning database through
+  # the sandbox proxy. Their tool policy is pinned to implement's by a unit test (smoke probes that one). The
+  # isolation probes run from this tier too, with its one exception, the planning database (D3 rule 2).
+  planning-sandbox:
+    runs-on: [self-hosted, %{runners.planning}]
+    # The read-only database password and the service slots, as the planning stages get them.
+    environment: %{environments.planning}
+    permissions:
+      contents: read
+      packages: read
+    timeout-minutes: 20
+    container:
+      image: %{image.repository}@%{image.digest}
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+      options: >-
+        --security-opt seccomp=/etc/factory-runner/seccomp-bwrap.json
+        --security-opt systempaths=unconfined
+    env:
+      CLAUDE_CODE_SUBPROCESS_ENV_SCRUB: "1"
+      # Present on purpose: the probe shows sandboxed Bash can't see it.
+      CONTEXT7_API_KEY: ${{ secrets.CONTEXT7_API_KEY }}
+      FACTORY_HOST_PROBES: "%{smoke.host_probes} 172.17.0.1 10.0.2.2"
+      CHECKS: /__w/_temp/factory-checks
+      PROBE_DIR: /opt/factory-probe
+    steps:
+      - name: Clean workspace
+        shell: bash
+        run: find "$GITHUB_WORKSPACE" -mindepth 1 -maxdepth 1 -exec rm -rf {} +
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # Agent jobs load the repository's settings, skills and CLAUDE.md: default branch only.
+          ref: ${{ github.event.repository.default_branch }}
+          persist-credentials: false
+
+      # The action would write the job token into origin's URL, where the agent can read it.
+      - name: Remove the git remote
+        shell: bash
+        run: git remote remove origin
+
+      # The planning tier's firewall admits the planning database (planning.json's host and port, written as
+      # in smoke.host_probes) and nothing else on the host or the LAN.
+      - name: Isolation probes (host services and Docker socket must be unreachable, the planning database aside)
+        shell: bash
+        run: |
+          bad=0
+          db=$(jq -r '"\(.database.host // ""):\(.database.port // 5432)"' .github/factory/planning.json)
+          for h in $FACTORY_HOST_PROBES; do
+            for p in 5432 6379 8002 3000 9443 22; do
+              if [ "$h:$p" = "$db" ]; then echo "allowed $h:$p (the planning database, D3 rule 2)"; continue; fi
+              if nc -z -w 3 "$h" "$p" 2>/dev/null; then echo "::error::REACHABLE $h:$p"; bad=1; else echo "blocked $h:$p"; fi
+            done
+          done
+          if [ -S /var/run/docker.sock ] && curl -s --max-time 3 --unix-socket /var/run/docker.sock http://d/version >/dev/null; then
+            echo "::error::host Docker socket is usable from the job container"; bad=1
+          else
+            echo "blocked host docker.sock"
+          fi
+          nc -z -w 5 api.github.com 443 || { echo "::error::no internet from the job container"; bad=1; }
+          echo "| Planning-tier isolation | $([ $bad = 0 ] && echo 'host and LAN unreachable but the planning database, internet ok' || echo 'FAILED') |" >> "$GITHUB_STEP_SUMMARY"
+          exit $bad
+
+      - name: Freeze the probe, the checker and the planning sandbox; start the planning services
+        shell: bash
+        env:
+          OAUTH: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          GHTOKEN: ${{ github.token }}
+          # As the planning stages' prepare step has it: pgbouncer holds it; the agent's process never has it.
+          FACTORY_DB_READER_PASSWORD: ${{ secrets.FACTORY_DB_READER_PASSWORD }}
+          # Hashed only, for the probe to look for.
+          SVC1: ${{ secrets.FACTORY_SVC_1 }}
+          SVC2: ${{ secrets.FACTORY_SVC_2 }}
+          SVC3: ${{ secrets.FACTORY_SVC_3 }}
+          SVC4: ${{ secrets.FACTORY_SVC_4 }}
+        run: |
+          set -euo pipefail
+          install -d -m 755 "$PROBE_DIR"
+          .github/factory/agent_job.sh freeze
+          install -d -m 700 "$RUNNER_TEMP/canary"
+          install -m 644 .github/factory/sandbox_probe.py "$PROBE_DIR/"
+          echo "FACTORY_TOOL_ARGS=$(tr '\n' ' ' < .github/factory/bash-probe-tools.args)" >> "$GITHUB_ENV"
+          # The services both probes must reach: the profile's test services, and the planning database
+          # through pgbouncer when planning.json names one. The verdict reads this copy, out of the agent's reach.
+          services="$CHECKS/planning-probe.services"
+          install -m 600 "$CHECKS/profiles/%{stack.profile}/services" "$services"
+          "$CHECKS/agent_job.sh" services /dev/null
+          if [ -n "$(jq -r '.database.host // ""' .github/factory/planning.json)" ]; then
+            "$CHECKS/planning-services.sh" .github/factory/planning.json "$RUNNER_TEMP/factory-db"
+            echo "planning-db %{planning.database.local_port}" >> "$services"
+          fi
+          install -m 644 "$services" "$PROBE_DIR/services"
+          # The planning stages' sandbox, built as they build it: the frozen base plus services.json.
+          install -m 644 .github/factory/planning-sandbox.settings.json "$CHECKS/planning-sandbox.base.json"
+          cfg=$("$CHECKS/agent_job.sh" mcp)
+          python3 -I .github/factory/services.py .github/factory/services.json plan \
+            "$CHECKS/planning-sandbox.base.json" "$CHECKS/planning-sandbox.settings.json" \
+            "$RUNNER_TEMP/services-context.json" "$cfg"
+          canary="canary$(head -c 24 /dev/urandom | od -An -tx1 | tr -d ' \n')"
+          printf '%s\n' "$canary" > "$RUNNER_TEMP/canary/plain.txt"
+          printf 'x-access-token:%s' "$canary" | base64 -w0 > "$RUNNER_TEMP/canary/extraheader.txt"
+          h() { printf %s "$1" | sha256sum | cut -c1-12; }
+          {
+            echo "oauth $(h "$OAUTH")"
+            echo "github $(h "$GHTOKEN")"
+            echo "canary $(h "$canary")"
+            if [ -n "$CONTEXT7_API_KEY" ]; then echo "context7 $(h "$CONTEXT7_API_KEY")"; fi
+            if [ -n "$FACTORY_DB_READER_PASSWORD" ]; then echo "db-reader $(h "$FACTORY_DB_READER_PASSWORD")"; fi
+            for n in 1 2 3 4; do
+              v="SVC$n"
+              if [ -n "${!v}" ]; then echo "service-$n $(h "${!v}")"; fi
+            done
+          } > "$PROBE_DIR/secret-hashes"
+          chmod 644 "$PROBE_DIR/secret-hashes"
+
+      # Control: unsandboxed, with the real tokens in the environment.
+      - name: Control probe
+        shell: bash
+        env:
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          /usr/local/bin/python3 -I "$PROBE_DIR/sandbox_probe.py" "$PROBE_DIR/secret-hashes" > "$CHECKS/control.txt"
+          /usr/local/bin/python3 -I "$CHECKS/sandbox_check.py" control "$CHECKS/control.txt" "$CHECKS/planning-probe.services"
+
+      # Under the planning stages' own sandbox settings, with their service credential slots in the step's env.
+      - name: Agent probe
+        id: claude
+        timeout-minutes: 10
+        env:
+          FACTORY_SVC_1: ${{ secrets.FACTORY_SVC_1 }}
+          FACTORY_SVC_2: ${{ secrets.FACTORY_SVC_2 }}
+          FACTORY_SVC_3: ${{ secrets.FACTORY_SVC_3 }}
+          FACTORY_SVC_4: ${{ secrets.FACTORY_SVC_4 }}
+        uses: anthropics/claude-code-action@58985842b834ed26087302ba27d07bc24ca8697a # v1.0.244
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          settings: ${{ env.CHECKS }}/planning-sandbox.settings.json
+          prompt: |
+            Run exactly this command once with the Bash tool and report its output verbatim:
+            /usr/local/bin/python3 -I /opt/factory-probe/sandbox_probe.py /opt/factory-probe/secret-hashes
+            Do nothing else.
+          claude_args: >-
+            --model %{models.probe}
+            --settings ${{ env.CHECKS }}/planning-sandbox.settings.json
+            ${{ env.FACTORY_TOOL_ARGS }}
+            --strict-mcp-config
+            --setting-sources user
+            --permission-mode auto --permission-prompts none
+            --max-turns 6
+
+      # Judges only the output of the one expected command, as recorded by the runtime.
+      - name: Assert the sandbox held
+        if: always()
+        shell: bash
+        env:
+          OAUTH: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          GHTOKEN: ${{ github.token }}
+          DBPW: ${{ secrets.FACTORY_DB_READER_PASSWORD }}
+          SVC1: ${{ secrets.FACTORY_SVC_1 }}
+          SVC2: ${{ secrets.FACTORY_SVC_2 }}
+          SVC3: ${{ secrets.FACTORY_SVC_3 }}
+          SVC4: ${{ secrets.FACTORY_SVC_4 }}
+          EXEC: ${{ steps.claude.outputs.execution_file }}
+        run: |
+          [ -n "$EXEC" ] || { echo "::error::the agent step left no execution file"; exit 1; }
+          bad=0
+          /usr/local/bin/python3 -I - > "$CHECKS/agent.txt" <<'PY' || bad=1
+          import json, os, sys
+          expected = "/usr/local/bin/python3 -I /opt/factory-probe/sandbox_probe.py /opt/factory-probe/secret-hashes"
+          uses, results = [], {}
+          for m in json.load(open(os.environ["EXEC"])):
+              msg = m.get("message")
+              content = msg.get("content") if isinstance(msg, dict) else None
+              for b in content if isinstance(content, list) else []:
+                  if b.get("type") == "tool_use":
+                      uses.append(b)
+                  elif b.get("type") == "tool_result":
+                      results[b["tool_use_id"]] = b
+          cmds = [(u.get("input") or {}).get("command", "").strip() for u in uses]
+          if len(uses) != 1 or uses[0].get("name") != "Bash" or cmds[0] != expected:
+              sys.exit(f"expected one Bash call running the probe; got {len(uses)}: {[u.get('name') for u in uses]}")
+          extra = set(uses[0].get("input") or {}) - {"command", "description", "timeout"}
+          if extra:
+              sys.exit(f"the probe call set unexpected Bash inputs: {sorted(extra)}")
+          c = results.get(uses[0]["id"], {}).get("content")
+          print(c if isinstance(c, str) else "\n".join(x.get("text", "") for x in c or []))
+          PY
+          [ "$bad" = 0 ] && { /usr/local/bin/python3 -I "$CHECKS/sandbox_check.py" agent "$CHECKS/agent.txt" "$CHECKS/control.txt" "$CHECKS/planning-probe.services" || bad=1; }
+          for v in "$OAUTH" "$GHTOKEN" "$CONTEXT7_API_KEY" "$DBPW" "$SVC1" "$SVC2" "$SVC3" "$SVC4"; do
+            if [ -n "$v" ] && grep -qF -- "$v" "$EXEC"; then echo "::error::a raw secret is in the transcript"; bad=1; fi
           done
           exit $bad
 
