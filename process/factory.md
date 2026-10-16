@@ -164,7 +164,8 @@ Agent jobs run on self-hosted runners, and a runner host may also run production
   - environment keys are blocklisted, not allowlisted, and `secrets['X']` or `toJSON(secrets)` aren't caught;
   - actions in agent jobs aren't allowlisted;
   - a `git checkout` in a `run:` step after the pinned checkout isn't caught;
-  - the direct-Claude pattern misses `import claude_agent_sdk` and `$(which claude)`.
+  - the direct-Claude pattern misses `import claude_agent_sdk` and `$(which claude)`;
+  - the guard that keeps a sandbox verdict's `open` to the planning probe matches the word as written, so a quoted, split, variable or continued `open`, or the checker run through a variable, gets past it (the pilot project's review of v2.1.5). An allowlist of the strict verdict's whole line would fall to a renamed step or a shell function in the same way.
 
   The structural answer is a design item: every agent run going through one reusable workflow, with a frozen step right before the agent that checks the actual environment, arguments and tool policy at runtime.
 

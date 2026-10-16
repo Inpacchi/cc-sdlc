@@ -37,6 +37,17 @@ Each entry contains:
 
 ---
 
+## 2026-10-16: The `open` guard's limits are on record
+
+**Origin:** The pilot project's review of v2.1.5. The workflow policy's guard against `open` in a sandbox verdict outside the planning probe is a match on the word. A quoted, split, variable or line-continued `open`, or the checker run through a variable, gets past it. A bare ` open` is refused.
+
+**Decision:** Leave the guard as it is, and record the limit. D2 rule 6 already says the static workflow check isn't a security control against a deliberate edit, and that the boundary is code-owner review of workflow changes. The guard is there for the accident, which it catches. The reviewer's suggested allowlist of the strict verdict's whole line would also fall to a deliberate edit, such as a renamed step or a shell function. The structural answer stays the one already listed: every agent run through one reusable workflow, checked at runtime.
+
+**Changes made:**
+1. **`process/factory.md`:** D2's Leaves open, "Gaps in the static workflow check", lists it.
+
+---
+
 ## 2026-10-16: Only the planning probe may be judged by the open internet; no socket may answer the sandbox
 
 **Origin:** The pilot project's review of v2.1.4. Two findings, neither blocking:
