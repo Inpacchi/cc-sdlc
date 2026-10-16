@@ -37,6 +37,26 @@ Each entry contains:
 
 ---
 
+## 2026-10-15: The planning probe judges the planning tier's open internet
+
+**Origin:** The new `planning-sandbox` smoke job's first live run, in the incubator (2026-10-16, its planning tier, with a production database):
+- **What held:** the planning boundary itself. The unsandboxed control found the reader password in `pgbouncer.ini`, which proves the probe looks where the password lives. The sandboxed agent found no secret, reached the test services and the planning database through the proxy, was refused the Docker socket, and had no route around the proxy. The isolation step passed with the database as its one exception.
+- **What failed:** the verdict, on "host outside the allowlist reachable" for `example.com` and `api.github.com`.
+
+**What happened:** The check held the planning sandbox to the strict tier's network allowlist. But the planning sandbox's `WebFetch(domain:*)` permission opens its proxy to every host, which is D3 rule 5's open internet for planning, by design. Its sandbox settings' own `allowedDomains` are only `localhost`, which hid that.
+
+**Changes made:**
+1. **`sandbox_check.py`:** the agent mode takes the tier's network rule as a last argument: `allowlist` (the default, the strict tier's) or `open` (the planning tier's). Under `open`, any host may answer through the proxy, but nothing may bypass it (no direct connection, no DNS). An unknown rule fails.
+2. **`templates/factory-smoke.yml`:** `planning-sandbox` passes `open`.
+3. **`tests/test_sandbox_check.py`:** the open internet still goes through the proxy: a host reached without it fails under either rule.
+4. **`process/factory.md`:** D2 rule 5's planning bullet says what the planning tier's network is.
+
+**Checked against the live run:** that run's control and agent output, judged again: `allowlist` gives exactly those two failures, `open` passes, and the control passes.
+
+**Rationale:** The probe proves what the design says, D3 rule 5 included. A check stricter than the design fails for the wrong reason, and teaches people to ignore its failures.
+
+---
+
 ## 2026-10-15: The public-content scan stops a push
 
 **Origin:** This release's first push. Check 6 found an added line naming the incubator, but its last command was an `echo`, so it exited 0. The push chained after it ran, and the release went out with the line. CD had it re-cut.

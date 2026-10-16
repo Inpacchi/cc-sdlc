@@ -58,6 +58,17 @@ class Services(unittest.TestCase):
                          ["the Docker socket accepts connections"])
         self.assertEqual(check.sockets(["localsvc none", "unixsock docker refused"], []), [])
 
+    def test_the_planning_tiers_open_internet_still_goes_through_the_proxy(self):
+        lines = ["net https://pypi.org/simple/ 200", "net https://example.com/ 200", "noproxy https://example.com/ 000",
+                 "direct 1.1.1.1:443 closed", "dns example.com failed"]
+        net = lambda failures: [f for f in failures if "allowlist" in f or "proxy" in f or "direct" in f  # noqa: E731
+                                or "DNS" in f]
+        self.assertEqual(net(check.judge_agent(lines, [], [])), ["host outside the allowlist reachable: "
+                                                                  "https://example.com/ (200)"])
+        self.assertEqual(net(check.judge_agent(lines, [], [], "open")), [])
+        around = [l.replace("noproxy https://example.com/ 000", "noproxy https://example.com/ 200") for l in lines]
+        self.assertEqual(net(check.judge_agent(around, [], [], "open")), ["reached a host without the sandbox proxy"])
+
     def test_a_missing_or_malformed_list_fails_the_job(self):
         self.assertEqual(check.sockets(["localsvc db connected", "unixsock docker refused"], None),
                          ["the stack profile's services file is missing or malformed"])

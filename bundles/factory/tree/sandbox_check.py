@@ -2,7 +2,7 @@
 
 Usage:
   python3 -I sandbox_check.py control <control-output> <services>
-  python3 -I sandbox_check.py agent <agent-output> <control-output> <services>
+  python3 -I sandbox_check.py agent <agent-output> <control-output> <services> [allowlist|open]
 
 control: the probe ran unsandboxed with the real secrets in its environment and a canary planted
          under the runner's temp directory. It must find the OAuth and GitHub tokens in its
@@ -12,7 +12,9 @@ control: the probe ran unsandboxed with the real secrets in its environment and 
 agent:   the probe ran as sandboxed agent Bash. It must find no secret anywhere, no credential
          variable by name, a PID namespace other than the control's, unlistable runner mounts,
          unwritable protected paths, the allowed registries reachable through the proxy, every
-         other host blocked, and no route that bypasses the proxy.
+         other host blocked, and no route that bypasses the proxy. With `open`, the planning tier's
+         network (design rule D3 rule 5: WebFetch(domain:*) opens the sandbox's proxy to every host),
+         any host may answer through the proxy; nothing may still bypass it.
 both:    the stack profile's test services (its `services` file, "<label> <port>" a line) answer on
          the job container's loopback (through the sandbox proxy, for the agent), and the Docker
          socket doesn't. A missing or malformed services file fails.
@@ -105,7 +107,7 @@ def judge_control(lines, services):
     return failures
 
 
-def judge_agent(lines, control, services):
+def judge_agent(lines, control, services, network="allowlist"):
     failures = kernel_files(lines) + sockets(lines, services)
     failures += [f"credential visible: {l}" for l in lines if l.startswith("secret ")]
     names = {l.split(" ", 1)[1] for l in lines if l.startswith("env-name ")}
@@ -122,7 +124,7 @@ def judge_agent(lines, control, services):
         ok = 200 <= int(code) < 400
         if url in REACHABLE and not ok:
             failures.append(f"allowed registry unreachable: {url} ({code})")
-        if url in BLOCKED and ok:
+        if url in BLOCKED and ok and network != "open":
             failures.append(f"host outside the allowlist reachable: {url} ({code})")
     if any(l.startswith("noproxy ") and not l.endswith(" 000") for l in lines):
         failures.append("reached a host without the sandbox proxy")
@@ -149,7 +151,10 @@ def main():
     if mode == "control":
         failures += judge_control(lines, read_services(sys.argv[3]))
     else:
-        failures += judge_agent(lines, open(sys.argv[3]).read().splitlines(), read_services(sys.argv[4]))
+        network = sys.argv[5] if len(sys.argv) > 5 else "allowlist"
+        if network not in ("allowlist", "open"):
+            failures.append(f"unknown network rule {network!r}: allowlist or open")
+        failures += judge_agent(lines, open(sys.argv[3]).read().splitlines(), read_services(sys.argv[4]), network)
 
     # The output is agent-influenced: stop workflow-command parsing and fence it safely.
     token = secrets.token_hex(16)
